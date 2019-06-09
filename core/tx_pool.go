@@ -632,8 +632,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			if (err != nil) || provider != fixedAddress {
 				return ErrInvalidSender
 			}
+		} else {
+			log.Info("desitnation is a normal address, skip provider signature check")
 		}
-		log.Info("desitnation is a normal address, skip provider signature check")
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
