@@ -296,6 +296,22 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	return msg, err
 }
 
+// WithProviderSignature returns a new transaction with the given provider signature.
+// This signature needs to be in the [R || S || V] format where V is 0 or 1.
+func (tx *Transaction) WithProviderSignature(signer Signer, sig []byte) (*Transaction, error) {
+	r, s, v, err := signer.SignatureValues(tx, sig)
+	if err != nil {
+		return nil, err
+	}
+	cpy := &Transaction{data: tx.data}
+	cpy.data.PR, cpy.data.PS, cpy.data.PV = r, s, v
+	return cpy, nil
+}
+
+func (tx *Transaction) RawProviderSignatureValues() (*big.Int, *big.Int, *big.Int) {
+	return tx.data.PV, tx.data.PR, tx.data.PS
+}
+
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be in the [R || S || V] format where V is 0 or 1.
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
