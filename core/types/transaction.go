@@ -17,6 +17,7 @@
 package types
 
 import (
+	"bytes"
 	"container/heap"
 	"errors"
 	"io"
@@ -43,6 +44,39 @@ type Transaction struct {
 	from atomic.Value
 }
 
+type txdataWithoutProvider struct {
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
+	GasLimit     uint64          `json:"gas"      gencodec:"required"`
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+func (d txdataWithoutProvider) toTxData() txdata {
+	return txdata{
+		AccountNonce: d.AccountNonce,
+		Price:        d.Price,
+		GasLimit:     d.GasLimit,
+		Recipient:    d.Recipient,
+		Amount:       d.Amount,
+		Payload:      d.Payload,
+
+		V:    d.V,
+		S:    d.S,
+		R:    d.R,
+		Hash: d.Hash,
+	}
+}
+
 type txdata struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
@@ -55,6 +89,11 @@ type txdata struct {
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
+
+	//Provider Signature values
+	PV *big.Int `json:"pv"`
+	PR *big.Int `json:"pr"`
+	PS *big.Int `json:"ps"`
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -114,6 +153,11 @@ func (tx *Transaction) Protected() bool {
 	return isProtectedV(tx.data.V)
 }
 
+// ProviderProtected returns whether the transaction is protected from replay protection.
+func (tx *Transaction) ProviderProtected() bool {
+	return isProtectedV(tx.data.PV)
+}
+
 func isProtectedV(V *big.Int) bool {
 	if V.BitLen() <= 8 {
 		v := V.Uint64()
@@ -131,10 +175,29 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	_, size, _ := s.Kind()
-	err := s.Decode(&tx.data)
-	if err == nil {
-		tx.size.Store(common.StorageSize(rlp.ListSize(size)))
+	var (
+		err   error
+		input []byte
+	)
+	input, err = s.Raw()
+	if err != nil {
+		return err
 	}
+
+	s.Reset(bytes.NewReader(input), 0)
+	err = s.Decode(&tx.data)
+	if err != nil {
+		//fallback to txwithout provider signature
+		s.Reset(bytes.NewReader(input), 0)
+		var data txdataWithoutProvider
+		err = s.Decode(&data)
+		if err != nil {
+			return err
+		}
+		tx.data = data.toTxData()
+	}
+
+	tx.size.Store(common.StorageSize(rlp.ListSize(size)))
 
 	return err
 }

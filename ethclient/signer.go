@@ -51,6 +51,10 @@ func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error)
 	return s.addr, nil
 }
 
+func (s *senderFromServer) Provider(tx *types.Transaction) (common.Address, error) {
+	return common.Address{}, errors.New("no provdier with senderFromServer")
+}
+
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {
 	panic("can't sign with senderFromServer")
 }
