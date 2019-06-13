@@ -1007,6 +1007,10 @@ type RPCTransaction struct {
 	V                *hexutil.Big    `json:"v"`
 	R                *hexutil.Big    `json:"r"`
 	S                *hexutil.Big    `json:"s"`
+	
+	PV               *hexutil.Big    `json:"pv"`
+	PR               *hexutil.Big    `json:"pr"`
+	PS               *hexutil.Big    `json:"ps"`
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1018,6 +1022,8 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	}
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
+
+	PV, PR, PS := tx.RawProviderSignatureValues()
 
 	result := &RPCTransaction{
 		From:     from,
@@ -1031,6 +1037,10 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		V:        (*hexutil.Big)(v),
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
+
+		PV:        (*hexutil.Big)(PV),
+		PR:        (*hexutil.Big)(PR),
+		PS:        (*hexutil.Big)(PS),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
