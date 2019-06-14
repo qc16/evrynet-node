@@ -52,6 +52,16 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	return signer
 }
 
+// ProviderSignTx signs the transaction using the given signer and private key
+func ProviderSignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
+	h := s.Hash(tx)
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+	return tx.WithProviderSignature(s, sig)
+}
+
 // SignTx signs the transaction using the given signer and private key
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
 	h := s.Hash(tx)
@@ -88,11 +98,22 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	return addr, nil
 }
 
+// Provider returns the address derived from the signature (V, R, S) using secp256k1
+func Provider(signer Signer, tx *Transaction) (common.Address, error) {
+	//Not caching provider for now
+	if tx.data.PV == nil {
+		return common.Address{}, ErrInvalidSig
+	}
+	return signer.Provider(tx)
+}
+
 // Signer encapsulates transaction signature handling. Note that this interface is not a
 // stable API and may change at any time to accommodate new protocol rules.
 type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
+	// Provider reutrns the provider address of the transaction
+	Provider(tx *Transaction) (common.Address, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
 	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
@@ -100,6 +121,8 @@ type Signer interface {
 	Hash(tx *Transaction) common.Hash
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
+
+	//TODO: Implement HashWithSenderSignature
 }
 
 // EIP155Transaction implements Signer using the EIP155 rules.
@@ -134,6 +157,19 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 	V.Sub(V, big8)
 	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V, true)
+}
+
+//Provider return the Address of provider based on PV, PS, PR
+func (s EIP155Signer) Provider(tx *Transaction) (common.Address, error) {
+	if !tx.ProviderProtected() {
+		return HomesteadSigner{}.Provider(tx)
+	}
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return common.Address{}, ErrInvalidChainId
+	}
+	V := new(big.Int).Sub(tx.data.PV, s.chainIdMul)
+	V.Sub(V, big8)
+	return recoverPlain(s.Hash(tx), tx.data.PR, tx.data.PS, V, true)
 }
 
 // SignatureValues returns signature values. This signature
@@ -179,6 +215,12 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 	return hs.FrontierSigner.SignatureValues(tx, sig)
 }
 
+//Provider return the Address of provider based on PV, PS, PR
+func (hs HomesteadSigner) Provider(tx *Transaction) (common.Address, error) {
+	return recoverPlain(hs.Hash(tx), tx.data.PR, tx.data.PS, tx.data.PV, true)
+
+}
+
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
 }
@@ -213,6 +255,10 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 		tx.data.Amount,
 		tx.data.Payload,
 	})
+}
+
+func (fs FrontierSigner) Provider(tx *Transaction) (common.Address, error) {
+	return recoverPlain(fs.Hash(tx), tx.data.PR, tx.data.PS, tx.data.PV, false)
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {

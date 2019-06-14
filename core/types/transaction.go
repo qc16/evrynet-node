@@ -43,6 +43,39 @@ type Transaction struct {
 	from atomic.Value
 }
 
+type txdataWithoutProvider struct {
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
+	GasLimit     uint64          `json:"gas"      gencodec:"required"`
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+func (d txdataWithoutProvider) toTxData() txdata {
+	return txdata{
+		AccountNonce: d.AccountNonce,
+		Price:        d.Price,
+		GasLimit:     d.GasLimit,
+		Recipient:    d.Recipient,
+		Amount:       d.Amount,
+		Payload:      d.Payload,
+
+		V:    d.V,
+		S:    d.S,
+		R:    d.R,
+		Hash: d.Hash,
+	}
+}
+
 type txdata struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
@@ -55,6 +88,11 @@ type txdata struct {
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
+
+	//Provider Signature values
+	PV *big.Int `json:"pv"`
+	PR *big.Int `json:"pr"`
+	PS *big.Int `json:"ps"`
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -114,6 +152,11 @@ func (tx *Transaction) Protected() bool {
 	return isProtectedV(tx.data.V)
 }
 
+// ProviderProtected returns whether the transaction is protected from replay protection.
+func (tx *Transaction) ProviderProtected() bool {
+	return isProtectedV(tx.data.PV)
+}
+
 func isProtectedV(V *big.Int) bool {
 	if V.BitLen() <= 8 {
 		v := V.Uint64()
@@ -130,13 +173,33 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
-	_, size, _ := s.Kind()
-	err := s.Decode(&tx.data)
-	if err == nil {
-		tx.size.Store(common.StorageSize(rlp.ListSize(size)))
+	var (
+		err error
+	)
+	raw, err := s.Raw()
+	lenStream := uint64(len(raw))
+
+	if err != nil {
+		return err
 	}
 
-	return err
+	err = rlp.DecodeBytes(raw, &tx.data)
+
+	if err == nil {
+		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
+	} else {
+		//fallback to tx without provider signature
+		var data txdataWithoutProvider
+		err = rlp.DecodeBytes(raw, &data)
+		if err == nil {
+			tx.data = data.toTxData()
+			// add up 32 byte for r, 32 byte for s, 2 byte for v
+			tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 66)))
+		}
+		return err
+	}
+
+	return nil
 }
 
 // MarshalJSON encodes the web3 RPC transaction format.
@@ -231,6 +294,22 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	var err error
 	msg.from, err = Sender(s, tx)
 	return msg, err
+}
+
+// WithProviderSignature returns a new transaction with the given provider signature.
+// This signature needs to be in the [R || S || V] format where V is 0 or 1.
+func (tx *Transaction) WithProviderSignature(signer Signer, sig []byte) (*Transaction, error) {
+	r, s, v, err := signer.SignatureValues(tx, sig)
+	if err != nil {
+		return nil, err
+	}
+	cpy := &Transaction{data: tx.data}
+	cpy.data.PR, cpy.data.PS, cpy.data.PV = r, s, v
+	return cpy, nil
+}
+
+func (tx *Transaction) RawProviderSignatureValues() (*big.Int, *big.Int, *big.Int) {
+	return tx.data.PV, tx.data.PR, tx.data.PS
 }
 
 // WithSignature returns a new transaction with the given signature.

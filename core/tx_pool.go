@@ -624,6 +624,23 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return ErrInvalidSender
 	}
+	// Make sure the transaction is signed with provider if the destination is an address
+	// Only check if tx is not a contract creation code
+	if tx.To() != nil {
+		to := tx.To()
+		if pool.currentState.Exist(*to) && pool.currentState.GetCodeSize(*to) > 0 {
+			log.Info("destination is a contract, must check provider signature")
+			//TODO: implement currentState.GetProviderAddress()
+			//This fixed address is for testing purpose
+			fixedAddress := common.HexToAddress("0x7AFd955A80E832940a5f6F020bF3c98fD070dca4")
+			provider, err := types.Provider(pool.signer, tx)
+			if (err != nil) || provider != fixedAddress {
+				return ErrInvalidSender
+			}
+		} else {
+			log.Info("desitnation is a normal address, skip provider signature check")
+		}
+	}
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
 	if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
