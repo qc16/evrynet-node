@@ -16,7 +16,7 @@
 
 package types
 
-import (	
+import (
 	"container/heap"
 	"errors"
 	"io"
@@ -174,26 +174,27 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	var (
-		err   error	
+		err error
 	)
 	raw, err := s.Raw()
 	lenStream := uint64(len(raw))
 
-	if err != nil {		
+	if err != nil {
 		return err
 	}
 
 	err = rlp.DecodeBytes(raw, &tx.data)
 
 	if err == nil {
-		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))				
-	}else{
+		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
+	} else {
+		//fallback to tx without provider signature
 		var data txdataWithoutProvider
 		err = rlp.DecodeBytes(raw, &data)
 		if err == nil {
 			tx.data = data.toTxData()
 			// add up 32 byte for r, 32 byte for s, 2 byte for v
-			tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 66)))		
+			tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 66)))
 		}
 		return err
 	}
