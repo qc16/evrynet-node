@@ -17,7 +17,6 @@
 package types
 
 import (
-	"bytes"
 	"container/heap"
 	"errors"
 	"io"
@@ -174,32 +173,33 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
-	_, size, _ := s.Kind()
 	var (
-		err   error
-		input []byte
+		err error
 	)
-	input, err = s.Raw()
+	raw, err := s.Raw()
+	lenStream := uint64(len(raw))
+
 	if err != nil {
 		return err
 	}
 
-	s.Reset(bytes.NewReader(input), 0)
-	err = s.Decode(&tx.data)
-	if err != nil {
-		//fallback to txwithout provider signature
-		s.Reset(bytes.NewReader(input), 0)
+	err = rlp.DecodeBytes(raw, &tx.data)
+
+	if err == nil {
+		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
+	} else {
+		//fallback to tx without provider signature
 		var data txdataWithoutProvider
-		err = s.Decode(&data)
-		if err != nil {
-			return err
+		err = rlp.DecodeBytes(raw, &data)
+		if err == nil {
+			tx.data = data.toTxData()
+			// add up 32 byte for r, 32 byte for s, 2 byte for v
+			tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 66)))
 		}
-		tx.data = data.toTxData()
+		return err
 	}
 
-	tx.size.Store(common.StorageSize(rlp.ListSize(size)))
-
-	return err
+	return nil
 }
 
 // MarshalJSON encodes the web3 RPC transaction format.
