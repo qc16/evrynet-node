@@ -1040,12 +1040,15 @@ type RPCTransaction struct {
 	To               *common.Address `json:"to"`
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
-	V                *hexutil.Big    `json:"v"`
-	R                *hexutil.Big    `json:"r"`
-	S                *hexutil.Big    `json:"s"`
-	PV               *hexutil.Big    `json:"pv"`
-	PR               *hexutil.Big    `json:"pr"`
-	PS               *hexutil.Big    `json:"ps"`
+
+	ProviderAddr common.Address `json:"providerAddr"`
+
+	V  *hexutil.Big `json:"v"`
+	R  *hexutil.Big `json:"r"`
+	S  *hexutil.Big `json:"s"`
+	PV *hexutil.Big `json:"pv"`
+	PR *hexutil.Big `json:"pr"`
+	PS *hexutil.Big `json:"ps"`
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1076,6 +1079,12 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		PR:       (*hexutil.Big)(PR),
 		PS:       (*hexutil.Big)(PS),
 	}
+
+	providerAddr := tx.ProviderAddr()
+	if providerAddr != nil {
+		result.ProviderAddr = *providerAddr
+	}
+
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
 		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
