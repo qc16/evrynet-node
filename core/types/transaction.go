@@ -84,15 +84,20 @@ type txdata struct {
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	Payload      []byte          `json:"input"    gencodec:"required"`
 
+	//provider address
+	ProviderAddr *common.Address `json:"providerAddr" rlp:"nil"`
+
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
 
 	//Provider Signature values
-	PV *big.Int `json:"pv"`
-	PR *big.Int `json:"pr"`
-	PS *big.Int `json:"ps"`
+	PV *big.Int `json:"pv"       rlp:"nil"`
+	PR *big.Int `json:"pr"       rlp:"nil"`
+	PS *big.Int `json:"ps"       rlp:"nil"`
+
+	
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -183,20 +188,18 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	err = rlp.DecodeBytes(raw, &tx.data)
+	var data txdataWithoutProvider
+	err = rlp.DecodeBytes(raw, &data)
 
 	if err == nil {
-		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
-	} else {
-		//fallback to tx without provider signature
-		var data txdataWithoutProvider
-		err = rlp.DecodeBytes(raw, &data)
-		if err == nil {
-			tx.data = data.toTxData()
-			// add up 32 byte for r, 32 byte for s, 2 byte for v
-			tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 66)))
+		tx.data = data.toTxData()
+		// add up 32 byte for r, 32 byte for s, 2 byte for v, 32 byte for providerAddr
+		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
+	}else{
+		err = rlp.DecodeBytes(raw, &tx.data)
+		if err !=  nil{
+			tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
 		}
-		return err
 	}
 
 	return nil
@@ -310,6 +313,10 @@ func (tx *Transaction) WithProviderSignature(signer Signer, sig []byte) (*Transa
 
 func (tx *Transaction) RawProviderSignatureValues() (*big.Int, *big.Int, *big.Int) {
 	return tx.data.PV, tx.data.PR, tx.data.PS
+}
+
+func (tx *Transaction) ProviderAddr() (*common.Address) {
+	return tx.data.ProviderAddr
 }
 
 // WithSignature returns a new transaction with the given signature.

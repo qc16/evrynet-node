@@ -1009,6 +1009,9 @@ type RPCTransaction struct {
 	To               *common.Address `json:"to"`
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
+
+	ProviderAddr     common.Address  `json:"providerAddr"`
+
 	V                *hexutil.Big    `json:"v"`
 	R                *hexutil.Big    `json:"r"`
 	S                *hexutil.Big    `json:"s"`
@@ -1016,6 +1019,7 @@ type RPCTransaction struct {
 	PV               *hexutil.Big    `json:"pv"`
 	PR               *hexutil.Big    `json:"pr"`
 	PS               *hexutil.Big    `json:"ps"`
+	
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1028,25 +1032,31 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
 
-	PV, PR, PS := tx.RawProviderSignatureValues()
-
+	PV, PR, PS := tx.RawProviderSignatureValues()	
+	
 	result := &RPCTransaction{
-		From:     from,
-		Gas:      hexutil.Uint64(tx.Gas()),
-		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
+		From:     		from,
+		Gas:      		hexutil.Uint64(tx.Gas()),
+		GasPrice: 		(*hexutil.Big)(tx.GasPrice()),
+		Hash:     		tx.Hash(),
+		Input:    		hexutil.Bytes(tx.Data()),
+		Nonce:    		hexutil.Uint64(tx.Nonce()),
+		To:       		tx.To(),
+		Value:    		(*hexutil.Big)(tx.Value()),
+		V:        		(*hexutil.Big)(v),
+		R:        		(*hexutil.Big)(r),
+		S:        		(*hexutil.Big)(s),
 
-		PV:        (*hexutil.Big)(PV),
-		PR:        (*hexutil.Big)(PR),
-		PS:        (*hexutil.Big)(PS),
+		PV:        		(*hexutil.Big)(PV),
+		PR:        		(*hexutil.Big)(PR),
+		PS:        		(*hexutil.Big)(PS),		
 	}
+
+	providerAddr := tx.ProviderAddr()
+	if providerAddr != nil {
+		result.ProviderAddr = *providerAddr
+	}
+	
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
 		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
