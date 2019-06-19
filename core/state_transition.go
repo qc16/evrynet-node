@@ -190,8 +190,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 	}
 	msg := st.msg
 
-	fmt.Println("providerAddr")
-	fmt.Println(msg.ProviderAddr().String())
+	
+	providerAddr := msg.ProviderAddr()
+	if providerAddr != nil {
+		fmt.Println("providerAddr")
+		fmt.Println(providerAddr.String())
+	}	
 
 	sender := vm.AccountRef(msg.From())
 	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
