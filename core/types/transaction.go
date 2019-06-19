@@ -59,6 +59,7 @@ type txdataNormal struct {
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
+
 func (d txdataNormal) toTxData() txdata {
 	return txdata{
 		AccountNonce: d.AccountNonce,
@@ -129,7 +130,7 @@ type txdataWithProviderSignature struct {
 	PV *big.Int `json:"pv"       rlp:"nil"`
 	PR *big.Int `json:"pr"       rlp:"nil"`
 	PS *big.Int `json:"ps"       rlp:"nil"`
-	
+
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
@@ -141,21 +142,19 @@ func (d txdataWithProviderSignature) toTxData() txdata {
 		GasLimit:     d.GasLimit,
 		Recipient:    d.Recipient,
 		Amount:       d.Amount,
-		Payload:      d.Payload,		
+		Payload:      d.Payload,
 
-		V:    d.V,
-		S:    d.S,
-		R:    d.R,
+		V: d.V,
+		S: d.S,
+		R: d.R,
 
-		PV:   d.PV,
-		PR:   d.PR,
-		PS:   d.PS,
+		PV: d.PV,
+		PR: d.PR,
+		PS: d.PS,
 
 		Hash: d.Hash,
 	}
 }
-
-
 
 type txdata struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
@@ -177,7 +176,7 @@ type txdata struct {
 	PV *big.Int `json:"pv"       rlp:"nil"`
 	PR *big.Int `json:"pr"       rlp:"nil"`
 	PS *big.Int `json:"ps"       rlp:"nil"`
-	
+
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
@@ -285,7 +284,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
 		return nil
 	}
-	
+
 	var dataWithProviderAddress txdataWithProviderAddress
 	err = rlp.DecodeBytes(raw, &dataWithProviderAddress)
 	if err == nil {
@@ -298,7 +297,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	var data txdata
 	err = rlp.DecodeBytes(raw, &data)
 	if err == nil {
-		tx.data = data		
+		tx.data = data
 		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
 		return nil
 	}
@@ -386,14 +385,14 @@ func (tx *Transaction) Size() common.StorageSize {
 // XXX Rename message to something less arbitrary?
 func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	msg := Message{
-		nonce:      	tx.data.AccountNonce,
-		gasLimit:   	tx.data.GasLimit,
-		gasPrice:   	new(big.Int).Set(tx.data.Price),
-		to:         	tx.data.Recipient,
-		amount:     	tx.data.Amount,
-		data:       	tx.data.Payload,
-		providerAddr: 	tx.data.ProviderAddr,
-		checkNonce: 	true,
+		nonce:      tx.data.AccountNonce,
+		gasLimit:   tx.data.GasLimit,
+		gasPrice:   new(big.Int).Set(tx.data.Price),
+		to:         tx.data.Recipient,
+		amount:     tx.data.Amount,
+		data:       tx.data.Payload,
+		provider:   tx.data.ProviderAddr,
+		checkNonce: true,
 	}
 
 	var err error
@@ -417,7 +416,7 @@ func (tx *Transaction) RawProviderSignatureValues() (*big.Int, *big.Int, *big.In
 	return tx.data.PV, tx.data.PR, tx.data.PS
 }
 
-func (tx *Transaction) ProviderAddr() (*common.Address) {
+func (tx *Transaction) ProviderAddr() *common.Address {
 	return tx.data.ProviderAddr
 }
 
@@ -573,16 +572,17 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 // Message is a fully derived transaction and implements core.Message
 //
 // NOTE: In a future PR this will be removed.
+// TODO: to see why is this removed.
 type Message struct {
-	to        		*common.Address
-	from       		common.Address
-	nonce      		uint64
-	amount     		*big.Int
-	gasLimit   		uint64
-	gasPrice   		*big.Int
-	data       		[]byte
-	providerAddr    *common.Address
-	checkNonce 		bool
+	to         *common.Address
+	from       common.Address
+	provider   *common.Address
+	nonce      uint64
+	amount     *big.Int
+	gasLimit   uint64
+	gasPrice   *big.Int
+	data       []byte
+	checkNonce bool
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
@@ -598,12 +598,12 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 	}
 }
 
-func (m Message) From() common.Address 				{ return m.from }
-func (m Message) To() *common.Address  				{ return m.to }
-func (m Message) ProviderAddr() *common.Address  	{ return m.providerAddr }
-func (m Message) GasPrice() *big.Int   				{ return m.gasPrice }
-func (m Message) Value() *big.Int      				{ return m.amount }
-func (m Message) Gas() uint64          				{ return m.gasLimit }
-func (m Message) Nonce() uint64        				{ return m.nonce }
-func (m Message) Data() []byte         				{ return m.data }
-func (m Message) CheckNonce() bool     				{ return m.checkNonce }
+func (m Message) From() common.Address      { return m.from }
+func (m Message) To() *common.Address       { return m.to }
+func (m Message) Provider() *common.Address { return m.provider }
+func (m Message) GasPrice() *big.Int        { return m.gasPrice }
+func (m Message) Value() *big.Int           { return m.amount }
+func (m Message) Gas() uint64               { return m.gasLimit }
+func (m Message) Nonce() uint64             { return m.nonce }
+func (m Message) Data() []byte              { return m.data }
+func (m Message) CheckNonce() bool          { return m.checkNonce }
