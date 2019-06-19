@@ -43,7 +43,7 @@ type Transaction struct {
 	from atomic.Value
 }
 
-type txdataWithoutProvider struct {
+type txdataNormal struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     uint64          `json:"gas"      gencodec:"required"`
@@ -59,8 +59,7 @@ type txdataWithoutProvider struct {
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
-
-func (d txdataWithoutProvider) toTxData() txdata {
+func (d txdataNormal) toTxData() txdata {
 	return txdata{
 		AccountNonce: d.AccountNonce,
 		Price:        d.Price,
@@ -75,6 +74,88 @@ func (d txdataWithoutProvider) toTxData() txdata {
 		Hash: d.Hash,
 	}
 }
+
+type txdataWithProviderAddress struct {
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
+	GasLimit     uint64          `json:"gas"      gencodec:"required"`
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`
+
+	//provider address
+	ProviderAddr *common.Address `json:"providerAddr" rlp:"nil"`
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+func (d txdataWithProviderAddress) toTxData() txdata {
+	return txdata{
+		AccountNonce: d.AccountNonce,
+		Price:        d.Price,
+		GasLimit:     d.GasLimit,
+		Recipient:    d.Recipient,
+		Amount:       d.Amount,
+		Payload:      d.Payload,
+		ProviderAddr: d.ProviderAddr,
+
+		V:    d.V,
+		S:    d.S,
+		R:    d.R,
+		Hash: d.Hash,
+	}
+}
+
+type txdataWithProviderSignature struct {
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
+	GasLimit     uint64          `json:"gas"      gencodec:"required"`
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	//Provider Signature values
+	PV *big.Int `json:"pv"       rlp:"nil"`
+	PR *big.Int `json:"pr"       rlp:"nil"`
+	PS *big.Int `json:"ps"       rlp:"nil"`
+	
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+func (d txdataWithProviderSignature) toTxData() txdata {
+	return txdata{
+		AccountNonce: d.AccountNonce,
+		Price:        d.Price,
+		GasLimit:     d.GasLimit,
+		Recipient:    d.Recipient,
+		Amount:       d.Amount,
+		Payload:      d.Payload,		
+
+		V:    d.V,
+		S:    d.S,
+		R:    d.R,
+
+		PV:   d.PV,
+		PR:   d.PR,
+		PS:   d.PS,
+
+		Hash: d.Hash,
+	}
+}
+
+
 
 type txdata struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
@@ -96,9 +177,7 @@ type txdata struct {
 	PV *big.Int `json:"pv"       rlp:"nil"`
 	PR *big.Int `json:"pr"       rlp:"nil"`
 	PS *big.Int `json:"ps"       rlp:"nil"`
-
 	
-
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
@@ -188,21 +267,43 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	var data txdataWithoutProvider
-	err = rlp.DecodeBytes(raw, &data)
+	var dataWithProviderSign txdataWithProviderSignature
+	err = rlp.DecodeBytes(raw, &dataWithProviderSign)
 
 	if err == nil {
-		tx.data = data.toTxData()
-		// add up 32 byte for r, 32 byte for s, 2 byte for v, 32 byte for providerAddr
+		tx.data = dataWithProviderSign.toTxData()
+		// add storage for providerAddr
 		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
-	}else{
-		err = rlp.DecodeBytes(raw, &tx.data)
-		if err !=  nil{
-			tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
-		}
+		return nil
 	}
 
-	return nil
+	var dataNormal txdataNormal
+	err = rlp.DecodeBytes(raw, &dataNormal)
+	if err == nil {
+		tx.data = dataNormal.toTxData()
+		// add storage for providerAddr, pv, pr, ps
+		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
+		return nil
+	}
+	
+	var dataWithProviderAddress txdataWithProviderAddress
+	err = rlp.DecodeBytes(raw, &dataWithProviderAddress)
+	if err == nil {
+		tx.data = dataWithProviderAddress.toTxData()
+		// add storage for pv, pr, ps
+		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
+		return nil
+	}
+
+	var data txdata
+	err = rlp.DecodeBytes(raw, &data)
+	if err == nil {
+		tx.data = data		
+		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream)))
+		return nil
+	}
+
+	return err
 }
 
 // MarshalJSON encodes the web3 RPC transaction format.
