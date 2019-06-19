@@ -105,6 +105,25 @@ type Account struct {
 	ProviderAddress *common.Address
 }
 
+// AccountWithoutProvider represent an account without provider
+type AccountWithoutProvider struct {
+	Nonce    uint64
+	Balance  *big.Int
+	Root     common.Hash // merkle root of the storage trie
+	CodeHash []byte
+}
+
+// ToAccount convert an AccountWithoutProvider to Account
+func (a AccountWithoutProvider) ToAccount() Account {
+	return Account{
+		Nonce:           a.Nonce,
+		Balance:         a.Balance,
+		Root:            a.Root,
+		CodeHash:        a.CodeHash,
+		ProviderAddress: nil,
+	}
+}
+
 // newObject creates a state object.
 func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	if data.Balance == nil {

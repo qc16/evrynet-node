@@ -470,8 +470,13 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 	}
 	var data Account
 	if err := rlp.DecodeBytes(enc, &data); err != nil {
-		log.Error("Failed to decode state object", "addr", addr, "err", err)
-		return nil
+		log.Debug("Failed to decode state object", "addr", addr, "err", err)
+		var dataWithoutProvider AccountWithoutProvider
+		if retryErr := rlp.DecodeBytes(enc, &dataWithoutProvider); retryErr != nil {
+			log.Error("Failed to decode state object without provider", "addr", addr, "err", retryErr)
+			return nil
+		}
+		data = dataWithoutProvider.ToAccount()
 	}
 	// Insert into the live set
 	obj := newObject(s, addr, data)
