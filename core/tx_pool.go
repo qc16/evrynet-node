@@ -44,6 +44,9 @@ var (
 	// ErrInvalidSender is returned if the transaction contains an invalid signature.
 	ErrInvalidSender = errors.New("invalid sender")
 
+	// ErrInvalidProvider is returned if the transaction contains an invalid signature.
+	ErrInvalidProvider = errors.New("invalid provider")
+
 	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
 	// one present in the local chain.
 	ErrNonceTooLow = errors.New("nonce too low")
@@ -626,16 +629,20 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Make sure the transaction is signed with provider if the destination is an address
 	// Only check if tx is not a contract creation code
+	// TODO: remove the log in prodution
 	if tx.To() != nil {
 		to := tx.To()
 		if pool.currentState.Exist(*to) && pool.currentState.GetCodeSize(*to) > 0 {
-			log.Info("destination is a contract, must check provider signature")
-			//TODO: implement currentState.GetProviderAddress()
-			//This fixed address is for testing purpose
-			fixedAddress := common.HexToAddress("0x7AFd955A80E832940a5f6F020bF3c98fD070dca4")
-			provider, err := types.Provider(pool.signer, tx)
-			if (err != nil) || provider != fixedAddress {
-				return ErrInvalidSender
+			log.Info("destination is a contract, must check it providers")
+			expectedProvider := pool.currentState.GetProvider(*to)
+			if expectedProvider == nil {
+				log.Info("destination is a non-enteprise contract. Skip checking provider signature")
+			} else {
+				provider, err := types.Provider(pool.signer, tx)
+				if (err != nil) || provider != *expectedProvider {
+					log.Info("invadli provider address", "expected", expectedProvider.String(), "got", provider.String(), "error", err)
+					return ErrInvalidProvider
+				}
 			}
 		} else {
 			log.Info("desitnation is a normal address, skip provider signature check")

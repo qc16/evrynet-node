@@ -102,7 +102,7 @@ type Account struct {
 	Balance         *big.Int
 	Root            common.Hash // merkle root of the storage trie
 	CodeHash        []byte
-	ProviderAddress *common.Address
+	ProviderAddress *common.Address `rlp:"nil"`
 }
 
 // AccountWithoutProvider represent an account without provider

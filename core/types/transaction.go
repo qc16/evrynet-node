@@ -85,7 +85,7 @@ type txdataWithProviderAddress struct {
 	Payload      []byte          `json:"input"    gencodec:"required"`
 
 	//provider address
-	ProviderAddr *common.Address `json:"providerAddr" rlp:"nil"`
+	Provider *common.Address `json:"provider" rlp:"nil"`
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -104,7 +104,7 @@ func (d txdataWithProviderAddress) toTxData() txdata {
 		Recipient:    d.Recipient,
 		Amount:       d.Amount,
 		Payload:      d.Payload,
-		ProviderAddr: d.ProviderAddr,
+		Provider:     d.Provider,
 
 		V:    d.V,
 		S:    d.S,
@@ -165,7 +165,7 @@ type txdata struct {
 	Payload      []byte          `json:"input"    gencodec:"required"`
 
 	//provider address
-	ProviderAddr *common.Address `json:"providerAddr" rlp:"nil"`
+	Provider *common.Address `json:"provider" rlp:"nil"`
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -391,7 +391,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		to:         tx.data.Recipient,
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
-		provider:   tx.data.ProviderAddr,
+		provider:   tx.data.Provider,
 		checkNonce: true,
 	}
 
@@ -416,8 +416,8 @@ func (tx *Transaction) RawProviderSignatureValues() (*big.Int, *big.Int, *big.In
 	return tx.data.PV, tx.data.PR, tx.data.PS
 }
 
-func (tx *Transaction) ProviderAddr() *common.Address {
-	return tx.data.ProviderAddr
+func (tx *Transaction) Provider() *common.Address {
+	return tx.data.Provider
 }
 
 // WithSignature returns a new transaction with the given signature.

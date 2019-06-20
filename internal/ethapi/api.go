@@ -1041,11 +1041,12 @@ type RPCTransaction struct {
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
 
-	ProviderAddr common.Address `json:"providerAddr"`
+	Provider common.Address `json:"provider"`
 
-	V  *hexutil.Big `json:"v"`
-	R  *hexutil.Big `json:"r"`
-	S  *hexutil.Big `json:"s"`
+	V *hexutil.Big `json:"v"`
+	R *hexutil.Big `json:"r"`
+	S *hexutil.Big `json:"s"`
+
 	PV *hexutil.Big `json:"pv"`
 	PR *hexutil.Big `json:"pr"`
 	PS *hexutil.Big `json:"ps"`
@@ -1075,14 +1076,15 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		V:        (*hexutil.Big)(v),
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
-		PV:       (*hexutil.Big)(PV),
-		PR:       (*hexutil.Big)(PR),
-		PS:       (*hexutil.Big)(PS),
+
+		PV: (*hexutil.Big)(PV),
+		PR: (*hexutil.Big)(PR),
+		PS: (*hexutil.Big)(PS),
 	}
 
-	providerAddr := tx.ProviderAddr()
+	providerAddr := tx.Provider()
 	if providerAddr != nil {
-		result.ProviderAddr = *providerAddr
+		result.Provider = *providerAddr
 	}
 
 	if blockHash != (common.Hash{}) {
