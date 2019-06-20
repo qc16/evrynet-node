@@ -21,8 +21,6 @@ import (
 	"math"
 	"math/big"
 
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
@@ -188,12 +186,6 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		return
 	}
 	msg := st.msg
-
-	providerAddr := msg.Provider()
-	if providerAddr != nil {
-		fmt.Println("providerAddr")
-		fmt.Println(providerAddr.String())
-	}
 
 	sender := vm.AccountRef(msg.From())
 	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
