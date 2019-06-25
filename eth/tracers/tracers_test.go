@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -177,7 +178,7 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	}
 	evm := vm.NewEVM(context, statedb, params.MainnetChainConfig, vm.Config{Debug: true, Tracer: tracer})
 
-	msg, err := tx.AsMessage(signer)
+	msg, err := tx.AsMessage(signer, big.NewInt(params.GAS_PRICE_CONFIG))
 	if err != nil {
 		t.Fatalf("failed to prepare transaction for tracing: %v", err)
 	}
@@ -251,7 +252,7 @@ func TestCallTracer(t *testing.T) {
 			}
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, vm.Config{Debug: true, Tracer: tracer})
 
-			msg, err := tx.AsMessage(signer)
+			msg, err := tx.AsMessage(signer, big.NewInt(params.GAS_PRICE_CONFIG))
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
 			}

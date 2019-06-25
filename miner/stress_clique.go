@@ -141,6 +141,7 @@ func makeGenesis(faucets []*ecdsa.PrivateKey, sealers []*ecdsa.PrivateKey) *core
 	genesis.GasLimit = 25000000
 
 	genesis.Config.ChainID = big.NewInt(18)
+	genesis.Config.GasPrice = big.NewInt(params.GAS_PRICE_CONFIG)
 	genesis.Config.Clique.Period = 1
 	genesis.Config.EIP150Hash = common.Hash{}
 
@@ -194,6 +195,7 @@ func makeSealer(genesis *core.Genesis) (*node.Node, error) {
 		return eth.New(ctx, &eth.Config{
 			Genesis:         genesis,
 			NetworkId:       genesis.Config.ChainID.Uint64(),
+			GasLimit: genesis.GasPrice,
 			SyncMode:        downloader.FullSync,
 			DatabaseCache:   256,
 			DatabaseHandles: 256,
@@ -202,7 +204,7 @@ func makeSealer(genesis *core.Genesis) (*node.Node, error) {
 			Miner: Config{
 				GasFloor: genesis.GasLimit * 9 / 10,
 				GasCeil:  genesis.GasLimit * 11 / 10,
-				GasPrice: big.NewInt(1),
+				GasPrice: genesis.GasPrice,
 				Recommit: time.Second,
 			},
 		})
