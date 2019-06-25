@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/cyberliem/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/stretchr/testify/assert"
 
