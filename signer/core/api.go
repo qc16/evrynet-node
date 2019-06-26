@@ -55,8 +55,8 @@ type ExternalAPI interface {
 	New(ctx context.Context) (common.Address, error)
 	// SignTransaction request to sign the specified transaction
 	SignTransaction(ctx context.Context, args SendTxArgs, methodSelector *string) (*ethapi.SignTransactionResult, error)
-	// SignTransaction request to sign the specified transaction
-	ProviderSignTransaction(ctx context.Context, args SendTxArgs, methodSelector *string) (*ethapi.SignTransactionResult, error)
+	// ProviderSignTransaction request to sign the specified transaction from provider
+	ProviderSignTransaction(ctx context.Context, args SendTxArgs, providerAddr common.Address, methodSelector *string) (*ethapi.SignTransactionResult, error)
 	// SignData - request to sign the given data (plus prefix)
 	SignData(ctx context.Context, contentType string, addr common.MixedcaseAddress, data interface{}) (hexutil.Bytes, error)
 	// SignTypedData - request to sign the given structured data (plus prefix)

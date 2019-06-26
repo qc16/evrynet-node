@@ -1318,6 +1318,19 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	return wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
 }
 
+// providerSign is a helper function that signs a transaction with the private key of the given address.
+func (s *PublicTransactionPoolAPI) providerSign(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	// Request the wallet to sign the transaction from provider
+	return wallet.ProviderSignTx(account, tx, s.b.ChainConfig().ChainID)
+}
+
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
 	From     common.Address  `json:"from"`
@@ -1540,7 +1553,7 @@ func (s *PublicTransactionPoolAPI) ProviderSignTransaction(ctx context.Context, 
 		return nil, err
 	}
 
-	tx, err := s.sign(providerAddr, args.toTransaction())
+	tx, err := s.providerSign(providerAddr, args.toTransaction())
 	if err != nil {
 		return nil, err
 	}
