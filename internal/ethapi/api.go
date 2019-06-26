@@ -374,9 +374,9 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 // providerSignTransaction sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
-func (s *PrivateAccountAPI) providerSignTransaction(ctx context.Context, args *SendTxArgs, passwd string) (*types.Transaction, error) {
+func (s *PrivateAccountAPI) providerSignTransaction(ctx context.Context, args *SendTxArgs, passwd string, providerAddr common.Address) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
+	account := accounts.Account{Address: providerAddr}
 	wallet, err := s.am.Find(account)
 	if err != nil {
 		return nil, err
@@ -413,7 +413,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
 // to other nodes
-func (s *PrivateAccountAPI) ProviderSignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
+func (s *PrivateAccountAPI) ProviderSignTransaction(ctx context.Context, args SendTxArgs, passwd string, providerAddr common.Address) (*SignTransactionResult, error) {
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
 	if args.Gas == nil {
@@ -426,7 +426,7 @@ func (s *PrivateAccountAPI) ProviderSignTransaction(ctx context.Context, args Se
 		return nil, fmt.Errorf("nonce not specified")
 	}
 	// provider will be signing transaction
-	signed, err := s.providerSignTransaction(ctx, &args, passwd)
+	signed, err := s.providerSignTransaction(ctx, &args, passwd, providerAddr)
 	if err != nil {
 		log.Warn("Failed transaction sign attempt", "from", args.From, "to", args.To, "value", args.Value.ToInt(), "err", err)
 		return nil, err
@@ -1061,10 +1061,10 @@ type RPCTransaction struct {
 	V                *hexutil.Big    `json:"v"`
 	R                *hexutil.Big    `json:"r"`
 	S                *hexutil.Big    `json:"s"`
-	
-	PV               *hexutil.Big    `json:"pv"`
-	PR               *hexutil.Big    `json:"pr"`
-	PS               *hexutil.Big    `json:"ps"`
+
+	PV *hexutil.Big `json:"pv"`
+	PR *hexutil.Big `json:"pr"`
+	PS *hexutil.Big `json:"ps"`
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1092,9 +1092,9 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
 
-		PV:        (*hexutil.Big)(PV),
-		PR:        (*hexutil.Big)(PR),
-		PS:        (*hexutil.Big)(PS),
+		PV: (*hexutil.Big)(PV),
+		PR: (*hexutil.Big)(PR),
+		PS: (*hexutil.Big)(PS),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
