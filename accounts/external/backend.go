@@ -202,6 +202,7 @@ func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transactio
 
 func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	res := ethapi.SignTransactionResult{}
+	from := common.NewMixedcaseAddress(*tx.Sender())
 	to := common.NewMixedcaseAddress(*tx.To())
 	data := hexutil.Bytes(tx.Data())
 	args := &core.SendTxArgs{
@@ -211,7 +212,7 @@ func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Tr
 		Gas:      hexutil.Uint64(tx.Gas()),
 		GasPrice: hexutil.Big(*tx.GasPrice()),
 		To:       &to,
-		From:     common.NewMixedcaseAddress(account.Address),
+		From:     from,
 	}
 
 	if err := api.client.Call(&res, "account_signTransaction", args); err != nil {
