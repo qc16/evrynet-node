@@ -136,7 +136,7 @@ func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction,
 	return w.keystore.SignTx(account, tx, chainID)
 }
 
-// SignTx implements accounts.Wallet, attempting to sign the given transaction
+// ProviderSignTx implements accounts.Wallet, attempting to sign the given transaction
 // with the given account. If the wallet does not wrap this particular account,
 // an error is returned to avoid account leakage (even though in theory we may
 // be able to sign via our shared keystore backend).
