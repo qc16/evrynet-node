@@ -477,6 +477,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'providerSignTransaction',
+			call: 'eth_providerSignTransaction',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'submitTransaction',
 			call: 'eth_submitTransaction',
 			params: 1,

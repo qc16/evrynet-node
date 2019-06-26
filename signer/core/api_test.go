@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/signer/core"
 	"github.com/ethereum/go-ethereum/signer/fourbyte"
@@ -322,4 +323,48 @@ func TestSignTx(t *testing.T) {
 		t.Error("Expected tx to be modified by UI")
 	}
 
+}
+
+func TestProviderSignTx(t *testing.T) {
+	var (
+		list []common.Address
+		res  *ethapi.SignTransactionResult
+		err  error
+	)
+
+	api, control := setup(t)
+	createAccount(control, api, t)
+	control.approveCh <- "A"
+	list, err = api.List(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := common.NewMixedcaseAddress(list[0])
+	methodSig := "test(uint)"
+	tx := mkTestTx(a)
+
+	log.Info("===============", tx.From.Address())
+	control.approveCh <- "Y"
+	control.inputCh <- "a_long_password"
+	res, err = api.SignTransaction(context.Background(), tx, &methodSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedTx := &types.Transaction{}
+	rlp.Decode(bytes.NewReader(res.Raw), parsedTx)
+
+	//The tx should NOT be modified by the UI
+	if parsedTx.Value().Cmp(tx.Value.ToInt()) != 0 {
+		t.Errorf("Expected value to be unchanged, expected %v got %v", tx.Value, parsedTx.Value())
+	}
+
+	control.approveCh <- "Y"
+	control.inputCh <- "a_long_password"
+	providerAddr := list[0]
+	res, err = api.ProviderSignTransaction(context.Background(), tx, providerAddr, &methodSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedTx = &types.Transaction{}
+	rlp.Decode(bytes.NewReader(res.Raw), parsedTx)
 }

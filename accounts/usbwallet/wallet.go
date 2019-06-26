@@ -579,6 +579,52 @@ func (w *wallet) SignTx(account accounts.Account, tx *types.Transaction, chainID
 	return signed, nil
 }
 
+// ProviderSignTx implements accounts.Wallet. It sends the transaction over to the Ledger
+// wallet to request a confirmation from the user. It returns either the signed
+// transaction or a failure if the user denied the transaction.
+//
+// Note, if the version of the Ethereum application running on the Ledger wallet is
+// too old to sign EIP-155 transactions, but such is requested nonetheless, an error
+// will be returned opposed to silently signing in Homestead mode.
+func (w *wallet) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	w.stateLock.RLock() // Comms have own mutex, this is for the state fields
+	defer w.stateLock.RUnlock()
+
+	// If the wallet is closed, abort
+	if w.device == nil {
+		return nil, accounts.ErrWalletClosed
+	}
+	// Make sure the requested account is contained within
+	path, ok := w.paths[account.Address]
+	if !ok {
+		return nil, accounts.ErrUnknownAccount
+	}
+	// All infos gathered and metadata checks out, request signing
+	<-w.commsLock
+	defer func() { w.commsLock <- struct{}{} }()
+
+	// Ensure the device isn't screwed with while user confirmation is pending
+	// TODO(karalabe): remove if hotplug lands on Windows
+	w.hub.commsLock.Lock()
+	w.hub.commsPend++
+	w.hub.commsLock.Unlock()
+
+	defer func() {
+		w.hub.commsLock.Lock()
+		w.hub.commsPend--
+		w.hub.commsLock.Unlock()
+	}()
+	// Sign the transaction and verify the sender to avoid hardware fault surprises
+	sender, signed, err := w.driver.SignTx(path, tx, chainID)
+	if err != nil {
+		return nil, err
+	}
+	if sender != account.Address {
+		// ignore because from is sender and account is provider
+	}
+	return signed, nil
+}
+
 // SignHashWithPassphrase implements accounts.Wallet, however signing arbitrary
 // data is not supported for Ledger wallets, so this method will always return
 // an error.
@@ -591,4 +637,11 @@ func (w *wallet) SignTextWithPassphrase(account accounts.Account, passphrase str
 // Since USB wallets don't rely on passphrases, these are silently ignored.
 func (w *wallet) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	return w.SignTx(account, tx, chainID)
+}
+
+// ProviderSignTxWithPassphrase implements accounts.Wallet, attempting to sign the given
+// transaction with the given account using passphrase as extra authentication.
+// Since USB wallets don't rely on passphrases, these are silently ignored.
+func (w *wallet) ProviderSignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	return w.ProviderSignTx(account, tx, chainID)
 }

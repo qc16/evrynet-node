@@ -200,6 +200,26 @@ func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transactio
 	return res.Tx, nil
 }
 
+func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	res := ethapi.SignTransactionResult{}
+	to := common.NewMixedcaseAddress(*tx.To())
+	data := hexutil.Bytes(tx.Data())
+	args := &core.SendTxArgs{
+		Data:     &data,
+		Nonce:    hexutil.Uint64(tx.Nonce()),
+		Value:    hexutil.Big(*tx.Value()),
+		Gas:      hexutil.Uint64(tx.Gas()),
+		GasPrice: hexutil.Big(*tx.GasPrice()),
+		To:       &to,
+		From:     common.NewMixedcaseAddress(account.Address),
+	}
+
+	if err := api.client.Call(&res, "account_signTransaction", args); err != nil {
+		return nil, err
+	}
+	return res.Tx, nil
+}
+
 func (api *ExternalSigner) SignTextWithPassphrase(account accounts.Account, passphrase string, text []byte) ([]byte, error) {
 	return []byte{}, fmt.Errorf("passphrase-operations not supported on external signers")
 }
@@ -207,6 +227,11 @@ func (api *ExternalSigner) SignTextWithPassphrase(account accounts.Account, pass
 func (api *ExternalSigner) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	return nil, fmt.Errorf("passphrase-operations not supported on external signers")
 }
+
+func (api *ExternalSigner) ProviderSignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	return nil, fmt.Errorf("passphrase-operations not supported on external signers")
+}
+
 func (api *ExternalSigner) SignDataWithPassphrase(account accounts.Account, passphrase, mimeType string, data []byte) ([]byte, error) {
 	return nil, fmt.Errorf("passphrase-operations not supported on external signers")
 }
