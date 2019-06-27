@@ -708,7 +708,7 @@ func (w *Wallet) SignTx(account accounts.Account, tx *types.Transaction, chainID
 	return tx.WithSignature(signer, sig)
 }
 
-// ProviderignTx requests the wallet to sign the given transaction.
+// ProviderSignTx requests the wallet to sign the given transaction.
 //
 // It looks up the account specified either solely via its address contained within,
 // or optionally with the aid of any location metadata from the embedded URL field.
