@@ -168,6 +168,26 @@ func (w *ledgerDriver) SignTx(path accounts.DerivationPath, tx *types.Transactio
 	return w.ledgerSign(path, tx, chainID)
 }
 
+// SignTx implements usbwallet.driver, sending the transaction to the Ledger and
+// waiting for the user to confirm or deny the transaction.
+//
+// Note, if the version of the Ethereum application running on the Ledger wallet is
+// too old to sign EIP-155 transactions, but such is requested nonetheless, an error
+// will be returned opposed to silently signing in Homestead mode.
+func (w *ledgerDriver) ProviderSignTx(path accounts.DerivationPath, tx *types.Transaction, chainID *big.Int) (common.Address, *types.Transaction, error) {
+	// If the Ethereum app doesn't run, abort
+	if w.offline() {
+		return common.Address{}, nil, accounts.ErrWalletClosed
+	}
+	// Ensure the wallet is capable of signing the given transaction
+	if chainID != nil && w.version[0] <= 1 && w.version[1] <= 0 && w.version[2] <= 2 {
+		return common.Address{}, nil, fmt.Errorf("Ledger v%d.%d.%d doesn't support signing this transaction, please update to v1.0.3 at least", w.version[0], w.version[1], w.version[2])
+	}
+	// All infos gathered and metadata checks out, request signing
+	//TODO: implement after
+	return w.ledgerSign(path, tx, chainID)
+}
+
 // ledgerVersion retrieves the current version of the Ethereum wallet app running
 // on the Ledger wallet.
 //

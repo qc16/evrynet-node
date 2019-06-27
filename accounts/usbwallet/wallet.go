@@ -67,6 +67,10 @@ type driver interface {
 	// SignTx sends the transaction to the USB device and waits for the user to confirm
 	// or deny the transaction.
 	SignTx(path accounts.DerivationPath, tx *types.Transaction, chainID *big.Int) (common.Address, *types.Transaction, error)
+
+	// ProviderSignTx sends the transaction to the USB device and waits for the user to confirm
+	// or deny the transaction.
+	ProviderSignTx(path accounts.DerivationPath, tx *types.Transaction, chainID *big.Int) (common.Address, *types.Transaction, error)
 }
 
 // wallet represents the common functionality shared by all USB hardware
@@ -614,13 +618,14 @@ func (w *wallet) ProviderSignTx(account accounts.Account, tx *types.Transaction,
 		w.hub.commsPend--
 		w.hub.commsLock.Unlock()
 	}()
-	// Sign the transaction and verify the sender to avoid hardware fault surprises
-	sender, signed, err := w.driver.SignTx(path, tx, chainID)
+	// Provider sign the transaction and verify the sender to avoid hardware fault surprises
+	sender, signed, err := w.driver.ProviderSignTx(path, tx, chainID)
 	if err != nil {
 		return nil, err
 	}
 	if sender != account.Address {
 		// ignore because from is sender and account is provider
+		//TODO: implement after
 	}
 	return signed, nil
 }
