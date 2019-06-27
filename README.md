@@ -118,6 +118,61 @@ supported by go-ethereum.
 $ geth --rinkeby console
 ```
 
+### Running a custom local node
+
+build geth at the root folder of go-ethereum by running the command:
+```shell
+$ make geth
+```
+
+the executable will be able to find at 
+```
+build/bin/geth
+```
+
+create data dir to store eth data 
+```
+make dir ~/testgeth
+```
+
+create a genesis block file with chainID and initial balance, for example ~/testgeth/genesis.json with chaind ID 15
+```json
+{
+ "config": {
+  "chainId": 15,
+  "homesteadBlock": 0,
+  "eip155Block": 0,
+  "eip158Block": 0
+ },
+ "nonce": "0x0000000000000042",
+ "timestamp": "0x0",
+ "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "gasLimit": "0x8000000",
+ "difficulty": "0x400",
+ "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "coinbase": "0x3333333333333333333333333333333333333333",
+ "alloc": {
+  "0xYouraccountSinceYouWillNeedItsPrivatekeyTOSendEtherOUt": {
+  "balance": "0x1337000000000000000000"},
+  "0xYouraccountSinceYouWillNeedItsPrivatekeyTOSendEtherOUt": {
+  "balance": "0x2337000000000000000000"}
+ }
+}
+
+```
+
+init the blockchain
+```shell 
+build/bin/geth --networkid 15 --datadir ~/testgeth/ init ~/testgeth/CustomGenesis.json
+```
+
+from now on, the node can be start with 
+```shell
+build/bin/geth --rpc --networkid 15 --datadir ~/testgeth/ console
+```
+
+to start mining, at the console, run ```miner.start(n)``` with n is the number of CPU alloc for mining
+ 
 ### Configuration
 
 As an alternative to passing the numerous flags to the `geth` binary, you can also pass a
@@ -342,3 +397,5 @@ also included in our repository in the `COPYING.LESSER` file.
 The go-ethereum binaries (i.e. all code inside of the `cmd` directory) is licensed under the
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also
 included in our repository in the `COPYING` file.
+
+## Running
