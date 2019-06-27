@@ -215,7 +215,8 @@ func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Tr
 		From:     from,
 	}
 
-	if err := api.client.Call(&res, "account_signTransaction", args); err != nil {
+	//TODO: implement account_providerSignTransaction function
+	if err := api.client.Call(&res, "account_providerSignTransaction", args); err != nil {
 		return nil, err
 	}
 	return res.Tx, nil
