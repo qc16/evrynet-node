@@ -427,7 +427,7 @@ Program design
 ------------------
 
 
-**1. Use struct literal initialization
+**1. Use struct literal initialization**
 
 ```
 Tip: Use struct literal initialization to avoid invalid intermediate state. Inline struct declarations where possible.
@@ -482,7 +482,7 @@ defer foo.close()
 ```
 
 
-**2. Avoid nil checks via default no-op implementations
+**2. Avoid nil checks via default no-op implementations**
 
 It’s much safer, and nicer, to be able to use output without having to check it for existence.
 
@@ -505,7 +505,7 @@ func (f *foo) process() {
 ```
 
 
-**3. Loggers are dependencies
+**3. Loggers are dependencies**
 
 ```
 Tip: Loggers are dependencies, just like references to other components, database handles, commandline flags, etc.
