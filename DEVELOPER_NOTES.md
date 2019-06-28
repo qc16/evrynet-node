@@ -8,7 +8,7 @@ This document notes is refered from [Code Review Comments](https://github.com/go
 **Table of Contents**
 
 - [Development Notes](#development-notes)
-    - [Development environment](#coding-style-general)
+    - [Development environment](#development-environment)
     - [Repository structure](#repository-structure)
     - [Formatting and style](#formatting-and-style)
     - [Program design](#program-design)
@@ -89,10 +89,10 @@ I just highlighted some notes here:
 **1. Imports**
 
 ```
-Tip: Standard library packages first, the other packages later.
+Tip: Use gofmt as formatting tool. Standard library packages first, the other packages later.
 ```
 
-Avoid renaming imports except to avoid a name collision; good package names should not require renaming. In the event of collision, prefer to rename the most local or project-specific import.
+Just use `gofmt` as formatting tool and our standard.
 
 Imports are organized in groups, with blank lines between them. The standard library packages are always in the first group.
 
@@ -114,6 +114,12 @@ import (
 ```
 
 **2. Package Names**
+
+```
+Tip: Just use `golint` to check naming conventions.
+```
+
+Install [golint](https://github.com/golang/lint) using `go get -u github.com/golang/lint/golint`
 
 The package name is the base name of its source directory; the package in `src/encoding/base64` is imported as `"encoding/base64"` but has name `base64`, not `encoding_base64` and not `encodingBase64`.
 
@@ -420,6 +426,9 @@ func (f *Foo) Location() (float64, float64, error)
 Program design
 ------------------
 
+
+**1. Use struct literal initialization
+
 ```
 Tip: Use struct literal initialization to avoid invalid intermediate state. Inline struct declarations where possible.
 ```
@@ -472,9 +481,8 @@ if err != nil {
 defer foo.close()
 ```
 
-```
-Tip: Avoid nil checks via default no-op implementations.
-```
+
+**2. Avoid nil checks via default no-op implementations
 
 It’s much safer, and nicer, to be able to use output without having to check it for existence.
 
@@ -495,6 +503,9 @@ func (f *foo) process() {
     // ...
 }
 ```
+
+
+**3. Loggers are dependencies
 
 ```
 Tip: Loggers are dependencies, just like references to other components, database handles, commandline flags, etc.
