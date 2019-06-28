@@ -89,10 +89,10 @@ I just highlighted some notes here:
 **1. Imports**
 
 ```
-Tip: Use gofmt as formatting tool. Standard library packages first, the other packages later.
+Tip: Use goimports as formatting tool. Standard library packages first, the other packages later.
 ```
 
-Just use `gofmt` as formatting tool and our standard.
+Just use [`goimports`](https://godoc.org/golang.org/x/tools/cmd/goimports) as formatting tool and our standard (`gofmt` is deprecated soon)
 
 Imports are organized in groups, with blank lines between them. The standard library packages are always in the first group.
 
