@@ -7,15 +7,41 @@ This document notes is refered from [Code Review Comments](https://github.com/go
 <!-- markdown-toc start -->
 **Table of Contents**
 
-- [Development Notes](#development-notes)
-    - [Development environment](#development-environment)
-    - [Repository structure](#repository-structure)
-    - [Formatting and style](#formatting-and-style)
-    - [Program design](#program-design)
-    - [Logging and instrumentation](#logging-and-instrumentation)
-    - [Testings](#testings)
-    - [Build and deploy](#build-and-deploy)
-- [References](#references)
+1. [Development Notes](#development-notes)
+2. [Development environment](#development-environment)
+3. [Repository structure](#repository-structure)
+4. [Formatting and style](#formatting-and-style)
+    - [Imports](#1-imports)
+    - [Package Names](#2-package-names)
+    - [Variable Names](#3-variable-names)
+    - [Declaring Empty Slices](#4-declaring-empty-slices)
+    - [Pass Values](#5-pass-values)
+    - [Receiver Names](#6-receiver-names)
+    - [Receiver Type](#7-receiver-type)
+    - [Synchronous Functions](#8-synchronous-functions)
+    - [Crypto Rand](#9-crypto-rand)
+    - [Comments](#10-comments)
+    - [Error Strings](#11-error-strings)
+    - [Useful Test Failures](#12-useful-test-failures)
+    - [Examples](#13-examples)
+    - [Handle Errors](#14-handle-errors)
+    - [In-Band Errors](#15-in-band-errors)
+    - [Indent Error Flow](#16-indent-error-flow)
+    - [Interfaces](#17-interfaces)
+    - [Line Length](#18-line_length)
+    - [Mixed Caps](#19-mixed-caps)
+    - [Named Result Parameters](#20-named-result-parameters)
+    - [Mocking](#21-mocking)
+
+5. [Program design](#program-design)
+    - [Use struct literal initialization](#1-use-struct-literal-initialization)
+    - [Avoid nil checks via default no-op implementations](#2-avoid-nil-checks-via-default-no-op-implementations)
+    - [Loggers are dependencies](#3-loggers-are-dependencies)
+
+6. [Logging and instrumentation](#logging-and-instrumentation)
+7. [Testings](#testings)
+8. [Build and deploy](#build-and-deploy)
+10. [References](#references)
 
 <!-- markdown-toc end -->
 
@@ -50,25 +76,25 @@ Tip: Put library code under a pkg/ subdirectory. Put binaries under a cmd/ subdi
 
 ```
 github.com/example/foo/
-    circle.yml
-    Dockerfile
-    cmd/
-        foosrv/
-        main.go
-        foocli/
-        main.go
-    pkg/
-        fs/
-        fs.go
-        fs_test.go
-        mock.go
-        mock_test.go
-        merge/
-        merge.go
-        merge_test.go
-        api/
-        api.go
-        api_test.go
+circle.yml
+Dockerfile
+cmd/
+foosrv/
+main.go
+foocli/
+main.go
+pkg/
+fs/
+fs.go
+fs_test.go
+mock.go
+mock_test.go
+merge/
+merge.go
+merge_test.go
+api/
+api.go
+api_test.go
 ```
 
 ```
@@ -87,6 +113,7 @@ I just highlighted some notes here:
 
 
 **1. Imports**
+--------
 
 ```
 Tip: Use goimports as formatting tool. Standard library packages first, the other packages later.
@@ -101,19 +128,21 @@ Example:
 package main
 
 import (
-        "fmt"
-        "hash/adler32"
-        "os"
+"fmt"
+"hash/adler32"
+"os"
 
-        "appengine/foo"
-        "appengine/user"
+"appengine/foo"
+"appengine/user"
 
-        "github.com/foo/bar"
-        "rsc.io/goversion/version"
-    )
+"github.com/foo/bar"
+"rsc.io/goversion/version"
+)
 ```
 
 **2. Package Names**
+--------
+
 
 ```
 Tip: Just use `golint` to check naming conventions.
@@ -126,6 +155,7 @@ The package name is the base name of its source directory; the package in `src/e
 Avoid meaningless package names like `util`, `common`, `misc`, `api`, `types`, and `interfaces`
 
 **3. Variable Names**
+--------
 
 ```
 Tip: Single letter for common variables, descriptive name for global variables.
@@ -136,6 +166,7 @@ Variable names in Go should be short rather than long. This is especially true f
 The basic rule: the further from its declaration that a name is used, the more descriptive the name must be. For a method receiver, one or two letters is sufficient. Common variables such as loop indices and readers can be a single letter (`i`, `r`). More unusual things and global variables need more descriptive names.
 
 **4. Declaring Empty Slices**
+--------
 
 When declaring empty slices, prefer:
 ```
@@ -149,10 +180,17 @@ t := []string{}
 The former one is a nil slice value, while the latter is non-nil but zero-length.
 
 **5. Pass Values**
+--------
 
-Don't pass pointers as function arguments just to save a few bytes. If a function refers to its argument `x` only as `*x` throughout, then the argument shouldn't be a pointer. Common instances of this include passing a pointer to a string (`*string`) or a pointer to an interface value (`*io.Reader`). In both cases the value itself is a fixed size and can be passed directly. This advice does not apply to large structs, or even small structs that might grow.
+Consider to pass params by value when:
+- Fixed size
+- Memory insignificant (string/ numerical/ interfaces)
+- Doesn't need to refer to its allocation, only its values
+
+Otherwise use pointer.
 
 **6. Receiver Names**
+--------
 
 ```
 Tip: Name should be short but need to be consistent.
@@ -161,23 +199,27 @@ Tip: Name should be short but need to be consistent.
 The name of a method's receiver should be a reflection of its identity; often a one or two letter abbreviation of its type suffices (such as "c" or "cl" for "Client"). Don't use generic names such as "me", "this" or "self", identifiers typical of object-oriented languages that gives the method a special meaning. In Go, the receiver of a method is just another parameter and therefore, should be named accordingly. The name need not be as descriptive as that of a method argument, as its role is obvious and serves no documentary purpose. It can be very short as it will appear on almost every line of every method of the type; familiarity admits brevity. Be consistent, too: if you call the receiver "c" in one method, don't call it "cl" in another.
 
 **7. Receiver Type**
+--------
 
 ```
 Tip: When in doubt, use a pointer receiver.
 ```
 
-Choosing whether to use a value or pointer receiver on methods can be difficult. If in doubt, use a pointer, but there are times when a value receiver makes sense, usually for reasons of efficiency, such as for small unchanging structs or values of basic type. Some useful guidelines:
+Pointer receiver:
 
-- If the receiver is a map, func or chan, don't use a pointer to them. If the receiver is a slice and the method doesn't reslice or reallocate the slice, don't use a pointer to it.
-- If the method needs to mutate the receiver, the receiver must be a pointer.
-- If the receiver is a struct that contains a sync.Mutex or similar synchronizing field, the receiver must be a pointer to avoid copying.
-- If the receiver is a large struct or array, a pointer receiver is more efficient. How large is large? Assume it's equivalent to passing all its elements as arguments to the method. If that feels too large, it's also too large for the receiver.
-- Can function or methods, either concurrently or when called from this method, be mutating the receiver? A value type creates a copy of the receiver when the method is invoked, so outside updates will not be applied to this receiver. If changes must be visible in the original receiver, the receiver must be a pointer.
-- If the receiver is a struct, array or slice and any of its elements is a pointer to something that might be mutating, prefer a pointer receiver, as it will make the intention more clear to the reader.
-- If the receiver is a small array or struct that is naturally a value type (for instance, something like the time.Time type), with no mutable fields and no pointers, or is just a simple basic type such as int or string, a value receiver makes sense. A value receiver can reduce the amount of garbage that can be generated; if a value is passed to a value method, an on-stack copy can be used instead of allocating on the heap. (The compiler tries to be smart about avoiding this allocation, but it can't always succeed.) Don't choose a value receiver type for this reason without profiling first.
-- Finally, when in doubt, use a pointer receiver.
+- Shared objects (might be modified/ accessed in different go routines)
+- Mutable objects or object with mutable fields.
+- Large struct/ large slice.
+- When in doubt, use pointer
+
+
+Normal receiver:
+
+- Chan, Map, Func.
+- Anything that is small & non-mutable.
 
 **8. Synchronous Functions**
+--------
 
 ```
 Tip: Prefer synchronous functin over asynchronous ones.
@@ -191,10 +233,12 @@ If callers need more concurrency, they can add it easily by calling the function
 
 
 **9. Crypto Rand**
+--------
 
 Use `crypto/rand` instead of `math/rand` to generate keys as the second one is unseeded, the generator is completely predictable.
 
 **10. Comments**
+--------
 
 ```
 Tip: Comments should be in full sentences.
@@ -242,7 +286,8 @@ See [here](https://golang.org/doc/effective_go.html#commentary) for more informa
 
 
 **11. Error Strings**
-    
+--------
+
 Error strings should not be capitalized (unless beginning with proper nouns or acronyms) or end with punctuation, since they are usually printed following other context. That is, use ```fmt.Errorf("something bad")``` not ```fmt.Errorf("Something bad")```, so that ```log.Printf("Reading %s: %v", filename, err)``` formats without a spurious capital letter mid-message. This does not apply to logging, which is implicitly line-oriented and not combined inside other messages.
 
 **12. Useful Test Failures**
@@ -251,7 +296,7 @@ Tests should fail with helpful messages saying what was wrong, with what inputs,
 
 ```
 if got != tt.want {
-	t.Errorf("Foo(%q) = %d; want %d", tt.in, got, tt.want) // or Fatalf, if test can't test anything more past this point
+t.Errorf("Foo(%q) = %d; want %d", tt.in, got, tt.want) // or Fatalf, if test can't test anything more past this point
 }
 ```
 
@@ -264,6 +309,7 @@ func TestNoValues(t *testing.T)    { testHelper(t, []int{}) }
 
 
 **13. Examples**
+--------
 
 When adding a new package, include examples of intended usage: a runnable Example, or a simple test demonstrating a complete call sequence.
 
@@ -271,11 +317,13 @@ Read more [here](https://blog.golang.org/examples)
 
 
 **14. Handle Errors**
+--------
 
 Do not discard error using `_` variables. If a function returns an error, check it to make sure the function succeeded. Handle the error, return it, or, in truly exceptional situations, panic.
 
 
 **15. In-Band Errors**
+--------
 
 Go's support for multiple return values provides a better solution. Instead of requiring clients to check for an in-band error value, a function should return an additional value to indicate whether its other return values are valid. This return value may be an error, or a boolean when no explanation is needed. It should be the final return value.
 
@@ -288,39 +336,40 @@ Encourages more robust and readable code
 ```
 value, ok := Lookup(key)
 if !ok  {
-    return fmt.Errorf("no value for %q", key)
+return fmt.Errorf("no value for %q", key)
 }
 return Parse(value)
 ```
 
 
 **16. Indent Error Flow**
+--------
 
 Try to keep the normal code path at a minimal indentation, and indent the error handling, dealing with it first. This improves the readability of the code by permitting visually scanning the normal path quickly. For instance, don't write:
 
 ```
 if err != nil {
-    // error handling
+// error handling
 } else {
-    // normal code
+// normal code
 }
 ```
 
 Write this instead
 ```
 if err != nil {
-    // error handling
-    return // or continue, etc.
+// error handling
+return // or continue, etc.
 }
 // normal code
 ```
 If the `if` statement has an initialization statement, such as:
 ```
 if x, err := f(); err != nil {
-    // error handling
-    return
+// error handling
+return
 } else {
-    // use x
+// use x
 }
 ```
 then this may require moving the short variable declaration to its own line:
@@ -328,39 +377,19 @@ then this may require moving the short variable declaration to its own line:
 ```
 x, err := f()
 if err != nil {
-    // error handling
-    return
+// error handling
+return
 }
 // use x
 ```
 
 
 **17. Interfaces**
+--------
 
-
-Go interfaces generally belong in the package that uses values of the interface type, not the package that implements those values. The implementing package should return concrete (usually pointer or struct) types: that way, new methods can be added to implementations without requiring extensive refactoring.
-
-Do not define interfaces on the implementor side of an API "for mocking"; instead, design the API so that it can be tested using the public API of the real implementation.
-
-Do not define interfaces before they are used: without a realistic example of usage, it is too difficult to see whether an interface is even necessary, let alone what methods it ought to contain.
+As our last discussion, we agree with this option for defining intefaces.
 
 ```
-package consumer  // consumer.go
-
-type Thinger interface { Thing() bool }
-
-func Foo(t Thinger) string { … }
-```
-```
-package consumer // consumer_test.go
-
-type fakeThinger struct{ … }
-func (t fakeThinger) Thing() bool { … }
-…
-if Foo(fakeThinger{…}) == "x" { … }
-```
-```
-// DO NOT DO IT!!!
 package producer
 
 type Thinger interface { Thing() bool }
@@ -370,19 +399,10 @@ func (t defaultThinger) Thing() bool { … }
 
 func NewThinger() Thinger { return defaultThinger{ … } }
 ```
-Instead return a concrete type and let the consumer mock the producer implementation.
-
-```
-package producer
-
-type Thinger struct{ … }
-func (t Thinger) Thing() bool { … }
-
-func NewThinger() Thinger { return Thinger{ … } }
-```
 
 
 **18. Line Length**
+--------
 
 Avoid uncomfortably long lines but don't add line breaks to keep lines short when they are more readable long.
 Long lines seem to go with long names, try to get rid of the long names instead.
@@ -390,11 +410,13 @@ Also try to avoid a long function even though we don't have any advices of how l
 
 
 **19. Mixed Caps**
+--------
 
 This convention is different conventions for other languages. For example an unexported constant is `maxLength` not `MaxLength` or `MAX_LENGTH`.
 
 
 **20. Named Result Parameters**
+--------
 
 Good:
 ```
@@ -422,12 +444,17 @@ Bad:
 func (f *Foo) Location() (float64, float64, error)
 ```
 
+**21. Mocking**
+--------
+
+Using `gomock` for mocking
 
 Program design
 ------------------
 
 
 **1. Use struct literal initialization**
+--------
 
 ```
 Tip: Use struct literal initialization to avoid invalid intermediate state. Inline struct declarations where possible.
@@ -444,7 +471,7 @@ cfg.Output = nil
 
 foo, err := newFoo(*fooKey, cfg)
 if err != nil {
-    log.Fatal(err)
+log.Fatal(err)
 }
 defer foo.close()
 ```
@@ -454,14 +481,14 @@ It’s considerably nicer to leverage so-called struct initialization syntax to 
 ```
 // This is better.
 cfg := fooConfig{
-    Bar:    bar,
-    Period: 100 * time.Millisecond,
-    Output: nil,
+Bar:    bar,
+Period: 100 * time.Millisecond,
+Output: nil,
 }
 
 foo, err := newFoo(*fooKey, cfg)
 if err != nil {
-    log.Fatal(err)
+log.Fatal(err)
 }
 defer foo.close()
 ```
@@ -471,41 +498,43 @@ As we construct and immediately use `cgf` object, we can put it inside `newFoo` 
 ```
 // This is even better.
 foo, err := newFoo(*fooKey, fooConfig{
-    Bar:    bar,
-    Period: 100 * time.Millisecond,
-    Output: nil,
+Bar:    bar,
+Period: 100 * time.Millisecond,
+Output: nil,
 })
 if err != nil {
-    log.Fatal(err)
+log.Fatal(err)
 }
 defer foo.close()
 ```
 
 
 **2. Avoid nil checks via default no-op implementations**
+--------
 
 It’s much safer, and nicer, to be able to use output without having to check it for existence.
 
 Good:
 ```
 func (f *foo) process() {
-     fmt.Fprintf(f.Output, "start\n")
-     // ...
+fmt.Fprintf(f.Output, "start\n")
+// ...
 }
 ```
 
 Bad:
 ```
 func (f *foo) process() {
-    if f.Output != nil {
-        fmt.Fprintf(f.Output, "start\n")
-    }
-    // ...
+if f.Output != nil {
+fmt.Fprintf(f.Output, "start\n")
+}
+// ...
 }
 ```
 
 
 **3. Loggers are dependencies**
+--------
 
 ```
 Tip: Loggers are dependencies, just like references to other components, database handles, commandline flags, etc.
@@ -513,10 +542,10 @@ Tip: Loggers are dependencies, just like references to other components, databas
 
 ```
 func (f *foo) process() {
-    fmt.Fprintf(f.Output, "start\n")
-    result := f.Bar.compute()
-    log.Printf("bar: %v", result) // Whoops!
-    // ...
+fmt.Fprintf(f.Output, "start\n")
+result := f.Bar.compute()
+log.Printf("bar: %v", result) // Whoops!
+// ...
 }
 ```
 
@@ -530,10 +559,10 @@ What do we do with dependencies? **We make them explicit**. Because the process 
 
 ```
 func (f *foo) process() {
-    fmt.Fprintf(f.Output, "start\n")
-    result := f.Bar.compute()
-    f.Logger.Printf("bar: %v", result) // Better.
-    // ...
+fmt.Fprintf(f.Output, "start\n")
+result := f.Bar.compute()
+f.Logger.Printf("bar: %v", result) // Better.
+// ...
 }
 ```
 
@@ -559,8 +588,8 @@ Let’s use loggers and metrics to pivot and address global state more directly.
 Example:
 ```
 func foo() {
-    resp, err := http.Get("http://zombo.com")
-    // ...
+resp, err := http.Get("http://zombo.com")
+// ...
 }
 ```
 
@@ -568,8 +597,8 @@ func foo() {
 
 ```
 func foo(client *http.Client) {
-    resp, err := client.Get("http://zombo.com")
-    // ...
+resp, err := client.Get("http://zombo.com")
+// ...
 }
 ```
 
@@ -577,13 +606,13 @@ Just pass an `http.Client` as a parameter. But that is a concrete type, which me
 
 ```
 type Doer interface {
-    Do(*http.Request) (*http.Response, error)
+Do(*http.Request) (*http.Response, error)
 }
 
 func foo(d Doer) {
-    req, _ := http.NewRequest("GET", "http://zombo.com", nil)
-    resp, err := d.Do(req)
-    // ...
+req, _ := http.NewRequest("GET", "http://zombo.com", nil)
+resp, err := d.Do(req)
+// ...
 }
 ```
 
