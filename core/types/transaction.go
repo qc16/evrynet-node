@@ -196,8 +196,12 @@ func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit u
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
 
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, providerAddr ...*common.Address) *Transaction {
+	tx := newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
+	if len(providerAddr) > 0 {
+		tx.data.Provider = providerAddr[0]
+	}
+	return tx
 }
 
 func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
