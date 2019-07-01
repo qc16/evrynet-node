@@ -644,12 +644,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			} else {
 				provider, err := types.Provider(pool.signer, tx)
 				if err != nil || provider != *expectedProvider {
-					log.Info("invadli provider address", "expected", expectedProvider.String(), "got", provider.String(), "error", err)
+					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", provider.String(), "error", err)
 					return ErrInvalidProvider
 				}
 			}
 		} else {
-			log.Info("desitnation is a normal address, skip provider signature check")
+			log.Info("destination is a normal address, skip provider signature check")
 		}
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
