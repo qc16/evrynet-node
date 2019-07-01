@@ -619,14 +619,15 @@ func (w *wallet) ProviderSignTx(account accounts.Account, tx *types.Transaction,
 		w.hub.commsLock.Unlock()
 	}()
 	// Provider sign the transaction and verify the sender to avoid hardware fault surprises
-	sender, signed, err := w.driver.ProviderSignTx(path, tx, chainID)
+	signer, signed, err := w.driver.ProviderSignTx(path, tx, chainID)
 	if err != nil {
 		return nil, err
 	}
-	if sender != account.Address {
-		// ignore because from is sender and account is provider
-		//TODO: implement after
+
+	if signer != account.Address {
+		return nil, fmt.Errorf("signer mismatch: expected %s, got %s", account.Address.Hex(), signer.Hex())
 	}
+
 	return signed, nil
 }
 

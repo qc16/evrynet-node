@@ -191,7 +191,8 @@ func (w *trezorDriver) ProviderSignTx(path accounts.DerivationPath, tx *types.Tr
 	if w.device == nil {
 		return common.Address{}, nil, accounts.ErrWalletClosed
 	}
-	//TODO: implement after
+
+	//TODO: implement after ticket id #3956
 	return w.trezorSign(path, tx, chainID)
 }
 

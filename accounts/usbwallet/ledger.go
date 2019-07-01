@@ -184,7 +184,7 @@ func (w *ledgerDriver) ProviderSignTx(path accounts.DerivationPath, tx *types.Tr
 		return common.Address{}, nil, fmt.Errorf("Ledger v%d.%d.%d doesn't support signing this transaction, please update to v1.0.3 at least", w.version[0], w.version[1], w.version[2])
 	}
 	// All infos gathered and metadata checks out, request signing
-	//TODO: implement after
+	//TODO: implement after ticket id #3955
 	return w.ledgerSign(path, tx, chainID)
 }
 

@@ -200,6 +200,7 @@ func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transactio
 	return res.Tx, nil
 }
 
+// ProviderSignTx request to sign the specified transaction from provider
 func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	res := ethapi.SignTransactionResult{}
 	from := common.NewMixedcaseAddress(*tx.Sender())
@@ -216,6 +217,7 @@ func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Tr
 	}
 
 	//TODO: implement account_providerSignTransaction function
+	// redmine ticket #3951
 	if err := api.client.Call(&res, "account_providerSignTransaction", args); err != nil {
 		return nil, err
 	}
