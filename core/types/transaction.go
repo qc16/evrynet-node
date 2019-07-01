@@ -258,7 +258,7 @@ func (tx *Transaction) Sender() *common.Address {
 	if tx.data.Payload == nil {
 		return nil
 	}
-	//TODO implement
+	//TODO implement ticket id #3957
 	return nil
 }
 
