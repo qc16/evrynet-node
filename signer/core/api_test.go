@@ -344,19 +344,6 @@ func TestProviderSignTx(t *testing.T) {
 	tx := mkTestTx(a)
 
 	log.Info("===============", tx.From.Address())
-	control.approveCh <- "Y"
-	control.inputCh <- "a_long_password"
-	res, err = api.SignTransaction(context.Background(), tx, &methodSig)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parsedTx := &types.Transaction{}
-	rlp.Decode(bytes.NewReader(res.Raw), parsedTx)
-
-	//The tx should NOT be modified by the UI
-	if parsedTx.Value().Cmp(tx.Value.ToInt()) != 0 {
-		t.Errorf("Expected value to be unchanged, expected %v got %v", tx.Value, parsedTx.Value())
-	}
 
 	control.approveCh <- "Y"
 	control.inputCh <- "a_long_password"
@@ -365,6 +352,6 @@ func TestProviderSignTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parsedTx = &types.Transaction{}
+	parsedTx := &types.Transaction{}
 	rlp.Decode(bytes.NewReader(res.Raw), parsedTx)
 }
