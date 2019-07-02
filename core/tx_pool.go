@@ -635,7 +635,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Make sure the transaction is signed properly
 	from, err := types.Sender(pool.signer, tx)
-	fmt.Printf("from is %s", from.String())
 	if err != nil {
 		return ErrInvalidSender
 	}
@@ -648,6 +647,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Make sure the transaction is signed with provider if the destination is an address
 	// Only check if tx is not a contract creation code
 	// TODO: remove the log in prodution
+	var providerAddr common.Address
 	if tx.To() != nil {
 		to := tx.To()
 		contractHash := pool.currentState.GetCodeHash(*to)
@@ -662,6 +662,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", provider.String(), "error", err)
 					return ErrInvalidProvider
 				}
+				providerAddr = provider
 			}
 		} else {
 			log.Info("destination is a normal address, skip provider signature check")
@@ -678,8 +679,17 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		return ErrInsufficientFunds
+	if (providerAddr != common.Address{}) {
+		// If there is provider in the tx, check for provider's balance instead
+
+		if pool.currentState.GetBalance(providerAddr).Cmp(tx.Cost()) < 0 {
+			return ErrInsufficientFunds
+		}
+	} else {
+		// check for sender's balance instead
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+			return ErrInsufficientFunds
+		}
 	}
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
 	if err != nil {
