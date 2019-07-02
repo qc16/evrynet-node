@@ -296,6 +296,7 @@ func (ks *KeyStore) ProviderSignTx(a accounts.Account, tx *types.Transaction, ch
 	if !found {
 		return nil, ErrLocked
 	}
+
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
 		return types.ProviderSignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)

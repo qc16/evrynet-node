@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/signer/core"
 )
@@ -202,23 +203,12 @@ func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transactio
 
 // ProviderSignTx request to sign the specified transaction from provider
 func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
-	res := ethapi.SignTransactionResult{}
-	from := common.NewMixedcaseAddress(*tx.Sender())
-	to := common.NewMixedcaseAddress(*tx.To())
-	data := hexutil.Bytes(tx.Data())
-	args := &core.SendTxArgs{
-		Data:     &data,
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		Value:    hexutil.Big(*tx.Value()),
-		Gas:      hexutil.Uint64(tx.Gas()),
-		GasPrice: hexutil.Big(*tx.GasPrice()),
-		To:       &to,
-		From:     from,
+	data, err := rlp.EncodeToBytes(tx)
+	if err != nil {
+		return nil, err
 	}
-
-	//TODO: implement account_providerSignTransaction function
-	// redmine ticket #3951
-	if err := api.client.Call(&res, "account_providerSignTransaction", args); err != nil {
+	res := ethapi.SignTransactionResult{}
+	if err := api.client.Call(&res, "account_providerSignTransaction", common.ToHex(data), account.Address.Hex()); err != nil {
 		return nil, err
 	}
 	return res.Tx, nil

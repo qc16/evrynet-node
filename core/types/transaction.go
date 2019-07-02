@@ -252,16 +252,6 @@ func (tx *Transaction) To() *common.Address {
 	return &to
 }
 
-// Sender returns the sender address of the transaction.
-// It returns nil if the transaction is a contract creation.
-func (tx *Transaction) Sender() *common.Address {
-	if tx.data.Payload == nil {
-		return nil
-	}
-	//TODO implement ticket id #3957
-	return nil
-}
-
 // Hash hashes the RLP encoding of tx.
 // It uniquely identifies the transaction.
 func (tx *Transaction) Hash() common.Hash {

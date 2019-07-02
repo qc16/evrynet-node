@@ -327,9 +327,9 @@ func TestSignTx(t *testing.T) {
 
 func TestProviderSignTx(t *testing.T) {
 	var (
-		list []common.Address
-		res  *ethapi.SignTransactionResult
-		err  error
+		list      []common.Address
+		res, res2 *ethapi.SignTransactionResult
+		err       error
 	)
 
 	api, control := setup(t)
@@ -344,14 +344,34 @@ func TestProviderSignTx(t *testing.T) {
 	tx := mkTestTx(a)
 
 	log.Info("===============", tx.From.Address())
-
 	control.approveCh <- "Y"
 	control.inputCh <- "a_long_password"
-	providerAddr := list[0]
-	res, err = api.ProviderSignTransaction(context.Background(), tx, providerAddr, &methodSig)
+
+	res, err = api.SignTransaction(context.Background(), tx, &methodSig)
 	if err != nil {
 		t.Fatal(err)
 	}
 	parsedTx := &types.Transaction{}
 	rlp.Decode(bytes.NewReader(res.Raw), parsedTx)
+	v, r, s := parsedTx.RawSignatureValues()
+
+	control.approveCh <- "Y"
+	control.inputCh <- "a_long_password"
+	providerAddr := list[0]
+	res2, err = api.ProviderSignTransaction(context.Background(), parsedTx, providerAddr, &methodSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedTx2 := &types.Transaction{}
+	rlp.Decode(bytes.NewReader(res2.Raw), parsedTx2)
+
+	v2, r2, s2 := parsedTx2.RawSignatureValues()
+	if v.Int64() != v2.Int64() || r.Int64() != r2.Int64() || s.Int64() != s2.Int64() {
+		t.Errorf("Expected v,r,s to be unchanged")
+	}
+
+	pv, pr, ps := parsedTx2.RawProviderSignatureValues()
+	if pv == nil || pr == nil || ps == nil {
+		t.Errorf("Expected pv,pr,ps not null")
+	}
 }

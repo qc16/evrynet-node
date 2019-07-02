@@ -374,20 +374,13 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 // providerSignTransaction sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
-func (s *PrivateAccountAPI) providerSignTransaction(ctx context.Context, args *SendTxArgs, passwd string, providerAddr common.Address) (*types.Transaction, error) {
+func (s *PrivateAccountAPI) providerSignTransaction(ctx context.Context, tx *types.Transaction, passwd string, providerAddr common.Address) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: providerAddr}
 	wallet, err := s.am.Find(account)
 	if err != nil {
 		return nil, err
 	}
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return nil, err
-	}
-	// Assemble the transaction and sign with the wallet
-	tx := args.toTransaction()
-
 	return wallet.ProviderSignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
@@ -413,22 +406,10 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
 // to other nodes
-func (s *PrivateAccountAPI) ProviderSignTransaction(ctx context.Context, args SendTxArgs, passwd string, providerAddr common.Address) (*SignTransactionResult, error) {
-	// No need to obtain the noncelock mutex, since we won't be sending this
-	// tx into the transaction pool, but right back to the user
-	if args.Gas == nil {
-		return nil, fmt.Errorf("gas not specified")
-	}
-	if args.GasPrice == nil {
-		return nil, fmt.Errorf("gasPrice not specified")
-	}
-	if args.Nonce == nil {
-		return nil, fmt.Errorf("nonce not specified")
-	}
+func (s *PrivateAccountAPI) ProviderSignTransaction(ctx context.Context, tx *types.Transaction, passwd string, providerAddr common.Address) (*SignTransactionResult, error) {
 	// provider will be signing transaction
-	signed, err := s.providerSignTransaction(ctx, &args, passwd, providerAddr)
+	signed, err := s.providerSignTransaction(ctx, tx, passwd, providerAddr)
 	if err != nil {
-		log.Warn("Failed transaction sign attempt", "from", args.From, "to", args.To, "value", args.Value.ToInt(), "err", err)
 		return nil, err
 	}
 	data, err := rlp.EncodeToBytes(signed)
@@ -459,11 +440,12 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 		log.Warn("Failed transaction sign attempt", "from", args.From, "to", args.To, "value", args.Value.ToInt(), "err", err)
 		return nil, err
 	}
+
 	data, err := rlp.EncodeToBytes(signed)
 	if err != nil {
 		return nil, err
 	}
-	return &SignTransactionResult{data, signed}, nil
+	return &SignTransactionResult{Raw: data, Tx: signed}, nil
 }
 
 // Sign calculates an Ethereum ECDSA signature for:
@@ -1539,29 +1521,16 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 // ProviderSignTransaction will sign the given transaction with the from account.
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
-func (s *PublicTransactionPoolAPI) ProviderSignTransaction(ctx context.Context, args SendTxArgs, providerAddr common.Address) (*SignTransactionResult, error) {
-	if args.Gas == nil {
-		return nil, fmt.Errorf("gas not specified")
-	}
-	if args.GasPrice == nil {
-		return nil, fmt.Errorf("gasPrice not specified")
-	}
-	if args.Nonce == nil {
-		return nil, fmt.Errorf("nonce not specified")
-	}
-	if err := args.setDefaults(ctx, s.b); err != nil {
+func (s *PublicTransactionPoolAPI) ProviderSignTransaction(ctx context.Context, encodedTx hexutil.Bytes, providerAddr common.Address) (*RPCTransaction, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return nil, err
 	}
-
-	tx, err := s.providerSign(providerAddr, args.toTransaction())
+	txSigned, err := s.providerSign(providerAddr, tx)
 	if err != nil {
 		return nil, err
 	}
-	data, err := rlp.EncodeToBytes(tx)
-	if err != nil {
-		return nil, err
-	}
-	return &SignTransactionResult{data, tx}, nil
+	return newRPCPendingTransaction(txSigned), nil
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool

@@ -79,3 +79,46 @@ func TestSendWithProviderSignature(t *testing.T) {
 	err = ethClient.SendTransaction(context.Background(), transaction)
 	assert.NoError(t, err)
 }
+
+func TestProviderSignTransaction(t *testing.T) {
+	const (
+		providerPK      = "87668A123F9FF917F43B9F9168BB6A30F897AA30955144C3A74FEA6AC6898BBC"
+		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
+		senderAddrStr   = "0xe9aABE2Ab51B068682e49126b0C58A725251932f"
+		providerAddrStr = "0x9687f49b7b87bc83a5127bdba0cc2d078b00ec5a"
+
+		testBal1     = 1000000 //1e6
+		testBal2     = 2000000 //2e6
+		testGasLimit = 1500000
+	)
+	spk, err := crypto.HexToECDSA(senderPK)
+	assert.NoError(t, err)
+	senderAddr := common.HexToAddress(senderAddrStr)
+	providerAddr := common.HexToAddress(providerAddrStr)
+	ethClient, err := ethclient.Dial("http://localhost:8545")
+	assert.NoError(t, err)
+	id, err := ethClient.ChainID(context.Background())
+	signer := types.NewEIP155Signer(id)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
+	assert.NoError(t, err)
+	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
+	assert.NoError(t, err)
+
+	tx := types.NewTransaction(nonce, providerAddr, big.NewInt(1000000), testGasLimit, gasPrice, nil)
+	txSigned, err := types.SignTx(tx, signer, spk)
+	assert.NoError(t, err)
+	v, r, s := txSigned.RawSignatureValues()
+
+	pTxSigned, err := ethClient.ProviderSignTx(context.Background(), txSigned, &providerAddr)
+	assert.NoError(t, err)
+	assert.NotEqual(t, nil, pTxSigned)
+
+	v2, r2, s2 := pTxSigned.RawSignatureValues()
+	pv, pr, ps := pTxSigned.RawProviderSignatureValues()
+	assert.Equal(t, v, v2)
+	assert.Equal(t, r, r2)
+	assert.Equal(t, s, s2)
+	assert.NotEqual(t, nil, pv)
+	assert.NotEqual(t, nil, pr)
+	assert.NotEqual(t, nil, ps)
+}

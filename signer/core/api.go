@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/usbwallet"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -56,7 +57,7 @@ type ExternalAPI interface {
 	// SignTransaction request to sign the specified transaction
 	SignTransaction(ctx context.Context, args SendTxArgs, methodSelector *string) (*ethapi.SignTransactionResult, error)
 	// ProviderSignTransaction request to sign the specified transaction from provider
-	ProviderSignTransaction(ctx context.Context, args SendTxArgs, providerAddr common.Address, methodSelector *string) (*ethapi.SignTransactionResult, error)
+	ProviderSignTransaction(ctx context.Context, tx *types.Transaction, providerAddr common.Address, methodSelector *string) (*ethapi.SignTransactionResult, error)
 	// SignData - request to sign the given data (plus prefix)
 	SignData(ctx context.Context, contentType string, addr common.MixedcaseAddress, data interface{}) (hexutil.Bytes, error)
 	// SignTypedData - request to sign the given structured data (plus prefix)
@@ -563,37 +564,9 @@ func (api *SignerAPI) SignTransaction(ctx context.Context, args SendTxArgs, meth
 }
 
 // ProviderSignTransaction signs the given Transaction and returns it both as json and rlp-encoded form
-func (api *SignerAPI) ProviderSignTransaction(ctx context.Context, args SendTxArgs, providerAddr common.Address, methodSelector *string) (*ethapi.SignTransactionResult, error) {
+func (api *SignerAPI) ProviderSignTransaction(ctx context.Context, tx *types.Transaction, providerAddr common.Address, methodSelector *string) (*ethapi.SignTransactionResult, error) {
 	var (
 		err    error
-		result SignTxResponse
-	)
-	msgs, err := api.validator.ValidateTransaction(methodSelector, &args)
-	if err != nil {
-		return nil, err
-	}
-	// If we are in 'rejectMode', then reject rather than show the user warnings
-	if api.rejectMode {
-		if err := msgs.getWarnings(); err != nil {
-			return nil, err
-		}
-	}
-	req := SignTxRequest{
-		Transaction: args,
-		Meta:        MetadataFromContext(ctx),
-		Callinfo:    msgs.Messages,
-	}
-	// Process approval
-	result, err = api.UI.ApproveTx(&req)
-	if err != nil {
-		return nil, err
-	}
-	if !result.Approved {
-		return nil, ErrRequestDenied
-	}
-	// Log changes made by the UI to the signing-request
-	logDiff(&req, &result)
-	var (
 		acc    accounts.Account
 		wallet accounts.Wallet
 	)
@@ -602,8 +575,6 @@ func (api *SignerAPI) ProviderSignTransaction(ctx context.Context, args SendTxAr
 	if err != nil {
 		return nil, err
 	}
-	// Convert fields into a real transaction
-	var unsignedTx = result.Transaction.toTransaction()
 	// Get the password for the transaction
 	pw, err := api.lookupOrQueryPassword(acc.Address, "Provider account password",
 		fmt.Sprintf("Please enter the password for provider account %s", acc.Address.String()))
@@ -611,7 +582,7 @@ func (api *SignerAPI) ProviderSignTransaction(ctx context.Context, args SendTxAr
 		return nil, err
 	}
 	// The one to sign is the one that was returned from the UI
-	signedTx, err := wallet.ProviderSignTxWithPassphrase(acc, pw, unsignedTx, api.chainID)
+	signedTx, err := wallet.ProviderSignTxWithPassphrase(acc, pw, tx, api.chainID)
 	if err != nil {
 		api.UI.ShowError(err.Error())
 		return nil, err
