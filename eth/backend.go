@@ -128,19 +128,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-	log.Info("Initialised chain configuration", "config", chainConfig)
-
-	//rewrite gas price
-	if chainConfig.GasPrice != nil {
-		config.GasPrice = chainConfig.GasPrice
-		config.GPO.GasPrice = chainConfig.GasPrice
-		config.Miner.GasPrice = chainConfig.GasPrice
-	}else{
-		chainConfig.GasPrice = config.GasPrice
-		config.GPO.GasPrice = config.GasPrice
-		config.Miner.GasPrice = config.GasPrice
-	}
+	log.Info("Initialised chain configuration", "config", chainConfig)	
 	
+	//rewrite gas price
+	chainConfig.GasPrice = config.GasPrice
+	config.GPO.GasPrice = config.GasPrice
+	config.Miner.GasPrice = config.GasPrice
 
 	eth := &Ethereum{
 		config:         config,
