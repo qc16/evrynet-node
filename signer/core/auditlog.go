@@ -18,9 +18,11 @@ package core
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -56,6 +58,26 @@ func (l *AuditLogger) SignTransaction(ctx context.Context, args SendTxArgs, meth
 		l.log.Info("SignTransaction", "type", "response", "data", common.Bytes2Hex(res.Raw), "error", e)
 	} else {
 		l.log.Info("SignTransaction", "type", "response", "data", res, "error", e)
+	}
+	return res, e
+}
+
+// ProviderSignTransaction auditLogger function
+func (l *AuditLogger) ProviderSignTransaction(ctx context.Context, tx *types.Transaction, providerAddr common.Address, methodSelector *string) (*ethapi.SignTransactionResult, error) {
+	sel := "<nil>"
+	if methodSelector != nil {
+		sel = *methodSelector
+	}
+	l.log.Info("ProviderSignTransaction", "type", "request", "metadata", MetadataFromContext(ctx).String(),
+		"tx", hex.EncodeToString(tx.Data()),
+		"providerAddr", providerAddr.Hex(),
+		"methodSelector", sel)
+
+	res, e := l.api.ProviderSignTransaction(ctx, tx, providerAddr, methodSelector)
+	if res != nil {
+		l.log.Info("ProviderSignTransaction", "type", "response", "data", common.Bytes2Hex(res.Raw), "error", e)
+	} else {
+		l.log.Info("ProviderSignTransaction", "type", "response", "data", res, "error", e)
 	}
 	return res, e
 }
