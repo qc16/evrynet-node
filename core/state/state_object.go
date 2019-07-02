@@ -114,7 +114,7 @@ type AccountWithoutProvider struct {
 }
 
 // ToAccount convert an AccountWithoutProvider to Account
-func (a AccountWithoutProvider) ToAccount() Account {
+func (a *AccountWithoutProvider) ToAccount() Account {
 	return Account{
 		Nonce:           a.Nonce,
 		Balance:         a.Balance,

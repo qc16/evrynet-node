@@ -222,10 +222,10 @@ func (self *StateDB) Empty(addr common.Address) bool {
 // GetProvider if
 func (self *StateDB) GetProvider(addr common.Address) *common.Address {
 	so := self.getStateObject(addr)
-	if so == nil {
-		return nil
+	if so != nil {
+		return so.ProviderAddress()
 	}
-	return so.ProviderAddress()
+	return nil
 }
 
 // Retrieve the balance from the given address or 0 if object not found
