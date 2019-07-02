@@ -303,7 +303,18 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 
 	var err error
 	msg.from, err = Sender(s, tx)
-	return msg, err
+	if err != nil {
+		return msg, err
+	}
+	provider, err := Provider(s, tx)
+	if err != nil {
+		//Sender will be gasPayer
+		msg.gasPayer = msg.from
+	} else {
+		msg.gasPayer = provider
+	}
+
+	return msg, nil
 }
 
 // WithProviderSignature returns a new transaction with the given provider signature.
@@ -489,6 +500,7 @@ type Message struct {
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
+	gasPayer   common.Address
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
@@ -504,6 +516,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 	}
 }
 
+func (m Message) GasPayer() common.Address  { return m.gasPayer }
 func (m Message) From() common.Address      { return m.from }
 func (m Message) To() *common.Address       { return m.to }
 func (m Message) Provider() *common.Address { return m.provider }
