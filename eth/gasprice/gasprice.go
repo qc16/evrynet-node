@@ -78,6 +78,8 @@ func NewOracle(backend ethapi.Backend, params Config) *Oracle {
 
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
+	gpo.cacheLock.RLock()
+	defer gpo.cacheLock.RUnlock()
 	return gpo.gasPrice, nil
 }
 

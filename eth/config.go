@@ -44,7 +44,7 @@ var DefaultConfig = Config{
 		DatasetsOnDisk: 2,
 	},
 	NetworkId:      1,
-	GasPrice: big.NewInt(params.GAS_PRICE_CONFIG),
+	GasPrice: big.NewInt(params.GasPriceConfig),
 	LightPeers:     100,
 	DatabaseCache:  512,
 	TrieCleanCache: 256,
@@ -53,14 +53,14 @@ var DefaultConfig = Config{
 	Miner: miner.Config{
 		GasFloor: 8000000,
 		GasCeil:  8000000,
-		GasPrice: big.NewInt(params.GAS_PRICE_CONFIG),
+		GasPrice: big.NewInt(params.GasPriceConfig),
 		Recommit: 3 * time.Second,
 	},
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
 		Blocks:     20,
 		Percentile: 60,
-		GasPrice: big.NewInt(params.GAS_PRICE_CONFIG),
+		GasPrice: big.NewInt(params.GasPriceConfig),
 	},
 }
 

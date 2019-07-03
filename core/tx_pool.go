@@ -719,10 +719,10 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		pendingDiscardMeter.Mark(1)
 		return false, ErrTxPoolFull
 	}
-	// If the transaction is replacing an already pending one, do directly
+	// If the transaction has the same nonce with a pending transaction, discard it
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
-		// replace tx if old tx has the same nonce
+		// discard new tx, which has the same nonce with old tx
 		pendingDiscardMeter.Mark(1)
 		return false, ErrSameNonce
 	}
