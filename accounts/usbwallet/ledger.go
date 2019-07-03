@@ -185,7 +185,7 @@ func (w *ledgerDriver) ProviderSignTx(path accounts.DerivationPath, tx *types.Tr
 	}
 	// All infos gathered and metadata checks out, request signing
 	//TODO: implement after ticket id #3955
-	return w.ledgerSign(path, tx, chainID)
+	return w.ledgerProviderSign(path, tx, chainID)
 }
 
 // ledgerVersion retrieves the current version of the Ethereum wallet app running
@@ -383,6 +383,44 @@ func (w *ledgerDriver) ledgerSign(derivationPath []uint32, tx *types.Transaction
 		return common.Address{}, nil, err
 	}
 	return sender, signed, nil
+}
+
+// ledgerProviderSign sends the transaction to the Ledger wallet, and waits for the user
+// to confirm or deny the transaction.
+//
+// The transaction signing protocol is defined as follows:
+//
+//   CLA | INS | P1 | P2 | Lc  | Le
+//   ----+-----+----+----+-----+---
+//    E0 | 04  | 00: first transaction data block
+//               80: subsequent transaction data block
+//                  | 00 | variable | variable
+//
+// Where the input for the first transaction block (first 255 bytes) is:
+//
+//   Description                                      | Length
+//   -------------------------------------------------+----------
+//   Number of BIP 32 derivations to perform (max 10) | 1 byte
+//   First derivation index (big endian)              | 4 bytes
+//   ...                                              | 4 bytes
+//   Last derivation index (big endian)               | 4 bytes
+//   RLP transaction chunk                            | arbitrary
+//
+// And the input for subsequent transaction blocks (first 255 bytes) are:
+//
+//   Description           | Length
+//   ----------------------+----------
+//   RLP transaction chunk | arbitrary
+//
+// And the output data is:
+//
+//   Description | Length
+//   ------------+---------
+//   signature V | 1 byte
+//   signature R | 32 bytes
+//   signature S | 32 bytes
+func (w *ledgerDriver) ledgerProviderSign(derivationPath []uint32, tx *types.Transaction, chainID *big.Int) (common.Address, *types.Transaction, error) {
+	return common.Address{}, nil, fmt.Errorf("ledgerProviderSign method not implemented")
 }
 
 // ledgerExchange performs a data exchange with the Ledger wallet, sending it a

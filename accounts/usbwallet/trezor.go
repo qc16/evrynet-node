@@ -191,9 +191,8 @@ func (w *trezorDriver) ProviderSignTx(path accounts.DerivationPath, tx *types.Tr
 	if w.device == nil {
 		return common.Address{}, nil, accounts.ErrWalletClosed
 	}
-
 	//TODO: implement after ticket id #3956
-	return w.trezorSign(path, tx, chainID)
+	return w.trezorProviderSign(path, tx, chainID)
 }
 
 // trezorDerive sends a derivation request to the Trezor device and returns the
@@ -279,6 +278,12 @@ func (w *trezorDriver) trezorSign(derivationPath []uint32, tx *types.Transaction
 		return common.Address{}, nil, err
 	}
 	return sender, signed, nil
+}
+
+// trezorProviderSign sends the transaction to the Trezor wallet, and waits for the user
+// to confirm or deny the transaction.
+func (w *trezorDriver) trezorProviderSign(derivationPath []uint32, tx *types.Transaction, chainID *big.Int) (common.Address, *types.Transaction, error) {
+	return common.Address{}, nil, fmt.Errorf("trezorProviderSign method not implemented")
 }
 
 // trezorExchange performs a data exchange with the Trezor wallet, sending it a
