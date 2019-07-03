@@ -1043,10 +1043,9 @@ type RPCTransaction struct {
 	V                *hexutil.Big    `json:"v"`
 	R                *hexutil.Big    `json:"r"`
 	S                *hexutil.Big    `json:"s"`
-
-	PV *hexutil.Big `json:"pv"`
-	PR *hexutil.Big `json:"pr"`
-	PS *hexutil.Big `json:"ps"`
+	PV               *hexutil.Big    `json:"pv"`
+	PR               *hexutil.Big    `json:"pr"`
+	PS               *hexutil.Big    `json:"ps"`
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
