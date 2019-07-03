@@ -1073,10 +1073,9 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		V:        (*hexutil.Big)(v),
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
-
-		PV: (*hexutil.Big)(PV),
-		PR: (*hexutil.Big)(PR),
-		PS: (*hexutil.Big)(PS),
+		PV:       (*hexutil.Big)(PV),
+		PR:       (*hexutil.Big)(PR),
+		PS:       (*hexutil.Big)(PS),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
