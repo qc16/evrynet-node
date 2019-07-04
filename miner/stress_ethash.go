@@ -173,7 +173,6 @@ func makeMiner(genesis *core.Genesis) (*node.Node, error) {
 		return eth.New(ctx, &eth.Config{
 			Genesis:         genesis,
 			NetworkId:       genesis.Config.ChainID.Uint64(),
-			GasPrice:        genesis.Config.GasPrice,
 			SyncMode:        downloader.FullSync,
 			DatabaseCache:   256,
 			DatabaseHandles: 256,
@@ -183,7 +182,7 @@ func makeMiner(genesis *core.Genesis) (*node.Node, error) {
 			Miner: Config{
 				GasFloor: genesis.GasLimit * 9 / 10,
 				GasCeil:  genesis.GasLimit * 11 / 10,
-				GasPrice: genesis.Config.GasPrice,
+				GasPrice: big.NewInt(1),
 				Recommit: time.Second,
 			},
 		})

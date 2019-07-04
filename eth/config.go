@@ -44,7 +44,6 @@ var DefaultConfig = Config{
 		DatasetsOnDisk: 2,
 	},
 	NetworkId:      1,
-	GasPrice: big.NewInt(params.GasPriceConfig),
 	LightPeers:     100,
 	DatabaseCache:  512,
 	TrieCleanCache: 256,
@@ -53,14 +52,13 @@ var DefaultConfig = Config{
 	Miner: miner.Config{
 		GasFloor: 8000000,
 		GasCeil:  8000000,
-		GasPrice: big.NewInt(params.GasPriceConfig),
+		GasPrice: big.NewInt(params.GWei),
 		Recommit: 3 * time.Second,
 	},
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
 		Blocks:     20,
 		Percentile: 60,
-		GasPrice: big.NewInt(params.GasPriceConfig),
 	},
 }
 
@@ -95,7 +93,6 @@ type Config struct {
 	// Protocol options
 	NetworkId uint64 // Network ID to use for selecting peers to connect to
 	SyncMode  downloader.SyncMode
-	GasPrice *big.Int
 
 	NoPruning  bool // Whether to disable pruning and flush everything to disk
 	NoPrefetch bool // Whether to disable prefetching and only load state on demand
