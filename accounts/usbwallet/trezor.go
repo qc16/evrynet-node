@@ -185,6 +185,16 @@ func (w *trezorDriver) SignTx(path accounts.DerivationPath, tx *types.Transactio
 	return w.trezorSign(path, tx, chainID)
 }
 
+// ProviderSignTx implements usbwallet.driver, sending the transaction to the Trezor and
+// waiting for the user to confirm or deny the transaction.
+func (w *trezorDriver) ProviderSignTx(path accounts.DerivationPath, tx *types.Transaction, chainID *big.Int) (common.Address, *types.Transaction, error) {
+	if w.device == nil {
+		return common.Address{}, nil, accounts.ErrWalletClosed
+	}
+	//TODO: implement after ticket id #3956
+	return w.trezorProviderSign(path, tx, chainID)
+}
+
 // trezorDerive sends a derivation request to the Trezor device and returns the
 // Ethereum address located on that path.
 func (w *trezorDriver) trezorDerive(derivationPath []uint32) (common.Address, error) {
@@ -268,6 +278,12 @@ func (w *trezorDriver) trezorSign(derivationPath []uint32, tx *types.Transaction
 		return common.Address{}, nil, err
 	}
 	return sender, signed, nil
+}
+
+// trezorProviderSign sends the transaction to the Trezor wallet, and waits for the user
+// to confirm or deny the transaction.
+func (w *trezorDriver) trezorProviderSign(derivationPath []uint32, tx *types.Transaction, chainID *big.Int) (common.Address, *types.Transaction, error) {
+	return common.Address{}, nil, fmt.Errorf("trezorProviderSign method not implemented")
 }
 
 // trezorExchange performs a data exchange with the Trezor wallet, sending it a

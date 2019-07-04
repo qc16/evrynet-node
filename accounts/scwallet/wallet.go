@@ -708,6 +708,27 @@ func (w *Wallet) SignTx(account accounts.Account, tx *types.Transaction, chainID
 	return tx.WithSignature(signer, sig)
 }
 
+// ProviderSignTx requests the wallet to sign the given transaction.
+//
+// It looks up the account specified either solely via its address contained within,
+// or optionally with the aid of any location metadata from the embedded URL field.
+//
+// If the wallet requires additional authentication to sign the request (e.g.
+// a password to decrypt the account, or a PIN code o verify the transaction),
+// an AuthNeededError instance will be returned, containing infos for the user
+// about which fields or actions are needed. The user may retry by providing
+// the needed details via ProviderSignTxWithPassphrase, or by other means (e.g. unlock
+// the account in a keystore).
+func (w *Wallet) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	signer := types.NewEIP155Signer(chainID)
+	hash := signer.Hash(tx)
+	sig, err := w.signHash(account, hash[:])
+	if err != nil {
+		return nil, err
+	}
+	return tx.WithProviderSignature(signer, sig)
+}
+
 // SignDataWithPassphrase requests the wallet to sign the given hash with the
 // given passphrase as extra authentication information.
 //
@@ -760,6 +781,20 @@ func (w *Wallet) SignTxWithPassphrase(account accounts.Account, passphrase strin
 		}
 	}
 	return w.SignTx(account, tx, chainID)
+}
+
+// ProviderSignTxWithPassphrase requests the wallet to sign the given transaction, with the
+// given passphrase as extra authentication information.
+//
+// It looks up the account specified either solely via its address contained within,
+// or optionally with the aid of any location metadata from the embedded URL field.
+func (w *Wallet) ProviderSignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	if !w.session.verified {
+		if err := w.Open(passphrase); err != nil {
+			return nil, err
+		}
+	}
+	return w.ProviderSignTx(account, tx, chainID)
 }
 
 // findAccountPath returns the derivation path for the provided account.

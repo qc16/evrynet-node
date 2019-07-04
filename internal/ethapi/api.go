@@ -371,6 +371,19 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
+// providerSignTransaction sets defaults and signs the given transaction
+// NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
+// and release it after the transaction has been submitted to the tx pool
+func (s *PrivateAccountAPI) providerSignTransaction(ctx context.Context, tx *types.Transaction, passwd string, providerAddr common.Address) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: providerAddr}
+	wallet, err := s.am.Find(account)
+	if err != nil {
+		return nil, err
+	}
+	return wallet.ProviderSignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
+}
+
 // SendTransaction will create a transaction from the given arguments and
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails.
@@ -387,6 +400,23 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 		return common.Hash{}, err
 	}
 	return SubmitTransaction(ctx, s.b, signed)
+}
+
+// ProviderSignTransaction will create a transaction from the given arguments and
+// tries to sign it with the key associated with args.To. If the given passwd isn't
+// able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
+// to other nodes
+func (s *PrivateAccountAPI) ProviderSignTransaction(ctx context.Context, tx *types.Transaction, passwd string, providerAddr common.Address) (*SignTransactionResult, error) {
+	// provider will be signing transaction
+	signed, err := s.providerSignTransaction(ctx, tx, passwd, providerAddr)
+	if err != nil {
+		return nil, err
+	}
+	data, err := rlp.EncodeToBytes(signed)
+	if err != nil {
+		return nil, err
+	}
+	return &SignTransactionResult{data, signed}, nil
 }
 
 // SignTransaction will create a transaction from the given arguments and
@@ -410,11 +440,12 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 		log.Warn("Failed transaction sign attempt", "from", args.From, "to", args.To, "value", args.Value.ToInt(), "err", err)
 		return nil, err
 	}
+
 	data, err := rlp.EncodeToBytes(signed)
 	if err != nil {
 		return nil, err
 	}
-	return &SignTransactionResult{data, signed}, nil
+	return &SignTransactionResult{Raw: data, Tx: signed}, nil
 }
 
 // Sign calculates an Ethereum ECDSA signature for:
@@ -1012,7 +1043,6 @@ type RPCTransaction struct {
 	V                *hexutil.Big    `json:"v"`
 	R                *hexutil.Big    `json:"r"`
 	S                *hexutil.Big    `json:"s"`
-	
 	PV               *hexutil.Big    `json:"pv"`
 	PR               *hexutil.Big    `json:"pr"`
 	PS               *hexutil.Big    `json:"ps"`
@@ -1042,10 +1072,9 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		V:        (*hexutil.Big)(v),
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
-
-		PV:        (*hexutil.Big)(PV),
-		PR:        (*hexutil.Big)(PR),
-		PS:        (*hexutil.Big)(PS),
+		PV:       (*hexutil.Big)(PV),
+		PR:       (*hexutil.Big)(PR),
+		PS:       (*hexutil.Big)(PS),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
@@ -1269,6 +1298,19 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	return wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
 }
 
+// providerSign is a helper function that signs a transaction with the private key of the given address.
+func (s *PublicTransactionPoolAPI) providerSign(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	// Request the wallet to sign the transaction from provider
+	return wallet.ProviderSignTx(account, tx, s.b.ChainConfig().ChainID)
+}
+
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
 	From     common.Address  `json:"from"`
@@ -1472,6 +1514,21 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 		return nil, err
 	}
 	return &SignTransactionResult{data, tx}, nil
+}
+
+// ProviderSignTransaction will sign the given transaction with the from account.
+// The node needs to have the private key of the account corresponding with
+// the given from address and it needs to be unlocked.
+func (s *PublicTransactionPoolAPI) ProviderSignTransaction(ctx context.Context, encodedTx hexutil.Bytes, providerAddr common.Address) (*RPCTransaction, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return nil, err
+	}
+	txSigned, err := s.providerSign(providerAddr, tx)
+	if err != nil {
+		return nil, err
+	}
+	return newRPCPendingTransaction(txSigned), nil
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool

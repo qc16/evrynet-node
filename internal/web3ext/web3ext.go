@@ -477,6 +477,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'providerSignTransaction',
+			call: 'eth_providerSignTransaction',
+			params: 2,
+    		inputFormatter: [null, web3._extend.formatters.inputAddressFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'submitTransaction',
 			call: 'eth_submitTransaction',
 			params: 1,
@@ -756,6 +762,12 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'selfDrops',
 			getter: 'account_selfDrops'
+		}),
+		new web3._extend.Method({
+			name: 'providerSignTransaction',
+			call: 'account_providerSignTransaction',
+			params: 2,
+			inputFormatter: [null, web3._extend.utils.toHex]
 		}),
 	]
 });

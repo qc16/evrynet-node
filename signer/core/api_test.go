@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/signer/core"
 	"github.com/ethereum/go-ethereum/signer/fourbyte"
@@ -322,4 +323,55 @@ func TestSignTx(t *testing.T) {
 		t.Error("Expected tx to be modified by UI")
 	}
 
+}
+
+func TestProviderSignTx(t *testing.T) {
+	var (
+		list      []common.Address
+		res, res2 *ethapi.SignTransactionResult
+		err       error
+	)
+
+	api, control := setup(t)
+	createAccount(control, api, t)
+	control.approveCh <- "A"
+	list, err = api.List(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := common.NewMixedcaseAddress(list[0])
+	methodSig := "test(uint)"
+	tx := mkTestTx(a)
+
+	log.Info("===============", tx.From.Address())
+	control.approveCh <- "Y"
+	control.inputCh <- "a_long_password"
+
+	res, err = api.SignTransaction(context.Background(), tx, &methodSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedTx := &types.Transaction{}
+	rlp.Decode(bytes.NewReader(res.Raw), parsedTx)
+	v, r, s := parsedTx.RawSignatureValues()
+
+	control.approveCh <- "Y"
+	control.inputCh <- "a_long_password"
+	providerAddr := list[0]
+	res2, err = api.ProviderSignTransaction(context.Background(), parsedTx, providerAddr, &methodSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedTx2 := &types.Transaction{}
+	rlp.Decode(bytes.NewReader(res2.Raw), parsedTx2)
+
+	v2, r2, s2 := parsedTx2.RawSignatureValues()
+	if v.Int64() != v2.Int64() || r.Int64() != r2.Int64() || s.Int64() != s2.Int64() {
+		t.Errorf("Expected v,r,s to be unchanged")
+	}
+
+	pv, pr, ps := parsedTx2.RawProviderSignatureValues()
+	if pv == nil || pr == nil || ps == nil {
+		t.Errorf("Expected pv,pr,ps not null")
+	}
 }

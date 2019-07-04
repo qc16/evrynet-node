@@ -517,6 +517,27 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
 }
 
+// ProviderSignTx allows request from provider to sign transaction.
+// Please note that the provider account must be unlocked prior to run this function
+func (ec *Client) ProviderSignTx(ctx context.Context, tx *types.Transaction, providerAddr *common.Address) (*types.Transaction, error) {
+	if providerAddr == nil {
+		return nil, errors.New("Provider address is required")
+	}
+	data, err := rlp.EncodeToBytes(tx)
+	if err != nil {
+		return nil, err
+	}
+	var json *rpcTransaction
+	err = ec.c.CallContext(ctx, &json, "eth_providerSignTransaction", common.ToHex(data), providerAddr.Hex())
+	if err != nil {
+		return nil, err
+	}
+	if json == nil {
+		return nil, ethereum.NotFound
+	}
+	return json.tx, nil
+}
+
 func toCallArg(msg ethereum.CallMsg) interface{} {
 	arg := map[string]interface{}{
 		"from": msg.From,
