@@ -81,6 +81,15 @@ var (
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
 	emptyCodeHash    = crypto.Keccak256Hash(nil)
+
+	// ErrOversizedData is returned if new tx has the same nonce with an old one
+	ErrSameNonce = errors.New("Transaction same nonce")
+
+	// ErrTxPoolFull is returned tx pool is full
+	ErrTxPoolFull = errors.New("Tx pool is full")
+
+	//ErrInvalidGasPrice is returned if tx gasPrice is different from gasPrice of network
+	ErrInvalidGasPrice = errors.New("Tx gasPrice is different from gasPrice of network")
 )
 
 var (
@@ -630,6 +639,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return ErrInvalidSender
 	}
+
+	//Vlidate gasPrice of tx must be as the same as gasPrice of chainConfig
+	if tx.GasPrice().Cmp(pool.chainconfig.GasPrice) != 0 {
+		return ErrInvalidGasPrice
+	}
+
 	// Make sure the transaction is signed with provider if the destination is an address
 	// Only check if tx is not a contract creation code
 	// TODO: remove the log in prodution
@@ -699,45 +714,17 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	}
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(pool.all.Count()) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
-		// If the new transaction is underpriced, don't accept it
-		if !local && pool.priced.Underpriced(tx, pool.locals) {
-			log.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
-			underpricedTxMeter.Mark(1)
-			return false, ErrUnderpriced
-		}
-		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(pool.all.Count()-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1), pool.locals)
-		for _, tx := range drop {
-			log.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
-			underpricedTxMeter.Mark(1)
-			pool.removeTx(tx.Hash(), false)
-		}
+		//discard new transaction when transaction pool is full
+		log.Trace("Discarding new transaction because transaction pool is full", "hash", hash, "price", tx.GasPrice())
+		pendingDiscardMeter.Mark(1)
+		return false, ErrTxPoolFull
 	}
-	// If the transaction is replacing an already pending one, do directly
+	// If the transaction has the same nonce with a pending transaction, discard it
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
-		// Nonce already pending, check if required price bump is met
-		inserted, old := list.Add(tx, pool.config.PriceBump)
-		if !inserted {
-			pendingDiscardMeter.Mark(1)
-			return false, ErrReplaceUnderpriced
-		}
-		// New transaction is better, replace old one
-		if old != nil {
-			pool.all.Remove(old.Hash())
-			pool.priced.Removed(1)
-			pendingReplaceMeter.Mark(1)
-		}
-		pool.all.Add(tx)
-		pool.priced.Put(tx)
-		pool.journalTx(from, tx)
-
-		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
-
-		// We've directly injected a replacement transaction, notify subsystems
-		go pool.txFeed.Send(NewTxsEvent{types.Transactions{tx}})
-
-		return old != nil, nil
+		// discard new tx, which has the same nonce with old tx
+		pendingDiscardMeter.Mark(1)
+		return false, ErrSameNonce
 	}
 	// New transaction isn't replacing a pending one, push into queue
 	replace, err := pool.enqueueTx(hash, tx)

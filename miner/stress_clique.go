@@ -117,7 +117,7 @@ func main() {
 			panic(err)
 		}
 		// Create a self transaction and inject into the pool
-		tx, err := types.SignTx(types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int), 21000, big.NewInt(100000000000), nil), types.HomesteadSigner{}, faucets[index])
+		tx, err := types.SignTx(types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int), 21000, big.NewInt(params.GasPriceConfig), nil), types.HomesteadSigner{}, faucets[index])
 		if err != nil {
 			panic(err)
 		}
@@ -141,6 +141,7 @@ func makeGenesis(faucets []*ecdsa.PrivateKey, sealers []*ecdsa.PrivateKey) *core
 	genesis.GasLimit = 25000000
 
 	genesis.Config.ChainID = big.NewInt(18)
+	genesis.Config.GasPrice = big.NewInt(params.GasPriceConfig)
 	genesis.Config.Clique.Period = 1
 	genesis.Config.EIP150Hash = common.Hash{}
 
@@ -194,6 +195,7 @@ func makeSealer(genesis *core.Genesis) (*node.Node, error) {
 		return eth.New(ctx, &eth.Config{
 			Genesis:         genesis,
 			NetworkId:       genesis.Config.ChainID.Uint64(),
+			GasLimit: 		 genesis.GasLimit,
 			SyncMode:        downloader.FullSync,
 			DatabaseCache:   256,
 			DatabaseHandles: 256,
@@ -202,7 +204,7 @@ func makeSealer(genesis *core.Genesis) (*node.Node, error) {
 			Miner: Config{
 				GasFloor: genesis.GasLimit * 9 / 10,
 				GasCeil:  genesis.GasLimit * 11 / 10,
-				GasPrice: big.NewInt(1),
+				GasPrice: genesis.Config.GasPrice,
 				Recommit: time.Second,
 			},
 		})
