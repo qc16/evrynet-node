@@ -480,7 +480,7 @@ web3._extend({
 			name: 'providerSignTransaction',
 			call: 'eth_providerSignTransaction',
 			params: 2,
-			inputFormatter: [null, web3._extend.utils.toHex]
+    		inputFormatter: [null, web3._extend.formatters.inputAddressFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'submitTransaction',

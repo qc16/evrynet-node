@@ -518,6 +518,7 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 }
 
 // ProviderSignTx allows request from provider to sign transaction.
+// Please note that the provider account must be unlocked prior to run this function
 func (ec *Client) ProviderSignTx(ctx context.Context, tx *types.Transaction, providerAddr *common.Address) (*types.Transaction, error) {
 	if providerAddr == nil {
 		return nil, errors.New("Provider address is required")
