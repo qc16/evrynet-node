@@ -98,10 +98,30 @@ func (s *stateObject) empty() bool {
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
+	Nonce           uint64
+	Balance         *big.Int
+	Root            common.Hash // merkle root of the storage trie
+	CodeHash        []byte
+	ProviderAddress *common.Address `rlp:"nil"`
+}
+
+// AccountWithoutProvider represent an account without provider
+type AccountWithoutProvider struct {
 	Nonce    uint64
 	Balance  *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
+}
+
+// ToAccount convert an AccountWithoutProvider to Account
+func (a *AccountWithoutProvider) ToAccount() Account {
+	return Account{
+		Nonce:           a.Nonce,
+		Balance:         a.Balance,
+		Root:            a.Root,
+		CodeHash:        a.CodeHash,
+		ProviderAddress: nil,
+	}
 }
 
 // newObject creates a state object.
@@ -400,4 +420,8 @@ func (s *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (s *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+func (s *stateObject) ProviderAddress() *common.Address {
+	return s.data.ProviderAddress
 }

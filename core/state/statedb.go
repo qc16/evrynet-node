@@ -219,6 +219,15 @@ func (self *StateDB) Empty(addr common.Address) bool {
 	return so == nil || so.empty()
 }
 
+// GetProvider if
+func (self *StateDB) GetProvider(addr common.Address) *common.Address {
+	so := self.getStateObject(addr)
+	if so != nil {
+		return so.ProviderAddress()
+	}
+	return nil
+}
+
 // Retrieve the balance from the given address or 0 if object not found
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.getStateObject(addr)
@@ -461,8 +470,13 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 	}
 	var data Account
 	if err := rlp.DecodeBytes(enc, &data); err != nil {
-		log.Error("Failed to decode state object", "addr", addr, "err", err)
-		return nil
+		log.Debug("Failed to decode state object, fall back to AccountWithoutProvider", "addr", addr, "err", err)
+		var dataWithoutProvider AccountWithoutProvider
+		if retryErr := rlp.DecodeBytes(enc, &dataWithoutProvider); retryErr != nil {
+			log.Error("Failed to decode state object without provider", "addr", addr, "err", retryErr)
+			return nil
+		}
+		data = dataWithoutProvider.ToAccount()
 	}
 	// Insert into the live set
 	obj := newObject(s, addr, data)
@@ -478,16 +492,18 @@ func (self *StateDB) setStateObject(object *stateObject) {
 func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil || stateObject.deleted {
-		stateObject, _ = self.createObject(addr)
+		stateObject, _ = self.createObject(addr, nil)
 	}
 	return stateObject
 }
 
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
-func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) {
+func (self *StateDB) createObject(addr common.Address, providerAddress *common.Address) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	newobj = newObject(self, addr, Account{})
+	newobj = newObject(self, addr, Account{
+		ProviderAddress: providerAddress,
+	})
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
@@ -508,8 +524,8 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 //   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
-func (self *StateDB) CreateAccount(addr common.Address) {
-	newObj, prev := self.createObject(addr)
+func (self *StateDB) CreateAccount(addr common.Address, providerAddress *common.Address) {
+	newObj, prev := self.createObject(addr, providerAddress)
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)
 	}
