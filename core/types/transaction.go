@@ -76,7 +76,7 @@ func (d txdataNormal) toTxData() txdata {
 	}
 }
 
-type txdataWithProviderAddress struct {
+type txdataWithProvider struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     uint64          `json:"gas"      gencodec:"required"`
@@ -84,42 +84,7 @@ type txdataWithProviderAddress struct {
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	Payload      []byte          `json:"input"    gencodec:"required"`
 
-	//provider address
 	Provider *common.Address `json:"provider" rlp:"nil"`
-
-	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
-
-	// This is only used when marshaling to JSON.
-	Hash *common.Hash `json:"hash" rlp:"-"`
-}
-
-func (d txdataWithProviderAddress) toTxData() txdata {
-	return txdata{
-		AccountNonce: d.AccountNonce,
-		Price:        d.Price,
-		GasLimit:     d.GasLimit,
-		Recipient:    d.Recipient,
-		Amount:       d.Amount,
-		Payload:      d.Payload,
-		Provider:     d.Provider,
-
-		V:    d.V,
-		S:    d.S,
-		R:    d.R,
-		Hash: d.Hash,
-	}
-}
-
-type txdataWithProviderSignature struct {
-	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
-	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
-	GasLimit     uint64          `json:"gas"      gencodec:"required"`
-	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
-	Amount       *big.Int        `json:"value"    gencodec:"required"`
-	Payload      []byte          `json:"input"    gencodec:"required"`
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -135,7 +100,7 @@ type txdataWithProviderSignature struct {
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-func (d txdataWithProviderSignature) toTxData() txdata {
+func (d txdataWithProvider) toTxData() txdata {
 	return txdata{
 		AccountNonce: d.AccountNonce,
 		Price:        d.Price,
@@ -143,6 +108,8 @@ func (d txdataWithProviderSignature) toTxData() txdata {
 		Recipient:    d.Recipient,
 		Amount:       d.Amount,
 		Payload:      d.Payload,
+
+		Provider: d.Provider,
 
 		V: d.V,
 		S: d.S,
@@ -270,12 +237,12 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	var dataWithProviderSign txdataWithProviderSignature
-	err = rlp.DecodeBytes(raw, &dataWithProviderSign)
+	var dataWithProvider txdataWithProvider
+	err = rlp.DecodeBytes(raw, &dataWithProvider)
 
 	if err == nil {
-		tx.data = dataWithProviderSign.toTxData()
-		// add storage for providerAddr
+		tx.data = dataWithProvider.toTxData()
+		// add storage for providerAddr, pv, pr, ps
 		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
 		return nil
 	}
@@ -285,15 +252,6 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	if err == nil {
 		tx.data = dataNormal.toTxData()
 		// add storage for providerAddr, pv, pr, ps
-		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
-		return nil
-	}
-
-	var dataWithProviderAddress txdataWithProviderAddress
-	err = rlp.DecodeBytes(raw, &dataWithProviderAddress)
-	if err == nil {
-		tx.data = dataWithProviderAddress.toTxData()
-		// add storage for pv, pr, ps
 		tx.size.Store(common.StorageSize(rlp.ListSize(lenStream + 32)))
 		return nil
 	}
@@ -391,7 +349,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	msg := Message{
 		nonce:      tx.data.AccountNonce,
 		gasLimit:   tx.data.GasLimit,
-		gasPrice:   new(big.Int).Set(tx.data.Price),  
+		gasPrice:   new(big.Int).Set(tx.data.Price),
 		to:         tx.data.Recipient,
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,

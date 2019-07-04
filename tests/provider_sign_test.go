@@ -57,7 +57,7 @@ func TestSendToNormalAddress(t *testing.T) {
 */
 func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) {
 	const (
-		contractAddrStr = "0x84b96f184e3a03254bd863c9edd640e4182eab6b"
+		contractAddrStr = "0xB11921DF47796aCbB90183C95DD89C002142dB96"
 		providerPK      = "87668A123F9FF917F43B9F9168BB6A30F897AA30955144C3A74FEA6AC6898BBC"
 		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
 		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
@@ -93,7 +93,7 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 func TestSendToNonEnterpriseSmartContractWithProviderSignature(t *testing.T) {
 	const (
 		//This should be a contract without provider address
-		contractAddrStr = "0x84b96f184e3a03254bd863c9edd640e4182eab6b"
+		contractAddrStr = "0xB11921DF47796aCbB90183C95DD89C002142dB96"
 		providerPK      = "87668A123F9FF917F43B9F9168BB6A30F897AA30955144C3A74FEA6AC6898BBC"
 		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
 		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
