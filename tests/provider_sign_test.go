@@ -16,29 +16,35 @@ import (
 
 /* These tests are done on a chain with already setup account/ contracts.
 To run these test, please deploy your own account/ contract and extract privatekey inorder to get the expected result
+Adjust these params to match deployment on local machine:
 */
+
+const (
+	normalAddress                  = "0x11c93c29591ba613852ac2c9278faec2d7e7ea59"
+	senderPK                       = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
+	senderAddrStr                  = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
+	contractAddrStrWithoutProvider = "0xA014d882aA3bd232c96c2AacbCCEcb334eE48B5b"
+	contractAddrStrWithProvider    = "0x335F7d696E35ADf35eE9209C6b3751Fad0c71C66"
+	providerPK                     = "E6CFAAD68311D3A873C98750F52B2543F2C3C692A8F11E6B411B390BCD807133"
+	invadlidProviderPK             = "5564a4ddd059ba6352aae637812ea6be7d818f92b5aff3564429478fcdfe4e8a"
+	providerAddrStr                = "0x8359d8C955DAef81e171C13659bA3Fb0dDa144b4"
+
+	testGasLimit   = 1000000
+	ethRPCEndpoint = "http://localhost:9015"
+)
 
 /*
 	Test Send ETH to a normal address
 		- No provider signature is required
 */
 func TestSendToNormalAddress(t *testing.T) {
-	const (
-		normalAddress = "0x11c93c29591ba613852ac2c9278faec2d7e7ea59"
-		senderPK      = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 100000000
-	)
 	senderAddr := common.HexToAddress(senderAddrStr)
 	normalAddr := common.HexToAddress(normalAddress)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -56,23 +62,13 @@ func TestSendToNormalAddress(t *testing.T) {
 		- Provider's signature is not required
 */
 func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) {
-	const (
-		contractAddrStr = "0xB11921DF47796aCbB90183C95DD89C002142dB96"
-		providerPK      = "87668A123F9FF917F43B9F9168BB6A30F897AA30955144C3A74FEA6AC6898BBC"
-		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 100000000
-	)
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
+	contractAddr := common.HexToAddress(contractAddrStrWithoutProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -91,26 +87,15 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 		- Provider's signature is not required
 */
 func TestSendToNonEnterpriseSmartContractWithProviderSignature(t *testing.T) {
-	const (
-		//This should be a contract without provider address
-		contractAddrStr = "0xB11921DF47796aCbB90183C95DD89C002142dB96"
-		providerPK      = "87668A123F9FF917F43B9F9168BB6A30F897AA30955144C3A74FEA6AC6898BBC"
-		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 1500000
-	)
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
+	contractAddr := common.HexToAddress(contractAddrStrWithoutProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -130,24 +115,14 @@ func TestSendToNonEnterpriseSmartContractWithProviderSignature(t *testing.T) {
 	Note: Please change data to your own function data
 */
 func TestInteractWithNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) {
-	const (
-		//This should be a contract with provider address
-		contractAddrStr = "0x84b96f184e3a03254bd863c9edd640e4182eab6b"
-		providerPK      = "87668A123F9FF917F43B9F9168BB6A30F897AA30955144C3A74FEA6AC6898BBC"
-		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 1500000
-	)
+	//This should be a contract with provider address
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
+	contractAddr := common.HexToAddress(contractAddrStrWithoutProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -166,26 +141,16 @@ func TestInteractWithNonEnterpriseSmartContractWithoutProviderSignature(t *testi
 	Test Send ETH to an Enterprise Smart Contract with invalid provider's signature
 */
 func TestSendToEnterPriseSmartContractWithInvalidProviderSignature(t *testing.T) {
-	const (
-		contractAddrStr = "0xFF39F431b21B01EEf3fEffE66EFAaDE74A3E91c2"
-		providerPK      = "5564a4ddd059ba6352aae637812ea6be7d818f92b5aff3564429478fcdfe4e8a"
-		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 1500000
-	)
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
+	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
-	ppk, err := crypto.HexToECDSA(providerPK)
+	ppk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -193,39 +158,28 @@ func TestSendToEnterPriseSmartContractWithInvalidProviderSignature(t *testing.T)
 	assert.NoError(t, err)
 
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, nil)
-	// return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 	transaction, err = types.SignTx(transaction, signer, spk)
+	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NotEqual(t, nil, err)
+	assert.NoError(t, err)
+
+	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
 	Test Send ETH to an enterprise Smart Contract with valid provider's signature
 */
 func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
-	const (
-		//This should be a contract with provider address
-		contractAddrStr = "0x6d88d80c9ac4bb26dac4c4bb09a61200f9cb8d75"
-		providerPK      = "E6CFAAD68311D3A873C98750F52B2543F2C3C692A8F11E6B411B390BCD807133"
-		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-		//providerAddr  = "0x8359d8C955DAef81e171C13659bA3Fb0dDa144b4"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 1500000
-	)
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
+	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
-	ppk, err := crypto.HexToECDSA(providerPK)
+	ppk, err := crypto.HexToECDSA(invadlidProviderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -233,11 +187,12 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, nil)
-	// return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
 	assert.NoError(t, err)
+	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
+	assert.NoError(t, err)
+
+	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -246,26 +201,16 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	Note: Please change data to your own function data
 */
 func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testing.T) {
-	const (
-		contractAddrStr = "0xFF39F431b21B01EEf3fEffE66EFAaDE74A3E91c2"
-		providerPK      = "5564a4ddd059ba6352aae637812ea6be7d818f92b5aff3564429478fcdfe4e8a"
-		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 1500000
-	)
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
+	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
-	ppk, err := crypto.HexToECDSA(providerPK)
+	ppk, err := crypto.HexToECDSA(invadlidProviderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -276,9 +221,11 @@ func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testin
 	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
+	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NotEqual(t, nil, err)
+	assert.NoError(t, err)
+
+	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -287,18 +234,8 @@ func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testin
 	Note: Please change data to your own function data
 */
 func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.T) {
-	const (
-		contractAddrStr = "0xFF39F431b21B01EEf3fEffE66EFAaDE74A3E91c2"
-		providerPK      = "87668A123F9FF917F43B9F9168BB6A30F897AA30955144C3A74FEA6AC6898BBC"
-		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 1500000
-	)
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
+	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
@@ -306,7 +243,7 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -317,7 +254,9 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
 	assert.NoError(t, err)
+	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
+	assert.NoError(t, err)
+
+	assert.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
 }
