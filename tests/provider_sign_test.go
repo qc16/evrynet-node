@@ -150,7 +150,7 @@ func TestSendToEnterPriseSmartContractWithInvalidProviderSignature(t *testing.T)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
-	ppk, err := crypto.HexToECDSA(senderPK)
+	ppk, err := crypto.HexToECDSA(invadlidProviderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
@@ -179,7 +179,7 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
-	ppk, err := crypto.HexToECDSA(invadlidProviderPK)
+	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
@@ -196,7 +196,7 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	assert.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
