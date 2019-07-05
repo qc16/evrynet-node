@@ -362,6 +362,16 @@ func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
 }
 
+// SignedProvider return the provider who signed that transaction
+// If the error can not be extract from tx, a nil is returned
+func (tx *Transaction) SignedProvider(s Signer) *common.Address {
+	provider, err := Provider(s, tx)
+	if err != nil {
+		return nil
+	}
+	return &provider
+}
+
 // Transactions is a Transaction slice type for basic sorting.
 type Transactions []*Transaction
 

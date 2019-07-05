@@ -97,6 +97,25 @@ func (m *txSortedMap) Forward(threshold uint64) types.Transactions {
 	return removed
 }
 
+//RemoveTxs removes a list of tx with corresponding nonces fomr its sorted Map
+func (m *txSortedMap) RemoveTxs(nonces []uint64) {
+	if len(nonces) == 0 {
+		return
+	}
+	for _, nonce := range nonces {
+		delete(m.items, nonce)
+	}
+	// If transactions were removed, the heap and cache are ruined
+
+	*m.index = make([]uint64, 0, len(m.items))
+	for nonce := range m.items {
+		*m.index = append(*m.index, nonce)
+	}
+	heap.Init(m.index)
+
+	m.cache = nil
+}
+
 // Filter iterates over the list of transactions and removes all of them for which
 // the specified function evaluates to true.
 func (m *txSortedMap) Filter(filter func(*types.Transaction) bool) types.Transactions {

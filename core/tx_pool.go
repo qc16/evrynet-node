@@ -1009,6 +1009,41 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 	}
 }
 
+func (pool *TxPool) filterUnpayableTransactions(account common.Address, l *txList) (types.Transactions, types.Transactions) {
+	var (
+		filtereds, invalids types.Transactions
+		costLimit           *big.Int
+		accountBalance      = pool.currentState.GetBalance(account)
+		nonces              []uint64
+	)
+	for nonce, tx := range l.txs.items {
+
+		if provider := tx.SignedProvider(pool.signer); provider != nil {
+			costLimit = pool.currentState.GetBalance(*provider)
+		} else {
+			costLimit = accountBalance
+		}
+		if tx.Cost().Cmp(costLimit) > 0 || tx.Gas() > pool.currentMaxGas {
+			nonces = append(nonces, nonce)
+			filtereds = append(filtereds, tx)
+		}
+	}
+	l.txs.RemoveTxs(nonces)
+	if l.strict && len(filtereds) > 0 {
+		lowest := uint64(math.MaxUint64)
+		for _, tx := range filtereds {
+			if nonce := tx.Nonce(); lowest > nonce {
+				lowest = nonce
+			}
+		}
+		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+	}
+	// if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
+
+	// }
+	return filtereds, invalids
+}
+
 // promoteExecutables moves transactions that have become processable from the
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
@@ -1036,8 +1071,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.all.Remove(hash)
 			log.Trace("Removed old queued transaction", "hash", hash)
 		}
+
 		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, _ := pool.filterUnpayableTransactions(addr, list)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			pool.all.Remove(hash)
@@ -1223,7 +1259,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Removed old pending transaction", "hash", hash)
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, invalids := pool.filterUnpayableTransactions(addr, list)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash)
