@@ -264,39 +264,3 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 
 	assert.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
 }
-
-func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountWithoutGas(t *testing.T) {
-	const (
-		contractAddrStr = "0x6d88d80c9AC4bB26DaC4c4Bb09a61200F9Cb8d75"
-		providerPK      = "E6CFAAD68311D3A873C98750F52B2543F2C3C692A8F11E6B411B390BCD807133"
-		senderPK        = "CD79C18795A866C4A7FA8D3A88494F618AB0E69B1493382D638A6483538EEA97"
-		senderAddrStr   = "0xBBD9e63B95308358AAfb20d6606701A4b6429f5e"
-
-		testBal1     = 1000000 //1e6
-		testBal2     = 2000000 //2e6
-		testGasLimit = 1500000
-	)
-	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStr)
-	spk, err := crypto.HexToECDSA(senderPK)
-	assert.NoError(t, err)
-
-	ppk, err := crypto.HexToECDSA(providerPK)
-	assert.NoError(t, err)
-
-	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:8545")
-	assert.NoError(t, err)
-	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
-	assert.NoError(t, err)
-	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
-	assert.NoError(t, err)
-
-	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
-	transaction, err = types.SignTx(transaction, signer, spk)
-	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-}
