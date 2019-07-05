@@ -179,7 +179,7 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
-	ppk, err := crypto.HexToECDSA(providerPK)
+	ppk, err := crypto.HexToECDSA(invadlidProviderPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
