@@ -61,8 +61,16 @@ var (
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
 
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
-	// is higher than the balance of the user's account.
+	// is higher than the balance of the user's account (fee's paid by user).
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
+
+	// ErrProviderInsufficientFunds is returned if the transaction fee
+	// is higher than the balance of the provider's account (fee's paid by provider)
+	ErrProviderInsufficientFunds = errors.New("provider has insufficient funds for gas * price")
+
+	// ErrSenderInsufficientFunds is returned if the transaction value
+	// is higher than the balance of the user's account (fee's paid by provider)
+	ErrSenderInsufficientFunds = errors.New("sender has insufficient funds for value")
 
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
@@ -678,15 +686,22 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
-	// cost == V + GP * GL
 	if (providerAddr != common.Address{}) {
-		// If there is provider in the tx, check for provider's balance instead
+		// Provider's cost == GP * GL
+		// Sender's cost == V
 
-		if pool.currentState.GetBalance(providerAddr).Cmp(tx.Cost()) < 0 {
-			return ErrInsufficientFunds
+		// Check sender's balance with tx amount
+		if pool.currentState.GetBalance(from).Cmp(tx.Value()) < 0 {
+			return ErrSenderInsufficientFunds
+		}
+
+		// Check provider's balance for transaction fee
+		if pool.currentState.GetBalance(providerAddr).Cmp(tx.TransactionFee()) < 0 {
+			return ErrProviderInsufficientFunds
 		}
 	} else {
-		// check for sender's balance instead
+		// Sender pays transaction fee, check sender's balance for tx costs
+		// cost == V + GP * GL
 		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 			return ErrInsufficientFunds
 		}
