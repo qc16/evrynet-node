@@ -1024,21 +1024,27 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 	}
 }
 
+// TODO: Write comments about what this function does and returns
 func (pool *TxPool) filterUnpayableTransactions(account common.Address, l *txList) (types.Transactions, types.Transactions) {
 	var (
 		filtereds, invalids types.Transactions
-		costLimit           *big.Int
+		providerBalance     *big.Int
 		accountBalance      = pool.currentState.GetBalance(account)
 		nonces              []uint64
+		hasEnoughFunds      bool
 	)
 	for nonce, tx := range l.txs.items {
 
+		hasEnoughFunds = true
 		if provider := tx.SignedProvider(pool.signer); provider != nil {
-			costLimit = pool.currentState.GetBalance(*provider)
+			providerBalance = pool.currentState.GetBalance(*provider)
+			// provider pays for fee, sender pays for value
+			hasEnoughFunds = tx.Value().Cmp(accountBalance) <= 0 && tx.TransactionFee().Cmp(providerBalance) <= 0
 		} else {
-			costLimit = accountBalance
+			// sender pays for fee + value
+			hasEnoughFunds = tx.Cost().Cmp(accountBalance) <= 0
 		}
-		if tx.Cost().Cmp(costLimit) > 0 || tx.Gas() > pool.currentMaxGas {
+		if !hasEnoughFunds || tx.Gas() > pool.currentMaxGas {
 			nonces = append(nonces, nonce)
 			filtereds = append(filtereds, tx)
 		}
