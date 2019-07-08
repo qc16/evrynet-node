@@ -66,6 +66,7 @@ type Message interface {
 	GasPayer() common.Address
 	//FromFrontier() (common.Address, error)
 	To() *common.Address
+	Owner() *common.Address
 	Provider() *common.Address
 
 	GasPrice() *big.Int
@@ -209,7 +210,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value, st.msg.Provider())
+		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value, st.msg.Owner(), st.msg.Provider())
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)

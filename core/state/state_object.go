@@ -102,6 +102,7 @@ type Account struct {
 	Balance         *big.Int
 	Root            common.Hash // merkle root of the storage trie
 	CodeHash        []byte
+	OwnerAddress    *common.Address `rlp:"nil"`
 	ProviderAddress *common.Address `rlp:"nil"`
 }
 
@@ -120,6 +121,7 @@ func (a *AccountWithoutProvider) ToAccount() Account {
 		Balance:         a.Balance,
 		Root:            a.Root,
 		CodeHash:        a.CodeHash,
+		OwnerAddress:    nil,
 		ProviderAddress: nil,
 	}
 }
@@ -420,6 +422,10 @@ func (s *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (s *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+func (s *stateObject) OwnerAddress() *common.Address {
+	return s.data.OwnerAddress
 }
 
 func (s *stateObject) ProviderAddress() *common.Address {

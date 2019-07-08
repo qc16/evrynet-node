@@ -100,8 +100,8 @@ var (
 	// ErrTxPoolFull is returned tx pool is full
 	ErrTxPoolFull = errors.New("Tx pool is full")
 
-	//ErrInvalidGasPrice is returned if tx gasPrice is different from gasPrice of network
-	ErrInvalidGasPrice = errors.New("Tx gasPrice is different from gasPrice of network")
+	//ErrInvalidGasPrice is returned if tx gasPrice is different from gasPrice of the network
+	ErrInvalidGasPrice = errors.New("Tx gasPrice is different from gasPrice of the network")
 )
 
 var (

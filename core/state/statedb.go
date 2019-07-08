@@ -219,6 +219,15 @@ func (self *StateDB) Empty(addr common.Address) bool {
 	return so == nil || so.empty()
 }
 
+// GetOwner if
+func (self *StateDB) GetOwner(addr common.Address) *common.Address {
+	so := self.getStateObject(addr)
+	if so != nil {
+		return so.OwnerAddress()
+	}
+	return nil
+}
+
 // GetProvider if
 func (self *StateDB) GetProvider(addr common.Address) *common.Address {
 	so := self.getStateObject(addr)
@@ -492,16 +501,17 @@ func (self *StateDB) setStateObject(object *stateObject) {
 func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil || stateObject.deleted {
-		stateObject, _ = self.createObject(addr, nil)
+		stateObject, _ = self.createObject(addr, nil, nil)
 	}
 	return stateObject
 }
 
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
-func (self *StateDB) createObject(addr common.Address, providerAddress *common.Address) (newobj, prev *stateObject) {
+func (self *StateDB) createObject(addr common.Address, ownerAddress *common.Address, providerAddress *common.Address) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
 	newobj = newObject(self, addr, Account{
+		OwnerAddress:    ownerAddress,
 		ProviderAddress: providerAddress,
 	})
 	newobj.setNonce(0) // sets the object to dirty
@@ -524,8 +534,8 @@ func (self *StateDB) createObject(addr common.Address, providerAddress *common.A
 //   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
-func (self *StateDB) CreateAccount(addr common.Address, providerAddress *common.Address) {
-	newObj, prev := self.createObject(addr, providerAddress)
+func (self *StateDB) CreateAccount(addr common.Address, ownerAddress *common.Address, providerAddress *common.Address) {
+	newObj, prev := self.createObject(addr, ownerAddress, providerAddress)
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)
 	}

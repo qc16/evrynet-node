@@ -75,7 +75,7 @@ func ApplyDAOHardFork(statedb *state.StateDB) {
 	// Retrieve the contract to refund balances into
 	if !statedb.Exist(params.DAORefundContract) {
 		//TODO: check this
-		statedb.CreateAccount(params.DAORefundContract, nil)
+		statedb.CreateAccount(params.DAORefundContract, nil, nil)
 	}
 
 	// Move every DAO account and extra-balance account funds into the refund contract

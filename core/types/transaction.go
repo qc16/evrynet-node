@@ -84,6 +84,9 @@ type txdata struct {
 	Amount       *big.Int        `json:"value"    gencodec:"required"`
 	Payload      []byte          `json:"input"    gencodec:"required"`
 
+	//owner address
+	Owner *common.Address `json:"owner" rlp:"nil"`
+
 	//provider address
 	Provider *common.Address `json:"provider" rlp:"nil"`
 
@@ -116,11 +119,10 @@ func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit u
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
 
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, providerAddr ...*common.Address) *Transaction {
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, ownerAddr *common.Address, providerAddr *common.Address) *Transaction {
 	tx := newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
-	if len(providerAddr) > 0 {
-		tx.data.Provider = providerAddr[0]
-	}
+	tx.data.Owner = ownerAddr
+	tx.data.Provider = providerAddr
 	return tx
 }
 
@@ -297,6 +299,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		to:         tx.data.Recipient,
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
+		owner:      tx.data.Owner,
 		provider:   tx.data.Provider,
 		checkNonce: true,
 	}
@@ -335,6 +338,10 @@ func (tx *Transaction) WithProviderSignature(signer Signer, sig []byte) (*Transa
 
 func (tx *Transaction) RawProviderSignatureValues() (*big.Int, *big.Int, *big.Int) {
 	return tx.data.PV, tx.data.PR, tx.data.PS
+}
+
+func (tx *Transaction) Owner() *common.Address {
+	return tx.data.Owner
 }
 
 func (tx *Transaction) Provider() *common.Address {
@@ -530,6 +537,7 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 type Message struct {
 	to         *common.Address
 	from       common.Address
+	owner      *common.Address
 	provider   *common.Address
 	nonce      uint64
 	amount     *big.Int
@@ -557,6 +565,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 func (m Message) GasPayer() common.Address  { return m.gasPayer }
 func (m Message) From() common.Address      { return m.from }
 func (m Message) To() *common.Address       { return m.to }
+func (m Message) Owner() *common.Address    { return m.owner }
 func (m Message) Provider() *common.Address { return m.provider }
 func (m Message) GasPrice() *big.Int        { return m.gasPrice }
 func (m Message) Value() *big.Int           { return m.amount }
