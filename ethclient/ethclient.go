@@ -568,9 +568,14 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 
 func toSendTxArgs(args ethereum.SendTxArgs) interface{} {
 	arg := map[string]interface{}{
-		"from":  args.From,
-		"to":    args.To,
-		"nonce": args.Nonce,
+		"from": args.From,
+		"to":   args.To,
+	}
+	if args.To != nil {
+		arg["to"] = args.To
+	}
+	if args.Nonce != nil {
+		arg["nonce"] = args.Nonce
 	}
 	if args.Value != nil {
 		arg["value"] = args.Value
