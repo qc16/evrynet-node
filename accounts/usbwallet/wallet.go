@@ -618,7 +618,7 @@ func (w *wallet) ProviderSignTx(account accounts.Account, tx *types.Transaction,
 		w.hub.commsPend--
 		w.hub.commsLock.Unlock()
 	}()
-	// Provider sign the transaction and verify the sender to avoid hardware fault surprises
+	// Providers sign the transaction and verify the sender to avoid hardware fault surprises
 	signer, signed, err := w.driver.ProviderSignTx(path, tx, chainID)
 	if err != nil {
 		return nil, err

@@ -16,21 +16,21 @@ var _ = (*txdataMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
-		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
-		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
-		GasLimit     hexutil.Uint64  `json:"gas"      gencodec:"required"`
-		Recipient    *common.Address `json:"to"       rlp:"nil"`
-		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
-		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
-		V            *hexutil.Big    `json:"v" gencodec:"required"`
-		R            *hexutil.Big    `json:"r" gencodec:"required"`
-		S            *hexutil.Big    `json:"s" gencodec:"required"`
-		PV           *hexutil.Big    `json:"pv"`
-		PR           *hexutil.Big    `json:"pr"`
-		PS           *hexutil.Big    `json:"ps"`
-		Owner        *common.Address `json:"owner" rlp:"nil"`
-		Provider     *common.Address `json:"provider" rlp:"nil"`
-		Hash         *common.Hash    `json:"hash" rlp:"-"`
+		AccountNonce hexutil.Uint64    `json:"nonce"    gencodec:"required"`
+		Price        *hexutil.Big      `json:"gasPrice" gencodec:"required"`
+		GasLimit     hexutil.Uint64    `json:"gas"      gencodec:"required"`
+		Recipient    *common.Address   `json:"to"       rlp:"nil"`
+		Amount       *hexutil.Big      `json:"value"    gencodec:"required"`
+		Payload      hexutil.Bytes     `json:"input"    gencodec:"required"`
+		V            *hexutil.Big      `json:"v" gencodec:"required"`
+		R            *hexutil.Big      `json:"r" gencodec:"required"`
+		S            *hexutil.Big      `json:"s" gencodec:"required"`
+		PV           *hexutil.Big      `json:"pv"`
+		PR           *hexutil.Big      `json:"pr"`
+		PS           *hexutil.Big      `json:"ps"`
+		Owner        *common.Address   `json:"owner" rlp:"nil"`
+		Providers    []*common.Address `json:"providers" rlp:"nil"`
+		Hash         *common.Hash      `json:"hash" rlp:"-"`
 	}
 	var enc txdata
 	enc.AccountNonce = hexutil.Uint64(t.AccountNonce)
@@ -46,7 +46,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 	enc.PR = (*hexutil.Big)(t.PR)
 	enc.PS = (*hexutil.Big)(t.PS)
 	enc.Hash = t.Hash
-	enc.Provider = t.Provider
+	enc.Providers = t.Providers
 	enc.Owner = t.Owner
 	return json.Marshal(&enc)
 }
@@ -54,21 +54,21 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
-		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
-		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
-		GasLimit     *hexutil.Uint64 `json:"gas"      gencodec:"required"`
-		Recipient    *common.Address `json:"to"       rlp:"nil"`
-		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
-		Payload      *hexutil.Bytes  `json:"input"    gencodec:"required"`
-		V            *hexutil.Big    `json:"v" gencodec:"required"`
-		R            *hexutil.Big    `json:"r" gencodec:"required"`
-		S            *hexutil.Big    `json:"s" gencodec:"required"`
-		PV           *hexutil.Big    `json:"pv"`
-		PR           *hexutil.Big    `json:"pr"`
-		PS           *hexutil.Big    `json:"ps"`
-		Owner        *common.Address `json:"owner" rlp:"nil"`
-		Provider     *common.Address `json:"provider" rlp:"nil"`
-		Hash         *common.Hash    `json:"hash" rlp:"-"`
+		AccountNonce *hexutil.Uint64   `json:"nonce"    gencodec:"required"`
+		Price        *hexutil.Big      `json:"gasPrice" gencodec:"required"`
+		GasLimit     *hexutil.Uint64   `json:"gas"      gencodec:"required"`
+		Recipient    *common.Address   `json:"to"       rlp:"nil"`
+		Amount       *hexutil.Big      `json:"value"    gencodec:"required"`
+		Payload      *hexutil.Bytes    `json:"input"    gencodec:"required"`
+		V            *hexutil.Big      `json:"v" gencodec:"required"`
+		R            *hexutil.Big      `json:"r" gencodec:"required"`
+		S            *hexutil.Big      `json:"s" gencodec:"required"`
+		PV           *hexutil.Big      `json:"pv"`
+		PR           *hexutil.Big      `json:"pr"`
+		PS           *hexutil.Big      `json:"ps"`
+		Owner        *common.Address   `json:"owner" rlp:"nil"`
+		Providers    []*common.Address `json:"providers" rlp:"nil"`
+		Hash         *common.Hash      `json:"hash" rlp:"-"`
 	}
 	var dec txdata
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -117,7 +117,7 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 	t.PR = (*big.Int)(dec.PR)
 	t.PS = (*big.Int)(dec.PS)
 
-	t.Provider = dec.Provider
+	t.Providers = dec.Providers
 	t.Owner = dec.Owner
 	return nil
 }

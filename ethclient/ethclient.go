@@ -531,7 +531,7 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 // Please note that the provider account must be unlocked prior to run this function
 func (ec *Client) ProviderSignTx(ctx context.Context, tx *types.Transaction, providerAddr *common.Address) (*types.Transaction, error) {
 	if providerAddr == nil {
-		return nil, errors.New("Provider address is required")
+		return nil, errors.New("Providers address is required")
 	}
 	data, err := rlp.EncodeToBytes(tx)
 	if err != nil {

@@ -49,3 +49,6 @@ profile.cov
 
 /build/_workspace/*
 /build/bin/*
+/go.sum
+*.log
+.idea/

@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-//TestProviderSignTransaction will sign a transaction with both sender's Key and Provider's Key
+//TestProviderSignTransaction will sign a transaction with both sender's Key and Providers's Key
 //Note that the account must be unlocked prior to run this test
 //The JSON rpc test can be call as
 //curl <rpcserver> -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_providerSignTransaction","params":["<raw_tx>", "<provider_address>"],"id":1}'

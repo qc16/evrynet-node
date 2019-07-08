@@ -68,7 +68,7 @@ type Message interface {
 	//FromFrontier() (common.Address, error)
 	To() *common.Address
 	Owner() *common.Address
-	Provider() *common.Address
+	Providers() []*common.Address
 
 	GasPrice() *big.Int
 	Gas() uint64
@@ -215,8 +215,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		if msg.Owner() != nil {
 			option.OwnerAddress = msg.Owner()
 		}
-		if msg.Provider() != nil {
-			option.ProviderAddress = msg.Provider()
+		if msg.Providers() != nil {
+			option.ProviderAddresses = msg.Providers()
 		}
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value, option)
 	} else {

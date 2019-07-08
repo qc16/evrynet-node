@@ -37,8 +37,8 @@ var (
 
 // CreateAccountOption contain extra parameter for Account creation
 type CreateAccountOption struct {
-	OwnerAddress    *common.Address
-	ProviderAddress *common.Address
+	OwnerAddress      *common.Address
+	ProviderAddresses []*common.Address
 }
 
 type Transaction struct {
@@ -93,8 +93,8 @@ type txdata struct {
 	//owner address
 	Owner *common.Address `json:"owner" rlp:"nil"`
 
-	//provider address
-	Provider *common.Address `json:"provider" rlp:"nil"`
+	// Providers address
+	Providers []*common.Address `json:"providers" rlp:"nil"`
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -130,7 +130,7 @@ func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPric
 	tx := newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
 	if len(opts) > 0 {
 		tx.data.Owner = opts[0].OwnerAddress
-		tx.data.Provider = opts[0].ProviderAddress
+		tx.data.Providers = opts[0].ProviderAddresses
 	}
 	return tx
 }
@@ -309,7 +309,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		owner:      tx.data.Owner,
-		provider:   tx.data.Provider,
+		providers:  tx.data.Providers,
 		checkNonce: true,
 	}
 
@@ -353,8 +353,8 @@ func (tx *Transaction) Owner() *common.Address {
 	return tx.data.Owner
 }
 
-func (tx *Transaction) Provider() *common.Address {
-	return tx.data.Provider
+func (tx *Transaction) Providers() []*common.Address {
+	return tx.data.Providers
 }
 
 // GasPayer returns gas payer of the transaction
@@ -547,7 +547,7 @@ type Message struct {
 	to         *common.Address
 	from       common.Address
 	owner      *common.Address
-	provider   *common.Address
+	providers  []*common.Address
 	nonce      uint64
 	amount     *big.Int
 	gasLimit   uint64
@@ -571,14 +571,14 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 	}
 }
 
-func (m Message) GasPayer() common.Address  { return m.gasPayer }
-func (m Message) From() common.Address      { return m.from }
-func (m Message) To() *common.Address       { return m.to }
-func (m Message) Owner() *common.Address    { return m.owner }
-func (m Message) Provider() *common.Address { return m.provider }
-func (m Message) GasPrice() *big.Int        { return m.gasPrice }
-func (m Message) Value() *big.Int           { return m.amount }
-func (m Message) Gas() uint64               { return m.gasLimit }
-func (m Message) Nonce() uint64             { return m.nonce }
-func (m Message) Data() []byte              { return m.data }
-func (m Message) CheckNonce() bool          { return m.checkNonce }
+func (m Message) GasPayer() common.Address     { return m.gasPayer }
+func (m Message) From() common.Address         { return m.from }
+func (m Message) To() *common.Address          { return m.to }
+func (m Message) Owner() *common.Address       { return m.owner }
+func (m Message) Providers() []*common.Address { return m.providers }
+func (m Message) GasPrice() *big.Int           { return m.gasPrice }
+func (m Message) Value() *big.Int              { return m.amount }
+func (m Message) Gas() uint64                  { return m.gasLimit }
+func (m Message) Nonce() uint64                { return m.nonce }
+func (m Message) Data() []byte                 { return m.data }
+func (m Message) CheckNonce() bool             { return m.checkNonce }

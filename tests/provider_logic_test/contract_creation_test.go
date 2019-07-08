@@ -32,7 +32,7 @@ func TestCreateContractWithProviderAddress(t *testing.T) {
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 	var option types.CreateAccountOption
-	option.ProviderAddress = &provideraddr
+	option.ProviderAddresses = &provideraddr
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
@@ -90,7 +90,7 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	sender := common.HexToAddress(senderAddrStr)
 	provideraddr := common.HexToAddress(providerWithoutGasAddr)
 	var option types.CreateAccountOption
-	option.ProviderAddress = &provideraddr
+	option.ProviderAddresses = &provideraddr
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
@@ -112,7 +112,7 @@ func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 	var option types.CreateAccountOption
-	option.ProviderAddress = &provideraddr
+	option.ProviderAddresses = &provideraddr
 	option.OwnerAddress = &sender
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
