@@ -1276,6 +1276,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
 		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
 		"contractAddress":   nil,
+		"gasPayer":          nil,
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
 	}
@@ -1292,6 +1293,9 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
 	if receipt.ContractAddress != (common.Address{}) {
 		fields["contractAddress"] = receipt.ContractAddress
+	}
+	if receipt.GasPayer != (common.Address{}) {
+		fields["gasPayer"] = receipt.GasPayer
 	}
 	return fields, nil
 }

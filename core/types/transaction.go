@@ -337,6 +337,20 @@ func (tx *Transaction) Provider() *common.Address {
 	return tx.data.Provider
 }
 
+func (tx *Transaction) GasPayer(s Signer) common.Address {
+	provider, err := Provider(s, tx)
+	if err == nil {
+		// provider pays gas fee
+		return provider
+	}
+	from, err := Sender(s, tx)
+	if err == nil {
+		// sender pays gas fee
+		return from
+	}
+	return common.Address{}
+}
+
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be in the [R || S || V] format where V is 0 or 1.
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
