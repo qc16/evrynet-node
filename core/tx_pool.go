@@ -1059,9 +1059,6 @@ func (pool *TxPool) filterUnpayableTransactions(account common.Address, l *txLis
 		}
 		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
 	}
-	// if l.costcap.Cmp(costLimit) <= 0 && l.gascap <= gasLimit {
-
-	// }
 	return filtereds, invalids
 }
 
