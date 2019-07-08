@@ -61,8 +61,16 @@ var (
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
 
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
-	// is higher than the balance of the user's account.
+	// is higher than the balance of the user's account (fee's paid by user).
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
+
+	// ErrProviderInsufficientFunds is returned if the transaction fee
+	// is higher than the balance of the provider's account (fee's paid by provider)
+	ErrProviderInsufficientFunds = errors.New("provider has insufficient funds for gas * price")
+
+	// ErrSenderInsufficientFunds is returned if the transaction value
+	// is higher than the balance of the user's account (fee's paid by provider)
+	ErrSenderInsufficientFunds = errors.New("sender has insufficient funds for value")
 
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
@@ -635,7 +643,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// Make sure the transaction is signed properly
 	from, err := types.Sender(pool.signer, tx)
-	fmt.Printf("from is %s", from.String())
 	if err != nil {
 		return ErrInvalidSender
 	}
@@ -648,6 +655,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Make sure the transaction is signed with provider if the destination is an address
 	// Only check if tx is not a contract creation code
 	// TODO: remove the log in prodution
+	var providerAddr common.Address
 	if tx.To() != nil {
 		to := tx.To()
 		contractHash := pool.currentState.GetCodeHash(*to)
@@ -662,6 +670,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", provider.String(), "error", err)
 					return ErrInvalidProvider
 				}
+				providerAddr = provider
 			}
 		} else {
 			log.Info("destination is a normal address, skip provider signature check")
@@ -677,9 +686,25 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
-	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		return ErrInsufficientFunds
+	if (providerAddr != common.Address{}) {
+		// Provider's cost == GP * GL
+		// Sender's cost == V
+
+		// Check sender's balance with tx amount
+		if pool.currentState.GetBalance(from).Cmp(tx.Value()) < 0 {
+			return ErrSenderInsufficientFunds
+		}
+
+		// Check provider's balance for transaction fee
+		if pool.currentState.GetBalance(providerAddr).Cmp(tx.TransactionFee()) < 0 {
+			return ErrProviderInsufficientFunds
+		}
+	} else {
+		// Sender pays transaction fee, check sender's balance for tx costs
+		// cost == V + GP * GL
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+			return ErrInsufficientFunds
+		}
 	}
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
 	if err != nil {
@@ -999,6 +1024,44 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 	}
 }
 
+// TODO: Write comments about what this function does and returns
+func (pool *TxPool) filterUnpayableTransactions(account common.Address, l *txList) (types.Transactions, types.Transactions) {
+	var (
+		filtereds, invalids types.Transactions
+		providerBalance     *big.Int
+		accountBalance      = pool.currentState.GetBalance(account)
+		nonces              []uint64
+		hasEnoughFunds      bool
+	)
+	for nonce, tx := range l.txs.items {
+
+		hasEnoughFunds = true
+		if provider := tx.SignedProvider(pool.signer); provider != nil {
+			providerBalance = pool.currentState.GetBalance(*provider)
+			// provider pays for fee, sender pays for value
+			hasEnoughFunds = tx.Value().Cmp(accountBalance) <= 0 && tx.TransactionFee().Cmp(providerBalance) <= 0
+		} else {
+			// sender pays for fee + value
+			hasEnoughFunds = tx.Cost().Cmp(accountBalance) <= 0
+		}
+		if !hasEnoughFunds || tx.Gas() > pool.currentMaxGas {
+			nonces = append(nonces, nonce)
+			filtereds = append(filtereds, tx)
+		}
+	}
+	l.txs.RemoveTxs(nonces)
+	if l.strict && len(filtereds) > 0 {
+		lowest := uint64(math.MaxUint64)
+		for _, tx := range filtereds {
+			if nonce := tx.Nonce(); lowest > nonce {
+				lowest = nonce
+			}
+		}
+		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+	}
+	return filtereds, invalids
+}
+
 // promoteExecutables moves transactions that have become processable from the
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
@@ -1026,8 +1089,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.all.Remove(hash)
 			log.Trace("Removed old queued transaction", "hash", hash)
 		}
+
 		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, _ := pool.filterUnpayableTransactions(addr, list)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			pool.all.Remove(hash)
@@ -1213,7 +1277,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Removed old pending transaction", "hash", hash)
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, invalids := pool.filterUnpayableTransactions(addr, list)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash)

@@ -303,7 +303,18 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 
 	var err error
 	msg.from, err = Sender(s, tx)
-	return msg, err
+	if err != nil {
+		return msg, err
+	}
+	provider, err := Provider(s, tx)
+	if err != nil {
+		//Sender will be gasPayer
+		msg.gasPayer = msg.from
+	} else {
+		msg.gasPayer = provider
+	}
+
+	return msg, nil
 }
 
 // WithProviderSignature returns a new transaction with the given provider signature.
@@ -345,10 +356,26 @@ func (tx *Transaction) Cost() *big.Int {
 	return total
 }
 
+// TransactionFee returns gasprice * gaslimit
+func (tx *Transaction) TransactionFee() *big.Int {
+	fee := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
+	return fee
+}
+
 // RawSignatureValues returns the V, R, S signature values of the transaction.
 // The return values should not be modified by the caller.
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
+}
+
+// SignedProvider return the provider who signed that transaction
+// If the error can not be extract from tx, a nil is returned
+func (tx *Transaction) SignedProvider(s Signer) *common.Address {
+	provider, err := Provider(s, tx)
+	if err != nil {
+		return nil
+	}
+	return &provider
 }
 
 // Transactions is a Transaction slice type for basic sorting.
@@ -489,6 +516,7 @@ type Message struct {
 	gasPrice   *big.Int
 	data       []byte
 	checkNonce bool
+	gasPayer   common.Address
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool) Message {
@@ -504,6 +532,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 	}
 }
 
+func (m Message) GasPayer() common.Address  { return m.gasPayer }
 func (m Message) From() common.Address      { return m.from }
 func (m Message) To() *common.Address       { return m.to }
 func (m Message) Provider() *common.Address { return m.provider }
