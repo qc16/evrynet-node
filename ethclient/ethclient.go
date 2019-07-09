@@ -278,20 +278,6 @@ func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*
 	return r, err
 }
 
-// TransactionGasPayer returns the gas payer of a transaction by transaction hash.
-// Temporary for testing only
-// Note that the receipt is not available for pending transactions.
-func (ec *Client) TransactionGasPayer(ctx context.Context, txHash common.Hash) (common.Address, error) {
-	var r *types.Receipt
-	err := ec.c.CallContext(ctx, &r, "eth_getTransactionReceipt", txHash)
-	if err == nil {
-		if r == nil {
-			return common.Address{}, ethereum.NotFound
-		}
-	}
-	return r.GasPayer, err
-}
-
 func toBlockNumArg(number *big.Int) string {
 	if number == nil {
 		return "latest"
