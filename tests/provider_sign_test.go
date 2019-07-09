@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -67,6 +68,16 @@ func TestSendToNormalAddress(t *testing.T) {
 	transaction, err = types.SignTx(transaction, signer, spk)
 	err = ethClient.SendTransaction(context.Background(), transaction)
 	assert.NoError(t, err)
+	for {
+		var gasPayer common.Address
+		gasPayer, err = ethClient.TransactionGasPayer(context.Background(), transaction.Hash())
+		if err == nil {
+			assert.Equal(t, gasPayer, senderAddr)
+			break
+		} else {
+			time.Sleep(5 * time.Second)
+		}
+	}
 }
 
 /*
