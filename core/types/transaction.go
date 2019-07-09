@@ -337,6 +337,8 @@ func (tx *Transaction) Provider() *common.Address {
 	return tx.data.Provider
 }
 
+// GasPayer returns gas payer of the transaction
+// gas payer should be either provider or sender
 func (tx *Transaction) GasPayer(s Signer) common.Address {
 	provider, err := Provider(s, tx)
 	if err == nil {

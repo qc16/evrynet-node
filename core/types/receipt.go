@@ -321,7 +321,6 @@ func (r Receipts) DeriveFields(config *params.ChainConfig, hash common.Hash, num
 			from, _ := Sender(signer, txs[i])
 			r[i].ContractAddress = crypto.CreateAddress(from, txs[i].Nonce())
 		}
-		// GasPayer should be either provider or sender
 		r[i].GasPayer = txs[i].GasPayer(signer)
 		// The used gas can be calculated based on previous r
 		if i == 0 {
