@@ -74,9 +74,8 @@ type SendTxArgs struct {
 	Value    hexutil.Big              `json:"value"`
 	Nonce    hexutil.Uint64           `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons.
-	Data     *hexutil.Bytes  `json:"data"`
-	Input    *hexutil.Bytes  `json:"input,omitempty"`
-	Provider *common.Address `json:"provider" rlp:"nil"`
+	Data  *hexutil.Bytes `json:"data"`
+	Input *hexutil.Bytes `json:"input,omitempty"`
 }
 
 func (args SendTxArgs) String() string {
