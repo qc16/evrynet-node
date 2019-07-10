@@ -23,6 +23,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -119,6 +120,21 @@ type CallMsg struct {
 	GasPrice *big.Int        // wei <-> gas exchange ratio
 	Value    *big.Int        // amount of wei sent along with the call
 	Data     []byte          // input data, usually an ABI-encoded contract method invocation
+}
+
+// SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
+type SendTxArgs struct {
+	From     common.Address
+	To       *common.Address
+	Gas      *hexutil.Uint64
+	GasPrice *hexutil.Big
+	Value    *hexutil.Big
+	Nonce    *hexutil.Uint64
+	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
+	// newer name and should be preferred by clients.
+	Data     *hexutil.Bytes
+	Input    *hexutil.Bytes
+	Provider *common.Address
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by
