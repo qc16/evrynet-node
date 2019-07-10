@@ -60,6 +60,7 @@ type Receipt struct {
 	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
 	ContractAddress common.Address `json:"contractAddress"`
 	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
+	GasPayer        common.Address `json:"gasPayer" gencodec:"required"`
 
 	// Inclusion information: These fields provide information about the inclusion of the
 	// transaction corresponding to this receipt.
@@ -98,6 +99,7 @@ type v4StoredReceiptRLP struct {
 	CumulativeGasUsed uint64
 	TxHash            common.Hash
 	ContractAddress   common.Address
+	GasPayer          common.Address
 	Logs              []*LogForStorage
 	GasUsed           uint64
 }
@@ -109,6 +111,7 @@ type v3StoredReceiptRLP struct {
 	Bloom             Bloom
 	TxHash            common.Hash
 	ContractAddress   common.Address
+	GasPayer          common.Address
 	Logs              []*LogForStorage
 	GasUsed           uint64
 }
@@ -247,6 +250,7 @@ func decodeV4StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
 	r.CumulativeGasUsed = stored.CumulativeGasUsed
 	r.TxHash = stored.TxHash
 	r.ContractAddress = stored.ContractAddress
+	r.GasPayer = stored.GasPayer
 	r.GasUsed = stored.GasUsed
 	r.Logs = make([]*Log, len(stored.Logs))
 	for i, log := range stored.Logs {
@@ -269,6 +273,7 @@ func decodeV3StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
 	r.Bloom = stored.Bloom
 	r.TxHash = stored.TxHash
 	r.ContractAddress = stored.ContractAddress
+	r.GasPayer = stored.GasPayer
 	r.GasUsed = stored.GasUsed
 	r.Logs = make([]*Log, len(stored.Logs))
 	for i, log := range stored.Logs {
@@ -316,6 +321,7 @@ func (r Receipts) DeriveFields(config *params.ChainConfig, hash common.Hash, num
 			from, _ := Sender(signer, txs[i])
 			r[i].ContractAddress = crypto.CreateAddress(from, txs[i].Nonce())
 		}
+		r[i].GasPayer = txs[i].GasPayer(signer)
 		// The used gas can be calculated based on previous r
 		if i == 0 {
 			r[i].GasUsed = r[i].CumulativeGasUsed

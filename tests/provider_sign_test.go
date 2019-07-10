@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -67,6 +68,44 @@ func TestSendToNormalAddress(t *testing.T) {
 	transaction, err = types.SignTx(transaction, signer, spk)
 	err = ethClient.SendTransaction(context.Background(), transaction)
 	assert.NoError(t, err)
+	// Check gas payer, should be sender's address
+	for {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
+		if err == nil {
+			assert.Equal(t, receipt.GasPayer, senderAddr)
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+/*
+	Test send to a normal address with provider's signature
+		- Expect to get error with redundant provider's signature
+*/
+func TestSendToNormalAddressWithProviderSignature(t *testing.T) {
+	senderAddr := common.HexToAddress(senderAddrStr)
+	normalAddr := common.HexToAddress(normalAddress)
+	spk, err := crypto.HexToECDSA(senderPK)
+	assert.NoError(t, err)
+
+	ppk, err := crypto.HexToECDSA(providerPK)
+	assert.NoError(t, err)
+	signer := types.HomesteadSigner{}
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	assert.NoError(t, err)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
+	assert.NoError(t, err)
+	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
+	assert.NoError(t, err)
+
+	transaction := types.NewTransaction(nonce, normalAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
+	transaction, err = types.SignTx(transaction, signer, spk)
+	assert.NoError(t, err)
+	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
+	assert.NoError(t, err)
+	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -92,18 +131,29 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 	transaction, err = types.SignTx(transaction, signer, spk)
 	err = ethClient.SendTransaction(context.Background(), transaction)
 	assert.NoError(t, err)
+
+	// Check gasPayer, should be sender's address
+	for {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
+		if err == nil {
+			assert.Equal(t, receipt.GasPayer, senderAddr)
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 /*
 	Test send ETH to a Non-enterprise Smart Contract with provider's signature
-		- Provider's signature is not required
+		- Expect to get error as provider's signature is redundant
 */
 func TestSendToNonEnterpriseSmartContractWithProviderSignature(t *testing.T) {
 	senderAddr := common.HexToAddress(senderAddrStr)
 	contractAddr := common.HexToAddress(contractAddrStrWithoutProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
-
+	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
@@ -115,10 +165,11 @@ func TestSendToNonEnterpriseSmartContractWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
-	// return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
 	assert.NoError(t, err)
+	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
+	assert.NoError(t, err)
+	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -204,7 +255,18 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	err = ethClient.SendTransaction(context.Background(), transaction)
+	assert.NoError(t, err)
+
+	for {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
+		if err == nil {
+			assert.Equal(t, receipt.GasPayer, common.HexToAddress(providerAddrStr))
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 /*
@@ -270,5 +332,16 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	err = ethClient.SendTransaction(context.Background(), transaction)
+	assert.NoError(t, err)
+
+	for {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
+		if err == nil {
+			assert.Equal(t, receipt.GasPayer, common.HexToAddress(providerAddrStr))
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
