@@ -48,6 +48,10 @@ var (
 	// ErrInvalidProvider is returned if the transaction contains an invalid signature.
 	ErrInvalidProvider = errors.New("invalid provider")
 
+	// ErrRedundantProvider is returned if the transaction does not require provider to sign
+	// but still contains a provider's signature
+	ErrRedundantProvider = errors.New("redundant provider's signature")
+
 	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
 	// one present in the local chain.
 	ErrNonceTooLow = errors.New("nonce too low")
@@ -652,29 +656,35 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInvalidGasPrice
 	}
 
-	// Make sure the transaction is signed with provider if the destination is an address
-	// Only check if tx is not a contract creation code
-	// TODO: remove the log in prodution
+	// If the destination is an enterprise smart contract, the tx must be signed with valid provider
+	// Otherwise, it should not have any provider's signature
+	// TODO: remove the log in production
+	signedProvider, err := types.Provider(pool.signer, tx)
+	// TODO: Temporary ignore err here
 	var providerAddr common.Address
 	if tx.To() != nil {
 		to := tx.To()
 		contractHash := pool.currentState.GetCodeHash(*to)
 		if (contractHash != common.Hash{}) && (contractHash != emptyCodeHash) {
-			log.Info("destination is a contract, must check it providers")
+			log.Info("destination is a contract, must check its providers")
 			expectedProvider := pool.currentState.GetProvider(*to)
 			if expectedProvider == nil {
-				log.Info("destination is a non-enteprise contract. Skip checking provider signature")
+				log.Info("destination is a non-enteprise contract, should not have provider's signature")
 			} else {
-				provider, err := types.Provider(pool.signer, tx)
-				if err != nil || provider != *expectedProvider {
-					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", provider.String(), "error", err)
+				if err != nil || signedProvider != *expectedProvider {
+					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", signedProvider.String(), "error", err)
 					return ErrInvalidProvider
 				}
-				providerAddr = provider
+				providerAddr = signedProvider
 			}
 		} else {
-			log.Info("destination is a normal address, skip provider signature check")
+			log.Info("destination is a normal address, should not have any provider's signature")
 		}
+	}
+	if providerAddr != signedProvider {
+		// this case happens when there is no provider address required but still have provider's signature
+		// providerAddress is nil while signedProvider is not
+		return ErrRedundantProvider
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
