@@ -682,7 +682,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	if (providerRetrieveErr == nil) && (!isEnterpriseContract) {
 		// this case happens when there is no provider address required but still have provider's signature
-		// providerAddress is nil while signedProvider is not
 		return ErrRedundantProvider
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
@@ -695,7 +694,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
-	if providerRetrieveErr != nil {
+	if providerRetrieveErr == nil {
 		// Provider's cost == GP * GL
 		// Sender's cost == V
 
