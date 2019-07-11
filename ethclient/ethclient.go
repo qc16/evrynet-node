@@ -505,6 +505,14 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64
 	return uint64(hex), nil
 }
 
+// SendTx injects args transaction into the pending pool for execution.
+//
+// If the transaction was a contract creation use the TransactionReceipt method to get the
+// contract address after the transaction has been mined.
+func (ec *Client) SendTx(ctx context.Context, args ethereum.SendTxArgs) error {
+	return ec.c.CallContext(ctx, nil, "eth_sendTransaction", toSendTxArgs(args))
+}
+
 // SendTransaction injects a signed transaction into the pending pool for execution.
 //
 // If the transaction was a contract creation use the TransactionReceipt method to get the
@@ -554,6 +562,34 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 	}
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
+	}
+	return arg
+}
+
+func toSendTxArgs(args ethereum.SendTxArgs) interface{} {
+	arg := map[string]interface{}{
+		"from": args.From,
+	}
+	if args.To != nil {
+		arg["to"] = args.To
+	}
+	if args.Nonce != nil {
+		arg["nonce"] = args.Nonce
+	}
+	if args.Value != nil {
+		arg["value"] = args.Value
+	}
+	if args.Data != nil {
+		arg["data"] = args.Data
+	}
+	if args.GasPrice != nil {
+		arg["gasPrice"] = args.GasPrice
+	}
+	if args.Gas != nil {
+		arg["gas"] = args.Gas
+	}
+	if args.Provider != nil {
+		arg["provider"] = args.Provider
 	}
 	return arg
 }
