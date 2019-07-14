@@ -1286,7 +1286,7 @@ func setMiner(ctx *cli.Context, cfg *miner.Config) {
 	}
 	// if ctx.GlobalIsSet(MinerLegacyGasPriceFlag.Name) {
 	// 	cfg.GasPrice = GlobalBig(ctx, MinerLegacyGasPriceFlag.Name)
-	// }	
+	// }
 	if ctx.GlobalIsSet(MinerRecommitIntervalFlag.Name) {
 		cfg.Recommit = ctx.Duration(MinerRecommitIntervalFlag.Name)
 	}

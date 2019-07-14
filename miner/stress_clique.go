@@ -195,7 +195,7 @@ func makeSealer(genesis *core.Genesis) (*node.Node, error) {
 		return eth.New(ctx, &eth.Config{
 			Genesis:         genesis,
 			NetworkId:       genesis.Config.ChainID.Uint64(),
-			GasLimit: 		 genesis.GasLimit,
+			GasLimit:        genesis.GasLimit,
 			SyncMode:        downloader.FullSync,
 			DatabaseCache:   256,
 			DatabaseHandles: 256,
