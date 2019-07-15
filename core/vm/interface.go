@@ -23,9 +23,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+//CreateAccountOption contain extra parameter for Account createion
+type CreateAccountOption struct {
+	OwnerAddress    *common.Address
+	ProviderAddress *common.Address
+}
+
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
-	CreateAccount(common.Address, ...*common.Address)
+	CreateAccount(common.Address, ...CreateAccountOption)
 
 	SubBalance(common.Address, *big.Int)
 	AddBalance(common.Address, *big.Int)

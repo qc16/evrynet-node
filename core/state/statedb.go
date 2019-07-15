@@ -26,6 +26,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -508,16 +510,18 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
-func (self *StateDB) createObject(addr common.Address, optionalParams ...*common.Address) (newobj, prev *stateObject) {
+func (self *StateDB) createObject(addr common.Address, opts ...vm.CreateAccountOption) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	if len(optionalParams) > 1 {
-		newobj = newObject(self, addr, Account{
-			OwnerAddress:    optionalParams[0],
-			ProviderAddress: optionalParams[1],
-		})
-	} else {
-		newobj = newObject(self, addr, Account{})
+	var account Account
+	if len(opts) > 0 {
+		log.Info("got optional parameters, take only the first Option, ignore the rest", opts)
+		account = Account{
+			OwnerAddress:    opts[0].OwnerAddress,
+			ProviderAddress: opts[0].ProviderAddress,
+		}
 	}
+	newobj = newObject(self, addr, account)
+
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
@@ -538,14 +542,10 @@ func (self *StateDB) createObject(addr common.Address, optionalParams ...*common
 //   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
-func (self *StateDB) CreateAccount(addr common.Address, optionalParams ...*common.Address) {
+func (self *StateDB) CreateAccount(addr common.Address, opts ...vm.CreateAccountOption) {
 	var newObj, prev *stateObject
 	//check if deploy enterprise smartcontract
-	if len(optionalParams) > 1 {
-		newObj, prev = self.createObject(addr, optionalParams[0], optionalParams[1])
-	} else {
-		newObj, prev = self.createObject(addr)
-	}
+	newObj, prev = self.createObject(addr, opts...)
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)
 	}
