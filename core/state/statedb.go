@@ -501,19 +501,23 @@ func (self *StateDB) setStateObject(object *stateObject) {
 func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 	stateObject := self.getStateObject(addr)
 	if stateObject == nil || stateObject.deleted {
-		stateObject, _ = self.createObject(addr, nil, nil)
+		stateObject, _ = self.createObject(addr)
 	}
 	return stateObject
 }
 
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
-func (self *StateDB) createObject(addr common.Address, ownerAddress *common.Address, providerAddress *common.Address) (newobj, prev *stateObject) {
+func (self *StateDB) createObject(addr common.Address, optionalParams ...*common.Address) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	newobj = newObject(self, addr, Account{
-		OwnerAddress:    ownerAddress,
-		ProviderAddress: providerAddress,
-	})
+	if len(optionalParams) > 1 {
+		newobj = newObject(self, addr, Account{
+			OwnerAddress:    optionalParams[0],
+			ProviderAddress: optionalParams[1],
+		})
+	} else {
+		newobj = newObject(self, addr, Account{})
+	}
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
@@ -534,8 +538,14 @@ func (self *StateDB) createObject(addr common.Address, ownerAddress *common.Addr
 //   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
-func (self *StateDB) CreateAccount(addr common.Address, ownerAddress *common.Address, providerAddress *common.Address) {
-	newObj, prev := self.createObject(addr, ownerAddress, providerAddress)
+func (self *StateDB) CreateAccount(addr common.Address, optionalParams ...*common.Address) {
+	var newObj, prev *stateObject
+	//check if deploy enterprise smartcontract
+	if len(optionalParams) > 1 {
+		newObj, prev = self.createObject(addr, optionalParams[0], optionalParams[1])
+	} else {
+		newObj, prev = self.createObject(addr)
+	}
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)
 	}
