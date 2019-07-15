@@ -119,10 +119,12 @@ func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit u
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
 
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, ownerAddr *common.Address, providerAddr *common.Address) *Transaction {
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, optionalParams ...*common.Address) *Transaction {
 	tx := newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
-	tx.data.Owner = ownerAddr
-	tx.data.Provider = providerAddr
+	if len(optionalParams) > 1 {
+		tx.data.Owner = optionalParams[0]
+		tx.data.Provider = optionalParams[1]
+	}
 	return tx
 }
 

@@ -219,7 +219,7 @@ func (self *StateDB) Empty(addr common.Address) bool {
 	return so == nil || so.empty()
 }
 
-// GetOwner if
+// Get owner address corresponding to an address
 func (self *StateDB) GetOwner(addr common.Address) *common.Address {
 	so := self.getStateObject(addr)
 	if so != nil {
