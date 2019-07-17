@@ -544,7 +544,7 @@ func (self *StateDB) createObject(addr common.Address, opts ...vm.CreateAccountO
 // Carrying over the balance ensures that Ether doesn't disappear.
 func (self *StateDB) CreateAccount(addr common.Address, opts ...vm.CreateAccountOption) {
 	var newObj, prev *stateObject
-	//check if deploy enterprise smartcontract
+	// check if deploy enterprise smartcontract
 	newObj, prev = self.createObject(addr, opts...)
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)

@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-//CreateAccountOption contain extra parameter for Account createion
+// CreateAccountOption contain extra parameter for Account createion
 type CreateAccountOption struct {
 	OwnerAddress    *common.Address
 	ProviderAddress *common.Address

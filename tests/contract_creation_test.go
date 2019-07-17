@@ -71,3 +71,39 @@ func TestCreateContractWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), tx))
 }
+
+func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
+	spk, err := crypto.HexToECDSA(senderPK)
+	assert.NoError(t, err)
+	sender := common.HexToAddress(senderAddrStr)
+	provideraddr := common.HexToAddress(providerAddrStr)
+	payLoadBytes, err := hexutil.Decode(payload)
+	assert.NoError(t, err)
+
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	assert.NoError(t, err)
+	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	assert.NoError(t, err)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, &sender, &provideraddr)
+	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
+	assert.NoError(t, err)
+	assert.Equal(t, senderAddrStr, tx.Owner().Hex())
+}
+
+func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
+	spk, err := crypto.HexToECDSA(senderPK)
+	assert.NoError(t, err)
+	sender := common.HexToAddress(senderAddrStr)
+	payLoadBytes, err := hexutil.Decode(payload)
+	assert.NoError(t, err)
+
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	assert.NoError(t, err)
+	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	assert.NoError(t, err)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
+	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
+	assert.NoError(t, err)
+	assert.Nil(t, tx.Owner())
+	assert.Nil(t, tx.Provider())
+}
