@@ -1,4 +1,4 @@
-package provider_logic_test
+package test
 
 import (
 	"context"
