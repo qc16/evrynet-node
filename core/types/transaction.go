@@ -308,12 +308,16 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	}
 	provider, err := Provider(s, tx)
 	if err != nil {
-		//Sender will be gasPayer
-		msg.gasPayer = msg.from
-	} else {
-		msg.gasPayer = provider
+		return msg, err
 	}
 
+	if provider != nil {
+		msg.provider = provider
+		return msg, nil
+	}
+
+	//Default: Sender will be gasPayer
+	msg.gasPayer = msg.from
 	return msg, nil
 }
 
@@ -341,9 +345,10 @@ func (tx *Transaction) Provider() *common.Address {
 // gas payer should be either provider or sender
 func (tx *Transaction) GasPayer(s Signer) common.Address {
 	provider, err := Provider(s, tx)
-	if err == nil {
+	if err == nil && provider != nil {
 		// provider pays gas fee
-		return provider
+		return *provider
+
 	}
 	from, err := Sender(s, tx)
 	if err == nil {
@@ -391,7 +396,7 @@ func (tx *Transaction) SignedProvider(s Signer) *common.Address {
 	if err != nil {
 		return nil
 	}
-	return &provider
+	return provider
 }
 
 // Transactions is a Transaction slice type for basic sorting.
