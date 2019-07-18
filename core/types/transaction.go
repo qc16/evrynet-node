@@ -312,7 +312,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	}
 
 	if provider != nil {
-		msg.provider = provider
+		msg.gasPayer = *provider
 		return msg, nil
 	}
 

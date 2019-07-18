@@ -103,7 +103,9 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 func Provider(signer Signer, tx *Transaction) (*common.Address, error) {
 	//Not caching provider for now
 	//Short circuit
-	if (tx.data.PV != nil && tx.data.PV.Cmp(big.NewInt(0)) == 0) && (tx.data.PR != nil && tx.data.PR.Cmp(big.NewInt(0)) == 0) && (tx.data.PS != nil && tx.data.PS.Cmp(big.NewInt(0)) == 0) {
+	if (tx.data.PV != nil && tx.data.PV.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PR != nil && tx.data.PR.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PS != nil && tx.data.PS.Cmp(big.NewInt(0)) == 0) {
 		return nil, nil
 	}
 	provider, err := signer.Provider(tx)
@@ -301,7 +303,7 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
-	if (Vb == nil) || (Vb != nil && Vb.BitLen() > 8) {
+	if Vb == nil || Vb.BitLen() > 8 {
 		return common.Address{}, ErrInvalidSig
 	}
 	V := byte(Vb.Uint64() - 27)

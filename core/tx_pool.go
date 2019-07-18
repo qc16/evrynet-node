@@ -671,7 +671,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 				log.Info("destination is a non-enteprise contract, should not have provider's signature")
 			} else {
 				isEnterpriseContract = true
-				if providerRetrieveErr != nil || signedProvider != expectedProvider {
+				if (providerRetrieveErr != nil) || (signedProvider.Hex() != expectedProvider.Hex()) {
 					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", signedProvider.String(), "error", providerRetrieveErr)
 					return ErrInvalidProvider
 				}
