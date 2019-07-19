@@ -545,6 +545,7 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		gasPrice:   gasPrice,
 		data:       data,
 		checkNonce: checkNonce,
+		gasPayer:   from,
 	}
 }
 
