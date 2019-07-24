@@ -128,8 +128,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-	log.Info("Initialised chain configuration", "config", chainConfig)	
-	
+	log.Info("Initialised chain configuration", "config", chainConfig)
+
 	//rewrite gas price
 	chainConfig.GasPrice = config.GasPrice
 	config.GPO.GasPrice = config.GasPrice
@@ -484,7 +484,7 @@ func (s *Ethereum) ChainDb() ethdb.Database            { return s.chainDb }
 func (s *Ethereum) IsListening() bool                  { return true } // Always listening
 func (s *Ethereum) EthVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *Ethereum) NetVersion() uint64                 { return s.networkID }
-func (s *Ethereum) GasPrice() *big.Int           	   { return s.gasPrice }
+func (s *Ethereum) GasPrice() *big.Int                 { return s.gasPrice }
 func (s *Ethereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
 func (s *Ethereum) Synced() bool                       { return atomic.LoadUint32(&s.protocolManager.acceptTxs) == 1 }
 func (s *Ethereum) ArchiveMode() bool                  { return s.config.NoPruning }
