@@ -101,18 +101,18 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 // Provider returns the address derived from the signature (V, R, S) using secp256k1
 // If there is no provider signature, it will return nil address pointer and nill error.
 func Provider(signer Signer, tx *Transaction) (*common.Address, error) {
-	//Not caching provider for now
-	//Short circuit
-	if (tx.data.PV != nil && tx.data.PV.Cmp(big.NewInt(0)) == 0) &&
-		(tx.data.PR != nil && tx.data.PR.Cmp(big.NewInt(0)) == 0) &&
-		(tx.data.PS != nil && tx.data.PS.Cmp(big.NewInt(0)) == 0) {
+	// Not caching provider for now
+	// Short circuit
+	if (tx.data.PV == nil || tx.data.PV.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PR == nil || tx.data.PR.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PS == nil || tx.data.PS.Cmp(big.NewInt(0)) == 0) {
 		return nil, nil
 	}
 	provider, err := signer.Provider(tx)
 	if err != nil {
 		return nil, err
 	}
-	//if it recovered as zero address
+	// if it recovered as zero address
 	if provider == (common.Address{}) {
 		return nil, nil
 	}
@@ -124,7 +124,7 @@ func Provider(signer Signer, tx *Transaction) (*common.Address, error) {
 type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
-	// Provider reutrns the provider address of the transaction
+	// Provider returns the provider address of the transaction
 	Provider(tx *Transaction) (common.Address, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
