@@ -28,6 +28,8 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 		PV           *hexutil.Big    `json:"pv"`
 		PR           *hexutil.Big    `json:"pr"`
 		PS           *hexutil.Big    `json:"ps"`
+		Owner        *common.Address `json:"owner" rlp:"nil"`
+		Provider     *common.Address `json:"provider" rlp:"nil"`
 		Hash         *common.Hash    `json:"hash" rlp:"-"`
 	}
 	var enc txdata
@@ -44,6 +46,8 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 	enc.PR = (*hexutil.Big)(t.PR)
 	enc.PS = (*hexutil.Big)(t.PS)
 	enc.Hash = t.Hash
+	enc.Provider = t.Provider
+	enc.Owner = t.Owner
 	return json.Marshal(&enc)
 }
 
@@ -62,6 +66,8 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 		PV           *hexutil.Big    `json:"pv"`
 		PR           *hexutil.Big    `json:"pr"`
 		PS           *hexutil.Big    `json:"ps"`
+		Owner        *common.Address `json:"owner" rlp:"nil"`
+		Provider     *common.Address `json:"provider" rlp:"nil"`
 		Hash         *common.Hash    `json:"hash" rlp:"-"`
 	}
 	var dec txdata
@@ -110,5 +116,8 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 	t.PV = (*big.Int)(dec.PV)
 	t.PR = (*big.Int)(dec.PR)
 	t.PS = (*big.Int)(dec.PS)
+
+	t.Provider = dec.Provider
+	t.Owner = dec.Owner
 	return nil
 }

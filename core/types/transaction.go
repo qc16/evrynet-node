@@ -35,6 +35,12 @@ var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
 )
 
+// CreateAccountOption contain extra parameter for Account createion
+type CreateAccountOption struct {
+	OwnerAddress    *common.Address
+	ProviderAddress *common.Address
+}
+
 type Transaction struct {
 	data txdata
 	// caches
@@ -119,11 +125,12 @@ func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit u
 	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 }
 
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, optionalParams ...*common.Address) *Transaction {
+// NewContractCreation create new instance of the tx with contract creation
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, opts ...CreateAccountOption) *Transaction {
 	tx := newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
-	if len(optionalParams) > 1 {
-		tx.data.Owner = optionalParams[0]
-		tx.data.Provider = optionalParams[1]
+	if len(opts) > 0 {
+		tx.data.Owner = opts[0].OwnerAddress
+		tx.data.Provider = opts[0].ProviderAddress
 	}
 	return tx
 }
