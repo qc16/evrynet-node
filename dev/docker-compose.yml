@@ -7,6 +7,7 @@ services:
     build:
       context: ./bootnode
     image: img_bootnode
+    container_name: geth-bootnode
     ports:
       - 30301:30301/udp
     networks:
@@ -30,7 +31,8 @@ services:
     image: img_miner1
     container_name: geth-miner-1
     volumes:
-      - ~/eth-data-1:/root/.ethash
+      - ~/eth-data-1/ethash:/root/.ethash
+      - ~/eth-data-1/ethereum:/root/.ethereum
     ports:
       - 8546:8545
     networks:
@@ -85,7 +87,8 @@ services:
       timeout: 5s
       retries: 30
     volumes:
-      - ~/eth-data-3:/root/.ethash
+      - ~/eth-data-3/ethash:/root/.ethash
+      - ~/eth-data-3/ethereum:/root/.ethereum
     networks:
       chainnet:
         ipv4_address: 172.25.0.110

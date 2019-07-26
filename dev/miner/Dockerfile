@@ -23,6 +23,6 @@ COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
 RUN geth init genesis.json
 RUN geth account import --password ~/.accountpassword  ~/.privatekey
 
-CMD exec geth --bootnodes "enode://$bootnodeId@$bootnodeIp:30301" --networkid 15 --verbosity 4  --syncmode "full" --mine --etherbase $address --minerthreads 2 --unlock $address --password ~/.accountpassword
+CMD exec geth --bootnodes "enode://$bootnodeId@$bootnodeIp:30301" --networkid 15 --verbosity 4  --syncmode "fast" --mine --etherbase $address --minerthreads 2 --unlock $address --password ~/.accountpassword
 
 EXPOSE 8545

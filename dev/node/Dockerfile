@@ -23,7 +23,7 @@ COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
 RUN geth init genesis.json
 RUN geth account import --password ~/.accountpassword  ~/.privatekey
 
-CMD exec geth --bootnodes "enode://$bootnodeId@$bootnodeIp:30301" --networkid 15 --verbosity=4 --rpc --rpcaddr "0.0.0.0" --rpcapi "eth,web3,net,admin,debug,db,personal" --rpccorsdomain "*" --syncmode "full"
+CMD exec geth --bootnodes "enode://$bootnodeId@$bootnodeIp:30301" --networkid 15 --verbosity 4 --rpc --rpcaddr "0.0.0.0" --rpcapi "eth,web3,net,admin,debug,db,personal" --rpccorsdomain "*" --syncmode "fast"
 
 EXPOSE 8545
 EXPOSE 30303
