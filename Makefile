@@ -11,12 +11,15 @@
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 
-local:
-	docker rmi -f dev_geth-bootnode dev_geth-explorer dev_geth-dev-node
-	docker rmi -f dev_geth-dev-miner-1 dev_geth-dev-miner-2 dev_geth-dev-swarm-1 dev_geth-dev-swarm-2
-	docker rmi -f dev_geth-monitor-frontend dev_geth-monitor-backend
-	docker rmi -f img_bootnode img_miner1 img_miner2 img_node img_explorer
-	docker-compose -f ./dev/docker-compose.yml up --force-recreate
+local_first_time:
+	docker rmi -f img_miner1 img_miner2 img_node img_explorer
+
+	needRestore=0 docker-compose -f ./dev/docker-compose.yml up --force-recreate
+
+local_existed:
+	docker rmi -f img_miner1 img_miner2 img_node img_explorer
+
+	needRestore=1 docker-compose -f ./dev/docker-compose.yml up --force-recreate
 
 geth:
 	build/env.sh go run build/ci.go install ./cmd/geth
