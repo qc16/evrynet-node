@@ -19,7 +19,6 @@ To run these test, please deploy your own account/ contract and extract privatek
 Adjust these params to match deployment on local machine:
 */
 
-
 /*
 	Test Send ETH to a normal address
 		- No provider signature is required

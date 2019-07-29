@@ -99,12 +99,24 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 }
 
 // Provider returns the address derived from the signature (V, R, S) using secp256k1
-func Provider(signer Signer, tx *Transaction) (common.Address, error) {
-	//Not caching provider for now
-	if tx.data.PV == nil {
-		return common.Address{}, ErrInvalidSig
+// If there is no provider signature, it will return nil address pointer and nill error.
+func Provider(signer Signer, tx *Transaction) (*common.Address, error) {
+	// Not caching provider for now
+	// Short circuit
+	if (tx.data.PV == nil || tx.data.PV.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PR == nil || tx.data.PR.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PS == nil || tx.data.PS.Cmp(big.NewInt(0)) == 0) {
+		return nil, nil
 	}
-	return signer.Provider(tx)
+	provider, err := signer.Provider(tx)
+	if err != nil {
+		return nil, err
+	}
+	// if it recovered as zero address
+	if provider == (common.Address{}) {
+		return nil, nil
+	}
+	return &provider, nil
 }
 
 // Signer encapsulates transaction signature handling. Note that this interface is not a
@@ -112,7 +124,7 @@ func Provider(signer Signer, tx *Transaction) (common.Address, error) {
 type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
-	// Provider reutrns the provider address of the transaction
+	// Provider returns the provider address of the transaction
 	Provider(tx *Transaction) (common.Address, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
@@ -291,7 +303,7 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
-	if Vb.BitLen() > 8 {
+	if Vb == nil || Vb.BitLen() > 8 {
 		return common.Address{}, ErrInvalidSig
 	}
 	V := byte(Vb.Uint64() - 27)

@@ -671,7 +671,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 				log.Info("destination is a non-enteprise contract, should not have provider's signature")
 			} else {
 				isEnterpriseContract = true
-				if providerRetrieveErr != nil || signedProvider != *expectedProvider {
+				if (providerRetrieveErr != nil) || (signedProvider.Hex() != expectedProvider.Hex()) {
 					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", signedProvider.String(), "error", providerRetrieveErr)
 					return ErrInvalidProvider
 				}
@@ -680,7 +680,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			log.Info("destination is a normal address, should not have any provider's signature")
 		}
 	}
-	if (providerRetrieveErr == nil) && (!isEnterpriseContract) {
+	if (signedProvider != nil) && (!isEnterpriseContract) {
 		// this case happens when there is no provider address required but still have provider's signature
 		return ErrRedundantProvider
 	}
@@ -694,7 +694,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
-	if providerRetrieveErr == nil {
+	if signedProvider != nil {
 		// Provider's cost == GP * GL
 		// Sender's cost == V
 
@@ -704,7 +704,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		}
 
 		// Check provider's balance for transaction fee
-		if pool.currentState.GetBalance(signedProvider).Cmp(tx.TransactionFee()) < 0 {
+		if pool.currentState.GetBalance(*signedProvider).Cmp(tx.TransactionFee()) < 0 {
 			return ErrProviderInsufficientFunds
 		}
 	} else {
