@@ -11,16 +11,6 @@
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 
-local_first_time:
-	docker rmi -f img_miner1 img_miner2 img_node img_explorer
-
-	needRestore=0 docker-compose -f ./dev/docker-compose.yml up --force-recreate
-
-local_existed:
-	docker rmi -f img_miner1 img_miner2 img_node img_explorer
-
-	needRestore=1 docker-compose -f ./dev/docker-compose.yml up --force-recreate
-
 geth:
 	build/env.sh go run build/ci.go install ./cmd/geth
 	@echo "Done building."
