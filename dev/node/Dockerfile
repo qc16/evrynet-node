@@ -28,7 +28,7 @@ RUN chmod +x restore.sh
 CMD ./restore.sh && \
     geth --networkid 15 --verbosity 4 --syncmode "fast" \
     --bootnodes "enode://$bootnodeId@$bootnodeIp:30301" \
-    --rpc --rpcaddr "0.0.0.0" --rpcapi "eth,web3,net,admin,debug,db,personal" --rpccorsdomain "*"
+    --rpc --rpcaddr "0.0.0.0" --rpcapi "eth,web3,net,admin,debug,db,personal" --rpccorsdomain "*" --rpcvhosts "*"
 
 EXPOSE 8545
 EXPOSE 30303

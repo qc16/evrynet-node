@@ -28,6 +28,7 @@ RUN chmod +x restore.sh
 CMD ./restore.sh && \
     geth --networkid 15 --verbosity 4 --syncmode "fast" \
     --bootnodes "enode://$bootnodeId@$bootnodeIp:30301" \
-    --etherbase $address --mine --minerthreads 2
+    --etherbase $address --mine --minerthreads 2 \
+    --unlock $address --password /root/.accountpassword
 
 EXPOSE 8545
