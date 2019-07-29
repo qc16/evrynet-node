@@ -26,7 +26,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -222,8 +221,7 @@ func (self *StateDB) Empty(addr common.Address) bool {
 
 // Get owner address corresponding to an address
 func (self *StateDB) GetOwner(addr common.Address) *common.Address {
-	so := self.getStateObject(addr)
-	if so != nil {
+	if so := self.getStateObject(addr); so != nil {
 		return so.OwnerAddress()
 	}
 	return nil
@@ -509,7 +507,7 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
-func (self *StateDB) createObject(addr common.Address, opts ...vm.CreateAccountOption) (newobj, prev *stateObject) {
+func (self *StateDB) createObject(addr common.Address, opts ...types.CreateAccountOption) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
 	var account Account
 	if len(opts) > 0 {
@@ -541,10 +539,9 @@ func (self *StateDB) createObject(addr common.Address, opts ...vm.CreateAccountO
 //   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
-func (self *StateDB) CreateAccount(addr common.Address, opts ...vm.CreateAccountOption) {
-	var newObj, prev *stateObject
+func (self *StateDB) CreateAccount(addr common.Address, opts ...types.CreateAccountOption) {
 	// check if deploy enterprise smartcontract
-	newObj, prev = self.createObject(addr, opts...)
+	newObj, prev := self.createObject(addr, opts...)
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)
 	}

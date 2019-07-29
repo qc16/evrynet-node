@@ -35,7 +35,7 @@ var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
 )
 
-// CreateAccountOption contain extra parameter for Account createion
+// CreateAccountOption contain extra parameter for Account creation
 type CreateAccountOption struct {
 	OwnerAddress    *common.Address
 	ProviderAddress *common.Address
