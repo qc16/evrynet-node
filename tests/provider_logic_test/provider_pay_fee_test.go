@@ -1,4 +1,4 @@
-package tests
+package test
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(0), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
@@ -55,8 +55,8 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
-			assert.Equal(t, receipt.GasPayer, common.HexToAddress(providerAddrStr))
-			assert.Equal(t, receipt.Status, uint64(1))
+			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -83,7 +83,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
@@ -113,7 +113,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
@@ -127,8 +127,8 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
-			assert.Equal(t, receipt.GasPayer, common.HexToAddress(providerAddrStr))
-			assert.Equal(t, receipt.Status, uint64(1))
+			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -156,7 +156,7 @@ func TestInteractEnterpriseSmartContractWithValidProviderSignatureWithoutGas(t *
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(0), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
