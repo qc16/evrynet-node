@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,12 +31,14 @@ func TestCreateContractWithProviderAddress(t *testing.T) {
 	provideraddr := common.HexToAddress(providerAddrStr)
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
+	var option types.CreateAccountOption
+	option.ProviderAddress = &provideraddr
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
 	assert.NoError(t, err)
-	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, &provideraddr)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
@@ -53,7 +56,7 @@ func TestCreateContractWithoutProviderAddress(t *testing.T) {
 	assert.NoError(t, err)
 	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
 	assert.NoError(t, err)
-	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, nil)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
@@ -73,7 +76,7 @@ func TestCreateContractWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
 	assert.NoError(t, err)
-	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, nil)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	tx, err = types.ProviderSignTx(tx, types.HomesteadSigner{}, ppk)
@@ -97,4 +100,44 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
+}
+
+func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
+	spk, err := crypto.HexToECDSA(senderPK)
+	assert.NoError(t, err)
+	sender := common.HexToAddress(senderAddrStr)
+	provideraddr := common.HexToAddress(providerAddrStr)
+	payLoadBytes, err := hexutil.Decode(payload)
+	assert.NoError(t, err)
+	var option types.CreateAccountOption
+	option.ProviderAddress = &provideraddr
+	option.OwnerAddress = &sender
+
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	assert.NoError(t, err)
+	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	assert.NoError(t, err)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
+	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
+	assert.NoError(t, err)
+	assert.Equal(t, strings.ToLower(senderAddrStr), strings.ToLower(tx.Owner().Hex()))
+	assert.Equal(t, strings.ToLower(providerAddrStr), strings.ToLower(tx.Provider().Hex()))
+}
+
+func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
+	spk, err := crypto.HexToECDSA(senderPK)
+	assert.NoError(t, err)
+	sender := common.HexToAddress(senderAddrStr)
+	payLoadBytes, err := hexutil.Decode(payload)
+	assert.NoError(t, err)
+
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	assert.NoError(t, err)
+	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	assert.NoError(t, err)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
+	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
+	assert.NoError(t, err)
+	assert.Nil(t, tx.Owner())
+	assert.Nil(t, tx.Provider())
 }
