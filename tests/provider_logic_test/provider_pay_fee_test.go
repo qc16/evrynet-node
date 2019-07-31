@@ -1,9 +1,10 @@
-package tests
+package test
 
 import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -24,12 +25,8 @@ To run these test, please deploy your own account/ contract and extract privatek
 // The balance of provider should be check prior and after the transaction is mined to
 // assure the correctness of the program.
 func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountWithoutGas(t *testing.T) {
-	const (
-		senderWithoutGasPK      = "CD79C18795A866C4A7FA8D3A88494F618AB0E69B1493382D638A6483538EEA97"
-		senderWithoutGasAddrStr = "0xBBD9e63B95308358AAfb20d6606701A4b6429f5e"
-	)
 	senderAddr := common.HexToAddress(senderWithoutGasAddrStr)
-	contractAddr := common.HexToAddress(newContractAddrWithProvider)
+	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
 	spk, err := crypto.HexToECDSA(senderWithoutGasPK)
 	assert.NoError(t, err)
 
@@ -44,26 +41,34 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(0), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	err = ethClient.SendTransaction(context.Background(), transaction)
+	assert.NoError(t, err)
+
+	for {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
+		if err == nil {
+			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 // Interact with a payable function and sending some native token along with transaction
 // Please make sure the sender does not have any funds
 // expected to get revert as sender's balance is not enough for transaction amount
 func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFromAccountWithoutGas(t *testing.T) {
-	const (
-		senderWithoutGasPK      = "CD79C18795A866C4A7FA8D3A88494F618AB0E69B1493382D638A6483538EEA97"
-		senderWithoutGasAddrStr = "0xBBD9e63B95308358AAfb20d6606701A4b6429f5e"
-	)
 	senderAddr := common.HexToAddress(senderWithoutGasAddrStr)
-	contractAddr := common.HexToAddress(newContractAddrWithProvider)
+	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
 	spk, err := crypto.HexToECDSA(senderWithoutGasPK)
 	assert.NoError(t, err)
 
@@ -78,7 +83,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
@@ -93,7 +98,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 // expected to get passed as sender's balance is enough for transaction amount
 func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFromAccountWithEnoughBalance(t *testing.T) {
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(newContractAddrWithProvider)
+	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
@@ -108,14 +113,26 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	err = ethClient.SendTransaction(context.Background(), transaction)
+	assert.NoError(t, err)
+
+	for {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
+		if err == nil {
+			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 // Interact with enterprise contract where provider has zero gas
@@ -139,7 +156,7 @@ func TestInteractEnterpriseSmartContractWithValidProviderSignatureWithoutGas(t *
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(0), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)

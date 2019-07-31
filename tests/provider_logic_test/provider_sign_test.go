@@ -47,7 +47,8 @@ func TestSendToNormalAddress(t *testing.T) {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
-			assert.Equal(t, receipt.GasPayer, senderAddr)
+			assert.Equal(t, senderAddr, receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -111,7 +112,8 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
-			assert.Equal(t, receipt.GasPayer, senderAddr)
+			assert.Equal(t, senderAddr, receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -167,7 +169,7 @@ func TestInteractWithNonEnterpriseSmartContractWithoutProviderSignature(t *testi
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000002")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	err = ethClient.SendTransaction(context.Background(), transaction)
@@ -236,7 +238,8 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
-			assert.Equal(t, receipt.GasPayer, common.HexToAddress(providerAddrStr))
+			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -266,7 +269,7 @@ func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testin
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
@@ -296,7 +299,7 @@ func TestInteractToEnterpriseSmartContractWithoutProviderSignature(t *testing.T)
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
@@ -327,7 +330,7 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 	assert.NoError(t, err)
 
 	// data to interact with a function of this contract
-	dataBytes := []byte("0x552410770000000000000000000000000000000000000000000000000000000000000004")
+	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
@@ -341,7 +344,8 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
-			assert.Equal(t, receipt.GasPayer, common.HexToAddress(providerAddrStr))
+			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
+			assert.Equal(t, uint64(1), receipt.Status)
 			break
 		}
 		time.Sleep(1 * time.Second)

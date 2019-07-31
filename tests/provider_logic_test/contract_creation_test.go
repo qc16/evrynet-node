@@ -80,3 +80,21 @@ func TestCreateContractWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), tx))
 }
+
+func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
+	spk, err := crypto.HexToECDSA(senderPK)
+	assert.NoError(t, err)
+	sender := common.HexToAddress(senderAddrStr)
+	provideraddr := common.HexToAddress(providerWithoutGasAddr)
+	payLoadBytes, err := hexutil.Decode(payload)
+	assert.NoError(t, err)
+
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	assert.NoError(t, err)
+	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	assert.NoError(t, err)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, &provideraddr)
+	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
+	assert.NoError(t, err)
+	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
+}
