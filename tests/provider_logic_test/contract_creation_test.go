@@ -89,6 +89,8 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	assert.NoError(t, err)
 	sender := common.HexToAddress(senderAddrStr)
 	provideraddr := common.HexToAddress(providerWithoutGasAddr)
+	var option types.CreateAccountOption
+	option.ProviderAddress = &provideraddr
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
@@ -96,7 +98,7 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	assert.NoError(t, err)
 	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
 	assert.NoError(t, err)
-	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, &provideraddr)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
