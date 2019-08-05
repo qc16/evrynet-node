@@ -509,8 +509,10 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64
 //
 // If the transaction was a contract creation use the TransactionReceipt method to get the
 // contract address after the transaction has been mined.
-func (ec *Client) SendTx(ctx context.Context, args ethereum.SendTxArgs) error {
-	return ec.c.CallContext(ctx, nil, "eth_sendTransaction", toSendTxArgs(args))
+func (ec *Client) SendTx(ctx context.Context, args ethereum.SendTxArgs) (common.Hash, error) {
+	var hash common.Hash
+	err := ec.c.CallContext(ctx, &hash, "eth_sendTransaction", toSendTxArgs(args))
+	return hash, err
 }
 
 // SendTransaction injects a signed transaction into the pending pool for execution.
@@ -588,8 +590,12 @@ func toSendTxArgs(args ethereum.SendTxArgs) interface{} {
 	if args.Gas != nil {
 		arg["gas"] = args.Gas
 	}
+	if args.Owner != nil {
+		arg["Owner"] = args.Owner
+	}
 	if args.Provider != nil {
 		arg["provider"] = args.Provider
 	}
+
 	return arg
 }

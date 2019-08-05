@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -66,6 +67,7 @@ type Message interface {
 	GasPayer() common.Address
 	//FromFrontier() (common.Address, error)
 	To() *common.Address
+	Owner() *common.Address
 	Provider() *common.Address
 
 	GasPrice() *big.Int
@@ -209,7 +211,14 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		vmerr error
 	)
 	if contractCreation {
-		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value, st.msg.Provider())
+		var option types.CreateAccountOption
+		if msg.Owner() != nil {
+			option.OwnerAddress = msg.Owner()
+		}
+		if msg.Provider() != nil {
+			option.ProviderAddress = msg.Provider()
+		}
+		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value, option)
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)

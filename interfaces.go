@@ -135,6 +135,7 @@ type SendTxArgs struct {
 	Data     *hexutil.Bytes
 	Input    *hexutil.Bytes
 	Provider *common.Address
+	Owner    *common.Address
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by

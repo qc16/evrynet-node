@@ -1,4 +1,4 @@
-package tests
+package test
 
 import (
 	"context"
@@ -24,7 +24,7 @@ func TestProviderSignTransaction(t *testing.T) {
 		providerPK      = "181C205392D2A39453E6CDFB2839C7F0CA77ED2683F1A04B5007AC223DF9DD82"
 		senderPK        = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
 		senderAddrStr   = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
-		providerAddrStr = "0x6cb9612fecf88360481e69b9f1e99f833592cdf7"
+		providerAddrStr = "0x42B45C5Fdea6E2fFe0dd3faB73FB55bE5c909B34"
 		//This should be a smart contract with provider address
 		scContractStr = "0xe9aabe2ab51b068682e49126b0c58a725251932f"
 
@@ -36,7 +36,7 @@ func TestProviderSignTransaction(t *testing.T) {
 	assert.NoError(t, err)
 	senderAddr := common.HexToAddress(senderAddrStr)
 	providerAddr := common.HexToAddress(providerAddrStr)
-	ethClient, err := ethclient.Dial("http://localhost:9017")
+	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	id, err := ethClient.ChainID(context.Background())
 	signer := types.NewEIP155Signer(id)

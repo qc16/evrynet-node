@@ -1041,6 +1041,7 @@ type RPCTransaction struct {
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
 
+	Owner    common.Address `json:"owner"`
 	Provider common.Address `json:"provider"`
 
 	V *hexutil.Big `json:"v"`
@@ -1080,6 +1081,11 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		PV: (*hexutil.Big)(PV),
 		PR: (*hexutil.Big)(PR),
 		PS: (*hexutil.Big)(PS),
+	}
+
+	ownerAddr := tx.Owner()
+	if ownerAddr != nil {
+		result.Owner = *ownerAddr
 	}
 
 	providerAddr := tx.Provider()
@@ -1339,6 +1345,7 @@ type SendTxArgs struct {
 	Data     *hexutil.Bytes  `json:"data"`
 	Input    *hexutil.Bytes  `json:"input"`
 	Provider *common.Address `json:"provider" rlp:"nil"`
+	Owner    *common.Address `json:"owner" rlp:"nil"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1408,7 +1415,14 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 		input = *args.Data
 	}
 	if args.To == nil {
-		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input, args.Provider)
+		var option types.CreateAccountOption
+		if args.Owner != nil {
+			option.OwnerAddress = args.Owner
+		}
+		if args.Provider != nil {
+			option.ProviderAddress = args.Provider
+		}
+		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input, option)
 	}
 	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
 }
