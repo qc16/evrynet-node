@@ -229,26 +229,15 @@ func (e *NoRewardEngine) accumulateRewards(config *params.ChainConfig, state *st
 }
 
 func (e *NoRewardEngine) Finalize(chain consensus.ChainReader, header *types.Header, statedb *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header) {
-	if e.rewardsOn {
-		e.inner.Finalize(chain, header, statedb, txs, uncles)
-	} else {
-		e.accumulateRewards(chain.Config(), statedb, header, uncles)
-		header.Root = statedb.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-	}
-}
-
-func (e *NoRewardEngine) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, statedb *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	if e.rewardsOn {
-		return e.inner.FinalizeAndAssemble(chain, header, statedb, txs, uncles, receipts)
+		e.inner.Finalize(chain, header, statedb, txs, uncles, nil)
 	} else {
 		e.accumulateRewards(chain.Config(), statedb, header, uncles)
 		header.Root = statedb.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-
-		// Header seems complete, assemble into a block and return
-		return types.NewBlock(header, txs, uncles, receipts), nil
 	}
+	// Header seems complete, assemble into a block and return
+	return types.NewBlock(header, txs, uncles, receipts), nil
 }
 
 func (e *NoRewardEngine) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
@@ -450,7 +439,7 @@ func (api *RetestethAPI) mineBlock() error {
 	if api.blockInterval == 0 {
 		timestamp = uint64(time.Now().Unix())
 	} else {
-		timestamp = parent.Time() + api.blockInterval
+		timestamp = new(big.Int).Add(parent.Time(), big.NewInt(int64(api.blockInterval))).Uint64()
 	}
 	gasLimit := core.CalcGasLimit(parent, 9223372036854775807, 9223372036854775807)
 	header := &types.Header{
@@ -458,7 +447,7 @@ func (api *RetestethAPI) mineBlock() error {
 		Number:     big.NewInt(int64(api.blockNumber + 1)),
 		GasLimit:   gasLimit,
 		Extra:      api.extraData,
-		Time:       timestamp,
+		Time:       big.NewInt(int64(timestamp)),
 	}
 	header.Coinbase = api.author
 	if api.engine != nil {
@@ -532,7 +521,7 @@ func (api *RetestethAPI) mineBlock() error {
 			}
 		}
 	}
-	block, err := api.engine.FinalizeAndAssemble(api.blockchain, header, statedb, txs, []*types.Header{}, receipts)
+	block, err := api.engine.Finalize(api.blockchain, header, statedb, txs, []*types.Header{}, receipts)
 	return api.importBlock(block)
 }
 

@@ -134,6 +134,7 @@ var (
 		utils.DeveloperPeriodFlag,
 		utils.TestnetFlag,
 		utils.RinkebyFlag,
+		utils.OttomanFlag,
 		utils.GoerliFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
@@ -146,6 +147,8 @@ var (
 		utils.EWASMInterpreterFlag,
 		utils.EVMInterpreterFlag,
 		configFileFlag,
+		utils.IstanbulRequestTimeoutFlag,
+		utils.IstanbulBlockPeriodFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -303,6 +306,10 @@ func geth(ctx *cli.Context) error {
 	node := makeFullNode(ctx)
 	defer node.Close()
 	startNode(ctx, node)
+
+	// Check if a valid consensus is used
+	quorumValidateConsensus(node)
+
 	node.Wait()
 	return nil
 }
@@ -378,7 +385,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 				if !ok {
 					continue
 				}
-				if timestamp := time.Unix(int64(done.Latest.Time), 0); time.Since(timestamp) < 10*time.Minute {
+				if timestamp := time.Unix(done.Latest.Time.Int64(), 0); time.Since(timestamp) < 10*time.Minute {
 					log.Info("Synchronisation completed", "latestnum", done.Latest.Number, "latesthash", done.Latest.Hash(),
 						"age", common.PrettyAge(timestamp))
 					stack.Stop()

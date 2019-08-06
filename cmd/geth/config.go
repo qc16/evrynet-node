@@ -220,3 +220,16 @@ func dumpConfig(ctx *cli.Context) error {
 
 	return nil
 }
+
+// quorumValidateConsensus checks if a consensus was used. The node is killed if consensus was not used
+func quorumValidateConsensus(stack *node.Node) {
+	var ethereum *eth.Ethereum
+
+	err := stack.Service(&ethereum)
+	if err != nil {
+		utils.Fatalf("Error retrieving Ethereum service: %v", err)
+	}
+	if ethereum.ChainConfig().Istanbul == nil && ethereum.ChainConfig().Clique == nil {
+		utils.Fatalf("Consensus not specified. Exiting!!")
+	}
+}

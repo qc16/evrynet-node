@@ -54,6 +54,8 @@ func BytesToHash(b []byte) Hash {
 	return h
 }
 
+func StringToHash(s string) Hash { return BytesToHash([]byte(s)) } // dep: Istanbul
+
 // BigToHash sets byte representation of b to hash.
 // If b is larger than len(h), b will be cropped from the left.
 func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
@@ -102,6 +104,11 @@ func (h *Hash) UnmarshalJSON(input []byte) error {
 // MarshalText returns the hex representation of h.
 func (h Hash) MarshalText() ([]byte, error) {
 	return hexutil.Bytes(h[:]).MarshalText()
+}
+
+// For Istanbul
+func EmptyHash(h Hash) bool {
+	return h == Hash{}
 }
 
 // SetBytes sets the hash to the value of b.
@@ -181,6 +188,8 @@ func BytesToAddress(b []byte) Address {
 	a.SetBytes(b)
 	return a
 }
+
+func StringToAddress(s string) Address { return BytesToAddress([]byte(s)) } // dep: Istanbul
 
 // BigToAddress returns Address with byte values of b.
 // If b is larger than len(h), b will be cropped from the left.

@@ -17,6 +17,7 @@
 package node
 
 import (
+	"crypto/ecdsa"
 	"path/filepath"
 	"reflect"
 
@@ -89,6 +90,11 @@ func (ctx *ServiceContext) Service(service interface{}) error {
 // RPC(http, ws or graphql).
 func (ctx *ServiceContext) ExtRPCEnabled() bool {
 	return ctx.config.ExtRPCEnabled()
+}
+
+// NodeKey returns node key from config
+func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
+	return ctx.config.NodeKey()
 }
 
 // ServiceConstructor is the function signature of the constructors needed to be
