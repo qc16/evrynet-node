@@ -29,10 +29,11 @@ func TestCreateContractWithProviderAddress(t *testing.T) {
 	assert.NoError(t, err)
 	sender := common.HexToAddress(senderAddrStr)
 	provideraddr := common.HexToAddress(providerAddrStr)
+	provideraddrArr := []*common.Address{&provideraddr}
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 	var option types.CreateAccountOption
-	option.ProviderAddresses = &provideraddr
+	option.ProviderAddresses = provideraddrArr
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
@@ -89,8 +90,9 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	assert.NoError(t, err)
 	sender := common.HexToAddress(senderAddrStr)
 	provideraddr := common.HexToAddress(providerWithoutGasAddr)
+	provideraddrArr := []*common.Address{&provideraddr}
 	var option types.CreateAccountOption
-	option.ProviderAddresses = &provideraddr
+	option.ProviderAddresses = provideraddrArr
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
@@ -109,10 +111,11 @@ func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
 	assert.NoError(t, err)
 	sender := common.HexToAddress(senderAddrStr)
 	provideraddr := common.HexToAddress(providerAddrStr)
+	provideraddrArr := []*common.Address{&provideraddr}
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 	var option types.CreateAccountOption
-	option.ProviderAddresses = &provideraddr
+	option.ProviderAddresses = provideraddrArr
 	option.OwnerAddress = &sender
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
@@ -123,7 +126,7 @@ func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.Equal(t, strings.ToLower(senderAddrStr), strings.ToLower(tx.Owner().Hex()))
-	assert.Equal(t, strings.ToLower(providerAddrStr), strings.ToLower(tx.Provider().Hex()))
+	assert.Equal(t, strings.ToLower(providerAddrStr), strings.ToLower(tx.Providers()[0].Hex()))
 }
 
 func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
@@ -141,5 +144,5 @@ func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.Nil(t, tx.Owner())
-	assert.Nil(t, tx.Provider())
+	assert.Nil(t, tx.Providers())
 }
