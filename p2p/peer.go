@@ -125,6 +125,15 @@ func NewPeer(id enode.ID, name string, caps []Cap) *Peer {
 	return peer
 }
 
+// NewPeerFromNode returns a peer for testing purposes.
+func NewPeerFromNode(node *enode.Node, name string, caps []Cap) *Peer {
+	pipe, _ := net.Pipe()
+	conn := &conn{fd: pipe, transport: nil, node: node, caps: caps, name: name}
+	peer := newPeer(log.Root(), conn, nil)
+	close(peer.closed) // ensures Disconnect doesn't block
+	return peer
+}
+
 // ID returns the node's public key.
 func (p *Peer) ID() enode.ID {
 	return p.rw.node.ID()

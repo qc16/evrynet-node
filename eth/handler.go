@@ -845,9 +845,11 @@ func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common
 	m := make(map[common.Address]consensus.Peer)
 	for _, p := range pm.peers.Peers() {
 		pubKey := p.Node().Pubkey()
-		addr := crypto.PubkeyToAddress(*pubKey)
-		if targets[addr] {
-			m[addr] = p
+		if pubKey != nil {
+			addr := crypto.PubkeyToAddress(*pubKey)
+			if targets[addr] {
+				m[addr] = p
+			}
 		}
 	}
 	return m
