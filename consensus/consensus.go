@@ -123,3 +123,6 @@ type PoW interface {
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
 }
+
+// Tendermint is a consensus engine to avoid byzantine failure
+type Tendermint interface{}

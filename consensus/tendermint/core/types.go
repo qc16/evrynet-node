@@ -1,20 +1,29 @@
 package core
 
-import (
-	"github.com/ethereum/go-ethereum/common"
-)
-
 type Engine interface {
 	Start() error
 	Stop() error
+}
 
-	IsProposer() bool
+type State uint64
 
-	// verify if a hash is the same as the proposed block in the current pending request
-	//
-	// this is useful when the engine is currently the proposer
-	//
-	// pending request is populated right at the preprepare stage so this would give us the earliest verification
-	// to avoid any race condition of coming propagated blocks
-	IsCurrentProposal(blockHash common.Hash) bool
+const (
+	StateAcceptRequest State = iota
+	StatePreprepared
+	StatePrepared
+	StateCommitted
+)
+
+func (s State) String() string {
+	if s == StateAcceptRequest {
+		return "Accept request"
+	} else if s == StatePreprepared {
+		return "Preprepared"
+	} else if s == StatePrepared {
+		return "Prepared"
+	} else if s == StateCommitted {
+		return "Committed"
+	} else {
+		return "Unknown"
+	}
 }

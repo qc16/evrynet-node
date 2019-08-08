@@ -4,27 +4,40 @@ import (
 	"crypto/ecdsa"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/consensus"
+	tendermintCore "github.com/ethereum/go-ethereum/consensus/tendermint/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 )
 
-// ----------------------------------------------------------------------------
+const (
+	// fetcherID is the ID indicates the block is from Istanbul engine
+	fetcherID = "tendermint"
+)
 
-type backend struct {
-	istanbulEventMux *event.TypeMux
-	privateKey       *ecdsa.PrivateKey
-
-	// the channels for tendermint engine notifications
-	commitCh          chan *types.Block
-	proposedBlockHash common.Hash
-	sealMu            sync.Mutex
+// New creates an Ethereum backend for Istanbul core engine.
+func New(privateKey *ecdsa.PrivateKey) consensus.Tendermint {
+	backend := &backend{
+		tendermintEventMux: new(event.TypeMux),
+		privateKey:         privateKey,
+	}
+	backend.core = tendermintCore.New(backend)
+	return backend
 }
 
-// EventMux implements istanbul.Backend.EventMux
+// ----------------------------------------------------------------------------
+type backend struct {
+	tendermintEventMux *event.TypeMux
+	privateKey         *ecdsa.PrivateKey
+	core               tendermintCore.Engine
+
+	coreStarted bool
+	coreMu      sync.RWMutex
+}
+
+// EventMux implements tendermint.Backend.EventMux
 func (sb *backend) EventMux() *event.TypeMux {
-	return sb.istanbulEventMux
+	return sb.tendermintEventMux
 }
 
 // Sign implements tendermint.Backend.Sign

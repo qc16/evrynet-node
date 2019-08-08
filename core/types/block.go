@@ -113,7 +113,7 @@ func (h *Header) Size() common.StorageSize {
 
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewLegacyKeccak256()
-	_ = rlp.Encode(hw, x)
+	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
 }
@@ -312,7 +312,7 @@ func (b *Block) Size() common.StorageSize {
 		return size.(common.StorageSize)
 	}
 	c := writeCounter(0)
-	_ = rlp.Encode(&c, b)
+	rlp.Encode(&c, b)
 	b.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
 }

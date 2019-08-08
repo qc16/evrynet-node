@@ -96,9 +96,6 @@ func (mux *TypeMux) Post(ev interface{}) error {
 	for _, sub := range subs {
 		sub.deliver(event)
 	}
-	//TODO: Just for testing
-	fmt.Printf("--- TypeOfData: %+v\n", rtyp)
-	fmt.Printf("--- Data: %+v \n", ev)
 	return nil
 }
 
