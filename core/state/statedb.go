@@ -514,7 +514,7 @@ func (self *StateDB) createObject(addr common.Address, opts ...types.CreateAccou
 		log.Info("got optional parameters, take only the first Option, ignore the rest", opts)
 		account = Account{
 			OwnerAddress:      opts[0].OwnerAddress,
-			ProviderAddresses: opts[0].ProviderAddresses,
+			ProviderAddresses: []*common.Address{opts[0].ProviderAddress},
 		}
 	}
 	newobj = newObject(self, addr, account)
