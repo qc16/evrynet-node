@@ -1041,8 +1041,8 @@ type RPCTransaction struct {
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
 
-	Owner     common.Address    `json:"owner"`
-	Providers []*common.Address `json:"providers"`
+	Owner     common.Address `json:"owner"`
+	Providers common.Address `json:"providers"`
 
 	V *hexutil.Big `json:"v"`
 	R *hexutil.Big `json:"r"`
@@ -1089,8 +1089,8 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	}
 
 	providerAddr := tx.Provider()
-	if ownerAddr != nil {
-		result.Providers = []*common.Address{providerAddr}
+	if providerAddr != nil {
+		result.Providers = *providerAddr
 	}
 
 	if blockHash != (common.Hash{}) {
@@ -1342,10 +1342,10 @@ type SendTxArgs struct {
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.
-	Data      *hexutil.Bytes    `json:"data"`
-	Input     *hexutil.Bytes    `json:"input"`
-	Owner     *common.Address   `json:"owner" rlp:"nil"`
-	Providers []*common.Address `json:"providers" rlp:"nil"`
+	Data     *hexutil.Bytes  `json:"data"`
+	Input    *hexutil.Bytes  `json:"input"`
+	Owner    *common.Address `json:"owner" rlp:"nil"`
+	Provider *common.Address `json:"providers" rlp:"nil"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.

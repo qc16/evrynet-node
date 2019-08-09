@@ -37,8 +37,8 @@ var (
 
 // CreateAccountOption contain extra parameter for Account creation
 type CreateAccountOption struct {
-	OwnerAddress      *common.Address
-	ProviderAddresses []*common.Address
+	OwnerAddress    *common.Address
+	ProviderAddress *common.Address
 }
 
 type Transaction struct {
@@ -130,8 +130,8 @@ func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPric
 	tx := newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
 	if len(opts) > 0 {
 		tx.data.Owner = opts[0].OwnerAddress
-		if len(opts[0].ProviderAddresses) > 0 {
-			tx.data.Provider = opts[0].ProviderAddresses[0]
+		if len(opts[0].ProviderAddress) > 0 {
+			tx.data.Provider = opts[0].ProviderAddress
 		}
 	}
 	return tx
