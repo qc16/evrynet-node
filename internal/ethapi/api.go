@@ -1088,8 +1088,10 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		result.Owner = *ownerAddr
 	}
 
-	providerAddrs := tx.Providers()
-	result.Providers = providerAddrs
+	providerAddr := tx.Provider()
+	if ownerAddr != nil {
+		result.Providers = []*common.Address{providerAddr}
+	}
 
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash

@@ -126,7 +126,7 @@ func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.Equal(t, strings.ToLower(senderAddrStr), strings.ToLower(tx.Owner().Hex()))
-	assert.Equal(t, strings.ToLower(providerAddrStr), strings.ToLower(tx.Providers()[0].Hex()))
+	assert.Equal(t, strings.ToLower(providerAddrStr), strings.ToLower(tx.Provider().Hex()))
 }
 
 func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
@@ -144,5 +144,5 @@ func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
 	assert.Nil(t, tx.Owner())
-	assert.Nil(t, tx.Providers())
+	assert.Nil(t, tx.Provider())
 }

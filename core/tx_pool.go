@@ -673,10 +673,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			if len(expectedProviders) == 0 {
 				log.Info("destination is a non-enteprise contract, should not have provider's signature")
 			} else {
-				// Validate providers limit
-				if len(tx.Providers()) > common.MaxProvider {
-					return ErrMaxProvider
-				}
 				isEnterpriseContract = true
 				if providerRetrieveErr != nil {
 					log.Info("invalid provider address", "error", providerRetrieveErr)
