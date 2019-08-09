@@ -10,7 +10,6 @@ import (
 // New creates an Istanbul consensus core
 func New(backend tendermint.Backend) Engine {
 	c := &core{
-		state:     StateAcceptRequest,
 		handlerWg: new(sync.WaitGroup),
 		backend:   backend,
 	}
@@ -20,8 +19,6 @@ func New(backend tendermint.Backend) Engine {
 // ----------------------------------------------------------------------------
 
 type core struct {
-	state State
-
 	backend    tendermint.Backend
 	events     *event.TypeMuxSubscription
 	timeoutSub *event.TypeMuxSubscription

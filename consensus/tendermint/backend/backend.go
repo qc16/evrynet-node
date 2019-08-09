@@ -10,11 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
-const (
-	// fetcherID is the ID indicates the block is from Istanbul engine
-	fetcherID = "tendermint"
-)
-
 // New creates an Ethereum backend for Istanbul core engine.
 func New(privateKey *ecdsa.PrivateKey) consensus.Tendermint {
 	backend := &backend{

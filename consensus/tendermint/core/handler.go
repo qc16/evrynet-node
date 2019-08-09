@@ -60,8 +60,11 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case tendermint.RequestEvent:
+				//TODO: Handle block proposal and remove this log
 				fmt.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
 				fmt.Printf("--- Value of event.Data: %+v\n", event.Data)
+			default:
+				fmt.Printf("--- Unknow event :%v", ev)
 			}
 		case _, ok := <-c.timeoutSub.Chan():
 			if !ok {
