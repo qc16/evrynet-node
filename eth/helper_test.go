@@ -22,6 +22,7 @@ package eth
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/hex"
 	"math/big"
 	"sort"
 	"sync"
@@ -39,7 +40,9 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
@@ -152,6 +155,49 @@ func newTestPeer(name string, version int, pm *ProtocolManager, shake bool) (*te
 	rand.Read(id[:])
 
 	peer := pm.newPeer(version, p2p.NewPeer(id, name, nil), net)
+
+	// Start the peer on a new thread
+	errc := make(chan error, 1)
+	go func() {
+		select {
+		case pm.newPeerCh <- peer:
+			errc <- pm.handle(peer)
+		case <-pm.quitSync:
+			errc <- p2p.DiscQuitting
+		}
+	}()
+	tp := &testPeer{app: app, net: net, peer: peer}
+	// Execute any implicitly requested handshakes and return
+	if shake {
+		var (
+			genesis = pm.blockchain.Genesis()
+			head    = pm.blockchain.CurrentHeader()
+			td      = pm.blockchain.GetTd(head.Hash(), head.Number.Uint64())
+		)
+		tp.handshake(nil, td, head.Hash(), genesis.Hash())
+	}
+	return tp, errc
+}
+
+func newNodeTest(record string) (*enode.Node, error) {
+	var r enr.Record
+	var pyRecord, _ = hex.DecodeString(record)
+	if err := rlp.DecodeBytes(pyRecord, &r); err != nil {
+		return nil, err
+	}
+	n, err := enode.New(enode.ValidSchemes, &r)
+	if err != nil {
+		return nil, err
+	}
+	return n, nil
+}
+
+// newTestPeerFromNode creates a new peer registered at the given protocol manager.
+func newTestPeerFromNode(name string, version int, pm *ProtocolManager, shake bool, node *enode.Node) (*testPeer, <-chan error) {
+	// Create a message pipe to communicate through
+	app, net := p2p.MsgPipe()
+
+	peer := pm.newPeer(version, p2p.NewPeerFromNode(node, name, nil), net)
 
 	// Start the peer on a new thread
 	errc := make(chan error, 1)
