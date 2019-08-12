@@ -100,6 +100,12 @@ type headerMarshaling struct {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
+	if h.MixDigest == TendermintDigest {
+		// Use Tendermint hash calculation if the mix digest is equivalent to the predefined Tendermint digest
+		if header := TendermintFilteredHeader(h, true); header != nil {
+			return rlpHash(header)
+		}
+	}
 	return rlpHash(h)
 }
 
