@@ -4,13 +4,17 @@
     "homesteadBlock": 0,
     "byzantiumBlock": 0,
     "eip155Block": 0,
-    "eip158Block": 0
+    "eip158Block": 0,
+    "tendermint": {
+      "epoch": 3000,
+      "policy": 0
+    }
   },
   "nonce": "0x0000000000000001",
   "timestamp": "0x0",
   "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "gasLimit": "0x8000000",
-  "difficulty": "0x100",
+  "difficulty": "0x1",
   "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "coinbase": "0x3333333333333333333333333333333333333333",
   "alloc": {

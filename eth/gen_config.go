@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/tendermint"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -46,6 +47,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		EVMInterpreter          string
 		ConstantinopleOverride  *big.Int
 		RPCGasCap               *big.Int `toml:",omitempty"`
+		Tendermint              tendermint.Config
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -77,6 +79,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.EVMInterpreter = c.EVMInterpreter
 	enc.ConstantinopleOverride = c.ConstantinopleOverride
 	enc.RPCGasCap = c.RPCGasCap
+	enc.Tendermint = c.Tendermint
 	return &enc, nil
 }
 
@@ -112,6 +115,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		EVMInterpreter          *string
 		ConstantinopleOverride  *big.Int
 		RPCGasCap               *big.Int `toml:",omitempty"`
+		Tendermint              *tendermint.Config
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -203,6 +207,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.RPCGasCap != nil {
 		c.RPCGasCap = dec.RPCGasCap
+	}
+	if dec.Tendermint != nil {
+		c.Tendermint = *dec.Tendermint
 	}
 	return nil
 }

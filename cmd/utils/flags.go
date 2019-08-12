@@ -667,6 +667,18 @@ var (
 		Usage: "Restrict connection between two whisper light clients",
 	}
 
+	// Tendermint settings
+	TendermintRequestTimeoutFlag = cli.Uint64Flag{
+		Name:  "tendermint.requesttimeout",
+		Usage: "Timeout for each Tendermint round in milliseconds",
+		Value: eth.DefaultConfig.Tendermint.RequestTimeout,
+	}
+	TendermintBlockPeriodFlag = cli.Uint64Flag{
+		Name:  "tendermint.blockperiod",
+		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
+		Value: eth.DefaultConfig.Tendermint.BlockPeriod,
+	}
+
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -1265,6 +1277,15 @@ func setEthash(ctx *cli.Context, cfg *eth.Config) {
 	}
 }
 
+func setTendermint(ctx *cli.Context, cfg *eth.Config) {
+	if ctx.GlobalIsSet(TendermintRequestTimeoutFlag.Name) {
+		cfg.Tendermint.RequestTimeout = ctx.GlobalUint64(TendermintRequestTimeoutFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
+		cfg.Tendermint.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
+	}
+}
+
 func setMiner(ctx *cli.Context, cfg *miner.Config) {
 	if ctx.GlobalIsSet(MinerNotifyFlag.Name) {
 		cfg.Notify = strings.Split(ctx.GlobalString(MinerNotifyFlag.Name), ",")
@@ -1389,6 +1410,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	setEthash(ctx, cfg)
 	setMiner(ctx, &cfg.Miner)
 	setWhitelist(ctx, cfg)
+	setTendermint(ctx, cfg)
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)

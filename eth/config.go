@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/tendermint"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -62,6 +63,8 @@ var DefaultConfig = Config{
 		Percentile: 60,
 		GasPrice:   big.NewInt(params.GasPriceConfig),
 	},
+
+	Tendermint: *tendermint.DefaultConfig,
 }
 
 func init() {
@@ -137,6 +140,9 @@ type Config struct {
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
+
+	// Tendermint options
+	Tendermint tendermint.Config
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
