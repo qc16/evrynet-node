@@ -42,6 +42,9 @@ const (
 )
 
 var (
+	// ErrOwnerReqired is returned if the transaction to create contract with a provider but not contains an owner.
+	ErrOwnerReqired = errors.New("owner is required")
+
 	// ErrInvalidSender is returned if the transaction contains an invalid signature.
 	ErrInvalidSender = errors.New("invalid sender")
 
@@ -685,6 +688,15 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 			}
 		} else {
 			log.Info("destination is a normal address, should not have any provider's signature")
+		}
+	} else {
+		log.Info("the transaction to create SC")
+		emptyAddress := common.Address{}
+		if tx.Provider() != nil && tx.Provider() != &emptyAddress {
+			if tx.Owner() == nil || tx.Owner() == &emptyAddress {
+				log.Info("owner address is required")
+				return ErrOwnerReqired
+			}
 		}
 	}
 	if (signedProvider != nil) && (!isEnterpriseContract) {
