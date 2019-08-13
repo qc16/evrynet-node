@@ -681,6 +681,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 					log.Info("invalid provider address", "error", providerRetrieveErr)
 					return ErrInvalidProvider
 				}
+				if signedProvider == nil {
+					log.Info("invalid provider address", "provider address is nil")
+					return ErrInvalidProvider
+				}
 				if !signedProvider.InList(expectedProviders) {
 					log.Info("invalid provider address", "provider address", signedProvider.String())
 					return ErrInvalidProvider

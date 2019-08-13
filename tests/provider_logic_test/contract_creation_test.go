@@ -113,6 +113,7 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	provideraddr := common.HexToAddress(providerWithoutGasAddr)
 	var option types.CreateAccountOption
 	option.ProviderAddress = &provideraddr
+	option.OwnerAddress = &sender
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
