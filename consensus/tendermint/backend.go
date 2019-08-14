@@ -4,7 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
-// Backend provides application specific functions for Istanbul core
+// Backend provides application specific functions for Tendermint core
 type Backend interface {
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux

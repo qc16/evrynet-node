@@ -178,11 +178,6 @@ var (
 		utils.WhisperRestrictConnectionBetweenLightClientsFlag,
 	}
 
-	tendermintFlags = []cli.Flag{
-		utils.TendermintRequestTimeoutFlag,
-		utils.TendermintBlockPeriodFlag,
-	}
-
 	metricsFlags = []cli.Flag{
 		utils.MetricsEnabledFlag,
 		utils.MetricsEnabledExpensiveFlag,
@@ -235,7 +230,6 @@ func init() {
 	app.Flags = append(app.Flags, consoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
 	app.Flags = append(app.Flags, whisperFlags...)
-	app.Flags = append(app.Flags, tendermintFlags...)
 	app.Flags = append(app.Flags, metricsFlags...)
 
 	app.Before = func(ctx *cli.Context) error {

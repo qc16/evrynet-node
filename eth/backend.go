@@ -238,7 +238,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
-	// If Istanbul is requested, set it up
+	// If Tendermint is requested, set it up
 	if chainConfig.Tendermint != nil {
 		if chainConfig.Tendermint.Epoch != 0 {
 			config.Tendermint.Epoch = chainConfig.Tendermint.Epoch

@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	"github.com/ethereum/go-ethereum/log"
 )
 
 // Start implements core.Engine.Start
@@ -65,7 +64,7 @@ func (c *core) handleEvents() {
 				fmt.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
 				fmt.Printf("--- Value of event.Data: %+v\n", event.Data)
 			default:
-				log.Debug("--- Unknow event :%v", ev)
+				fmt.Printf("--- Unknow event :%v", ev)
 			}
 		case _, ok := <-c.timeoutSub.Chan():
 			if !ok {
