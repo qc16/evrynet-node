@@ -49,8 +49,8 @@ func TestSendTxCreateContractWithProviderAndOwner(t *testing.T) {
 	assert.NotEqual(t, emptyHash, hash)
 	if hash != emptyHash {
 		tx, _, err := ethClient.TransactionByHash(context.Background(), hash)
-		assert.Equal(t, tx.Provider(), args.Provider)
-		assert.Equal(t, tx.Owner(), args.Owner)
+		assert.Equal(t, args.Provider, tx.Provider())
+		assert.Equal(t, args.Owner, tx.Owner())
 		assert.NoError(t, err)
 	}
 }

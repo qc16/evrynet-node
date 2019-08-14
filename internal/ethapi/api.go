@@ -1344,8 +1344,8 @@ type SendTxArgs struct {
 	// newer name and should be preferred by clients.
 	Data     *hexutil.Bytes  `json:"data"`
 	Input    *hexutil.Bytes  `json:"input"`
-	Provider *common.Address `json:"provider" rlp:"nil"`
 	Owner    *common.Address `json:"owner" rlp:"nil"`
+	Provider *common.Address `json:"provider" rlp:"nil"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.

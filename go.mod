@@ -21,7 +21,7 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff
 	github.com/go-ole/go-ole v1.2.1
 	github.com/go-stack/stack v1.8.0
-	github.com/golang/protobuf v1.2.0
+	github.com/golang/protobuf v1.3.1
 	github.com/golang/snappy v0.0.1
 	github.com/hashicorp/golang-lru v0.0.0-20160813221303-0a025b7e63ad
 	github.com/howeyc/fsnotify v0.0.0-20151003194602-f0c08ee9c607
@@ -65,5 +65,3 @@ require (
 	gopkg.in/sourcemap.v1 v1.0.5
 	gopkg.in/urfave/cli.v1 v1.20.0
 )
-
-replace github.com/ethereum/go-ethereum => ../evrynet-client

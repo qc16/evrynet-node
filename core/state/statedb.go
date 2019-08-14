@@ -227,13 +227,13 @@ func (self *StateDB) GetOwner(addr common.Address) *common.Address {
 	return nil
 }
 
-// GetProvider if
-func (self *StateDB) GetProvider(addr common.Address) *common.Address {
+// GetProviders returns providers of account
+func (self *StateDB) GetProviders(addr common.Address) []*common.Address {
 	so := self.getStateObject(addr)
 	if so != nil {
-		return so.ProviderAddress()
+		return so.ProviderAddresses()
 	}
-	return nil
+	return []*common.Address{}
 }
 
 // Retrieve the balance from the given address or 0 if object not found
@@ -513,8 +513,8 @@ func (self *StateDB) createObject(addr common.Address, opts ...types.CreateAccou
 	if len(opts) > 0 {
 		log.Info("got optional parameters, take only the first Option, ignore the rest", opts)
 		account = Account{
-			OwnerAddress:    opts[0].OwnerAddress,
-			ProviderAddress: opts[0].ProviderAddress,
+			OwnerAddress:      opts[0].OwnerAddress,
+			ProviderAddresses: []*common.Address{opts[0].ProviderAddress},
 		}
 	}
 	newobj = newObject(self, addr, account)

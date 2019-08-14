@@ -93,7 +93,7 @@ type txdata struct {
 	//owner address
 	Owner *common.Address `json:"owner" rlp:"nil"`
 
-	//provider address
+	// Provider address
 	Provider *common.Address `json:"provider" rlp:"nil"`
 
 	// Signature values

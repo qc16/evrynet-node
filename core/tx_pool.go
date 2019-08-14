@@ -42,6 +42,9 @@ const (
 )
 
 var (
+	// ErrOwnerReqired is returned if the transaction to create contract with a provider but not contains an owner.
+	ErrOwnerReqired = errors.New("owner is required")
+
 	// ErrInvalidSender is returned if the transaction contains an invalid signature.
 	ErrInvalidSender = errors.New("invalid sender")
 
@@ -100,8 +103,11 @@ var (
 	// ErrTxPoolFull is returned tx pool is full
 	ErrTxPoolFull = errors.New("Tx pool is full")
 
-	//ErrInvalidGasPrice is returned if tx gasPrice is different from gasPrice of the network
+	// ErrInvalidGasPrice is returned if tx gasPrice is different from gasPrice of the network
 	ErrInvalidGasPrice = errors.New("Tx gasPrice is different from gasPrice of the network")
+
+	// ErrMaxProvider will be returned if the providers are over the limit
+	ErrMaxProvider = errors.New("maximum provider in contract")
 )
 
 var (
@@ -666,18 +672,35 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		contractHash := pool.currentState.GetCodeHash(*to)
 		if (contractHash != common.Hash{}) && (contractHash != emptyCodeHash) {
 			log.Info("destination is a contract, must check its providers")
-			expectedProvider := pool.currentState.GetProvider(*to)
-			if expectedProvider == nil {
+			expectedProviders := pool.currentState.GetProviders(*to)
+			if len(expectedProviders) == 0 {
 				log.Info("destination is a non-enteprise contract, should not have provider's signature")
 			} else {
 				isEnterpriseContract = true
-				if (providerRetrieveErr != nil) || (signedProvider.Hex() != expectedProvider.Hex()) {
-					log.Info("invalid provider address", "expected", expectedProvider.String(), "got", signedProvider.String(), "error", providerRetrieveErr)
+				if providerRetrieveErr != nil {
+					log.Info("invalid provider address", "error", providerRetrieveErr)
+					return ErrInvalidProvider
+				}
+				if signedProvider == nil {
+					log.Info("invalid provider address", "provider address is nil")
+					return ErrInvalidProvider
+				}
+				if !signedProvider.InList(expectedProviders) {
+					log.Info("invalid provider address", "provider address", signedProvider.String())
 					return ErrInvalidProvider
 				}
 			}
 		} else {
 			log.Info("destination is a normal address, should not have any provider's signature")
+		}
+	} else {
+		log.Info("the transaction to create SC")
+		emptyAddress := common.Address{}
+		if tx.Provider() != nil && tx.Provider() != &emptyAddress {
+			if tx.Owner() == nil || tx.Owner() == &emptyAddress {
+				log.Info("owner address is required")
+				return ErrOwnerReqired
+			}
 		}
 	}
 	if (signedProvider != nil) && (!isEnterpriseContract) {

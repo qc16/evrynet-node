@@ -576,7 +576,7 @@ func (api *SignerAPI) ProviderSignTransaction(ctx context.Context, tx *types.Tra
 		return nil, err
 	}
 	// Get the password for the transaction
-	pw, err := api.lookupOrQueryPassword(acc.Address, "Provider account password",
+	pw, err := api.lookupOrQueryPassword(acc.Address, "Providers account password",
 		fmt.Sprintf("Please enter the password for provider account %s", acc.Address.String()))
 	if err != nil {
 		return nil, err

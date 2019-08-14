@@ -61,6 +61,23 @@ func TestIsHexAddress(t *testing.T) {
 	}
 }
 
+func TestHexAddressHasUpperAndLowerCase(t *testing.T) {
+	tests := []struct {
+		str string
+		exp string
+	}{
+		{"0xb61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B", "0xb61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B"},
+		{"0xB61f4c3e676cE9f4FbF7f5597a303eeeC3ae531b", "0xb61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B"},
+	}
+
+	for _, test := range tests {
+		if HexToAddress(test.str).Hex() != test.exp {
+			t.Errorf("Hex(%s) ; expected %v", HexToAddress(test.str).Hex(), test.exp)
+		}
+	}
+
+}
+
 func TestHashJsonValidation(t *testing.T) {
 	var tests = []struct {
 		Prefix string
