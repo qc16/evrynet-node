@@ -24,79 +24,61 @@ import (
 )
 
 var (
-	// TODO: Add digest for our consensus
-	// Digest represents a hash of ""
+	// TendermintDigest TODO: Add digest for our consensus, Digest represents a hash of ""
 	// to identify whether the block is from Tendermint consensus engine
 	TendermintDigest = common.HexToHash("0x0")
 
-	TendermintExtraVanity = 32 // Fixed number of extra-data bytes reserved for validator vanity
-	TendermintExtraSeal   = 65 // Fixed number of extra-data bytes reserved for validator seal
+	// TendermintExtraVanity Fixed number of extra-data bytes reserved for validator vanity
+	TendermintExtraVanity = 32
+	// TendermintExtraSeal Fixed number of extra-data bytes reserved for validator seal
+	TendermintExtraSeal = 65
 
 	// ErrInvalidTendermintHeaderExtra is returned if the length of extra-data is less than 32 bytes
 	ErrInvalidTendermintHeaderExtra = errors.New("invalid tendermint header extra-data")
 )
 
+// TendermintExtra extra data for Tendermint consensus
 type TendermintExtra struct {
-	// basic info
-	ChainID  string
-	TotalTxs int64 // total txs in the blockchain until now
-
-	// hashes of block data
 	LastCommitHash []byte // commit from validators from the last block
 
 	// hashes from the app output from the prev block
+	ValidatorsHash     []byte // validators for the current block
 	NextValidatorsHash []byte // validators for the next block
 
-	ConsensusHash   []byte // validators for the current block
-	AppHash         []byte // state after txs from the previous block
-	LastResultsHash []byte // root hash of all results from the txs from the previous block
-	EvidenceHash    []byte // evidence of malicious validators included in the block
+	EvidenceHash []byte // evidence of malicious validators included in the block
 
-	Validators    []common.Address // validators address, evidence
-	Seal          []byte           // Proposer seal 65 bytes
-	CommittedSeal [][]byte         // Committed seal, 65 * len(Validators) bytes
+	Seal          []byte   // Proposer seal 65 bytes
+	CommittedSeal [][]byte // Committed seal, 65 * len(Validators) bytes
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
 func (ist *TendermintExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
-		ist.ChainID,
-		ist.TotalTxs,
 		ist.LastCommitHash,
+		ist.ValidatorsHash,
 		ist.NextValidatorsHash,
-		ist.ConsensusHash,
-		ist.AppHash,
-		ist.LastResultsHash,
 		ist.EvidenceHash,
-		ist.Validators,
 		ist.Seal,
 		ist.CommittedSeal,
 	})
 }
 
-// DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
+// DecodeRLP implements rlp.Decoder, and load the tendermint fields from a RLP stream.
 func (ist *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
 	var tendermintExtra struct {
-		ChainID            string
-		TotalTxs           int64
 		LastCommitHash     []byte
+		ValidatorsHash     []byte
 		NextValidatorsHash []byte
-		ConsensusHash      []byte
-		AppHash            []byte
-		LastResultsHash    []byte
 		EvidenceHash       []byte
-		Validators         []common.Address
 		Seal               []byte
 		CommittedSeal      [][]byte
 	}
 	if err := s.Decode(&tendermintExtra); err != nil {
 		return err
 	}
-	ist.ChainID, ist.TotalTxs = tendermintExtra.ChainID, tendermintExtra.TotalTxs
-	ist.LastCommitHash, ist.NextValidatorsHash = tendermintExtra.LastCommitHash, tendermintExtra.NextValidatorsHash
-	ist.ConsensusHash, ist.AppHash = tendermintExtra.ConsensusHash, tendermintExtra.AppHash
-	ist.LastResultsHash, ist.EvidenceHash = tendermintExtra.LastResultsHash, tendermintExtra.EvidenceHash
-	ist.Validators, ist.Seal, ist.CommittedSeal = tendermintExtra.Validators, tendermintExtra.Seal, tendermintExtra.CommittedSeal
+	ist.LastCommitHash, ist.ValidatorsHash, ist.NextValidatorsHash = tendermintExtra.LastCommitHash, tendermintExtra.ValidatorsHash, tendermintExtra.NextValidatorsHash
+	ist.EvidenceHash = tendermintExtra.EvidenceHash
+	ist.Seal, ist.CommittedSeal = tendermintExtra.Seal, tendermintExtra.CommittedSeal
 	return nil
 }
 
@@ -117,12 +99,14 @@ func ExtractTendermintExtra(h *Header) (*TendermintExtra, error) {
 }
 
 // TendermintFilteredHeader returns a filtered header which some information (like seal, committed seals)
-// are clean to fulfill the Istanbul hash rules. It returns nil if the extra-data cannot be
+// are clean to fulfill the Tendermint hash rules. It returns nil if the extra-data cannot be
 // decoded/encoded by rlp.
 func TendermintFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader := CopyHeader(h)
 	tendermintExtra, err := ExtractTendermintExtra(newHeader)
-	if err != nil {
+	// Returns nil if ValidatorHash is missing, since a Header is not valid unless there is
+	// a ValidatorsHash (corresponding to the validator set).
+	if err != nil || len(tendermintExtra.ValidatorsHash) == 0 {
 		return nil
 	}
 
