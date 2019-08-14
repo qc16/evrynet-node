@@ -1,9 +1,6 @@
 package backend
 
 import (
-	"math/big"
-	"math/rand"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
@@ -13,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/crypto/sha3"
+	"math/big"
 )
 
 // Seal generates a new block for the given input block with the local miner's
@@ -22,6 +20,14 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	go sb.EventMux().Post(tendermint.RequestEvent{
 		Proposal: block,
 	})
+	go func() {
+		select {
+		case results <- block:
+		default:
+			log.Warn("Sealing result is not read by miner")
+		}
+	}()
+
 	return nil
 }
 
@@ -77,6 +83,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 }
 
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
+	header.Difficulty = big.NewInt(1)
 	log.Warn("Prepare: implement me")
 	return nil
 }
@@ -95,13 +102,26 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 }
 
 func (sb *backend) SealHash(header *types.Header) (hash common.Hash) {
-	log.Warn("SealHash: implement me")
+	hasher := sha3.NewLegacyKeccak256()
 
 	//TODO: this logic is temporary.
 	// I wanna make hash is different when SealHash() was called to bypass `func (w *worker) taskLoop()`
-	hasher := sha3.NewLegacyKeccak256()
-	rd := rand.Uint64()
-	rlp.Encode(hasher, rd)
+
+	rlp.Encode(hasher, []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra,
+	})
 	hasher.Sum(hash[:0])
 	return hash
 }
