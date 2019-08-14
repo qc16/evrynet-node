@@ -835,11 +835,6 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 	}
 }
 
-// Enqueue add a block into fetcher queue
-func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
-	pm.fetcher.Enqueue(id, block)
-}
-
 // FindPeers retrives peers by addresses
 func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
 	m := make(map[common.Address]consensus.Peer)

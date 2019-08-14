@@ -19,7 +19,6 @@ package consensus
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // Constants to match up protocol versions and messages
@@ -38,18 +37,16 @@ var (
 
 // Protocol defines the protocol of the consensus
 type Protocol struct {
-	// Official short name of the protocol used during capability negotiation.
+	// Name is official short name of the protocol used during capability negotiation.
 	Name string
-	// Supported versions of the eth protocol (first is primary).
+	// Versions are supported versions of the eth protocol (first is primary).
 	Versions []uint
-	// Number of implemented message corresponding to different protocol versions.
+	// Lengths is number of implemented message corresponding to different protocol versions.
 	Lengths []uint64
 }
 
 // Broadcaster defines the interface to enqueue blocks to fetcher and find peer
 type Broadcaster interface {
-	// Enqueue add a block into fetcher queue
-	Enqueue(id string, block *types.Block)
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
 }

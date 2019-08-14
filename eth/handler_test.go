@@ -669,31 +669,14 @@ outer:
 	}
 }
 
-func createProtocolManager() (*ProtocolManager, error) {
-	var (
-		db       = rawdb.NewMemoryDatabase()
-		config   = new(params.ChainConfig)
-		syncmode = downloader.FullSync
-	)
-	(&core.Genesis{Config: config}).MustCommit(db)
-	blockchain, err := core.NewBlockChain(db, nil, config, ethash.NewFaker(), vm.Config{}, nil)
-	if err != nil {
-		return nil, err
-	}
-	pm, err := NewProtocolManager(config, syncmode, DefaultConfig.NetworkId, new(event.TypeMux), new(testTxPool), ethash.NewFaker(), blockchain, db, 1, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return pm, nil
-}
 func TestFindPeers(t *testing.T) {
-	pm, err := createProtocolManager()
+	pm, _, err := newTestProtocolManager(downloader.FullSync, 0, nil, nil)
+	if pm != nil {
+		defer pm.Stop()
+	}
 	if err != nil {
 		t.Fatalf("can't create protocol manager: %v", err)
 	}
-	pm.Start(1000)
-	defer pm.Stop()
 
 	record := "f884b8407098ad865b00a582051940cb9cf36836572411a47278783077011599ed5cd16b76f2635f4e234738f30813a89eb9137e3e3df5266e3a1f11df72ecf1145ccb9c01826964827634826970847f00000189736563703235366b31a103ca634cae0d49acb401d8a4c6b6fe8c55b70d115bf400769cc1400f3258cd31388375647082765f"
 	n, err := newNodeTest(record)
@@ -721,7 +704,10 @@ func TestFindPeers(t *testing.T) {
 
 // Test send message between peers
 func TestSendMessageBetweenPeer(t *testing.T) {
-	pm, err := createProtocolManager()
+	pm, _, err := newTestProtocolManager(downloader.FullSync, 0, nil, nil)
+	if pm != nil {
+		defer pm.Stop()
+	}
 	if err != nil {
 		t.Fatalf("can't create protocol manager: %v", err)
 	}
