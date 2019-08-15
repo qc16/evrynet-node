@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/tendermint"
 	tendermintCore "github.com/ethereum/go-ethereum/consensus/tendermint/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
@@ -16,9 +17,10 @@ const (
 	tendermintMsg = 0x11
 )
 
-// New creates an Ethereum backend for Tendermint core engine.
-func New(privateKey *ecdsa.PrivateKey) consensus.Tendermint {
+// New creates an Ethereum backend for Istanbul core engine.
+func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey) consensus.Tendermint {
 	backend := &backend{
+		config:             config,
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         privateKey,
 	}
@@ -28,6 +30,7 @@ func New(privateKey *ecdsa.PrivateKey) consensus.Tendermint {
 
 // ----------------------------------------------------------------------------
 type backend struct {
+	config             *tendermint.Config
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
 	core               tendermintCore.Engine

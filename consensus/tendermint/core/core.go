@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
-// New creates an Istanbul consensus core
+// New creates an Tendermint consensus core
 func New(backend tendermint.Backend) Engine {
 	c := &core{
 		handlerWg: new(sync.WaitGroup),
