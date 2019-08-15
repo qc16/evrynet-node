@@ -42,43 +42,39 @@ type TendermintExtra struct {
 	LastCommitHash []byte // commit from validators from the last block
 
 	// hashes from the app output from the prev block
-	ValidatorsHash     []byte // validators for the current block
-	NextValidatorsHash []byte // validators for the next block
-
-	EvidenceHash []byte // evidence of malicious validators included in the block
+	Validators     []common.Address // list of validators of the current block
+	NextValidators []common.Address // validators for the next block
 
 	Seal          []byte   // Proposer seal 65 bytes
 	CommittedSeal [][]byte // Committed seal, 65 * len(Validators) bytes
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
-func (ist *TendermintExtra) EncodeRLP(w io.Writer) error {
+func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
-		ist.LastCommitHash,
-		ist.ValidatorsHash,
-		ist.NextValidatorsHash,
-		ist.EvidenceHash,
-		ist.Seal,
-		ist.CommittedSeal,
+		te.LastCommitHash,
+		te.Validators,
+		te.NextValidators,
+		te.Seal,
+		te.CommittedSeal,
 	})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the tendermint fields from a RLP stream.
-func (ist *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
+func (te *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
 	var tendermintExtra struct {
-		LastCommitHash     []byte
-		ValidatorsHash     []byte
-		NextValidatorsHash []byte
-		EvidenceHash       []byte
-		Seal               []byte
-		CommittedSeal      [][]byte
+		LastCommitHash []byte
+		NextValidators []common.Address
+		Validators     []common.Address
+		Seal           []byte
+		CommittedSeal  [][]byte
 	}
 	if err := s.Decode(&tendermintExtra); err != nil {
 		return err
 	}
-	ist.LastCommitHash, ist.ValidatorsHash, ist.NextValidatorsHash = tendermintExtra.LastCommitHash, tendermintExtra.ValidatorsHash, tendermintExtra.NextValidatorsHash
-	ist.EvidenceHash = tendermintExtra.EvidenceHash
-	ist.Seal, ist.CommittedSeal = tendermintExtra.Seal, tendermintExtra.CommittedSeal
+	te.LastCommitHash, te.NextValidators = tendermintExtra.LastCommitHash, tendermintExtra.NextValidators
+	te.Validators = tendermintExtra.Validators
+	te.Seal, te.CommittedSeal = tendermintExtra.Seal, tendermintExtra.CommittedSeal
 	return nil
 }
 
@@ -104,16 +100,13 @@ func ExtractTendermintExtra(h *Header) (*TendermintExtra, error) {
 func TendermintFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader := CopyHeader(h)
 	tendermintExtra, err := ExtractTendermintExtra(newHeader)
-	// Returns nil if ValidatorHash is missing, since a Header is not valid unless there is
-	// a ValidatorsHash (corresponding to the validator set).
-	if err != nil || len(tendermintExtra.ValidatorsHash) == 0 {
+	if err != nil {
 		return nil
 	}
 
 	if !keepSeal {
 		tendermintExtra.Seal = []byte{}
 	}
-	tendermintExtra.CommittedSeal = [][]byte{}
 
 	payload, err := rlp.EncodeToBytes(&tendermintExtra)
 	if err != nil {
