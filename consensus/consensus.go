@@ -117,6 +117,12 @@ type Engine interface {
 	Close() error
 }
 
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
+}
+
 // PoW is a consensus engine based on proof-of-work.
 type PoW interface {
 	Engine

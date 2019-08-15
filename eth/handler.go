@@ -102,7 +102,8 @@ type ProtocolManager struct {
 
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
-	wg     sync.WaitGroup
+	wg sync.WaitGroup
+
 	engine consensus.Engine
 }
 

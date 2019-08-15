@@ -13,6 +13,8 @@ import (
 type Engine interface {
 	Start() error
 	Stop() error
+
+	IsProposer() bool
 }
 
 // TODO: More msg codes here if needed
