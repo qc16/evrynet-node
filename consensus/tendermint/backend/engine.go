@@ -14,6 +14,10 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+var (
+	defaultDifficulty = big.NewInt(1)
+)
+
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
 func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
@@ -73,8 +77,10 @@ func (sb *backend) Stop() error {
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	panic("Author: implement me")
-	//TODO: Research & Implement
+	log.Warn("Author: implement me")
+
+	//TODO: fake return address from a signed header.
+	return common.Address{}, nil
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of a
@@ -106,7 +112,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 }
 
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
-	header.Difficulty = big.NewInt(1)
+	header.Difficulty = defaultDifficulty
 	log.Warn("Prepare: implement me")
 
 	//TODO: Research & Implement
@@ -124,6 +130,10 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 	log.Warn("FinalizeAndAssemble: implement me")
 	//TODO: Research & Implement
 
+	// No block rewards, so the state remains as is and uncles are dropped
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	header.UncleHash = types.CalcUncleHash(nil)
+
 	// Assemble and return the final block for sealing
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
@@ -133,8 +143,7 @@ func (sb *backend) SealHash(header *types.Header) (hash common.Hash) {
 
 	//TODO: this logic is temporary.
 	// I wanna make hash is different when SealHash() was called to bypass `func (w *worker) taskLoop()`
-
-	rlp.Encode(hasher, []interface{}{
+	_ = rlp.Encode(hasher, []interface{}{
 		header.ParentHash,
 		header.UncleHash,
 		header.Coinbase,
