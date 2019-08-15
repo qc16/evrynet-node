@@ -1,19 +1,3 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package validator
 
 import (
@@ -35,8 +19,6 @@ func TestValidatorSet(t *testing.T) {
 	testNewValidatorSet(t)
 	testNormalValSet(t)
 	testEmptyValSet(t)
-	testStickyProposer(t)
-	testAddAndRemoveValidator(t)
 }
 
 func testNewValidatorSet(t *testing.T) {
@@ -44,7 +26,7 @@ func testNewValidatorSet(t *testing.T) {
 	const ValCnt = 100
 
 	// Create 100 validators with random addresses
-	b := []byte{}
+	var b []byte
 	for i := 0; i < ValCnt; i++ {
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
@@ -105,104 +87,11 @@ func testNormalValSet(t *testing.T) {
 	if _, val := valSet.GetByAddress(invalidAddr); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
-	// test get proposer
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
-	}
-	// test calculate proposer
-	lastProposer := addr1
-	valSet.CalcProposer(lastProposer, uint64(0))
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val2) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val2)
-	}
-	valSet.CalcProposer(lastProposer, uint64(3))
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
-	}
-	// test empty last proposer
-	lastProposer = common.Address{}
-	valSet.CalcProposer(lastProposer, uint64(3))
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val2) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val2)
-	}
 }
 
 func testEmptyValSet(t *testing.T) {
 	valSet := NewSet(ExtractValidators([]byte{}), tendermint.RoundRobin)
 	if valSet == nil {
 		t.Errorf("validator set should not be nil")
-	}
-}
-
-func testAddAndRemoveValidator(t *testing.T) {
-	valSet := NewSet(ExtractValidators([]byte{}), tendermint.RoundRobin)
-	valSet.AddValidator(common.StringToAddress(string(0)))
-	valSet.AddValidator(common.StringToAddress(string(1)))
-	if !valSet.AddValidator(common.StringToAddress(string(2))) {
-		t.Error("the validator should be added")
-	}
-	if valSet.AddValidator(common.StringToAddress(string(2))) {
-		t.Error("the existing validator should not be added")
-	}
-	if len(valSet.List()) != 3 {
-		t.Error("the size of validator set should be 3")
-	}
-
-	for i, v := range valSet.List() {
-		expected := common.StringToAddress(string(i))
-		if v.Address() != expected {
-			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Hex())
-		}
-	}
-
-	if !valSet.RemoveValidator(common.StringToAddress(string(2))) {
-		t.Error("the validator should be removed")
-	}
-	if valSet.RemoveValidator(common.StringToAddress(string(2))) {
-		t.Error("the non-existing validator should not be removed")
-	}
-	if len(valSet.List()) != 2 {
-		t.Error("the size of validator set should be 2")
-	}
-	valSet.RemoveValidator(common.StringToAddress(string(1)))
-	if len(valSet.List()) != 1 {
-		t.Error("the size of validator set should be 1")
-	}
-	valSet.RemoveValidator(common.StringToAddress(string(0)))
-	if len(valSet.List()) != 0 {
-		t.Error("the size of validator set should be 0")
-	}
-}
-
-func testStickyProposer(t *testing.T) {
-	b1 := common.Hex2Bytes(testAddress)
-	b2 := common.Hex2Bytes(testAddress2)
-	addr1 := common.BytesToAddress(b1)
-	addr2 := common.BytesToAddress(b2)
-	val1 := New(addr1)
-	val2 := New(addr2)
-
-	valSet := newDefaultSet([]common.Address{addr1, addr2}, tendermint.Sticky)
-
-	// test get proposer
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
-	}
-	// test calculate proposer
-	lastProposer := addr1
-	valSet.CalcProposer(lastProposer, uint64(0))
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val1) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val1)
-	}
-
-	valSet.CalcProposer(lastProposer, uint64(1))
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val2) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val2)
-	}
-	// test empty last proposer
-	lastProposer = common.Address{}
-	valSet.CalcProposer(lastProposer, uint64(3))
-	if val := valSet.GetProposer(); !reflect.DeepEqual(val, val2) {
-		t.Errorf("proposer mismatch: have %v, want %v", val, val2)
 	}
 }
