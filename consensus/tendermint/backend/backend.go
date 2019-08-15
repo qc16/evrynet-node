@@ -55,9 +55,9 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
 // TODO: change AddressSet to validatorSet
-func (sb *backend) Broadcast(addressSet []common.Address, payload []byte) error {
+func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
 	// send to others
-	if err := sb.Gossip(addressSet, payload); err != nil {
+	if err := sb.Gossip(valSet, payload); err != nil {
 		return err
 	}
 	// send to self
@@ -73,13 +73,13 @@ func (sb *backend) Broadcast(addressSet []common.Address, payload []byte) error 
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // TODO: change AddressSet to validatorSet
-func (sb *backend) Gossip(addressSet []common.Address, payload []byte) error {
+func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 
 	targets := make(map[common.Address]bool)
-	for _, val := range addressSet {
-		if val != sb.address {
-			targets[val] = true
+	for _, val := range valSet.List() {
+		if val.Address() != sb.address {
+			targets[val.Address()] = true
 		}
 	}
 
