@@ -8,6 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+var (
+	addressSet = []common.Address{
+		common.HexToAddress("0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1"),
+		common.HexToAddress("0x723f12209b9C71f17A7b27FCDF16CA5883b7BBB0"),
+	}
+)
+
 func TestSign(t *testing.T) {
 	privateKey, _ := generatePrivateKey()
 	b := &backend{
@@ -27,6 +34,26 @@ func TestSign(t *testing.T) {
 
 	if signer != getAddress() {
 		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
+	}
+}
+
+// Test broadcast in consensus
+func TestBroadcast(t *testing.T) {
+	backend := &backend{}
+	payload := []byte("vote message")
+	err := backend.Broadcast(addressSet, payload)
+	if err != nil {
+		t.Fatalf("can't broadcast to validators: %v", err)
+	}
+}
+
+// Test Gossip between validators in consensus
+func TestGossip(t *testing.T) {
+	backend := &backend{}
+	payload := []byte("vote message")
+	err := backend.Gossip(addressSet, payload)
+	if err != nil {
+		t.Fatalf("can't gossip to validators: %v", err)
 	}
 }
 

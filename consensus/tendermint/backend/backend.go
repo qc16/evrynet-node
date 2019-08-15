@@ -16,7 +16,7 @@ const (
 	tendermintMsg = 0x11
 )
 
-// New creates an Ethereum backend for Istanbul core engine.
+// New creates an Ethereum backend for Tendermint core engine.
 func New(privateKey *ecdsa.PrivateKey) consensus.Tendermint {
 	backend := &backend{
 		tendermintEventMux: new(event.TypeMux),
@@ -49,7 +49,7 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 	return crypto.Sign(hashData, sb.privateKey)
 }
 
-// Broadcast implements istanbul.Backend.Broadcast
+// Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
 // TODO: change AddressSet to validatorSet
 func (sb *backend) Broadcast(addressSet []common.Address, payload []byte) error {

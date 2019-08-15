@@ -22,7 +22,6 @@ package eth
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"encoding/hex"
 	"math/big"
 	"sort"
 	"sync"
@@ -40,13 +39,12 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
 	testBankKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testPublicKey  = crypto.FromECDSAPub(&testBankKey.PublicKey)
 	testBank       = crypto.PubkeyToAddress(testBankKey.PublicKey)
 )
 
@@ -179,20 +177,8 @@ func newTestPeer(name string, version int, pm *ProtocolManager, shake bool) (*te
 	return tp, errc
 }
 
-func newNodeTest(record string) (*enode.Node, error) {
-	var r enr.Record
-	var pyRecord, _ = hex.DecodeString(record)
-	if err := rlp.DecodeBytes(pyRecord, &r); err != nil {
-		return nil, err
-	}
-	n, err := enode.New(enode.ValidSchemes, &r)
-	if err != nil {
-		return nil, err
-	}
-	return n, nil
-}
-
-// newTestPeerFromNode creates a new peer registered at the given protocol manager.
+// newTestPeerFromNode creates a new peer from a node registered at the given protocol manager.
+// Its used in TestFindPeers
 func newTestPeerFromNode(name string, version int, pm *ProtocolManager, shake bool, node *enode.Node) (*testPeer, <-chan error) {
 	// Create a message pipe to communicate through
 	app, net := p2p.MsgPipe()

@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
@@ -36,6 +37,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -678,18 +680,15 @@ func TestFindPeers(t *testing.T) {
 		t.Fatalf("can't create protocol manager: %v", err)
 	}
 
-	record := "f884b8407098ad865b00a582051940cb9cf36836572411a47278783077011599ed5cd16b76f2635f4e234738f30813a89eb9137e3e3df5266e3a1f11df72ecf1145ccb9c01826964827634826970847f00000189736563703235366b31a103ca634cae0d49acb401d8a4c6b6fe8c55b70d115bf400769cc1400f3258cd31388375647082765f"
-	n, err := newNodeTest(record)
-	if err != nil {
-		t.Fatalf("can't create node from record: %v", err)
-	}
+	// create a node for test peer
+	n := enode.MustParseV4("enode://" + hex.EncodeToString(testPublicKey[1:]) + "@33.4.2.1:30303")
 
 	peer, _ := newTestPeerFromNode(fmt.Sprintf("peer %d", 0), eth63, pm, true, n)
 	defer peer.close()
 
 	targets := map[common.Address]bool{}
-	address1 := common.HexToAddress("0x71562b71999873DB5b286dF957af199Ec94617F7")
-	address2 := common.HexToAddress("0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1")
+	address1 := testBank                                                          // this address is in peer list
+	address2 := common.HexToAddress("0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1") // a random address that should not be in Peers list
 	targets[address1] = true
 	targets[address2] = true
 
@@ -717,4 +716,6 @@ func TestSendMessageBetweenPeer(t *testing.T) {
 	VoteMsg := 0x12
 	vote := map[string]bool{"agree": true}
 	go peer.Send(uint64(VoteMsg), []interface{}{vote})
+
+	//TODO: Add handler to check receiving messages
 }
