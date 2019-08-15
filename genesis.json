@@ -5,10 +5,7 @@
     "byzantiumBlock": 0,
     "eip155Block": 0,
     "eip158Block": 0,
-    "tendermint": {
-      "epoch": 3000,
-      "policy": 0
-    }
+    "constantinopleBlock": 0
   },
   "nonce": "0x0000000000000001",
   "timestamp": "0x0",
