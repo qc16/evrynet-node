@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -35,6 +37,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -666,4 +669,53 @@ outer:
 	if receivedCount != broadcastExpected {
 		t.Errorf("block broadcast to %d peers, expected %d", receivedCount, broadcastExpected)
 	}
+}
+
+func TestFindPeers(t *testing.T) {
+	pm, _, err := newTestProtocolManager(downloader.FullSync, 0, nil, nil)
+	if pm != nil {
+		defer pm.Stop()
+	}
+	if err != nil {
+		t.Fatalf("can't create protocol manager: %v", err)
+	}
+
+	// create a node for test peer
+	n := enode.MustParseV4("enode://" + hex.EncodeToString(testPublicKey[1:]) + "@33.4.2.1:30303")
+
+	peer, _ := newTestPeerFromNode(fmt.Sprintf("peer %d", 0), eth63, pm, true, n)
+	defer peer.close()
+
+	targets := map[common.Address]bool{}
+	address1 := testBank                                                          // this address is in peer list
+	address2 := common.HexToAddress("0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1") // a random address that should not be in Peers list
+	targets[address1] = true
+	targets[address2] = true
+
+	peers := pm.FindPeers(targets)
+	if _, ok := peers[address1].(consensus.Peer); !ok {
+		t.Fatalf("can't find peers")
+	}
+	if _, ok := peers[address2].(consensus.Peer); ok {
+		t.Fatalf("find wrong peers")
+	}
+}
+
+// Test send message between peers
+func TestSendMessageBetweenPeer(t *testing.T) {
+	pm, _, err := newTestProtocolManager(downloader.FullSync, 0, nil, nil)
+	if pm != nil {
+		defer pm.Stop()
+	}
+	if err != nil {
+		t.Fatalf("can't create protocol manager: %v", err)
+	}
+	peer, _ := newTestPeer("peer", eth63, pm, false)
+	defer peer.close()
+
+	VoteMsg := 0x12
+	vote := map[string]bool{"agree": true}
+	go peer.Send(uint64(VoteMsg), []interface{}{vote})
+
+	//TODO: Add handler to check receiving messages
 }

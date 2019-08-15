@@ -44,6 +44,7 @@ import (
 
 var (
 	testBankKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testPublicKey  = crypto.FromECDSAPub(&testBankKey.PublicKey)
 	testBank       = crypto.PubkeyToAddress(testBankKey.PublicKey)
 )
 
@@ -152,6 +153,37 @@ func newTestPeer(name string, version int, pm *ProtocolManager, shake bool) (*te
 	rand.Read(id[:])
 
 	peer := pm.newPeer(version, p2p.NewPeer(id, name, nil), net)
+
+	// Start the peer on a new thread
+	errc := make(chan error, 1)
+	go func() {
+		select {
+		case pm.newPeerCh <- peer:
+			errc <- pm.handle(peer)
+		case <-pm.quitSync:
+			errc <- p2p.DiscQuitting
+		}
+	}()
+	tp := &testPeer{app: app, net: net, peer: peer}
+	// Execute any implicitly requested handshakes and return
+	if shake {
+		var (
+			genesis = pm.blockchain.Genesis()
+			head    = pm.blockchain.CurrentHeader()
+			td      = pm.blockchain.GetTd(head.Hash(), head.Number.Uint64())
+		)
+		tp.handshake(nil, td, head.Hash(), genesis.Hash())
+	}
+	return tp, errc
+}
+
+// newTestPeerFromNode creates a new peer from a node registered at the given protocol manager.
+// Its used in TestFindPeers
+func newTestPeerFromNode(name string, version int, pm *ProtocolManager, shake bool, node *enode.Node) (*testPeer, <-chan error) {
+	// Create a message pipe to communicate through
+	app, net := p2p.MsgPipe()
+
+	peer := pm.newPeer(version, p2p.NewPeerFromNode(node, name, nil), net)
 
 	// Start the peer on a new thread
 	errc := make(chan error, 1)
