@@ -54,7 +54,6 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-// TODO: change AddressSet to validatorSet
 func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
 	// send to others
 	if err := sb.Gossip(valSet, payload); err != nil {
@@ -62,7 +61,9 @@ func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 	}
 	// send to self
 	go func() {
-		if err := sb.tendermintEventMux.Post(payload); err != nil {
+		if err := sb.EventMux().Post(tendermint.MessageEvent{
+			Payload: payload,
+		}); err != nil {
 			fmt.Printf("error in Post event %v", err)
 		}
 	}()
@@ -72,7 +73,6 @@ func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 // Gossip implements tendermint.Backend.Gossip
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
-// TODO: change AddressSet to validatorSet
 func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 

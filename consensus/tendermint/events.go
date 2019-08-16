@@ -4,3 +4,8 @@ package tendermint
 type RequestEvent struct {
 	Proposal Proposal
 }
+
+// MessageEvent is posted for Tendermint engine communication
+type MessageEvent struct {
+	Payload []byte
+}

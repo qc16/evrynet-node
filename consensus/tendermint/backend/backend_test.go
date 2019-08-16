@@ -3,18 +3,13 @@ package backend
 import (
 	"crypto/ecdsa"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
 	"github.com/ethereum/go-ethereum/consensus/tendermint/validator"
 	"github.com/ethereum/go-ethereum/crypto"
-)
-
-var (
-	addressSet = []common.Address{
-		common.HexToAddress("0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1"),
-		common.HexToAddress("0x723f12209b9C71f17A7b27FCDF16CA5883b7BBB0"),
-	}
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
@@ -41,13 +36,22 @@ func TestSign(t *testing.T) {
 
 // Test broadcast in consensus
 func TestBroadcast(t *testing.T) {
-	backend := &backend{}
+	// Create a backend and use it as Engine
+	engine := newEngine()
+	assert.NoError(t, engine.Start(nil, nil))
+
 	payload := []byte("vote message")
 	validatorSet := newTestValidatorSet(2)
-	err := backend.Broadcast(validatorSet, payload)
+	err := engine.Broadcast(validatorSet, payload)
+
+	// Sleep to make sure that the block can be received from
+	time.Sleep(2 * time.Second)
 	if err != nil {
 		t.Fatalf("can't broadcast to validators: %v", err)
 	}
+	// Output:
+	// --- Type of event.Data: tendermint.MessageEvent
+	// --- Value of event.Data: [118 111 116 101 32 109 101 115 115 97 103 101]
 }
 
 // Test Gossip between validators in consensus

@@ -31,6 +31,7 @@ func (c *core) subscribeEvents() {
 	c.events = c.backend.EventMux().Subscribe(
 		// external events
 		tendermint.RequestEvent{},
+		tendermint.MessageEvent{},
 	)
 	c.timeoutSub = c.backend.EventMux().Subscribe(
 		timeoutEvent{},
@@ -63,6 +64,10 @@ func (c *core) handleEvents() {
 				//TODO: Handle block proposal and remove this log
 				fmt.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
 				fmt.Printf("--- Value of event.Data: %+v\n", event.Data)
+			case tendermint.MessageEvent:
+				fmt.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
+				fmt.Printf("--- Value of event.Data: %+v\n", ev.Payload)
+				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 			default:
 				fmt.Printf("--- Unknow event :%v", ev)
 			}
