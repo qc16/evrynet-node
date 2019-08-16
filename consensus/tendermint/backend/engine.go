@@ -97,8 +97,12 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 // a results channel to retrieve the async verifications (the order is that of
 // the input slice).
 func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	panic("VerifyHeaders: implement me")
-	//TODO: Research & Implement
+	log.Warn("VerifyHeaders: implement me")
+
+	//TODO: fake return
+	abort := make(chan struct{})
+	results := make(chan error, len(headers))
+	return abort, results
 }
 
 func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
