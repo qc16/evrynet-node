@@ -221,3 +221,29 @@ func TestGetBlockHeadersDataEncodeDecode(t *testing.T) {
 		}
 	}
 }
+
+func TestTendermintRecvTransactions63(t *testing.T) { testTendermintRecvTransactions(t, 63) }
+
+func testTendermintRecvTransactions(t *testing.T, protocol int) {
+	txAdded := make(chan []*types.Transaction)
+	pm, _ := newTestProtocolManagerMustConsensus(t, downloader.FastSync, "tendermint", 0, txAdded, nil)
+	pm.acceptTxs = 1 // mark synced to accept transactions
+	p, _ := newTestPeer("peer", protocol, pm, true)
+	defer pm.Stop()
+	defer p.close()
+
+	tx := newTestTransaction(testAccount, 0, 0)
+	if err := p2p.Send(p.app, TxMsg, []interface{}{tx}); err != nil {
+		t.Fatalf("send error: %v", err)
+	}
+	select {
+	case added := <-txAdded:
+		if len(added) != 1 {
+			t.Errorf("wrong number of added transactions: got %d, want 1", len(added))
+		} else if added[0].Hash() != tx.Hash() {
+			t.Errorf("added wrong tx hash: got %v, want %v", added[0].Hash(), tx.Hash())
+		}
+	case <-time.After(2 * time.Second):
+		t.Errorf("no NewTxsEvent received within 2 seconds")
+	}
+}

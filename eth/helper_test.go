@@ -30,6 +30,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/tendermint"
+	"github.com/ethereum/go-ethereum/consensus/tendermint/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -48,6 +50,49 @@ var (
 	testPublicKey  = crypto.FromECDSAPub(&testBankKey.PublicKey)
 	testBank       = crypto.PubkeyToAddress(testBankKey.PublicKey)
 )
+
+// newTestProtocolManagerConsensus creates a new protocol manager for testing purposes,
+// with the given number of blocks already known, and potential notification
+// channels for different events.
+func newTestProtocolManagerConsensus(mode downloader.SyncMode, consensusAlgo string, blocks int, newtx chan<- []*types.Transaction, tendermintConfig *params.TendermintConfig) (*ProtocolManager, ethdb.Database, error) {
+	config := params.TendermintTestChainConfig
+	if tendermintConfig != nil {
+		config.Tendermint = tendermintConfig
+	}
+
+	var (
+		evmux                   = new(event.TypeMux)
+		engine consensus.Engine = ethash.NewFaker()
+		db                      = rawdb.NewMemoryDatabase()
+		gspec                   = &core.Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  core.GenesisAlloc{testBank: {Balance: big.NewInt(1000000)}},
+		}
+		genesis = gspec.MustCommit(db)
+	)
+
+	switch consensusAlgo {
+	case "tendermint":
+		var tendermint tendermint.Config
+		nodeKey, _ := crypto.GenerateKey()
+		engine = backend.New(&tendermint, nodeKey)
+	default:
+		engine = ethash.NewFaker()
+	}
+
+	blockchain, _ := core.NewBlockChain(db, nil, gspec.Config, engine, vm.Config{}, nil)
+	chain, _ := core.GenerateChain(gspec.Config, genesis, engine, db, blocks, nil)
+	if _, err := blockchain.InsertChain(chain); err != nil {
+		panic(err)
+	}
+
+	pm, err := NewProtocolManager(config, mode, DefaultConfig.NetworkId, evmux, &testTxPool{added: newtx}, engine, blockchain, db, 1, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	pm.Start(1000)
+	return pm, db, nil
+}
 
 // newTestProtocolManager creates a new protocol manager for testing purposes,
 // with the given number of blocks already known, and potential notification
@@ -100,6 +145,18 @@ func newTestProtocolManagerWithConsensus(engine consensus.Engine) (*ProtocolMana
 	}
 	pm.Start(1000)
 	return pm, nil
+}
+
+// newTestProtocolManagerMustConsensus creates a new protocol manager for testing purposes,
+// with the given number of blocks already known, and potential notification
+// channels for different events. In case of an error, the constructor force-
+// fails the test.
+func newTestProtocolManagerMustConsensus(t *testing.T, mode downloader.SyncMode, consensusAlgo string, blocks int, newtx chan<- []*types.Transaction, tendermintConfig *params.TendermintConfig) (*ProtocolManager, ethdb.Database) {
+	pm, db, err := newTestProtocolManagerConsensus(mode, consensusAlgo, blocks, newtx, tendermintConfig)
+	if err != nil {
+		t.Fatalf("Failed to create protocol manager: %v", err)
+	}
+	return pm, db
 }
 
 // newTestProtocolManagerMust creates a new protocol manager for testing purposes,
