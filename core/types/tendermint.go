@@ -24,13 +24,16 @@ import (
 )
 
 var (
-	// TendermintDigest TODO: Add digest for our consensus, Digest represents a hash of ""
+	// TendermintDigest
 	// to identify whether the block is from Tendermint consensus engine
+	//TODO: Add digest for our consensus, Digest represents a hash of ""
 	TendermintDigest = common.HexToHash("0x0")
 
 	// TendermintExtraVanity Fixed number of extra-data bytes reserved for validator vanity
+	// A Tendermint's Header.Extra is : <normal ExtraData> + 0x00 til first 32 bytes + n. Seal for each 65 bytes after
 	TendermintExtraVanity = 32
 	// TendermintExtraSeal Fixed number of extra-data bytes reserved for validator seal
+	// Each seal is exactly 65 bytes.
 	TendermintExtraSeal = 65
 
 	// ErrInvalidTendermintHeaderExtra is returned if the length of extra-data is less than 32 bytes
@@ -39,10 +42,9 @@ var (
 
 // TendermintExtra extra data for Tendermint consensus
 type TendermintExtra struct {
-	LastCommitHash []byte // commit from validators from the last block
-
 	// hashes from the app output from the prev block
-	Validators     []common.Address // list of validators of the current block
+	Validators []common.Address // list of validators of the current block
+	// TODO: find a way to calculate this
 	NextValidators []common.Address // validators for the next block
 
 	Seal          []byte   // Proposer seal 65 bytes
@@ -52,7 +54,6 @@ type TendermintExtra struct {
 // EncodeRLP serializes ist into the Ethereum RLP format.
 func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
-		te.LastCommitHash,
 		te.Validators,
 		te.NextValidators,
 		te.Seal,
@@ -63,7 +64,6 @@ func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the tendermint fields from a RLP stream.
 func (te *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
 	var tendermintExtra struct {
-		LastCommitHash []byte
 		NextValidators []common.Address
 		Validators     []common.Address
 		Seal           []byte
@@ -72,7 +72,7 @@ func (te *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&tendermintExtra); err != nil {
 		return err
 	}
-	te.LastCommitHash, te.NextValidators = tendermintExtra.LastCommitHash, tendermintExtra.NextValidators
+	te.NextValidators = tendermintExtra.NextValidators
 	te.Validators = tendermintExtra.Validators
 	te.Seal, te.CommittedSeal = tendermintExtra.Seal, tendermintExtra.CommittedSeal
 	return nil
