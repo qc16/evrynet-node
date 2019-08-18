@@ -16,25 +16,27 @@ type Validator interface {
 
 // ----------------------------------------------------------------------------
 
+// Validators type is list of Validator
 type Validators []Validator
 
-// Use for sort.Sort()
+// Len must be implemented for sort.Sort()
 func (slice Validators) Len() int {
 	return len(slice)
 }
 
-// Use for sort.Sort()
+// Less must be implemented for sort.Sort()
 func (slice Validators) Less(i, j int) bool {
 	return strings.Compare(slice[i].String(), slice[j].String()) < 0
 }
 
-// Use for sort.Sort()
+// Swap must be implemented for sort.Sort()
 func (slice Validators) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
 // ----------------------------------------------------------------------------
 
+// ValidatorSet interface handles validator, proposer for defaultSet
 type ValidatorSet interface {
 	// Return the validator size
 	Size() int

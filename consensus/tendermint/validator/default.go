@@ -12,16 +12,21 @@ type defaultValidator struct {
 	address common.Address
 }
 
+// Address will return address of defaultValidator
 func (val *defaultValidator) Address() common.Address {
 	return val.address
 }
 
+// String will parse address of defaultValidator to string and return it
 func (val *defaultValidator) String() string {
 	return val.Address().String()
 }
 
 // ----------------------------------------------------------------------------
 
+// defaultSet stores list of validator,
+// proposer, proposer policy, proposer selector for voting
+// and validator mutex to handle the conflict of the reader/writer between goroutines
 type defaultSet struct {
 	validators tendermint.Validators
 	policy     tendermint.ProposerPolicy
@@ -55,18 +60,22 @@ func newDefaultSet(addrs []common.Address, policy tendermint.ProposerPolicy) *de
 	return valSet
 }
 
+// Size will return the length of validators in defaultSet
 func (valSet *defaultSet) Size() int {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	return len(valSet.validators)
 }
 
+// List will return validators in defaultSet
 func (valSet *defaultSet) List() []tendermint.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	return valSet.validators
 }
 
+// GetByIndex will return validator by index in defaultSet
+// If the index >= size of validators, return nil
 func (valSet *defaultSet) GetByIndex(i uint64) tendermint.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
@@ -76,6 +85,8 @@ func (valSet *defaultSet) GetByIndex(i uint64) tendermint.Validator {
 	return nil
 }
 
+// GetByAddress will return the validator & its index of the validator set by the address
+// If the address does not exist in the validator set, it will return -1
 func (valSet *defaultSet) GetByAddress(addr common.Address) (int, tendermint.Validator) {
 	for i, val := range valSet.List() {
 		if addr == val.Address() {

@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -61,10 +62,7 @@ func testNormalValSet(t *testing.T) {
 	val2 := New(addr2)
 
 	valSet := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin)
-	if valSet == nil {
-		t.Errorf("the format of validator set is invalid")
-		t.FailNow()
-	}
+	assert.NotNil(t, valSet, "the format of validator set is invalid")
 
 	// check size
 	if size := valSet.Size(); size != 2 {
