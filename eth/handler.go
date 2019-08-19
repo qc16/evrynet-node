@@ -102,7 +102,8 @@ type ProtocolManager struct {
 
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
-	wg sync.WaitGroup
+	wg     sync.WaitGroup
+	engine consensus.Engine
 }
 
 // NewProtocolManager returns a new Ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
@@ -121,6 +122,11 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
+		engine:      engine,
+	}
+
+	if handler, ok := engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(manager)
 	}
 	// If fast sync was requested and our database is empty, grant it
 	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() == 0 {
@@ -367,6 +373,16 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 	}
 	defer msg.Discard()
+
+	if handler, ok := pm.engine.(consensus.Handler); ok {
+		log.Debug("Handling from consensus level first...")
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		handled, err := handler.HandleMsg(addr, msg)
+		if handled {
+			return err
+		}
+	}
 
 	// Handle the message depending on its contents
 	switch {

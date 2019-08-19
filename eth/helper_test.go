@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -73,6 +74,32 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 	}
 	pm.Start(1000)
 	return pm, db, nil
+}
+
+//newTestProtocolManagerWithConsensus return an eth.ProtocolManager with specific consensusEngine
+func newTestProtocolManagerWithConsensus(engine consensus.Engine) (*ProtocolManager, error) {
+	var (
+		mode   = downloader.FullSync
+		blocks = 0
+		evmux  = new(event.TypeMux)
+		db     = rawdb.NewMemoryDatabase()
+		gspec  = &core.Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  core.GenesisAlloc{testBank: {Balance: big.NewInt(1000000)}},
+		}
+		genesis       = gspec.MustCommit(db)
+		blockchain, _ = core.NewBlockChain(db, nil, gspec.Config, engine, vm.Config{}, nil)
+	)
+	chain, _ := core.GenerateChain(gspec.Config, genesis, engine, db, blocks, nil)
+	if _, err := blockchain.InsertChain(chain); err != nil {
+		panic(err)
+	}
+	pm, err := NewProtocolManager(gspec.Config, mode, DefaultConfig.NetworkId, evmux, &testTxPool{}, engine, blockchain, db, 1, nil)
+	if err != nil {
+		return nil, err
+	}
+	pm.Start(1000)
+	return pm, nil
 }
 
 // newTestProtocolManagerMust creates a new protocol manager for testing purposes,

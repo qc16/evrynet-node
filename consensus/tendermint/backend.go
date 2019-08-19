@@ -14,4 +14,7 @@ type Backend interface {
 
 	// Gossip sends a message to all validators (exclude self)
 	Gossip(valSet ValidatorSet, payload []byte) error
+
+	// Broadcast sends a message to all validators (including self)
+	Broadcast(valSet ValidatorSet, payload []byte) error
 }

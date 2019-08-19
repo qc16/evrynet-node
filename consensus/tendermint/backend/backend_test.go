@@ -3,13 +3,11 @@ package backend
 import (
 	"crypto/ecdsa"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
 	"github.com/ethereum/go-ethereum/consensus/tendermint/validator"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
@@ -31,37 +29,6 @@ func TestSign(t *testing.T) {
 
 	if signer != getAddress() {
 		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
-	}
-}
-
-// Test broadcast in consensus
-func TestBroadcast(t *testing.T) {
-	// Create a backend and use it as Engine
-	engine := newEngine()
-	assert.NoError(t, engine.Start(nil, nil))
-
-	payload := []byte("vote message")
-	validatorSet := newTestValidatorSet(2)
-	err := engine.Broadcast(validatorSet, payload)
-
-	// Sleep to make sure that the block can be received from
-	time.Sleep(2 * time.Second)
-	if err != nil {
-		t.Fatalf("can't broadcast to validators: %v", err)
-	}
-	// Output:
-	// --- Type of event.Data: tendermint.MessageEvent
-	// --- Value of event.Data: [118 111 116 101 32 109 101 115 115 97 103 101]
-}
-
-// Test Gossip between validators in consensus
-func TestGossip(t *testing.T) {
-	backend := &backend{}
-	payload := []byte("vote message")
-	validatorSet := newTestValidatorSet(2)
-	err := backend.Gossip(validatorSet, payload)
-	if err != nil {
-		t.Fatalf("can't gossip to validators: %v", err)
 	}
 }
 
