@@ -65,7 +65,7 @@ func newTestProtocolManagerConsensus(mode downloader.SyncMode, consensusAlgo str
 		engine consensus.Engine = ethash.NewFaker()
 		db                      = rawdb.NewMemoryDatabase()
 		gspec                   = &core.Genesis{
-			Config: params.TestChainConfig,
+			Config: params.TendermintTestChainConfig,
 			Alloc:  core.GenesisAlloc{testBank: {Balance: big.NewInt(1000000)}},
 		}
 		genesis = gspec.MustCommit(db)
@@ -80,7 +80,10 @@ func newTestProtocolManagerConsensus(mode downloader.SyncMode, consensusAlgo str
 		engine = ethash.NewFaker()
 	}
 
-	blockchain, _ := core.NewBlockChain(db, nil, gspec.Config, engine, vm.Config{}, nil)
+	blockchain, err := core.NewBlockChain(db, nil, gspec.Config, engine, vm.Config{}, nil)
+	if err != nil {
+		panic(err)
+	}
 	chain, _ := core.GenerateChain(gspec.Config, genesis, engine, db, blocks, nil)
 	if _, err := blockchain.InsertChain(chain); err != nil {
 		panic(err)

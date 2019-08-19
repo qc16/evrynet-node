@@ -102,8 +102,7 @@ type ProtocolManager struct {
 
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
-	wg sync.WaitGroup
-
+	wg     sync.WaitGroup
 	engine consensus.Engine
 }
 
@@ -375,6 +374,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	}
 	defer msg.Discard()
 
+	// if the handler and engine is implemented in consensus
 	if handler, ok := pm.engine.(consensus.Handler); ok {
 		log.Debug("Handling from consensus level first...")
 		pubKey := p.Node().Pubkey()
