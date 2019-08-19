@@ -107,6 +107,7 @@ func TendermintFilteredHeader(h *Header, keepSeal bool) *Header {
 	if !keepSeal {
 		tendermintExtra.Seal = []byte{}
 	}
+	tendermintExtra.CommittedSeal = [][]byte{}
 
 	payload, err := rlp.EncodeToBytes(&tendermintExtra)
 	if err != nil {
