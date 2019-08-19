@@ -26,6 +26,7 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -424,6 +425,15 @@ func (p *peer) String() string {
 	return fmt.Sprintf("Peer %s [%s]", p.id,
 		fmt.Sprintf("eth/%2d", p.version),
 	)
+}
+
+// Address return Ethereum Address of a peer
+func (p *peer) Address() common.Address {
+	pubKey := p.Node().Pubkey()
+	if pubKey != nil {
+		return (crypto.PubkeyToAddress(*pubKey))
+	}
+	return common.Address{}
 }
 
 // peerSet represents the collection of active peers currently participating in

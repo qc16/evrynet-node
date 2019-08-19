@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -133,4 +134,14 @@ type Tendermint interface {
 
 	// Stop stops the engine
 	Stop() error
+}
+
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
+
+	// SetBroadcaster sets the broadcaster to send message to peers
+	SetBroadcaster(Broadcaster)
 }

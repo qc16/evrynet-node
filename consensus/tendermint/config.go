@@ -4,6 +4,7 @@ type ProposerPolicy uint64
 
 const (
 	RoundRobin ProposerPolicy = iota
+	Sticky
 )
 
 type Config struct {

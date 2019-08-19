@@ -5,14 +5,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/tendermint"
+	"github.com/ethereum/go-ethereum/consensus/tendermint/validator"
 	"github.com/ethereum/go-ethereum/crypto"
-)
-
-var (
-	addressSet = []common.Address{
-		common.HexToAddress("0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1"),
-		common.HexToAddress("0x723f12209b9C71f17A7b27FCDF16CA5883b7BBB0"),
-	}
 )
 
 func TestSign(t *testing.T) {
@@ -37,26 +32,6 @@ func TestSign(t *testing.T) {
 	}
 }
 
-// Test broadcast in consensus
-func TestBroadcast(t *testing.T) {
-	backend := &backend{}
-	payload := []byte("vote message")
-	err := backend.Broadcast(addressSet, payload)
-	if err != nil {
-		t.Fatalf("can't broadcast to validators: %v", err)
-	}
-}
-
-// Test Gossip between validators in consensus
-func TestGossip(t *testing.T) {
-	backend := &backend{}
-	payload := []byte("vote message")
-	err := backend.Gossip(addressSet, payload)
-	if err != nil {
-		t.Fatalf("can't gossip to validators: %v", err)
-	}
-}
-
 /**
  * SimpleBackend
  * Private key: bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1
@@ -70,4 +45,15 @@ func getAddress() common.Address {
 func generatePrivateKey() (*ecdsa.PrivateKey, error) {
 	key := "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
 	return crypto.HexToECDSA(key)
+}
+
+func newTestValidatorSet(n int) tendermint.ValidatorSet {
+	// generate validators
+	addrs := make([]common.Address, n)
+	for i := 0; i < n; i++ {
+		privateKey, _ := crypto.GenerateKey()
+		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
+	}
+	vset := validator.NewSet(addrs, tendermint.RoundRobin)
+	return vset
 }
