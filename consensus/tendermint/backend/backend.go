@@ -66,6 +66,11 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 	return crypto.Sign(hashData, sb.privateKey)
 }
 
+// Address implements tendermint.Backend.Address
+func (sb *backend) Address() common.Address {
+	return sb.address
+}
+
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
 func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
