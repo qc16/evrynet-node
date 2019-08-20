@@ -2,6 +2,7 @@ package core
 
 import (
 	"io"
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -52,7 +53,21 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 }
 
 type messageSet struct {
+	view       *tendermint.View
 	valSet     tendermint.ValidatorSet
 	messagesMu *sync.Mutex
 	messages   map[common.Address]*message
+}
+
+// Construct a new message set to accumulate messages for given height/view number.
+func newMessageSet(valSet tendermint.ValidatorSet) *messageSet {
+	return &messageSet{
+		view: &tendermint.View{
+			Round:  new(big.Int),
+			Height: new(big.Int),
+		},
+		messagesMu: new(sync.Mutex),
+		messages:   make(map[common.Address]*message),
+		valSet:     valSet,
+	}
 }
