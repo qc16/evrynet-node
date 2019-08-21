@@ -16,7 +16,6 @@ import (
 
 const (
 	tendermintMsg = 0x11
-	NewBlockMsg   = 0x07
 )
 
 var (

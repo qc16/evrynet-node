@@ -7,7 +7,7 @@ import (
 
 // Backend provides application specific functions for Tendermint core
 type Backend interface {
-	// Address returns the owner's address
+	// Address returns the Ethereum address of the node running this backend
 	Address() common.Address
 
 	// EventMux returns the event mux in backend

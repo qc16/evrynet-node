@@ -1,20 +1,16 @@
 package backend
 
 import (
-	"bytes"
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"log"
-	"math/big"
+
+	"golang.org/x/crypto/sha3"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	"github.com/ethereum/go-ethereum/core/types"
-	ethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
-
-	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -38,12 +34,12 @@ func (sb *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
-// return false if cannot handle message else return false if the message is not handled
+// return false if the message cannot be handle by Tendermint Backend
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
-
-	if msg.Code == tendermintMsg {
+	switch msg.Code {
+	case tendermintMsg:
 		if !sb.coreStarted {
 			return true, tendermint.ErrStoppedEngine
 		}
@@ -63,31 +59,10 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		}()
 
 		return true, nil
+	default:
+		return false, fmt.Errorf("unknown message code %d for Tendermint's protocol", msg.Code)
+		//TODO:Handler other cases
+		//Case 1: NewBlock when this node is the propose.
+		//More cases to be added...
 	}
-	if msg.Code == NewBlockMsg && sb.core.IsProposer() { // eth.NewBlockMsg: import cycle
-		// this case is to safeguard the race of similar block which gets propagated from other node while this node is proposing
-		// as p2p.Msg can only be decoded once (get EOF for any subsequence read), we need to make sure the payload is restored after we decode it
-		if reader, ok := msg.Payload.(*bytes.Reader); ok {
-			payload, err := ioutil.ReadAll(reader)
-			if err != nil {
-				return true, err
-			}
-			reader.Reset(payload)       // ready to be decoded
-			defer reader.Reset(payload) // restore so main eth/handler can decode
-			var request struct {        // this has to be same as eth/protocol.go#newBlockData as we are reading NewBlockMsg
-				Block *types.Block
-				TD    *big.Int
-			}
-			if err := msg.Decode(&request); err != nil {
-				ethlog.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
-				return false, nil
-			}
-			newRequestedBlock := request.Block
-			if newRequestedBlock.Header().MixDigest == types.TendermintDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
-				ethlog.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
