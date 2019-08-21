@@ -24,11 +24,11 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/p2p"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 var (

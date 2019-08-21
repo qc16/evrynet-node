@@ -24,9 +24,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 type TwoOperandTestcase struct {

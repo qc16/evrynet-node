@@ -24,11 +24,11 @@ import (
 	"math/big"
 	"unsafe"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 //go:generate gencodec -type Receipt -field-override receiptMarshaling -out gen_receipt_json.go

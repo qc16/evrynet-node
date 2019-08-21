@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/vm"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 type account struct{}

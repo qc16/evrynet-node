@@ -21,9 +21,9 @@ package geth
 import (
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/p2p/discv5"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 // MainnetGenesis returns the JSON spec to use for the main Ethereum network. It

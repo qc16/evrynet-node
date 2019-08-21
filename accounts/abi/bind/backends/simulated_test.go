@@ -21,13 +21,13 @@ import (
 	"math/big"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	ethereum "github.com/evrynet-official/evrynet-client"
+	"github.com/evrynet-official/evrynet-client/accounts/abi/bind"
+	"github.com/evrynet-official/evrynet-client/accounts/abi/bind/backends"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 )
 
 func TestSimulatedBackend(t *testing.T) {

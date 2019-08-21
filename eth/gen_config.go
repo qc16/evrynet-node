@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/miner"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/eth/gasprice"
+	"github.com/evrynet-official/evrynet-client/miner"
 )
 
 // MarshalTOML marshals as TOML.

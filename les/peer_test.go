@@ -4,11 +4,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/les/flowcontrol"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/mclock"
+	"github.com/evrynet-official/evrynet-client/les/flowcontrol"
+	"github.com/evrynet-official/evrynet-client/p2p"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 const (

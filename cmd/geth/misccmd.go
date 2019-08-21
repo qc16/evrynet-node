@@ -23,11 +23,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/evrynet-official/evrynet-client/cmd/utils"
+	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/urfave/cli"
 )
 
 var (

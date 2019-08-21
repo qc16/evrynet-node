@@ -23,12 +23,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/tests"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/vm"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/tests"
 
-	cli "gopkg.in/urfave/cli.v1"
+	cli "github.com/urfave/cli"
 )
 
 var stateTestCommand = cli.Command{

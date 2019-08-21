@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/evrynet-official/evrynet-client/log"
 )
 
 // handler handles JSON-RPC messages. There is one handler per connection. Note that

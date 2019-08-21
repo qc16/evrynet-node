@@ -22,10 +22,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/evrynet-official/evrynet-client/accounts/abi"
+	"github.com/evrynet-official/evrynet-client/accounts/abi/bind"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
 // Signer is an interaface defining the callback when a contract requires a

@@ -6,12 +6,12 @@ import (
 	"log"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	tendermintCore "github.com/ethereum/go-ethereum/consensus/tendermint/core"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/event"
 )
 
 const (

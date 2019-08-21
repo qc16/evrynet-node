@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	tendermintBackend "github.com/ethereum/go-ethereum/consensus/tendermint/backend"
-	"github.com/ethereum/go-ethereum/consensus/tendermint/validator"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tendermintBackend "github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/p2p"
+	"github.com/evrynet-official/evrynet-client/p2p/enode"
 )
 
 func registerNewPeer(pm *ProtocolManager, p *peer) error {

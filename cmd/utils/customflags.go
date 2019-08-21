@@ -27,8 +27,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/math"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/evrynet-official/evrynet-client/common/math"
+	"github.com/urfave/cli"
 )
 
 // Custom type which is registered in the flags library which cli uses for

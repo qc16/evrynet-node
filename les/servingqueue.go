@@ -22,9 +22,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/les/csvlogger"
+	"github.com/evrynet-official/evrynet-client/common/mclock"
+	"github.com/evrynet-official/evrynet-client/common/prque"
+	"github.com/evrynet-official/evrynet-client/les/csvlogger"
 )
 
 // servingQueue allows running tasks in a limited number of threads and puts the

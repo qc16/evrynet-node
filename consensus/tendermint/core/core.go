@@ -3,8 +3,8 @@ package core
 import (
 	"sync"
 
-	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/event"
 )
 
 // New creates an Tendermint consensus core

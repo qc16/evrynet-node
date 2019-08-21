@@ -5,13 +5,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/evrynet-official/evrynet-client/crypto"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/ethclient"
 )
 
 //TestProviderSignTransaction will sign a transaction with both sender's Key and Providers's Key

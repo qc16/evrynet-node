@@ -4,10 +4,10 @@ import (
 	"crypto/ecdsa"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	"github.com/ethereum/go-ethereum/consensus/tendermint/validator"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
+	"github.com/evrynet-official/evrynet-client/crypto"
 )
 
 func TestSign(t *testing.T) {

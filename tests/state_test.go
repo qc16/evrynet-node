@@ -24,8 +24,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/evrynet-official/evrynet-client/cmd/utils"
+	"github.com/evrynet-official/evrynet-client/core/vm"
 )
 
 func TestState(t *testing.T) {

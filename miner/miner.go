@@ -23,16 +23,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/consensus"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 // Backend wraps all methods required for mining.

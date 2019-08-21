@@ -21,9 +21,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/internal/debug"
-	"github.com/ethereum/go-ethereum/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/evrynet-official/evrynet-client/internal/debug"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/urfave/cli"
 )
 
 var (

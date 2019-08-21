@@ -17,8 +17,8 @@
 package les
 
 import (
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/evrynet-official/evrynet-client/p2p"
 )
 
 var (

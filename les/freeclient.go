@@ -23,12 +23,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/les/csvlogger"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common/mclock"
+	"github.com/evrynet-official/evrynet-client/common/prque"
+	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/les/csvlogger"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 // freeClientPool implements a client database that limits the connection time

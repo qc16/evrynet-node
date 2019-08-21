@@ -4,8 +4,8 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 // Proposal supports retrieving height and serialized block to be used during Tendermint consensus.

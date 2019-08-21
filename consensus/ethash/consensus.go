@@ -25,14 +25,14 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/math"
+	"github.com/evrynet-official/evrynet-client/consensus"
+	"github.com/evrynet-official/evrynet-client/consensus/misc"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rlp"
 	"golang.org/x/crypto/sha3"
 )
 
