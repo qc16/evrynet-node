@@ -1,10 +1,10 @@
 package eth
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -13,47 +13,99 @@ import (
 	tendermintBackend "github.com/ethereum/go-ethereum/consensus/tendermint/backend"
 	"github.com/ethereum/go-ethereum/consensus/tendermint/validator"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
-func TestTendermintBroadcaster(t *testing.T) {
-	var (
-		thisNodePk  = mustGeneratePrivateKey(t)
-		otherNodePk = mustGeneratePrivateKey(t)
-		tbe         = tendermintBackend.New(tendermint.DefaultConfig, thisNodePk)
-		addrs       = []common.Address{
-			crypto.PubkeyToAddress(thisNodePk.PublicKey),
-			crypto.PubkeyToAddress(otherNodePk.PublicKey),
-		}
-		validatorSet = validator.NewSet(addrs, tendermint.RoundRobin)
-	)
-	pm, err := newTestProtocolManagerWithConsensus(tbe)
-	assert.NoError(t, err)
-	defer pm.Stop()
-
-	assert.NoError(t, tbe.Start(nil, nil))
-	// create nodes for test peer
-	n1 := enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&thisNodePk.PublicKey)[1:]) + "@33.4.2.1:30303")
-	n2 := enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&otherNodePk.PublicKey)[1:]) + "@33.4.2.1:30304")
-
-	newTestPeerFromNode(fmt.Sprintf("peer %d", 0), eth63, pm, true, n1)
-	newTestPeerFromNode(fmt.Sprintf("peer %d", 1), eth63, pm, true, n2)
-
-	//We don't close the peers since peer.send is asynchronous. When test terminated, the peers will be terminated as well.
-
-	bc, ok := tbe.(tendermint.Backend)
-	assert.Equal(t, true, ok)
-	payload := []byte("vote message")
-
-	assert.NoError(t, bc.Broadcast(validatorSet, payload))
-
-	//DOTO: set up a test that can receive real message. This might require 2 protocolManagers.
+func registerNewPeer(pm *ProtocolManager, p *peer) error {
+	if err := pm.peers.Register(p); err != nil {
+		return err
+	}
+	return nil
 }
 
-func mustGeneratePrivateKey(t *testing.T) *ecdsa.PrivateKey {
-	privateKey, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fail()
+//TestTendermintBroadcast setup a test to broadcast a message from a node
+//Broadcast included Gossip hence Gossip is not required to test separatedly
+//Expectation: the MessageEvent is shown for consensus/tendermint/core.handleEvents (internal events)
+//And the Message's Hash is shown for consensus/tendermint/backend.HandleMsg (external message from peers)
+func TestTendermintBroadcast(t *testing.T) {
+	var (
+		nodePk1 = mustGeneratePrivateKey(t)
+		nodePk2 = mustGeneratePrivateKey(t)
+		tbe1    = tendermintBackend.New(tendermint.DefaultConfig, nodePk1)
+		addrs   = []common.Address{
+			crypto.PubkeyToAddress(nodePk1.PublicKey),
+			crypto.PubkeyToAddress(nodePk2.PublicKey),
+		}
+		validatorSet = validator.NewSet(addrs, tendermint.RoundRobin)
+		totalPeers   = 2
+		n1           = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk1.PublicKey)[1:]) + "@33.4.2.1:30303")
+		n2           = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk2.PublicKey)[1:]) + "@33.4.2.1:30304")
+	)
+	assert.NoError(t, tbe1.Start(nil, nil))
+	pm1, err := newTestProtocolManagerWithConsensus(tbe1)
+	time.Sleep(2 * time.Second)
+	assert.NoError(t, err)
+	defer pm1.Stop()
+
+	//Create 2 Pipe for read and write. These are full duplex
+	io1, io2 := p2p.MsgPipe()
+
+	//p1 will write to io2, p2 will receive from io1 and vice versal.
+	p1 := pm1.newPeer(63, p2p.NewPeerFromNode(n1, fmt.Sprintf("peer %d", 0), nil), io2)
+	p2 := pm1.newPeer(63, p2p.NewPeerFromNode(n2, fmt.Sprintf("peer %d", 1), nil), io1)
+	assert.NoError(t, registerNewPeer(pm1, p1))
+	assert.NoError(t, registerNewPeer(pm1, p2))
+
+	// assert it back to tendermint Backend to call Gossip.
+	bc, ok := tbe1.(tendermint.Backend)
+	assert.Equal(t, true, ok)
+
+	payload := []byte("vote message")
+	assert.NoError(t, bc.Broadcast(validatorSet, payload))
+	time.Sleep(2 * time.Second)
+
+	//Making sure that the handlingMsg is done by calling pm.handleMsg
+	var (
+		errCh         = make(chan error, totalPeers)
+		doneCh        = make(chan struct{}, totalPeers)
+		receivedCount int
+		expectedCount = 1
+	)
+	timeout := time.After(20 * time.Second)
+	for _, p := range []*peer{p1, p2} {
+		go func(p *peer) {
+			for {
+				if err := pm1.handleMsg(p); err != nil {
+					errCh <- err
+				} else {
+					doneCh <- struct{}{}
+				}
+			}
+		}(p)
 	}
-	return privateKey
+outer:
+	for {
+		select {
+		case err = <-errCh:
+			fmt.Printf("handling error %v\n", err)
+			break outer
+		case <-doneCh:
+			receivedCount++
+			if receivedCount >= expectedCount {
+				fmt.Printf("handling done ")
+				break outer
+			}
+
+		case <-timeout:
+			fmt.Printf("timdeout")
+
+			t.Fail()
+			break outer
+		}
+
+	}
+	if err != nil {
+		t.Errorf("error handling msg by peer: %v", err)
+	}
 }
