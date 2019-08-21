@@ -23,5 +23,12 @@ type core struct {
 	events     *event.TypeMuxSubscription
 	timeoutSub *event.TypeMuxSubscription
 
+	valSet       tendermint.ValidatorSet // validators set
+	currentState *roundState
+
+	timeoutProposal *event.TypeMuxSubscription
+	// timeoutPrevote = TimeoutPrevote or TimeoutPrecommit depends on current round step
+	timeoutPrevote *event.TypeMuxSubscription
+
 	handlerWg *sync.WaitGroup
 }

@@ -1,6 +1,7 @@
 package tendermint
 
 import (
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -51,3 +52,9 @@ type ValidatorSet interface {
 // ----------------------------------------------------------------------------
 
 type ProposalSelector func(ValidatorSet, common.Address, uint64) Validator
+
+// View includes a round number and a height of block we want to commit
+type View struct {
+	Round  *big.Int
+	Height *big.Int
+}
