@@ -32,8 +32,7 @@ func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
 	lockedRound *big.Int, lockedBlock *types.Block,
 	validRound *big.Int, validBlock *types.Block) *roundState {
 	return &roundState{
-		round:              view.Round,
-		height:             view.Height,
+		view:               view,
 		block:              block,
 		lockedRound:        lockedRound,
 		lockedBlock:        lockedBlock,
@@ -48,9 +47,8 @@ func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
 
 // roundState stores the consensus state
 type roundState struct {
-	round  *big.Int
-	height *big.Int
-	block  *types.Block // current proposed block
+	view  *tendermint.View // view contains round and height
+	block *types.Block     // current proposed block
 
 	lockedRound *big.Int     // lockedRound is latest round it is locked
 	lockedBlock *types.Block // lockedBlock is block it is locked at lockedRound above
@@ -72,32 +70,18 @@ func (s *roundState) SetProposalReceived(proposalReceived *tendermint.Proposal) 
 	s.ProposalReceived = proposalReceived
 }
 
-func (s *roundState) SetRound(r *big.Int) {
+func (s *roundState) SetView(v *tendermint.View) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.round = r
+	s.view = v
 }
 
-func (s *roundState) Round() *big.Int {
+func (s *roundState) View() *tendermint.View {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.round
-}
-
-func (s *roundState) SetHeight(hei *big.Int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.height = hei
-}
-
-func (s *roundState) Height() *big.Int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.height
+	return s.view
 }
 
 func (s *roundState) SetBlock(bl *types.Block) {
@@ -163,8 +147,7 @@ func (s *roundState) ValidBlock() *types.Block {
 // be confusing.
 func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	var ss struct {
-		Round              *big.Int
-		Height             *big.Int
+		View               *tendermint.View
 		Block              *types.Block
 		LockedRound        *big.Int
 		LockedBlock        *types.Block
@@ -178,7 +161,7 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	if err := stream.Decode(&ss); err != nil {
 		return err
 	}
-	s.round, s.height, s.block = ss.Round, ss.Height, ss.Block
+	s.view, s.block = ss.View, ss.Block
 	s.lockedRound, s.lockedBlock = ss.LockedRound, ss.LockedBlock
 	s.validRound, s.validBlock = ss.ValidRound, ss.ValidBlock
 	s.ProposalReceived = ss.ProposalReceived
@@ -202,8 +185,7 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 	defer s.mu.RUnlock()
 
 	return rlp.Encode(w, []interface{}{
-		s.round,
-		s.height,
+		s.view,
 		s.block,
 		s.lockedRound,
 		s.lockedBlock,
