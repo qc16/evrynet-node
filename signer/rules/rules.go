@@ -22,11 +22,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/signer/core"
-	"github.com/ethereum/go-ethereum/signer/rules/deps"
-	"github.com/ethereum/go-ethereum/signer/storage"
+	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/signer/core"
+	"github.com/evrynet-official/evrynet-client/signer/rules/deps"
+	"github.com/evrynet-official/evrynet-client/signer/storage"
 	"github.com/robertkrimen/otto"
 )
 

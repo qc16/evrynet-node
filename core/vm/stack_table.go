@@ -17,7 +17,7 @@
 package vm
 
 import (
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 func minSwapStack(n int) int {

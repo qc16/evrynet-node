@@ -4,7 +4,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 )
 
 // Start implements core.Engine.Start

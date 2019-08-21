@@ -1,8 +1,8 @@
 package tendermint
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/event"
 )
 
 // Backend provides application specific functions for Tendermint core

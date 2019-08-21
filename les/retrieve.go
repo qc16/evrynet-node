@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/light"
+	"github.com/evrynet-official/evrynet-client/common/mclock"
+	"github.com/evrynet-official/evrynet-client/light"
 )
 
 var (

@@ -22,10 +22,10 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/console"
-	"github.com/ethereum/go-ethereum/crypto"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/evrynet-official/evrynet-client/cmd/utils"
+	"github.com/evrynet-official/evrynet-client/console"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/urfave/cli"
 )
 
 // promptPassphrase prompts the user for a passphrase.  Set confirmation to true

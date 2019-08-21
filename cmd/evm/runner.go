@@ -27,17 +27,17 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/ethereum/go-ethereum/cmd/evm/internal/compiler"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/core/vm/runtime"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/evrynet-official/evrynet-client/cmd/evm/internal/compiler"
+	"github.com/evrynet-official/evrynet-client/cmd/utils"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/rawdb"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/vm"
+	"github.com/evrynet-official/evrynet-client/core/vm/runtime"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/params"
+	cli "github.com/urfave/cli"
 )
 
 var runCommand = cli.Command{

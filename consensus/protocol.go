@@ -18,7 +18,7 @@
 package consensus
 
 import (
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/evrynet-official/evrynet-client/common"
 )
 
 // Constants to match up protocol versions and messages

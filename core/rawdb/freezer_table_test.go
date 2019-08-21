@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/evrynet-official/evrynet-client/metrics"
 )
 
 func init() {

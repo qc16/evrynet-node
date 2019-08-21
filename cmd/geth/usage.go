@@ -24,9 +24,9 @@ import (
 
 	"strings"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/internal/debug"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/evrynet-official/evrynet-client/cmd/utils"
+	"github.com/evrynet-official/evrynet-client/internal/debug"
+	cli "github.com/urfave/cli"
 )
 
 // AppHelpTemplate is the test template for the default, global app help topic.

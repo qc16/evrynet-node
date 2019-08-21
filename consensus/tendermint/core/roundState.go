@@ -21,9 +21,9 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 // newRoundState creates a new roundState instance with the given view and validatorSet

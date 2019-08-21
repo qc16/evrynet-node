@@ -23,11 +23,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/p2p/discover"
+	"github.com/evrynet-official/evrynet-client/p2p/enode"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/urfave/cli"
 )
 
 var (

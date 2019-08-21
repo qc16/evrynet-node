@@ -25,15 +25,15 @@ import (
 	"reflect"
 	"unicode"
 
-	cli "gopkg.in/urfave/cli.v1"
+	cli "github.com/urfave/cli"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/dashboard"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/graphql"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
+	"github.com/evrynet-official/evrynet-client/cmd/utils"
+	"github.com/evrynet-official/evrynet-client/dashboard"
+	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/graphql"
+	"github.com/evrynet-official/evrynet-client/node"
+	"github.com/evrynet-official/evrynet-client/params"
+	whisper "github.com/evrynet-official/evrynet-client/whisper/whisperv6"
 	"github.com/naoina/toml"
 )
 

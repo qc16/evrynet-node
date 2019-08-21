@@ -19,8 +19,8 @@ package les
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/bitutil"
-	"github.com/ethereum/go-ethereum/light"
+	"github.com/evrynet-official/evrynet-client/common/bitutil"
+	"github.com/evrynet-official/evrynet-client/light"
 )
 
 const (

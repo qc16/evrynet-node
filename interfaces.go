@@ -15,16 +15,16 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package ethereum defines interfaces for interacting with Ethereum.
-package ethereum
+package evrynet
 
 import (
 	"context"
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.
