@@ -1,7 +1,7 @@
 package core
 
 import (
-	"fmt"
+	"log"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
@@ -62,14 +62,14 @@ func (c *core) handleEvents() {
 			switch ev := event.Data.(type) {
 			case tendermint.RequestEvent:
 				//TODO: Handle block proposal and remove this log
-				fmt.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
-				fmt.Printf("--- Value of event.Data: %+v\n", event.Data)
+				log.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
+				log.Printf("--- Value of event.Data: %+v\n", event.Data)
 			case tendermint.MessageEvent:
-				fmt.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
-				fmt.Printf("--- Value of event.Data: %+v\n", ev.Payload)
+				log.Printf("--- Type of event.Data: %+v\n", reflect.TypeOf(ev))
+				log.Printf("--- Value of event.Data: %+v\n", ev.Payload)
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 			default:
-				fmt.Printf("--- Unknow event :%v", ev)
+				log.Printf("--- Unknow event :%v", ev)
 			}
 		case _, ok := <-c.timeoutSub.Chan():
 			if !ok {

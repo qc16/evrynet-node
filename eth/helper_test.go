@@ -318,3 +318,11 @@ func (p *testPeer) handshake(t *testing.T, td *big.Int, head common.Hash, genesi
 func (p *testPeer) close() {
 	p.app.Close()
 }
+
+func mustGeneratePrivateKey(t *testing.T) *ecdsa.PrivateKey {
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fail()
+	}
+	return privateKey
+}

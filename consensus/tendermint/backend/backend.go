@@ -3,7 +3,7 @@ package backend
 import (
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
+	"log"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -83,7 +83,7 @@ func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 		if err := sb.EventMux().Post(tendermint.MessageEvent{
 			Payload: payload,
 		}); err != nil {
-			fmt.Printf("error in Post event %v", err)
+			log.Printf("error in Post event %v", err)
 		}
 	}()
 	return nil
@@ -110,11 +110,11 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		ps := sb.broadcaster.FindPeers(targets)
 		for _, p := range ps {
 			//TODO: remove these logs in production
-			fmt.Printf("sending msg to peer %s\n", p.Address().Hex())
+			log.Printf("sending msg from %s to peer %s\n", sb.address.Hex(), p.Address().Hex())
 			//TODO: check for recent messsages using lru.ARCCache
 			go func(p consensus.Peer) {
 				if err := p.Send(tendermintMsg, payload); err != nil {
-					fmt.Printf("Error sending message to peer, error(%v)", err)
+					log.Printf("Error sending message to peer, error(%v)", err)
 				}
 			}(p)
 		}

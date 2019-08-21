@@ -1,17 +1,16 @@
-
 package backend
 
 import (
 	"bytes"
 	"errors"
-	"fmt"
-	"math/big"
 	"io/ioutil"
+	"log"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/consensus/tendermint"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/core/types"
+	ethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 
@@ -53,16 +52,16 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		if err != nil {
 			return true, errDecodeFailed
 		}
-
-		log.Debug("handler.HandleMsg implement me mark peer's message amd self known message", "hash", hash.String())
+		//log is used at local package level for testing now
+		log.Printf("--- Message from peer %s, msgCode is %d msg Hash is %s \n", addr.Hex(), msg.Code, hash.String())
 		//TODO: mark peer's message and self known message with the hash get from message
-		
+
 		go func() {
 			if err := sb.tendermintEventMux.Post(data); err != nil {
-				fmt.Printf("error in Post event %v", err)
+				log.Printf("error in Post event %v", err)
 			}
 		}()
-		
+
 		return true, nil
 	}
 	if msg.Code == NewBlockMsg && sb.core.IsProposer() { // eth.NewBlockMsg: import cycle
@@ -80,12 +79,12 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 				TD    *big.Int
 			}
 			if err := msg.Decode(&request); err != nil {
-				log.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
+				ethlog.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
 				return false, nil
 			}
 			newRequestedBlock := request.Block
 			if newRequestedBlock.Header().MixDigest == types.TendermintDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
-				log.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
+				ethlog.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
 				return true, nil
 			}
 		}
