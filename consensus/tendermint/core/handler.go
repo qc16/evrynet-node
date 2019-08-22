@@ -7,23 +7,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 )
 
-// Start implements core.Engine.Start
-func (c *core) Start() error {
-	// Tests will handle events itself, so we have to make subscribeEvents()
-	// be able to call in test.
-	c.subscribeEvents()
-	go c.handleEvents()
-
-	return nil
-}
-
-// Stop implements core.Engine.Stop
-func (c *core) Stop() error {
-	c.unsubscribeEvents()
-
-	return nil
-}
-
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events
@@ -33,15 +16,11 @@ func (c *core) subscribeEvents() {
 		tendermint.RequestEvent{},
 		tendermint.MessageEvent{},
 	)
-	c.timeoutSub = c.backend.EventMux().Subscribe(
-		timeoutEvent{},
-	)
 }
 
 // Unsubscribe all events
 func (c *core) unsubscribeEvents() {
 	c.events.Unsubscribe()
-	c.timeoutSub.Unsubscribe()
 }
 
 func (c *core) handleEvents() {
@@ -70,10 +49,6 @@ func (c *core) handleEvents() {
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 			default:
 				log.Printf("--- Unknow event :%v", ev)
-			}
-		case _, ok := <-c.timeoutSub.Chan():
-			if !ok {
-				return
 			}
 		}
 	}
