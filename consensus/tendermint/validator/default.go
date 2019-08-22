@@ -162,3 +162,5 @@ func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
 }
 
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
+
+func (valSet *defaultSet) Policy() tendermint.ProposerPolicy { return valSet.policy }

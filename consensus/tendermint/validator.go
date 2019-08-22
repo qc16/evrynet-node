@@ -53,6 +53,8 @@ type ValidatorSet interface {
 	Copy() ValidatorSet
 	// Get the maximum number of faulty nodes
 	F() int
+	// Get proposer policy
+	Policy() ProposerPolicy
 }
 
 // ----------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"encoding/json"
 	"errors"
 	"math/big"
 	"time"
@@ -16,7 +15,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
@@ -373,43 +371,6 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
 	}
 	return snap, err
-}
-
-// store inserts the snapshot into the database.
-func (s *Snapshot) store(db ethdb.Database) error {
-	blob, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	return db.Put(append([]byte(dbKeySnapshotPrefix), s.Hash[:]...), blob)
-}
-
-// newSnapshot create a new snapshot with the specified startup parameters. This
-// method does not initialize the set of recent validators, so only ever use if for
-// the genesis block.
-func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet tendermint.ValidatorSet) *Snapshot {
-	snap := &Snapshot{
-		Epoch:  epoch,
-		Number: number,
-		Hash:   hash,
-		ValSet: valSet,
-	}
-	return snap
-}
-
-// loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
-	if err != nil {
-		return nil, err
-	}
-	snap := new(Snapshot)
-	if err := json.Unmarshal(blob, snap); err != nil {
-		return nil, err
-	}
-	snap.Epoch = epoch
-
-	return snap, nil
 }
 
 // verifyProposalSeal checks proposal seal is signed by validator
