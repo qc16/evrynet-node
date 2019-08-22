@@ -47,8 +47,12 @@ type ValidatorSet interface {
 	GetByIndex(i uint64) Validator
 	// Get validator by given address
 	GetByAddress(addr common.Address) (int, Validator)
-	// Check whether the validator with given address is a proposer
-	IsProposer(address common.Address) bool
+	// Remove validator
+	RemoveValidator(address common.Address) bool
+	// Copy validator set
+	Copy() ValidatorSet
+	// Get the maximum number of faulty nodes
+	F() int
 }
 
 // ----------------------------------------------------------------------------

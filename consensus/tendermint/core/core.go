@@ -1,10 +1,16 @@
 package core
 
 import (
+	"bytes"
 	"sync"
 
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/event"
+)
+
+const (
+	msgCommit uint64 = iota
 )
 
 // New creates an Tendermint consensus core
@@ -57,4 +63,12 @@ func (c *core) Stop() error {
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
 	return nil
+}
+
+// PrepareCommittedSeal returns a committed seal for the given hash
+func PrepareCommittedSeal(hash common.Hash) []byte {
+	var buf bytes.Buffer
+	buf.Write(hash.Bytes())
+	buf.Write([]byte{byte(msgCommit)})
+	return buf.Bytes()
 }

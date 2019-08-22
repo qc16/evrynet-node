@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"math"
 	"sort"
 	"sync"
 
@@ -135,3 +136,29 @@ func stickyProposer(valSet tendermint.ValidatorSet, proposer common.Address, rou
 	pick := seed % uint64(valSet.Size())
 	return valSet.GetByIndex(pick)
 }
+
+func (valSet *defaultSet) RemoveValidator(address common.Address) bool {
+	valSet.validatorMu.Lock()
+	defer valSet.validatorMu.Unlock()
+
+	for i, v := range valSet.validators {
+		if v.Address() == address {
+			valSet.validators = append(valSet.validators[:i], valSet.validators[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+
+	addresses := make([]common.Address, 0, len(valSet.validators))
+	for _, v := range valSet.validators {
+		addresses = append(addresses, v.Address())
+	}
+	return NewSet(addresses, valSet.policy)
+}
+
+func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }

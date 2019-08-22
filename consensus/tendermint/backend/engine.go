@@ -1,21 +1,68 @@
 package backend
 
 import (
+	"encoding/json"
+	"errors"
 	"math/big"
+	"time"
+
+	"golang.org/x/crypto/sha3"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
-	"golang.org/x/crypto/sha3"
 )
 
 var (
 	defaultDifficulty = big.NewInt(1)
+	nilUncleHash      = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+	emptyNonce        = types.BlockNonce{}
+	now               = time.Now
+)
+
+const (
+	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+)
+
+var (
+	// errInvalidProposal is returned when a prposal is malformed.
+	errInvalidProposal = errors.New("invalid proposal")
+	// errInvalidSignature is returned when given signature is not signed by given
+	// address.
+	errInvalidSignature = errors.New("invalid signature")
+	// errUnknownBlock is returned when the list of validators is requested for a block
+	// that is not part of the local blockchain.
+	errUnknownBlock = errors.New("unknown block")
+	// errUnauthorized is returned if a header is signed by a non authorized entity.
+	errUnauthorized = errors.New("unauthorized")
+	// errInvalidDifficulty is returned if the difficulty of a block is not 1
+	errInvalidDifficulty = errors.New("invalid difficulty")
+	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
+	errInvalidExtraDataFormat = errors.New("invalid extra data format")
+	// errInvalidMixDigest is returned if a block's mix digest is not Tendermint digest.
+	errInvalidMixDigest = errors.New("invalid Tendermint mix digest")
+	// errInvalidNonce is returned if a block's nonce is invalid
+	errInvalidNonce = errors.New("invalid nonce")
+	// errInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
+	errInvalidTimestamp = errors.New("invalid timestamp")
+	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
+	errInvalidCommittedSeals = errors.New("invalid committed seals")
+	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
+	errEmptyCommittedSeals = errors.New("zero committed seals")
+	// errEmptyProposalSeals is returned if the field of proposal seals is zero.
+	errEmptyProposalSeals = errors.New("zero proposal seals")
+	// errInvalidVotingChain is returned if an authorization list is attempted to
+	// be modified via out-of-range or non-contiguous headers.
+	errInvalidVotingChain = errors.New("invalid voting chain")
 )
 
 // Seal generates a new block for the given input block with the local miner's
@@ -87,9 +134,82 @@ func (sb *backend) Author(header *types.Header) (common.Address, error) {
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	log.Warn("VerifyHeader: implement me")
-	//TODO: Research & Implement
-	return nil
+	return sb.verifyHeader(chain, header, nil)
+}
+
+// verifyHeader checks whether a header conforms to the consensus rules.The
+// caller may optionally pass in a batch of parents (ascending order) to avoid
+// looking those up from the database. This is useful for concurrently verifying
+// a batch of new headers.
+func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	if header.Number == nil {
+		return errUnknownBlock
+	}
+
+	// Don't waste time checking blocks from the future
+	if header.Time > big.NewInt(now().Unix()).Uint64() {
+		return consensus.ErrFutureBlock
+	}
+
+	// Ensure that the extra data format is satisfied
+	if _, err := types.ExtractTendermintExtra(header); err != nil {
+		return errInvalidExtraDataFormat
+	}
+
+	// Ensure that the coinbase is valid
+	//TODO: checks the Nonce is auth or drop
+	if header.Nonce != (emptyNonce) {
+		return errInvalidNonce
+	}
+	// Ensure that the mix digest is zero as we don't have fork protection currently
+	if header.MixDigest != types.TendermintDigest {
+		return errInvalidMixDigest
+	}
+	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
+	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
+		return errInvalidDifficulty
+	}
+
+	return sb.verifyCascadingFields(chain, header, parents)
+}
+
+// verifyCascadingFields verifies all the header fields that are not standalone,
+// rather depend on a batch of previous headers. The caller may optionally pass
+// in a batch of parents (ascending order) to avoid looking those up from the
+// database. This is useful for concurrently verifying a batch of new headers.
+func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	// The genesis block is the always valid dead-end
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil
+	}
+	// Ensure that the block's timestamp isn't too close to it's parent
+	var parent *types.Header
+	if len(parents) > 0 {
+		parent = parents[len(parents)-1]
+	} else {
+		parent = chain.GetHeader(header.ParentHash, number-1)
+	}
+	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
+		return consensus.ErrUnknownAncestor
+	}
+	if parent.Time+sb.config.BlockPeriod > header.Time {
+		return errInvalidTimestamp
+	}
+	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
+	if err != nil {
+		return err
+	}
+	validators := make([]byte, len(snap.validators())*common.AddressLength)
+	for i, validator := range snap.validators() {
+		copy(validators[i*common.AddressLength:], validator[:])
+	}
+	if err := sb.verifyProposalSeal(chain, header, parents); err != nil {
+		return err
+	}
+
+	return sb.verifyCommittedSeals(chain, header, parents)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -178,4 +298,241 @@ func (sb *backend) Close() error {
 	log.Warn("Close: implement me")
 	//TODO: Research & Implement
 	return nil
+}
+
+// snapshot retrieves the authorization snapshot at a given point in time.
+func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+	// Search for a snapshot in memory or on disk for checkpoints
+	var (
+		headers []*types.Header
+		snap    *Snapshot
+	)
+	for snap == nil {
+		// If an in-memory snapshot was found, use that
+		//TODO: get from cached if the snapshot is existed
+
+		// If an on-disk checkpoint snapshot can be found, use that
+		if number%checkpointInterval == 0 {
+			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
+				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
+				snap = s
+				break
+			}
+		}
+		// If we're at block zero, make a snapshot
+		if number == 0 {
+			genesis := chain.GetHeaderByNumber(0)
+			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
+				return nil, err
+			}
+			extra, err := types.ExtractTendermintExtra(genesis)
+			if err != nil {
+				return nil, err
+			}
+			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(extra.Validators, sb.config.ProposerPolicy))
+			if err := snap.store(sb.db); err != nil {
+				return nil, err
+			}
+			log.Trace("Stored genesis voting snapshot to disk")
+			break
+		}
+		// No snapshot for this header, gather the header and move backward
+		var header *types.Header
+		if len(parents) > 0 {
+			// If we have explicit parents, pick from there (enforced)
+			header = parents[len(parents)-1]
+			if header.Hash() != hash || header.Number.Uint64() != number {
+				return nil, consensus.ErrUnknownAncestor
+			}
+			parents = parents[:len(parents)-1]
+		} else {
+			// No explicit parents (or no more left), reach out to the database
+			header = chain.GetHeader(hash, number)
+			if header == nil {
+				return nil, consensus.ErrUnknownAncestor
+			}
+		}
+		headers = append(headers, header)
+		number, hash = number-1, header.ParentHash
+	}
+	// Previous snapshot found, apply any pending headers on top of it
+	for i := 0; i < len(headers)/2; i++ {
+		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+	snap, err := snap.apply(headers)
+	if err != nil {
+		return nil, err
+	}
+	//TODO: add to cached for snapshot
+
+	// If we've generated a new checkpoint snapshot, save to disk
+	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+		if err = snap.store(sb.db); err != nil {
+			return nil, err
+		}
+		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+	}
+	return snap, err
+}
+
+// store inserts the snapshot into the database.
+func (s *Snapshot) store(db ethdb.Database) error {
+	blob, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	return db.Put(append([]byte(dbKeySnapshotPrefix), s.Hash[:]...), blob)
+}
+
+// newSnapshot create a new snapshot with the specified startup parameters. This
+// method does not initialize the set of recent validators, so only ever use if for
+// the genesis block.
+func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet tendermint.ValidatorSet) *Snapshot {
+	snap := &Snapshot{
+		Epoch:  epoch,
+		Number: number,
+		Hash:   hash,
+		ValSet: valSet,
+	}
+	return snap
+}
+
+// loadSnapshot loads an existing snapshot from the database.
+func loadSnapshot(epoch uint64, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
+	if err != nil {
+		return nil, err
+	}
+	snap := new(Snapshot)
+	if err := json.Unmarshal(blob, snap); err != nil {
+		return nil, err
+	}
+	snap.Epoch = epoch
+
+	return snap, nil
+}
+
+// verifyProposalSeal checks proposal seal is signed by validator
+func (sb *backend) verifyProposalSeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	// Verifying the genesis block is not supported
+	number := header.Number.Uint64()
+	if number == 0 {
+		return errUnknownBlock
+	}
+
+	// Retrieve the snapshot needed to verify this header and cache it
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
+	if err != nil {
+		return err
+	}
+
+	// resolve the authorization key and check against signers
+	signer, err := ecrecover(header)
+	if err != nil {
+		return err
+	}
+
+	// Signer should be in the validator set of previous block's extraData.
+	if _, v := snap.ValSet.GetByAddress(signer); v == nil {
+		return errUnauthorized
+	}
+	return nil
+}
+
+// verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
+func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+	number := header.Number.Uint64()
+	// We don't need to verify committed seals in the genesis block
+	if number == 0 {
+		return nil
+	}
+
+	// Retrieve the snapshot needed to verify this header and cache it
+	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
+	if err != nil {
+		return err
+	}
+
+	extra, err := types.ExtractTendermintExtra(header)
+	if err != nil {
+		return err
+	}
+	// The length of Committed seals should be larger than 0
+	if len(extra.CommittedSeal) == 0 {
+		return errEmptyCommittedSeals
+	}
+
+	validators := snap.ValSet.Copy()
+	// Check whether the committed seals are generated by parent's validators
+	validSeal := 0
+	proposalSeal := tendermintCore.PrepareCommittedSeal(header.Hash())
+	// 1. Get committed seals from current header
+	for _, seal := range extra.CommittedSeal {
+		// 2. Get the original address by seal and parent block hash
+		addr, err := getSignatureAddress(proposalSeal, seal)
+		if err != nil {
+			log.Error("not a valid address", "err", err)
+			return errInvalidSignature
+		}
+		// Every validator can have only one seal. If more than one seals are signed by a
+		// validator, the validator cannot be found and errInvalidCommittedSeals is returned.
+		if validators.RemoveValidator(addr) {
+			validSeal++
+		} else {
+			return errInvalidCommittedSeals
+		}
+	}
+
+	// The length of validSeal should be larger than number of faulty node + 1
+	if validSeal <= 2*snap.ValSet.F() {
+		return errInvalidCommittedSeals
+	}
+
+	return nil
+}
+
+// ecrecover extracts the Ethereum account address from a signed header.
+func ecrecover(header *types.Header) (common.Address, error) {
+	//TODO: check if existed in the cached
+
+	// Retrieve the signature from the header extra-data
+	extra, err := types.ExtractTendermintExtra(header)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	addr, err := getSignatureAddress(sigHash(header).Bytes(), extra.Seal)
+	if err != nil {
+		return addr, err
+	}
+	//TODO: will be caching address
+	return addr, nil
+}
+
+// sigHash returns the hash
+// signing. It is the hash of the entire header apart from the 65 byte signature
+// contained at the end of the extra data.
+//
+// Note, the method requires the extra data to be at least 65 bytes, otherwise it
+// panics. This is done to avoid accidentally using both forms (signature present
+// or not), which could be abused to produce different hashes for the same header.
+func sigHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.New256()
+
+	// Clean seal is required for calculating proposer seal.
+	rlp.Encode(hasher, types.TendermintFilteredHeader(header, false))
+	hasher.Sum(hash[:0])
+	return hash
+}
+
+// GetSignatureAddress gets the signer address from the signature
+func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
+	// 1. Keccak data
+	hashData := crypto.Keccak256([]byte(data))
+	// 2. Recover public key
+	pubkey, err := crypto.SigToPub(hashData, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return crypto.PubkeyToAddress(*pubkey), nil
 }

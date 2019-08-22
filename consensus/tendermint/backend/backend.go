@@ -6,6 +6,8 @@ import (
 	"log"
 	"sync"
 
+	"github.com/evrynet-official/evrynet-client/ethdb"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -47,6 +49,7 @@ type backend struct {
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
 	core               tendermintCore.Engine
+	db                 ethdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
 
