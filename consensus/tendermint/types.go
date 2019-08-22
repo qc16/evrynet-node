@@ -22,3 +22,7 @@ type Proposal interface {
 type Request struct {
 	Proposal Proposal
 }
+
+func Encode(val interface{}) ([]byte, error) {
+	return rlp.EncodeToBytes(val)
+}

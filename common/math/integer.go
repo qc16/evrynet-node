@@ -97,3 +97,11 @@ func SafeMul(x, y uint64) (uint64, bool) {
 	}
 	return x * y, y > MaxUint64/x
 }
+
+// MaxInt returns max of 2 integers of type int
+func MaxInt(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}

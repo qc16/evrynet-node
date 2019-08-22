@@ -5,11 +5,13 @@ import (
 	"errors"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/event"
 )
@@ -49,6 +51,7 @@ type backend struct {
 	core               tendermintCore.Engine
 	broadcaster        consensus.Broadcaster
 	address            common.Address
+	chain              consensus.ChainReader
 
 	coreStarted bool
 	coreMu      sync.RWMutex
@@ -119,4 +122,33 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		}
 	}
 	return nil
+}
+
+// Verify implements tendermint.Backend.Verify
+func (sb *backend) Verify(proposal tendermint.Proposal) (time.Duration, error) {
+	// Check if the proposal is a valid block
+	block := &types.Block{}
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return 0, tendermint.ErrInvalidProposal
+	}
+
+	// check block body
+	txnHash := types.DeriveSha(block.Transactions())
+	uncleHash := types.CalcUncleHash(block.Uncles())
+	if txnHash != block.Header().TxHash {
+		return 0, tendermint.ErrMismatchTxhashes
+	}
+	if uncleHash != types.CalcUncleHash((nil)) {
+		return 0, tendermint.ErrInvalidUncleHash
+	}
+
+	// verify the header of proposed block
+	err := sb.VerifyHeader(sb.chain, block.Header(), false)
+	if err == nil {
+		return 0, nil
+	} else if err == consensus.ErrFutureBlock {
+		return time.Unix(int64(block.Header().Time), 0).Sub(time.Now()), consensus.ErrFutureBlock
+	}
+	return 0, err
 }

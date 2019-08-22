@@ -52,6 +52,24 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+func (m *message) Payload() ([]byte, error) {
+	return rlp.EncodeToBytes(m)
+}
+
+func (m *message) PayloadNoSig() ([]byte, error) {
+	return rlp.EncodeToBytes(&message{
+		Code:          m.Code,
+		Msg:           m.Msg,
+		Address:       m.Address,
+		Signature:     []byte{},
+		CommittedSeal: m.CommittedSeal,
+	})
+}
+
+func (m *message) Decode(val interface{}) error {
+	return rlp.DecodeBytes(m.Msg, val)
+}
+
 type messageSet struct {
 	view       *tendermint.View
 	valSet     tendermint.ValidatorSet
@@ -69,5 +87,27 @@ func newMessageSet(valSet tendermint.ValidatorSet) *messageSet {
 		messagesMu: new(sync.Mutex),
 		messages:   make(map[common.Address]*message),
 		valSet:     valSet,
+	}
+}
+
+// SignedMsgType is a type of signed message in the consensus.
+type SignedMsgType byte
+
+const (
+	// Votes
+	PrevoteType   SignedMsgType = 0x01
+	PrecommitType SignedMsgType = 0x02
+
+	// Proposals
+	ProposalType SignedMsgType = 0x20
+)
+
+// IsVoteTypeValid returns true if t is a valid vote type.
+func IsVoteTypeValid(t SignedMsgType) bool {
+	switch t {
+	case PrevoteType, PrecommitType:
+		return true
+	default:
+		return false
 	}
 }

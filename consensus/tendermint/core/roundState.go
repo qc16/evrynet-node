@@ -18,6 +18,7 @@ package core
 
 import (
 	"io"
+
 	"math/big"
 	"sync"
 
@@ -27,6 +28,7 @@ import (
 )
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
+// keep a reference of proposalReceived in order to propose locked proposal when there is a lock and it's turn to be the proposer
 func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
 	proposalReceived *tendermint.Proposal, block *types.Block,
 	lockedRound *big.Int, lockedBlock *types.Block,
@@ -56,11 +58,25 @@ type roundState struct {
 	validRound *big.Int     // validRound is last known round with PoLC for non-nil valid block
 	validBlock *types.Block // validBlock last known block of PoLC above
 
-	ProposalReceived   *tendermint.Proposal //
+	ProposalReceived   *tendermint.Proposal
 	PrevotesReceived   *messageSet
 	PrecommitsReceived *messageSet
 
 	mu *sync.RWMutex
+}
+
+func (s *roundState) Subject() *tendermint.Subject {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.ProposalReceived == nil {
+		return nil
+	}
+
+	return &tendermint.Subject{
+		View:   s.view,
+		Digest: (*s.ProposalReceived).Hash(),
+	}
 }
 
 func (s *roundState) SetProposalReceived(proposalReceived *tendermint.Proposal) {
@@ -82,6 +98,16 @@ func (s *roundState) View() *tendermint.View {
 	defer s.mu.RUnlock()
 
 	return s.view
+}
+
+func (s *roundState) Height() *big.Int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.view == nil {
+		return nil
+	}
+	return s.view.Height
 }
 
 func (s *roundState) SetBlock(bl *types.Block) {

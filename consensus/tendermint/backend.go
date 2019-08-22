@@ -1,6 +1,8 @@
 package tendermint
 
 import (
+	"time"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/event"
 )
@@ -21,4 +23,8 @@ type Backend interface {
 
 	// Broadcast sends a message to all validators (including self)
 	Broadcast(valSet ValidatorSet, payload []byte) error
+
+	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
+	// the time difference of the proposal and current time is also returned.
+	Verify(Proposal) (time.Duration, error)
 }
