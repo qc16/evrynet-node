@@ -137,7 +137,7 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	}
 }
 
-// Unmarshal from a json byte array
+// UnmarshalJSON from a json byte array
 func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	var j snapshotJSON
 	if err := json.Unmarshal(b, &j); err != nil {
@@ -151,7 +151,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Marshal to a json byte array
+// MarshalJSON to a json byte array
 func (s *Snapshot) MarshalJSON() ([]byte, error) {
 	j := s.toJSONStruct()
 	return json.Marshal(j)

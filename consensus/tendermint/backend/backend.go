@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/evrynet-official/evrynet-client/ethdb"
-
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"

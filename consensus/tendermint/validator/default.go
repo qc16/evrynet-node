@@ -137,6 +137,7 @@ func stickyProposer(valSet tendermint.ValidatorSet, proposer common.Address, rou
 	return valSet.GetByIndex(pick)
 }
 
+// RemoveValidator will remove a validator from validatorset
 func (valSet *defaultSet) RemoveValidator(address common.Address) bool {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
@@ -150,6 +151,7 @@ func (valSet *defaultSet) RemoveValidator(address common.Address) bool {
 	return false
 }
 
+// Copy allows copy all items from A to B
 func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
@@ -161,6 +163,8 @@ func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
 	return NewSet(addresses, valSet.policy)
 }
 
+// F get the maximum number of faulty nodes
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
+// Policy get proposal policy
 func (valSet *defaultSet) Policy() tendermint.ProposerPolicy { return valSet.policy }
