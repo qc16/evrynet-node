@@ -1,8 +1,9 @@
 # How to start 2 nodes in an Tendermint
 1. Build and export to `PATH`
     ```shell
-    $ make all
-    $ export PATH=$(pwd)/build/bin:$PATH
+    $ go build ./cmd/gev
+    $ go build ./cmd/bootnode
+    $ export PATH=$(pwd):$PATH
     ```
 2. Create a working directory for 2 validator nodes  
     ```shell
@@ -79,14 +80,14 @@
 
 7. Now we will generate initial accounts for any of the nodes in the required node’s working directory. The resulting public account address printed in the terminal should be recorded. Repeat as many times as necessary. A set of funded accounts may be required depending what you are trying to accomplish  
     ```sheel
-    $ geth --datadir node1/data account new
+    $ gev --datadir node1/data account new
     INFO [06-11|16:05:53.672] Maximum peer count                       ETH=25 LES=0 total=25
     Your new account is locked with a password. Please give a password. Do not forget this password.
     Passphrase: 
     Repeat passphrase: 
     Address: {b61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B}
 
-    $ geth --datadir node2/data account new
+    $ gev --datadir node2/data account new
     INFO [06-11|16:06:34.529] Maximum peer count                       ETH=25 LES=0 total=25
     Your new account is locked with a password. Please give a password. Do not forget this password.
     Passphrase: 
@@ -105,17 +106,16 @@
     $ cp node2/nodekey node2/data/geth
     ```
 
-10. Switch into working directory of lead node and initialize it. Repeat for every working directory X created in step 3. The resulting hash given by executing `geth init` must match for every node  
+10. Switch into working directory of lead node and initialize it. Repeat for every working directory X created in step 3. The resulting hash given by executing `gev init` must match for every node  
     ```shell
     $ cd node1
-    $ geth --datadir data init genesis.json
+    $ gev --datadir data init genesis.json
     INFO [06-11|16:14:11.883] Maximum peer count                       ETH=25 LES=0 total=25
     ...
     INFO [06-11|16:14:11.898] Successfully wrote genesis state         database=lightchaindata
     $
-    $ cd ..
-    $ cd node2
-    $ geth --datadir data init genesis.json
+    $ cd ../node2
+    $ gev --datadir data init genesis.json
     INFO [06-11|16:14:24.814] Maximum peer count                       ETH=25 LES=0 total=25
     ...
     INFO [06-11|16:14:24.834] Successfully wrote genesis state         database=lightchaindata   
@@ -125,28 +125,28 @@
     - Node 1
     ```shell
     $ cd node1
-    $ geth --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30300 --debug console
+    $ gev --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30300 --debug console
     ```
     - Node 2
     ```shell
     $ cd ../node2
-    $ geth --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30301 --debug console
+    $ gev --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30301 --debug console
     ```
     
 12. Or you can start all nodes by first creating a script and running it.
     ```shell
     $ nano startall.sh
     #!/bin/bash
-    geth --datadir node1/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30300 2>>node1/node.log &
+    gev --datadir node1/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30300 2>>node1/node.log &
 
-    geth --datadir node2/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30301 2>>node2/node.log &
+    gev --datadir node2/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30301 2>>node2/node.log &
     ```
 
     ```shell
-    See if the any geth nodes are running.
+    See if the any gev nodes are running.
     $ ps | grep geth
     
-    Kill geth processes
+    Kill gev processes
     $ killall -INT geth
     
     $ chmod +x startall.sh

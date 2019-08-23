@@ -52,3 +52,14 @@ profile.cov
 /go.sum
 *.log
 .idea/
+
+bootnode
+gev
+
+# Ignore data of test node
+/tests/test_nodes/*/geth.ipc
+/tests/test_nodes/*/data/geth/LOCK
+/tests/test_nodes/*/data/geth/transactions.rlp
+/tests/test_nodes/*/data/geth/chaindata/
+/tests/test_nodes/*/data/geth/lightchaindata/
+/tests/test_nodes/*/data/geth/nodes/
