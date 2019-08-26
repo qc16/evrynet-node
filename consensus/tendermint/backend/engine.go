@@ -179,7 +179,9 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return consensus.ErrUnknownAncestor
 	}
 	if parent.Time+sb.config.BlockPeriod > header.Time {
-		return errInvalidTimestamp
+		//TODO: find out if tendermint is subject to error when Block Period is too fast
+		//	return errInvalidTimestamp
+		log.Warn("block time difference is too small","different in ms", header.Time-sb.config.BlockPeriod)
 	}
 	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
 	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
@@ -292,13 +294,18 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		headers []*types.Header
 		snap    *Snapshot
 	)
+	// Loop and try to find a valid snapshot that contain the block hash we need, otherwise a list of headers and a
+	// most recent snapshot then apply the headers onto that snapshot to get the snapshot we need
 	for snap == nil {
 		// If an in-memory snapshot was found, use that
 		//TODO: get from cached if the snapshot is existed
 
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
+			s, err := loadSnapshot(sb.config.Epoch, sb.db, hash);
+			if err!=nil {
+				log.Warn("cannot load snapshot from db", "error", err)
+			} else {
 				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
 				break
@@ -340,10 +347,11 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		headers = append(headers, header)
 		number, hash = number-1, header.ParentHash
 	}
-	// Previous snapshot found, apply any pending headers on top of it
+	//revert the headers's array index , i.e, block n..1 become 1..n
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
+	// apply the list of headers found on top of it
 	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err

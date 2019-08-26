@@ -17,9 +17,12 @@ const (
 )
 
 // Snapshot is the state of the authorization voting at a given point in time.
+// It doesn't have anything to do with voting of creating new Block, only voting for changes in validator sets
 type Snapshot struct {
 	Epoch uint64 // The number of blocks after which to checkpoint and reset the pending votes
 	Number uint64                   // Block number where the snapshot was created
+
+	//TODO: Add Tally to count votes and determine kicking/adding validators
 	Hash   common.Hash              // Block hash where the snapshot was created
 	ValSet tendermint.ValidatorSet    // Set of authorized validators at this moment
 }
@@ -66,7 +69,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
 
-	// TODO: Research & Implement more
+	// TODO: Research & Implement Tally vote to add/remove validator from validator set
 
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()

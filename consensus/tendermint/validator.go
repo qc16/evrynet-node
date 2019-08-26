@@ -47,7 +47,8 @@ type ValidatorSet interface {
 	GetByIndex(i uint64) Validator
 	// Get validator by given address
 	GetByAddress(addr common.Address) (int, Validator)
-	// Remove validator
+	// RemoveValidator remove the input validator from a list. It return false if the validator exist and is removed.
+	// If the validator is not in the set, this function will return false
 	RemoveValidator(address common.Address) bool
 	// Copy validator set
 	Copy() ValidatorSet
