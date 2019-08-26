@@ -53,6 +53,8 @@ var (
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	errInvalidVotingChain = errors.New("invalid voting chain")
+	// errCoinBaseInvalid is returned if the value of coin base is not equals proposer's address in header
+	errCoinBaseInvalid = errors.New("invalid coin base address")
 )
 
 // Seal generates a new block for the given input block with the local miner's
@@ -163,9 +165,9 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
 func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	// The genesis block is the always valid dead-end
-	number := header.Number.Uint64()
-	if number == 0 {
+	// get block number from header of block
+	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
 		return nil
 	}
 	// Ensure that the block's timestamp isn't too close to it's parent
@@ -173,9 +175,9 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
-		parent = chain.GetHeader(header.ParentHash, number-1)
+		parent = chain.GetHeader(header.ParentHash, blockNumber-1)
 	}
-	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
+	if parent == nil || parent.Number.Uint64() != blockNumber-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
 	if parent.Time+sb.config.BlockPeriod > header.Time {
@@ -183,20 +185,18 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		//	return errInvalidTimestamp
 		log.Warn("block time difference is too small","different in ms", header.Time-sb.config.BlockPeriod)
 	}
-	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
+
+	// get snap shoot to prepare for the verify proposal and committed seal
+	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, parents)
 	if err != nil {
 		return err
 	}
-	vals := make([]byte, len(snap.validators())*common.AddressLength)
-	for i, validator := range snap.validators() {
-		copy(vals[i*common.AddressLength:], validator[:])
-	}
-	if err := sb.verifyProposalSeal(chain, header, parents); err != nil {
+
+	if err := sb.verifyProposalSeal(chain, header, parents, snap); err != nil {
 		return err
 	}
 
-	return sb.verifyCommittedSeals(chain, header, parents)
+	return sb.verifyCommittedSeals(chain, header, parents, snap)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -369,23 +369,16 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 }
 
 // verifyProposalSeal checks proposal seal is signed by validator
-func (sb *backend) verifyProposalSeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	// Verifying the genesis block is not supported
-	number := header.Number.Uint64()
-	if number == 0 {
-		return errUnknownBlock
-	}
-
-	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
-
+func (sb *backend) verifyProposalSeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header, snap *Snapshot) error {
 	// resolve the authorization key and check against signers
-	signer, err := ecrecover(header)
+	signer, err := blockProposer(header)
 	if err != nil {
 		return err
+	}
+
+	// compare with coin base that contain the address of proposer.
+	if signer != header.Coinbase {
+		return errCoinBaseInvalid
 	}
 
 	// Signer should be in the validator set of previous block's extraData.
@@ -396,19 +389,7 @@ func (sb *backend) verifyProposalSeal(chain consensus.ChainReader, header *types
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	number := header.Number.Uint64()
-	// We don't need to verify committed seals in the genesis block
-	if number == 0 {
-		return nil
-	}
-
-	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := sb.snapshot(chain, number-1, header.ParentHash, parents)
-	if err != nil {
-		return err
-	}
-
+func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header, snap *Snapshot) error {
 	extra, err := types.ExtractTendermintExtra(header)
 	if err != nil {
 		return err
@@ -447,8 +428,8 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	return nil
 }
 
-// ecrecover extracts the Ethereum account address from a signed header.
-func ecrecover(header *types.Header) (common.Address, error) {
+// blockProposer extracts the Ethereum account address from a signed header.
+func blockProposer(header *types.Header) (common.Address, error) {
 	//TODO: check if existed in the cached
 
 	// Retrieve the signature from the header extra-data
