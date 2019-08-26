@@ -196,7 +196,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	return sb.verifyCommittedSeals(chain, header, parents, snap)
+	return sb.verifyCommittedSeals(header, parents, snap)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -389,7 +389,7 @@ func (sb *backend) verifyProposalSeal(chain consensus.ChainReader, header *types
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header, snap *Snapshot) error {
+func (sb *backend) verifyCommittedSeals( header *types.Header, parents []*types.Header, snap *Snapshot) error {
 	extra, err := types.ExtractTendermintExtra(header)
 	if err != nil {
 		return err
