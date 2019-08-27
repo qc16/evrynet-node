@@ -45,7 +45,7 @@ type TendermintExtra struct {
 	// Validators is list of current validators
 	Validators []common.Address
 	// ModifiedValidator is address of modified validator, either add or remove depends on Nonce value in block header
-	ModifiedValidator *common.Address
+	ModifiedValidator common.Address
 	// Seal is proposer's seal, 65 bytes
 	Seal []byte
 	// CommittedSeal is list seals of validators that committed the block, 65 * len(Validators) bytes
@@ -66,7 +66,7 @@ func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 func (te *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
 	var tendermintExtra struct {
 		Validators        []common.Address
-		ModifiedValidator *common.Address
+		ModifiedValidator common.Address
 		Seal              []byte
 		CommittedSeal     [][]byte
 	}
