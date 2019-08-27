@@ -42,20 +42,21 @@ var (
 
 // TendermintExtra extra data for Tendermint consensus
 type TendermintExtra struct {
-	// hashes from the app output from the prev block
-	Validators []common.Address // list of validators of the current block
-	// TODO: find a way to calculate this
-	NextValidators []common.Address // validators for the next block
-
-	Seal          []byte   // Proposer seal 65 bytes
-	CommittedSeal [][]byte // Committed seal, 65 * len(Validators) bytes
+	// Validators is list of current validators
+	Validators []common.Address
+	// ModifiedValidator is address of modified validator, either add or remove depends on Nonce value in block header
+	ModifiedValidator common.Address
+	// Seal is proposer's seal, 65 bytes
+	Seal []byte
+	// CommittedSeal is list seals of validators that committed the block, 65 * len(Validators) bytes
+	CommittedSeal [][]byte
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
 func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		te.Validators,
-		te.NextValidators,
+		te.ModifiedValidator,
 		te.Seal,
 		te.CommittedSeal,
 	})
@@ -64,16 +65,16 @@ func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the tendermint fields from a RLP stream.
 func (te *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
 	var tendermintExtra struct {
-		NextValidators []common.Address
-		Validators     []common.Address
-		Seal           []byte
-		CommittedSeal  [][]byte
+		Validators        []common.Address
+		ModifiedValidator common.Address
+		Seal              []byte
+		CommittedSeal     [][]byte
 	}
 	if err := s.Decode(&tendermintExtra); err != nil {
 		return err
 	}
-	te.NextValidators = tendermintExtra.NextValidators
 	te.Validators = tendermintExtra.Validators
+	te.ModifiedValidator = tendermintExtra.ModifiedValidator
 	te.Seal, te.CommittedSeal = tendermintExtra.Seal, tendermintExtra.CommittedSeal
 	return nil
 }
