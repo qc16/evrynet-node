@@ -5,7 +5,6 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/params"
@@ -37,12 +36,13 @@ func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
 func newTestBackend() *backend {
 	var (
 		engine consensus.Engine = newEngine()
-		db                      = rawdb.NewMemoryDatabase()
+		config                  = params.TendermintTestChainConfig
+		b                       = engine.(*backend)
 	)
 
-	blockchain, _ := core.NewBlockChain(db, nil, params.TendermintTestChainConfig, engine, vm.Config{}, nil)
+	blockchain, _ := core.NewBlockChain(b.db, nil, config, engine, vm.Config{}, nil)
 
-	b := engine.(*backend)
 	b.Start(blockchain, nil)
+
 	return b
 }

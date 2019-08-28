@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -18,6 +16,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
+	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -183,7 +182,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	if parent.Time+sb.config.BlockPeriod > header.Time {
 		//TODO: find out if tendermint is subject to error when Block Period is too fast
 		//	return errInvalidTimestamp
-		log.Warn("block time difference is too small","different in ms", header.Time-sb.config.BlockPeriod)
+		log.Warn("block time difference is too small", "different in ms", header.Time-sb.config.BlockPeriod)
 	}
 
 	// get snap shoot to prepare for the verify proposal and committed seal
@@ -192,7 +191,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	if err := sb.verifyProposalSeal(chain, header, parents, snap); err != nil {
+	if err := sb.verifyProposalSeal(header, parents, snap); err != nil {
 		return err
 	}
 
@@ -302,8 +301,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
-			s, err := loadSnapshot(sb.config.Epoch, sb.db, hash);
-			if err!=nil {
+			s, err := loadSnapshot(sb.config.Epoch, sb.db, hash)
+			if err != nil {
 				log.Warn("cannot load snapshot from db", "error", err)
 			} else {
 				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
@@ -369,13 +368,12 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 }
 
 // verifyProposalSeal checks proposal seal is signed by validator
-func (sb *backend) verifyProposalSeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header, snap *Snapshot) error {
+func (sb *backend) verifyProposalSeal(header *types.Header, parents []*types.Header, snap *Snapshot) error {
 	// resolve the authorization key and check against signers
 	signer, err := blockProposer(header)
 	if err != nil {
 		return err
 	}
-
 	// compare with coin base that contain the address of proposer.
 	if signer != header.Coinbase {
 		return errCoinBaseInvalid
@@ -389,7 +387,7 @@ func (sb *backend) verifyProposalSeal(chain consensus.ChainReader, header *types
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (sb *backend) verifyCommittedSeals( header *types.Header, parents []*types.Header, snap *Snapshot) error {
+func (sb *backend) verifyCommittedSeals(header *types.Header, parents []*types.Header, snap *Snapshot) error {
 	extra, err := types.ExtractTendermintExtra(header)
 	if err != nil {
 		return err
@@ -459,13 +457,14 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	// Clean seal is required for calculating proposer seal.
 	rlp.Encode(hasher, types.TendermintFilteredHeader(header, false))
 	hasher.Sum(hash[:0])
+
 	return hash
 }
 
 // GetSignatureAddress gets the signer address from the signature
 func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	// 1. Keccak data
-	hashData := crypto.Keccak256([]byte(data))
+	hashData := crypto.Keccak256(data)
 	// 2. Recover public key
 	pubkey, err := crypto.SigToPub(hashData, sig)
 	if err != nil {

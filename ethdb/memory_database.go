@@ -58,11 +58,11 @@ func (db *MemDatabase) NewBatch() Batch {
 func (db *MemDatabase) Len() int { return len(db.db) }
 
 func (db *MemDatabase) HasAncient(kind string, number uint64) (bool, error) {
-	panic("implement me")
+	return false, nil
 }
 
 func (db *MemDatabase) Ancient(kind string, number uint64) ([]byte, error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (db *MemDatabase) Ancients() (uint64, error) {
