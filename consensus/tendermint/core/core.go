@@ -18,6 +18,7 @@ func New(backend tendermint.Backend) Engine {
 	c := &core{
 		handlerWg: new(sync.WaitGroup),
 		backend:   backend,
+		timeout:   NewTimeoutTicker(),
 	}
 	return c
 }
@@ -29,7 +30,7 @@ type core struct {
 	//this component will send/receive data to other nodes and other components
 	backend tendermint.Backend
 	//events is the channel to receives 2 types of event:
-	//- RequestEvent: when there is a new composed block from Tx_pool
+	//- NewBlockEvent: when there is a new composed block from Tx_pool
 	//- MessageEvent: when there is a new message from other validators/ peers
 	events *event.TypeMuxSubscription
 	//handleWg will help core stop gracefully, i.e, core will wait till handlingEvents done before reutrning.
@@ -44,17 +45,25 @@ type core struct {
 	//timeoutProposal is the channel to receive proposal timeout.
 	//TODO: check if the timeout can be done without relating to the current state of core.
 	timeoutProposal *event.TypeMuxSubscription
-	// timeoutPrevote = channe  or TimeoutPrecommit depends on current round step
+	// timeoutPrevote = channel  or TimeoutPrecommit depends on current round step
 	timeoutPrevote *event.TypeMuxSubscription
+	//timeout will schedule all timeout requirement and fire the timeout event once it's finished.
+	timeout TimeoutTicker
+	//config store the config of the chain
+	config tendermint.Config
 }
 
 // Start implements core.Engine.Start
+
 func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	c.subscribeEvents()
+	if err := c.timeout.Start(); err != nil {
+		return err
+	}
 	go c.handleEvents()
-
+	c.startRoundZero()
 	return nil
 }
 
@@ -71,4 +80,8 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	buf.Write(hash.Bytes())
 	buf.Write([]byte{byte(msgCommit)})
 	return buf.Bytes()
+}
+
+func (c *core) BroadCastPropose(propose *tendermint.Proposal) {
+	//TODO: send the proposal by using c.backend.Broadcast.
 }

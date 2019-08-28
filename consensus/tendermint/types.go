@@ -1,24 +1,17 @@
 package tendermint
 
 import (
-	"io"
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
-// Proposal supports retrieving height and serialized block to be used during Tendermint consensus.
-type Proposal interface {
-	// Number retrieves the sequence number of this proposal.
-	Number() *big.Int
-	// Hash retrieves the hash of this proposal.
-	Hash() common.Hash
-	EncodeRLP(w io.Writer) error
-	DecodeRLP(s *rlp.Stream) error
-	String() string
-}
 
-type Request struct {
-	Proposal Proposal
+//Proposal represent a propose message to be sent in the case of the node is a proposer
+//for its Round.
+type Proposal struct {
+	Block    *types.Block
+	Round    *big.Int
+	POLRound *big.Int
+	//TODO: check if we need block Height
 }
