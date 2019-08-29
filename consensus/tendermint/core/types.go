@@ -31,6 +31,7 @@ type message struct {
 	Msg           []byte
 	Address       common.Address
 	Signature     []byte
+	//TODO: Is CommitedSeal needed in message of Tendermint?
 	CommittedSeal []byte
 }
 

@@ -59,7 +59,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round *big.Int) {
 //it check if this core is proposer and send Propose
 //otherwise it will set timeout and eventually call enterPrevote
 //enterPropose is called after:
-// enterNewRound(height,round)
+// enterNewRound(blockNumber,round)
 func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 	//This is strictly use with pointer for state update.
 	var (
@@ -130,7 +130,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 				POLRound: big.NewInt(-1),
 			}
 		}
-		c.BroadCastPropose(&toPropose)
+		c.SendPropose(&toPropose)
 	}
 }
 
