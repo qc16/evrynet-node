@@ -7,6 +7,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/ethdb"
@@ -57,10 +58,16 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.Equal(t, "zero committed seals", err.Error())
 
 	// with committed seal but is invalid
-	block = makeBlockWithCommittedSeal(chain, engine)
+	block = makeBlockWithCommittedSealInvalid(chain, engine)
 	assert.NotNil(t, chain)
 	err = engine.VerifyHeader(chain, block.Header(), false)
 	assert.Equal(t, "invalid signature", err.Error())
+
+	// with committed seal
+	block = makeBlockWithCommittedSeal(chain, engine)
+	assert.NotNil(t, chain)
+	err = engine.VerifyHeader(chain, block.Header(), false)
+	assert.NoError(t, err)
 }
 
 func makeGenesisHeader() *types.Header {
@@ -107,10 +114,22 @@ func makeBlockWithSeal(chain *mockChain, engine *backend) *types.Block {
 	return block.WithSeal(header)
 }
 
+func makeBlockWithCommittedSealInvalid(chain *mockChain, engine *backend) *types.Block {
+	var header = makeHeader(chain.Genesis())
+	appendSeal(header, engine)
+	appendCommittedSeal(header, engine, []byte{})
+	block := types.NewBlockWithHeader(header)
+	return block.WithSeal(header)
+}
+
 func makeBlockWithCommittedSeal(chain *mockChain, engine *backend) *types.Block {
 	var header = makeHeader(chain.Genesis())
 	appendSeal(header, engine)
-	appendCommittedSeal(header, engine)
+
+	commitHash := tendermintCore.PrepareCommittedSeal(header.Hash())
+	committedSeal, _ := engine.Sign(commitHash)
+
+	appendCommittedSeal(header, engine, committedSeal)
 	block := types.NewBlockWithHeader(header)
 	return block.WithSeal(header)
 }
@@ -121,24 +140,10 @@ func appendSeal(header *types.Header, engine *backend) {
 	writeSeal(header, seal)
 }
 
-func appendCommittedSeal(header *types.Header, engine *backend) {
-	var (
-		//messages = map[common.Address]*commitMessage
-		addr = getAddress()
-	)
-
-	// msg := &commitMessage{
-	// 	Code: msgCommit,
-	// 	Msg: []byte{}
-	// 	Address: addr,
-	// 	Signature: []byte{},
-	// 	CommittedSeal: addr.Bytes(),
-	// }
-	// messages[addr] = msg
-
+func appendCommittedSeal(header *types.Header, engine *backend, committedSeal []byte) {
 	committedSeals := make([][]byte, 1)
 	committedSeals[0] = make([]byte, types.TendermintExtraSeal)
-	copy(committedSeals[0][:], addr.Bytes()[:])
+	copy(committedSeals[0][:], committedSeal[:])
 	writeCommittedSeals(header, committedSeals)
 }
 
