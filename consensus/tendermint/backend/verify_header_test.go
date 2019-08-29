@@ -1,20 +1,16 @@
 package backend
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/params"
-	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,21 +24,9 @@ var (
 	validators = []common.Address{
 		getAddress(),
 	}
-	genesisHeader = types.Header{
-		Number:     big.NewInt(int64(0)),
-		ParentHash: common.HexToHash("0x01"),
-		UncleHash:  types.CalcUncleHash(nil),
-		Root:       common.HexToHash("0x0"),
-		Extra:      makeExtra(true),
-		Difficulty: defaultDifficulty,
-	}
-	genesisBlock = types.NewBlock(&genesisHeader, nil, nil, nil)
+	genesisHeader = makeGenesisHeader()
+	genesisBlock = types.NewBlockWithHeader(genesisHeader)
 )
-
-func makeNodeKey() *ecdsa.PrivateKey {
-	key, _ := generatePrivateKey()
-	return key
-}
 
 func TestBackend_VerifyHeader(t *testing.T) {
 	//create New test backend and newMockChain
@@ -52,31 +36,49 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.Equal(t, true, engine.coreStarted)
 
 	// without seal
-	block := makeBlockWithoutSeal(chain)
+	block := makeBlockWithoutSeal(chain, engine)
 	err := engine.VerifyHeader(chain, block.Header(), false)
 	assert.Error(t, err)
 	assert.Equal(t, "invalid signature length", err.Error())
 
 	// with seal but incorrect coinbase
-	block = makeBlockWithSeal(chain)
+	block = makeBlockWithSeal(chain, engine)
 	assert.NotNil(t, chain)
 	header := block.Header()
 	header.Coinbase = common.Address{}
-	appendSeal(header)
+	appendSeal(header, engine)
 	err = engine.VerifyHeader(chain, header, false)
 	assert.Equal(t, "invalid coin base address", err.Error())
 
 	// without committed seal
-	block = makeBlockWithSeal(chain)
+	block = makeBlockWithSeal(chain, engine)
 	assert.NotNil(t, chain)
 	err = engine.VerifyHeader(chain, block.Header(), false)
 	assert.Equal(t, "zero committed seals", err.Error())
 
 	// with committed seal but is invalid
-	block = makeBlockWithCommittedSeal(chain)
+	block = makeBlockWithCommittedSeal(chain, engine)
 	assert.NotNil(t, chain)
 	err = engine.VerifyHeader(chain, block.Header(), false)
 	assert.Equal(t, "invalid signature", err.Error())
+}
+
+func makeGenesisHeader() *types.Header {
+	var header = &types.Header{
+		Number:     big.NewInt(int64(0)),
+		ParentHash: common.HexToHash("0x01"),
+		UncleHash:  types.CalcUncleHash(nil),
+		Root:       common.HexToHash("0x0"),
+		Difficulty: defaultDifficulty,
+	}
+	extra, _ := prepareExtra(header, validators)
+	header.Extra = extra
+	return header
+}
+
+func makeNodeKey() *ecdsa.PrivateKey {
+	key, _ := generatePrivateKey()
+	return key
 }
 
 func makeBlockChain() (*mockChain, *backend) {
@@ -92,43 +94,34 @@ func makeBlockChain() (*mockChain, *backend) {
 	return &chain, b
 }
 
-func makeBlockWithoutSeal(chain *mockChain) *types.Block {
+func makeBlockWithoutSeal(chain *mockChain, engine *backend) *types.Block {
 	var header = makeHeader(chain.Genesis())
-	prepare(chain, header)
+	block := types.NewBlockWithHeader(header)
+	return block
+}
+
+func makeBlockWithSeal(chain *mockChain, engine *backend) *types.Block {
+	var header = makeHeader(chain.Genesis())
+	appendSeal(header, engine)
 	block := types.NewBlockWithHeader(header)
 	return block.WithSeal(header)
 }
 
-func makeBlockWithSeal(chain *mockChain) *types.Block {
+func makeBlockWithCommittedSeal(chain *mockChain, engine *backend) *types.Block {
 	var header = makeHeader(chain.Genesis())
-	prepare(chain, header)
-	appendSeal(header)
+	appendSeal(header, engine)
+	appendCommittedSeal(header, engine)
 	block := types.NewBlockWithHeader(header)
 	return block.WithSeal(header)
 }
 
-func makeBlockWithCommittedSeal(chain *mockChain) *types.Block {
-	var header = makeHeader(chain.Genesis())
-	prepare(chain, header)
-	appendCommittedSeal(header)
-	appendSeal(header)
-	block := types.NewBlockWithHeader(header)
-	return block.WithSeal(header)
-}
-
-func appendSeal(header *types.Header) {
+func appendSeal(header *types.Header, engine *backend) {
 	// sign the hash
-	hash := sigHash(header)
-	seal := sign(hash.Bytes())
-
-	// add seal to extradata of the header
-	extra, _ := types.ExtractTendermintExtra(header)
-	extra.Seal = seal
-	payload, _ := rlp.EncodeToBytes(&extra)
-	header.Extra = append(header.Extra[:types.TendermintExtraVanity], payload...)
+	seal, _ := engine.Sign(sigHash(header).Bytes())
+	writeSeal(header, seal)
 }
 
-func appendCommittedSeal(header *types.Header) {
+func appendCommittedSeal(header *types.Header, engine *backend) {
 	var (
 		//messages = map[common.Address]*commitMessage
 		addr = getAddress()
@@ -146,61 +139,21 @@ func appendCommittedSeal(header *types.Header) {
 	committedSeals := make([][]byte, 1)
 	committedSeals[0] = make([]byte, types.TendermintExtraSeal)
 	copy(committedSeals[0][:], addr.Bytes()[:])
-	// add seal to extradata of the header
-	extra, _ := types.ExtractTendermintExtra(header)
-	extra.CommittedSeal = committedSeals
-	payload, _ := rlp.EncodeToBytes(&extra)
-	header.Extra = append(header.Extra[:types.TendermintExtraVanity], payload...)
-}
-
-func prepare(chain consensus.ChainReader, header *types.Header) {
-	header.Coinbase = getAddress()
-	header.Nonce = emptyNonce
-	header.MixDigest = types.TendermintDigest
-
-	// use the same difficulty for all blocks
-	header.Difficulty = defaultDifficulty
-
-	// add validators in snapshot to extraData's validators section
-	extra := makeExtra(true)
-	header.Extra = extra
+	writeCommittedSeals(header, committedSeals)
 }
 
 func makeHeader(parent *types.Block) *types.Header {
 	header := &types.Header{
+		Coinbase: getAddress(),
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
 		GasLimit:   core.CalcGasLimit(parent, parent.GasLimit(), parent.GasLimit()),
 		GasUsed:    0,
-		Extra:      makeExtra(false),
 		Difficulty: defaultDifficulty,
 	}
+	extra, _ := prepareExtra(header, validators)
+	header.Extra = extra
 	return header
-}
-
-func makeExtra(importValidators bool) []byte {
-	var extra []byte
-	extra = append(extra, bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)...)
-	extra = extra[:types.TendermintExtraVanity]
-
-	data := &types.TendermintExtra{
-		Validators:    []common.Address{},
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-	if importValidators {
-		data.Validators = validators
-	}
-
-	payload, _ := rlp.EncodeToBytes(&data)
-	extra = append(extra, payload...)
-	return extra
-}
-
-func sign(data []byte) []byte {
-	hashData := crypto.Keccak256(data)
-	seal, _ := crypto.Sign(hashData, nodeKey)
-	return seal
 }
 
 type commitMessage struct {

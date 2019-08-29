@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"errors"
 	"math/big"
 	"time"
@@ -471,4 +472,79 @@ func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+// prepareExtra returns a extra-data of the given header and validators
+func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
+	var buf bytes.Buffer
+
+	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
+	if len(header.Extra) < types.TendermintExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:types.TendermintExtraVanity])
+
+	tdm := &types.TendermintExtra{
+		Validators:    vals,
+		Seal:          []byte{},
+		CommittedSeal: [][]byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&tdm)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(buf.Bytes(), payload...), nil
+}
+
+// writeSeal writes the extra-data field of the given header with the given seals.
+// suggest to rename to writeSeal.
+func writeSeal(h *types.Header, seal []byte) error {
+	if len(seal)%types.TendermintExtraSeal != 0 {
+		return errInvalidSignature
+	}
+
+	tendermintExtra, err := types.ExtractTendermintExtra(h)
+	if err != nil {
+		return err
+	}
+
+	tendermintExtra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&tendermintExtra)
+	if err != nil {
+		return err
+	}
+
+	h.Extra = append(h.Extra[:types.TendermintExtraVanity], payload...)
+	return nil
+}
+
+// writeCommittedSeals writes the extra-data field of a block header with given committed seals.
+func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
+	if len(committedSeals) == 0 {
+		return errInvalidCommittedSeals
+	}
+
+	for _, seal := range committedSeals {
+		if len(seal) != types.TendermintExtraSeal {
+			return errInvalidCommittedSeals
+		}
+	}
+
+	tendermintExtra, err := types.ExtractTendermintExtra(h)
+	if err != nil {
+		return err
+	}
+
+	tendermintExtra.CommittedSeal = make([][]byte, len(committedSeals))
+	copy(tendermintExtra.CommittedSeal, committedSeals)
+
+	payload, err := rlp.EncodeToBytes(&tendermintExtra)
+	if err != nil {
+		return err
+	}
+
+	h.Extra = append(h.Extra[:types.TendermintExtraVanity], payload...)
+	return nil
 }
