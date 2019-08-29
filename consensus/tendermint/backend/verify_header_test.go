@@ -15,10 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	msgCommit uint64 = iota
-)
-
 var (
 	emptyNonce = types.BlockNonce{}
 	nodeKey    = makeNodeKey()
@@ -26,7 +22,7 @@ var (
 		getAddress(),
 	}
 	genesisHeader = makeGenesisHeader()
-	genesisBlock = types.NewBlockWithHeader(genesisHeader)
+	genesisBlock  = types.NewBlockWithHeader(genesisHeader)
 )
 
 func TestBackend_VerifyHeader(t *testing.T) {
@@ -77,6 +73,7 @@ func makeGenesisHeader() *types.Header {
 		UncleHash:  types.CalcUncleHash(nil),
 		Root:       common.HexToHash("0x0"),
 		Difficulty: defaultDifficulty,
+		MixDigest: types.TendermintDigest,
 	}
 	extra, _ := prepareExtra(header, validators)
 	header.Extra = extra
@@ -149,29 +146,19 @@ func appendCommittedSeal(header *types.Header, engine *backend, committedSeal []
 
 func makeHeader(parent *types.Block) *types.Header {
 	header := &types.Header{
-		Coinbase: getAddress(),
+		Coinbase:   getAddress(),
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
 		GasLimit:   core.CalcGasLimit(parent, parent.GasLimit(), parent.GasLimit()),
 		GasUsed:    0,
 		Difficulty: defaultDifficulty,
+		MixDigest: types.TendermintDigest,
 	}
 	extra, _ := prepareExtra(header, validators)
 	header.Extra = extra
 	return header
 }
 
-type commitMessage struct {
-	Code          uint64
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
-}
-
-type message struct {
-	messages map[common.Address]*commitMessage
-}
 type mockChain struct {
 }
 

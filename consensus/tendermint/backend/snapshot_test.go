@@ -28,9 +28,9 @@ func TestSaveAndLoad(t *testing.T) {
 	snap1, err := loadSnapshot(snap.Epoch, db, snap.Hash)
 	assert.NoError(t, err)
 	assert.NotNil(t, snap1)
-	assert.Equal(t,snap.Epoch, snap1.Epoch)
+	assert.Equal(t, snap.Epoch, snap1.Epoch)
 	assert.Equal(t, snap.Hash, snap1.Hash)
-		if !reflect.DeepEqual(snap.ValSet, snap.ValSet) {
-			t.Errorf("validator set mismatch: have %v, want %v", snap1.ValSet, snap.ValSet)
-		}
+	if !reflect.DeepEqual(snap.ValSet, snap.ValSet) {
+		t.Errorf("validator set mismatch: have %v, want %v", snap1.ValSet, snap.ValSet)
+	}
 }
