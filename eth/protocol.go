@@ -92,7 +92,7 @@ var errorToString = map[int]string{
 	ErrGenesisBlockMismatch:    "Genesis block mismatch",
 	ErrNoStatusMsg:             "No status message",
 	ErrExtraStatusMsg:          "Extra status message",
-	ErrSuspendedPeer:           "Suspended peer",
+	ErrSuspendedPeer:           "Suspended Peer",
 }
 
 type txPool interface {

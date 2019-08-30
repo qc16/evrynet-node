@@ -17,13 +17,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/p2p/enode"
 )
 
-func registerNewPeer(pm *ProtocolManager, p *peer) error {
-	if err := pm.peers.Register(p); err != nil {
-		return err
-	}
-	return nil
-}
-
 //TestTendermintBroadcast setup a test to broadcast a message from a node
 //Broadcast included Gossip hence Gossip is not required to test separatedly
 //Expectation: the MessageEvent is shown for consensus/tendermint/core.handleEvents (internal events)
@@ -43,7 +36,7 @@ func TestTendermintBroadcast(t *testing.T) {
 		n2           = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk2.PublicKey)[1:]) + "@33.4.2.1:30304")
 	)
 	assert.NoError(t, tbe1.Start(nil, nil))
-	pm1, err := newTestProtocolManagerWithConsensus(tbe1)
+	pm1, err := NewTestProtocolManagerWithConsensus(tbe1)
 	time.Sleep(2 * time.Second)
 	assert.NoError(t, err)
 	defer pm1.Stop()
@@ -52,10 +45,10 @@ func TestTendermintBroadcast(t *testing.T) {
 	io1, io2 := p2p.MsgPipe()
 
 	//p1 will write to io2, p2 will receive from io1 and vice versal.
-	p1 := pm1.newPeer(63, p2p.NewPeerFromNode(n1, fmt.Sprintf("peer %d", 0), nil), io2)
-	p2 := pm1.newPeer(63, p2p.NewPeerFromNode(n2, fmt.Sprintf("peer %d", 1), nil), io1)
-	assert.NoError(t, registerNewPeer(pm1, p1))
-	assert.NoError(t, registerNewPeer(pm1, p2))
+	p1 := pm1.NewPeer(63, p2p.NewPeerFromNode(n1, fmt.Sprintf("Peer %d", 0), nil), io2)
+	p2 := pm1.NewPeer(63, p2p.NewPeerFromNode(n2, fmt.Sprintf("Peer %d", 1), nil), io1)
+	assert.NoError(t, RegisterNewPeer(pm1, p1))
+	assert.NoError(t, RegisterNewPeer(pm1, p2))
 
 	// assert it back to tendermint Backend to call Gossip.
 	bc, ok := tbe1.(tendermint.Backend)
@@ -65,7 +58,7 @@ func TestTendermintBroadcast(t *testing.T) {
 	assert.NoError(t, bc.Broadcast(validatorSet, payload))
 	time.Sleep(2 * time.Second)
 
-	//Making sure that the handlingMsg is done by calling pm.handleMsg
+	//Making sure that the handlingMsg is done by calling pm.HandleMsg
 	var (
 		errCh         = make(chan error, totalPeers)
 		doneCh        = make(chan struct{}, totalPeers)
@@ -73,10 +66,10 @@ func TestTendermintBroadcast(t *testing.T) {
 		expectedCount = 1
 	)
 	timeout := time.After(20 * time.Second)
-	for _, p := range []*peer{p1, p2} {
-		go func(p *peer) {
+	for _, p := range []*Peer{p1, p2} {
+		go func(p *Peer) {
 			for {
-				if err := pm1.handleMsg(p); err != nil {
+				if err := pm1.HandleMsg(p); err != nil {
 					errCh <- err
 				} else {
 					doneCh <- struct{}{}
@@ -106,6 +99,6 @@ outer:
 
 	}
 	if err != nil {
-		t.Errorf("error handling msg by peer: %v", err)
+		t.Errorf("error handling msg by Peer: %v", err)
 	}
 }

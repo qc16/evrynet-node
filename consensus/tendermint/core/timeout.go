@@ -68,7 +68,7 @@ type timeoutTicker struct {
 func NewTimeoutTicker() TimeoutTicker {
 	//TODO: allow caller to indicate buffer size
 	tt := &timeoutTicker{
-		timer:    time.NewTimer(0),
+		timer:    time.NewTimer(time.Duration(1<<63 - 1)),
 		tickChan: make(chan timeoutInfo, tickTockBufferSize),
 		tockChan: make(chan timeoutInfo, tickTockBufferSize),
 	}
@@ -113,7 +113,10 @@ func (tt *timeoutTicker) stopTimer() {
 // timers are interupted and replaced by new ticks from later steps
 // timeouts of 0 on the tickChan will be immediately relayed to the tockChan
 func (tt *timeoutTicker) timeoutRoutine() {
-	var ti timeoutInfo
+	var ti = timeoutInfo{
+		BlockNumber: big.NewInt(0),
+		Round:       big.NewInt(0),
+	}
 	//TODO: DO we need mutex for this?
 	for {
 		select {

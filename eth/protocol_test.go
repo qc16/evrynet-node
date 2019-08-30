@@ -73,7 +73,7 @@ func testStatusMsgErrors(t *testing.T, protocol int) {
 	}
 
 	for i, test := range tests {
-		p, errc := newTestPeer("peer", protocol, pm, false)
+		p, errc := newTestPeer("Peer", protocol, pm, false)
 		// The send call might hang until reset because
 		// the protocol might not read the payload.
 		go p2p.Send(p.app, test.code, test.data)
@@ -100,7 +100,7 @@ func testRecvTransactions(t *testing.T, protocol int) {
 	txAdded := make(chan []*types.Transaction)
 	pm, _ := newTestProtocolManagerMust(t, downloader.FullSync, 0, nil, txAdded)
 	pm.acceptTxs = 1 // mark synced to accept transactions
-	p, _ := newTestPeer("peer", protocol, pm, true)
+	p, _ := newTestPeer("Peer", protocol, pm, true)
 	defer pm.Stop()
 	defer p.close()
 
@@ -171,7 +171,7 @@ func testSendTransactions(t *testing.T, protocol int) {
 		}
 	}
 	for i := 0; i < 3; i++ {
-		p, _ := newTestPeer(fmt.Sprintf("peer #%d", i), protocol, pm, true)
+		p, _ := newTestPeer(fmt.Sprintf("Peer #%d", i), protocol, pm, true)
 		wg.Add(1)
 		go checktxs(p)
 	}

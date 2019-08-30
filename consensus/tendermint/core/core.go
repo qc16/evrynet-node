@@ -16,11 +16,12 @@ const (
 )
 
 // New creates an Tendermint consensus core
-func New(backend tendermint.Backend) Engine {
+func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 	c := &core{
 		handlerWg: new(sync.WaitGroup),
 		backend:   backend,
 		timeout:   NewTimeoutTicker(),
+		config:    config,
 	}
 	return c
 }
@@ -52,7 +53,7 @@ type core struct {
 	//timeout will schedule all timeout requirement and fire the timeout event once it's finished.
 	timeout TimeoutTicker
 	//config store the config of the chain
-	config tendermint.Config
+	config *tendermint.Config
 }
 
 // Start implements core.Engine.Start
@@ -60,6 +61,7 @@ type core struct {
 func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
+	c.currentState = c.getStoredState()
 	c.subscribeEvents()
 	if err := c.timeout.Start(); err != nil {
 		return err

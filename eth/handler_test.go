@@ -76,7 +76,7 @@ func TestGetBlockHeaders63(t *testing.T) { testGetBlockHeaders(t, 63) }
 
 func testGetBlockHeaders(t *testing.T, protocol int) {
 	pm, _ := newTestProtocolManagerMust(t, downloader.FullSync, downloader.MaxHashFetch+15, nil, nil)
-	peer, _ := newTestPeer("peer", protocol, pm, true)
+	peer, _ := newTestPeer("Peer", protocol, pm, true)
 	defer peer.close()
 
 	// Create a "random" unknown hash for testing
@@ -235,7 +235,7 @@ func TestGetBlockBodies63(t *testing.T) { testGetBlockBodies(t, 63) }
 
 func testGetBlockBodies(t *testing.T, protocol int) {
 	pm, _ := newTestProtocolManagerMust(t, downloader.FullSync, downloader.MaxBlockFetch+15, nil, nil)
-	peer, _ := newTestPeer("peer", protocol, pm, true)
+	peer, _ := newTestPeer("Peer", protocol, pm, true)
 	defer peer.close()
 
 	// Create a batch of tests for various scenarios
@@ -342,7 +342,7 @@ func testGetNodeData(t *testing.T, protocol int) {
 	}
 	// Assemble the test environment
 	pm, db := newTestProtocolManagerMust(t, downloader.FullSync, 4, generator, nil)
-	peer, _ := newTestPeer("peer", protocol, pm, true)
+	peer, _ := newTestPeer("Peer", protocol, pm, true)
 	defer peer.close()
 
 	// Fetch for now the entire chain db
@@ -438,7 +438,7 @@ func testGetReceipt(t *testing.T, protocol int) {
 	}
 	// Assemble the test environment
 	pm, _ := newTestProtocolManagerMust(t, downloader.FullSync, 4, generator, nil)
-	peer, _ := newTestPeer("peer", protocol, pm, true)
+	peer, _ := newTestPeer("Peer", protocol, pm, true)
 	defer peer.close()
 
 	// Collect the hashes to request, and the response to expect
@@ -458,7 +458,7 @@ func testGetReceipt(t *testing.T, protocol int) {
 
 // Tests that post eth protocol handshake, clients perform a mutual checkpoint
 // challenge to validate each other's chains. Hash mismatches, or missing ones
-// during a fast sync should lead to the peer getting dropped.
+// during a fast sync should lead to the Peer getting dropped.
 func TestCheckpointChallenge(t *testing.T) {
 	tests := []struct {
 		syncmode   downloader.SyncMode
@@ -475,7 +475,7 @@ func TestCheckpointChallenge(t *testing.T) {
 
 		// If checkpointing is enabled locally and remote response is empty, only drop during fast sync
 		{downloader.FullSync, true, false, true, false, false},
-		{downloader.FastSync, true, false, true, false, true}, // Special case, fast sync, unsynced peer
+		{downloader.FastSync, true, false, true, false, true}, // Special case, fast sync, unsynced Peer
 		{downloader.LightSync, true, false, true, false, false},
 
 		// If checkpointing is enabled locally and remote response mismatches, always drop
@@ -538,8 +538,8 @@ func testCheckpointChallenge(t *testing.T, syncmode downloader.SyncMode, checkpo
 	pm.Start(1000)
 	defer pm.Stop()
 
-	// Connect a new peer and check that we receive the checkpoint challenge
-	peer, _ := newTestPeer("peer", eth63, pm, true)
+	// Connect a new Peer and check that we receive the checkpoint challenge
+	peer, _ := newTestPeer("Peer", eth63, pm, true)
 	defer peer.close()
 
 	if checkpoint {
@@ -572,14 +572,14 @@ func testCheckpointChallenge(t *testing.T, syncmode downloader.SyncMode, checkpo
 	// Wait until the test timeout passes to ensure proper cleanup
 	time.Sleep(syncChallengeTimeout + 100*time.Millisecond)
 
-	// Verify that the remote peer is maintained or dropped
+	// Verify that the remote Peer is maintained or dropped
 	if drop {
 		if peers := pm.peers.Len(); peers != 0 {
-			t.Fatalf("peer count mismatch: have %d, want %d", peers, 0)
+			t.Fatalf("Peer count mismatch: have %d, want %d", peers, 0)
 		}
 	} else {
 		if peers := pm.peers.Len(); peers != 1 {
-			t.Fatalf("peer count mismatch: have %d, want %d", peers, 1)
+			t.Fatalf("Peer count mismatch: have %d, want %d", peers, 1)
 		}
 	}
 }
@@ -626,7 +626,7 @@ func testBroadcastBlock(t *testing.T, totalPeers, broadcastExpected int) {
 	defer pm.Stop()
 	var peers []*testPeer
 	for i := 0; i < totalPeers; i++ {
-		peer, _ := newTestPeer(fmt.Sprintf("peer %d", i), eth63, pm, true)
+		peer, _ := newTestPeer(fmt.Sprintf("Peer %d", i), eth63, pm, true)
 		defer peer.close()
 		peers = append(peers, peer)
 	}
@@ -664,7 +664,7 @@ outer:
 		peer.app.Close()
 	}
 	if err != nil {
-		t.Errorf("error matching block by peer: %v", err)
+		t.Errorf("error matching block by Peer: %v", err)
 	}
 	if receivedCount != broadcastExpected {
 		t.Errorf("block broadcast to %d peers, expected %d", receivedCount, broadcastExpected)
@@ -680,14 +680,14 @@ func TestFindPeers(t *testing.T) {
 		t.Fatalf("can't create protocol manager: %v", err)
 	}
 
-	// create a node for test peer
+	// create a node for test Peer
 	n := enode.MustParseV4("enode://" + hex.EncodeToString(testPublicKey[1:]) + "@33.4.2.1:30303")
 
-	peer, _ := newTestPeerFromNode(fmt.Sprintf("peer %d", 0), eth63, pm, true, n)
+	peer, _ := newTestPeerFromNode(fmt.Sprintf("Peer %d", 0), eth63, pm, true, n)
 	defer peer.close()
 
 	targets := map[common.Address]bool{}
-	address1 := testBank                                                          // this address is in peer list
+	address1 := testBank                                                          // this address is in Peer list
 	address2 := common.HexToAddress("0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1") // a random address that should not be in Peers list
 	targets[address1] = true
 	targets[address2] = true
@@ -710,7 +710,7 @@ func TestSendMessageBetweenPeer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("can't create protocol manager: %v", err)
 	}
-	peer, _ := newTestPeer("peer", eth63, pm, false)
+	peer, _ := newTestPeer("Peer", eth63, pm, false)
 	defer peer.close()
 
 	VoteMsg := 0x12

@@ -95,7 +95,7 @@ type ProtocolManager struct {
 	whitelist map[uint64]common.Hash
 
 	// channels for fetcher, syncer, txsyncLoop
-	newPeerCh   chan *peer
+	newPeerCh   chan *Peer
 	txsyncCh    chan *txsync
 	quitSync    chan struct{}
 	noMorePeers chan struct{}
@@ -118,7 +118,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		chainconfig: config,
 		peers:       newPeerSet(),
 		whitelist:   whitelist,
-		newPeerCh:   make(chan *peer),
+		newPeerCh:   make(chan *Peer),
 		noMorePeers: make(chan struct{}),
 		txsyncCh:    make(chan *txsync),
 		quitSync:    make(chan struct{}),
@@ -152,7 +152,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 			Version: version,
 			Length:  ProtocolLengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
-				peer := manager.newPeer(int(version), p, rw)
+				peer := manager.NewPeer(int(version), p, rw)
 				select {
 				case manager.newPeerCh <- peer:
 					manager.wg.Add(1)
@@ -224,17 +224,17 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 }
 
 func (pm *ProtocolManager) removePeer(id string) {
-	// Short circuit if the peer was already removed
+	// Short circuit if the Peer was already removed
 	peer := pm.peers.Peer(id)
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing Ethereum peer", "peer", id)
+	log.Debug("Removing Ethereum Peer", "Peer", id)
 
-	// Unregister the peer from the downloader and Ethereum peer set
+	// Unregister the Peer from the downloader and Ethereum Peer set
 	pm.downloader.UnregisterPeer(id)
 	if err := pm.peers.Unregister(id); err != nil {
-		log.Error("Peer removal failed", "peer", id, "err", err)
+		log.Error("Peer removal failed", "Peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer
 	if peer != nil {
@@ -273,29 +273,31 @@ func (pm *ProtocolManager) Stop() {
 	close(pm.quitSync)
 
 	// Disconnect existing sessions.
-	// This also closes the gate for any new registrations on the peer set.
+	// This also closes the gate for any new registrations on the Peer set.
 	// sessions which are already established but not added to pm.peers yet
 	// will exit when they try to register.
 	pm.peers.Close()
 
-	// Wait for all peer handler goroutines and the loops to come down.
+	// Wait for all Peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
 
 	log.Info("Ethereum protocol stopped")
 }
 
-func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
+//NewPeer reutrn a pper to abstract the connection to another node
+//It is exported for testing purposes
+func (pm *ProtocolManager) NewPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *Peer {
 	return newPeer(pv, p, newMeteredMsgWriter(rw))
 }
 
-// handle is the callback invoked to manage the life cycle of an eth peer. When
-// this function terminates, the peer is disconnected.
-func (pm *ProtocolManager) handle(p *peer) error {
-	// Ignore maxPeers if this is a trusted peer
+// handle is the callback invoked to manage the life cycle of an eth Peer. When
+// this function terminates, the Peer is disconnected.
+func (pm *ProtocolManager) handle(p *Peer) error {
+	// Ignore maxPeers if this is a trusted Peer
 	if pm.peers.Len() >= pm.maxPeers && !p.Peer.Info().Network.Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.Log().Debug("Ethereum peer connected", "name", p.Name())
+	p.Log().Debug("Ethereum Peer connected", "name", p.Name())
 
 	// Execute the Ethereum handshake
 	var (
@@ -312,14 +314,14 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
 		rw.Init(p.version)
 	}
-	// Register the peer locally
+	// Register the Peer locally
 	if err := pm.peers.Register(p); err != nil {
-		p.Log().Error("Ethereum peer registration failed", "err", err)
+		p.Log().Error("Ethereum Peer registration failed", "err", err)
 		return err
 	}
 	defer pm.removePeer(p.id)
 
-	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
+	// Register the Peer in the downloader. If the downloader considers it banned, we disconnect
 	if err := pm.downloader.RegisterPeer(p.id, p.version, p); err != nil {
 		return err
 	}
@@ -329,16 +331,16 @@ func (pm *ProtocolManager) handle(p *peer) error {
 
 	// If we have a trusted CHT, reject all peers below that (avoid fast sync eclipse)
 	if pm.checkpointHash != (common.Hash{}) {
-		// Request the peer's checkpoint header for chain height/weight validation
+		// Request the Peer's checkpoint header for chain height/weight validation
 		if err := p.RequestHeadersByNumber(pm.checkpointNumber, 1, 0, false); err != nil {
 			return err
 		}
-		// Start a timer to disconnect if the peer doesn't reply in time
+		// Start a timer to disconnect if the Peer doesn't reply in time
 		p.syncDrop = time.AfterFunc(syncChallengeTimeout, func() {
 			p.Log().Warn("Checkpoint challenge timed out, dropping", "addr", p.RemoteAddr(), "type", p.Name())
 			pm.removePeer(p.id)
 		})
-		// Make sure it's cleaned up if the peer dies off
+		// Make sure it's cleaned up if the Peer dies off
 		defer func() {
 			if p.syncDrop != nil {
 				p.syncDrop.Stop()
@@ -354,17 +356,17 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 	// Handle incoming messages until the connection is torn down
 	for {
-		if err := pm.handleMsg(p); err != nil {
+		if err := pm.HandleMsg(p); err != nil {
 			p.Log().Debug("Ethereum message handling failed", "err", err)
 			return err
 		}
 	}
 }
 
-// handleMsg is invoked whenever an inbound message is received from a remote
-// peer. The remote connection is torn down upon returning any error.
-func (pm *ProtocolManager) handleMsg(p *peer) error {
-	// Read the next message from the remote peer, and ensure it's fully consumed
+// HandleMsg is invoked whenever an inbound message is received from a remote
+// Peer. The remote connection is torn down upon returning any error.
+func (pm *ProtocolManager) HandleMsg(p *Peer) error {
+	// Read the next message from the remote Peer, and ensure it's fully consumed
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -508,7 +510,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				p.syncDrop.Stop()
 				p.syncDrop = nil
 
-				// Validate the header and either drop the peer or continue
+				// Validate the header and either drop the Peer or continue
 				if headers[0].Hash() != pm.checkpointHash {
 					return errors.New("checkpoint hash mismatch")
 				}
@@ -517,7 +519,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// Otherwise if it's a whitelisted block, validate against the set
 			if want, ok := pm.whitelist[headers[0].Number.Uint64()]; ok {
 				if hash := headers[0].Hash(); want != hash {
-					p.Log().Info("Whitelist mismatch, dropping peer", "number", headers[0].Number.Uint64(), "hash", hash, "want", want)
+					p.Log().Info("Whitelist mismatch, dropping Peer", "number", headers[0].Number.Uint64(), "hash", hash, "want", want)
 					return errors.New("whitelist block mismatch")
 				}
 				p.Log().Debug("Whitelist block verified", "number", headers[0].Number.Uint64(), "hash", want)
@@ -699,17 +701,17 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		request.Block.ReceivedAt = msg.ReceivedAt
 		request.Block.ReceivedFrom = p
 
-		// Mark the peer as owning the block and schedule it for import
+		// Mark the Peer as owning the block and schedule it for import
 		p.MarkBlock(request.Block.Hash())
 		pm.fetcher.Enqueue(p.id, request.Block)
 
-		// Assuming the block is importable by the peer, but possibly not yet done so,
-		// calculate the head hash and TD that the peer truly must have.
+		// Assuming the block is importable by the Peer, but possibly not yet done so,
+		// calculate the head hash and TD that the Peer truly must have.
 		var (
 			trueHead = request.Block.ParentHash()
 			trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
 		)
-		// Update the peer's total difficulty if better than the previous
+		// Update the Peer's total difficulty if better than the previous
 		if _, td := p.Head(); trueTD.Cmp(td) > 0 {
 			p.SetHead(trueHead, trueTD)
 
@@ -753,7 +755,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 	hash := block.Hash()
 	peers := pm.peers.PeersWithoutBlock(hash)
 
-	// If propagation is requested, send to a subset of the peer
+	// If propagation is requested, send to a subset of the Peer
 	if propagate {
 		// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 		var td *big.Int
@@ -790,7 +792,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 // BroadcastTxs will propagate a batch of transactions to all peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
-	var txset = make(map[*peer]types.Transactions)
+	var txset = make(map[*Peer]types.Transactions)
 
 	// Broadcast transactions to a batch of peers not knowing about it
 	for _, tx := range txs {
@@ -831,7 +833,7 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 }
 
 // NodeInfo represents a short summary of the Ethereum sub-protocol metadata
-// known about the host peer.
+// known about the host Peer.
 type NodeInfo struct {
 	Network    uint64              `json:"network"`    // Ethereum network ID (1=Frontier, 2=Morden, Ropsten=3, Rinkeby=4)
 	Difficulty *big.Int            `json:"difficulty"` // Total difficulty of the host's blockchain

@@ -1,9 +1,10 @@
 package validator
 
 import (
+	"reflect"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/log"
 )
 
 // New will create new validator
@@ -20,9 +21,8 @@ func NewSet(addrs []common.Address, policy tendermint.ProposerPolicy) tendermint
 
 // IsProposer will be checking whether the validator with given address is a proposer
 func (valSet *defaultSet) IsProposer(address common.Address) bool {
-	log.Warn("validator.IsProposer: implement me")
-	//TODO: implement for this function to check is proposer
-	return false
+	_, val := valSet.GetByAddress(address)
+	return reflect.DeepEqual(valSet.GetProposer(), val)
 }
 
 // ExtractValidators will extract extra data to address list

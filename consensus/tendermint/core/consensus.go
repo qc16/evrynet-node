@@ -108,6 +108,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 	}
 	//if we are proposer, find the latest block we're having to propose
 	if c.valSet.IsProposer(c.backend.Address()) {
+		log.Info("this node is proposer of this round")
 		var (
 			toPropose   tendermint.Proposal
 			lockedRound = state.LockedRound()
@@ -143,6 +144,10 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round *big.Int) {
 }
 
 func (c *core) startRoundZero() {
-	c.currentState = c.getStoredState()
+	//init valset from backend
+	if c.valSet == nil {
+		c.valSet = c.backend.Validators(c.currentState.BlockNumber())
+
+	}
 	c.enterNewRound(c.currentState.view.BlockNumber, big.NewInt(0))
 }

@@ -1,6 +1,8 @@
 package tendermint
 
 import (
+	"math/big"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/event"
 )
@@ -24,4 +26,7 @@ type Backend interface {
 	// Broadcast sends a message to all validators (including self)
 	// It will call gossip and post an identical event to its EventMux().
 	Broadcast(valSet ValidatorSet, payload []byte) error
+
+	// Validators returns the validator set
+	Validators(blockNumber *big.Int) ValidatorSet
 }
