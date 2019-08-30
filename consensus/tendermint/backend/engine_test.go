@@ -4,13 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestSimulateSubscribeAndReceiveToSeal is a simple test to pass a block to backend.Seal()
@@ -38,5 +38,7 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 func newEngine() *backend {
 	nodeKey, _ := crypto.GenerateKey()
 	be, _ := New(tendermint.DefaultConfig, nodeKey).(*backend)
+	be.address = crypto.PubkeyToAddress(nodeKey.PublicKey)
+	be.db = ethdb.NewMemDatabase()
 	return be
 }

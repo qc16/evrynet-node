@@ -11,6 +11,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 )
 
@@ -23,17 +24,33 @@ var (
 	ErrNoBroadcaster = errors.New("no broadcaster is set")
 )
 
-// New creates an Ethereum backend for Istanbul core engine.
+//Option return an optional function for backend's initial behaviour
+type Option func(b *backend) error
+
+//WithDB return an option to set backend's db
+func WithDB(db ethdb.Database) Option {
+	return func(b *backend) error {
+		b.db = db
+		return nil
+	}
+}
+
+// New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
-func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey) consensus.Tendermint {
-	backend := &backend{
+func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
+	be := &backend{
 		config:             config,
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         privateKey,
 		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
 	}
-	backend.core = tendermintCore.New(backend)
-	return backend
+	be.core = tendermintCore.New(be)
+	for _, opt := range opts {
+		if err:=opt(be);err!=nil {
+			log.Panicf("error at initialization of backend (%v)",err)
+		}
+	}
+	return be
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
@@ -47,6 +64,7 @@ type backend struct {
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
 	core               tendermintCore.Engine
+	db                 ethdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
 
