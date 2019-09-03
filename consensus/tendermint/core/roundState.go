@@ -53,8 +53,8 @@ type roundState struct {
 	lockedRound *big.Int     // lockedRound is latest round it is locked
 	lockedBlock *types.Block // lockedBlock is block it is locked at lockedRound above
 
-	validRound *big.Int     // validRound is last known round with PoLC for non-nil valid block
-	validBlock *types.Block // validBlock last known block of PoLC above
+	validRound *big.Int     // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
+	validBlock *types.Block // validBlock is last known block of PoLC above
 
 	ProposalReceived   *tendermint.Proposal //
 	PrevotesReceived   *messageSet
@@ -67,20 +67,19 @@ type roundState struct {
 	mu *sync.RWMutex
 }
 
-func (s *roundState) Step() RoundStepType{
+func (s *roundState) Step() RoundStepType {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.step
 }
 
-
-func (s *roundState) BlockNumber() *big.Int{
+func (s *roundState) BlockNumber() *big.Int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.view.BlockNumber
 }
 
-func (s *roundState) Round() *big.Int{
+func (s *roundState) Round() *big.Int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.view.Round

@@ -47,7 +47,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round *big.Int) {
 	//Update to RoundStepNewRound
 	state.UpdateRoundStep(round, RoundStepNewRound)
 
-	//Upon NewRound, there should be valid block yet
+	//Upon NewRound, there should be no valid block yet
 	state.SetValidRoundAndBlock(nil, nil)
 
 	c.enterPropose(blockNumber, round)
@@ -69,7 +69,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 		sStep         = state.Step()
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || sRound.Cmp(round) > 0 || (sRound.Cmp(round) == 0 && sStep >= RoundStepPropose) {
-		log.Debug("enterNewRound ignore: we are in a state that is ahead of the input state",
+		log.Debug("enterPropose ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound.String(), "input_round", round.String(),
 			"current_step", sStep.String(), "input_step", RoundStepPropose.String())
@@ -110,18 +110,18 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 	if c.valSet.IsProposer(c.backend.Address()) {
 		log.Info("this node is proposer of this round")
 		var (
-			toPropose   tendermint.Proposal
-			lockedRound = state.LockedRound()
-			lockedBlock = state.LockedBlock()
+			toPropose  tendermint.Proposal
+			validRound = state.ValidRound()
+			validBlock = state.ValidBlock()
 		)
-		// if it's locked, propose the locked block
+		// if there is a validRound, propose the valid block
 
-		if lockedRound != nil {
+		if validRound != nil {
 			state.SetValidRoundAndBlock(round, c.currentState.LockedBlock())
 			toPropose = tendermint.Proposal{
-				Block:    lockedBlock,
+				Block:    validBlock,
 				Round:    round,
-				POLRound: lockedRound,
+				POLRound: validRound,
 			}
 		} else {
 			//get the block node currently received from tx_pool
