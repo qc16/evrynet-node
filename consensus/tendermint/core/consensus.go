@@ -54,6 +54,29 @@ func (c *core) enterNewRound(blockNumber *big.Int, round *big.Int) {
 
 }
 
+//defaultDecideProposal is the default proposal selector
+//it will prioritize validBlock, else will get its own block from tx_pool
+func (c *core) defaultDecideProposal(round *big.Int) tendermint.Proposal {
+	var (
+		state     = c.currentState
+	)
+	// if there is validBlock, propose it.
+	if state.ValidRound() != nil {
+		return tendermint.Proposal{
+			Block:    state.ValidBlock(),
+			Round:    round,
+			POLRound: state.ValidRound(),
+		}
+	}
+
+	//get the block node currently received from tx_pool
+	return tendermint.Proposal{
+		Block:    state.Block(),
+		Round:    round,
+		POLRound: big.NewInt(-1),
+	}
+}
+
 //enterPropose switch core state to propose step.
 //it checks core state to make sure that it's legal to enterPropose
 //it check if this core is proposer and send Propose
@@ -110,28 +133,17 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 	if c.valSet.IsProposer(c.backend.Address()) {
 		log.Info("this node is proposer of this round")
 		var (
-			toPropose  tendermint.Proposal
-			validRound = state.ValidRound()
-			validBlock = state.ValidBlock()
+			lockedRound = state.LockedRound()
+			lockedBlock = state.LockedBlock()
 		)
-		// if there is a validRound, propose the valid block
+		// if there is a lockedBlock, set validRound and validBlock to locked one
+		if lockedRound != nil {
+			state.SetValidRoundAndBlock(lockedRound, lockedBlock)
 
-		if validRound != nil {
-			state.SetValidRoundAndBlock(round, c.currentState.LockedBlock())
-			toPropose = tendermint.Proposal{
-				Block:    validBlock,
-				Round:    round,
-				POLRound: validRound,
-			}
-		} else {
-			//get the block node currently received from tx_pool
-			toPropose = tendermint.Proposal{
-				Block:    state.Block(),
-				Round:    round,
-				POLRound: big.NewInt(-1),
-			}
 		}
-		c.SendPropose(&toPropose)
+		proposal := c.defaultDecideProposal(round)
+
+		c.SendPropose(&proposal)
 	}
 }
 
