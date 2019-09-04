@@ -4,12 +4,14 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"log"
+	"math/big"
 	"sync"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
@@ -44,10 +46,10 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		privateKey:         privateKey,
 		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
 	}
-	be.core = tendermintCore.New(be)
+	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {
-		if err:=opt(be);err!=nil {
-			log.Panicf("error at initialization of backend (%v)",err)
+		if err := opt(be); err != nil {
+			log.Panicf("error at initialization of backend (%v)", err)
 		}
 	}
 	return be
@@ -137,4 +139,12 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		}
 	}
 	return nil
+}
+
+func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
+	//TODO: implement this with snapshot
+	return validator.NewSet([]common.Address{
+		common.HexToAddress("0xb61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B"),
+		common.HexToAddress("0xF837F945733a512A087866462B2a4b82FED11146"),
+	}, tendermint.RoundRobin)
 }

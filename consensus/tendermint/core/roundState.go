@@ -53,14 +53,43 @@ type roundState struct {
 	lockedRound *big.Int     // lockedRound is latest round it is locked
 	lockedBlock *types.Block // lockedBlock is block it is locked at lockedRound above
 
-	validRound *big.Int     // validRound is last known round with PoLC for non-nil valid block
-	validBlock *types.Block // validBlock last known block of PoLC above
+	validRound *big.Int     // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
+	validBlock *types.Block // validBlock is last known block of PoLC above
 
 	ProposalReceived   *tendermint.Proposal //
 	PrevotesReceived   *messageSet
 	PrecommitsReceived *messageSet
 
+	//step is the enumerate Step that currently the core is at.
+	//to jump to the next step, UpdateRoundStep is called.
+	step RoundStepType
+
 	mu *sync.RWMutex
+}
+
+func (s *roundState) Step() RoundStepType {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.step
+}
+
+func (s *roundState) BlockNumber() *big.Int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.view.BlockNumber
+}
+
+func (s *roundState) Round() *big.Int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.view.Round
+}
+
+func (s *roundState) UpdateRoundStep(round *big.Int, step RoundStepType) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.view.Round = round
+	s.step = step
 }
 
 func (s *roundState) SetProposalReceived(proposalReceived *tendermint.Proposal) {
@@ -75,6 +104,13 @@ func (s *roundState) SetView(v *tendermint.View) {
 	defer s.mu.Unlock()
 
 	s.view = v
+}
+
+// IsProposalComplete Returns true if the proposal block is complete &&
+// (if POLRound was proposed, we have +2/3 prevotes from there).
+func (s *roundState) IsProposalComplete() bool {
+	//TODO: implement this, it have to do with number of votes receives (in handle prevotes)
+	return true
 }
 
 func (s *roundState) View() *tendermint.View {

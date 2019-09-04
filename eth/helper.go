@@ -76,8 +76,8 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 	return pm, db, nil
 }
 
-//newTestProtocolManagerWithConsensus return an eth.ProtocolManager with specific consensusEngine
-func newTestProtocolManagerWithConsensus(engine consensus.Engine) (*ProtocolManager, error) {
+//NewTestProtocolManagerWithConsensus return an eth.ProtocolManager with specific consensusEngine
+func NewTestProtocolManagerWithConsensus(engine consensus.Engine) (*ProtocolManager, error) {
 	var (
 		mode   = downloader.FullSync
 		blocks = 0
@@ -163,25 +163,25 @@ func newTestTransaction(from *ecdsa.PrivateKey, nonce uint64, datasize int) *typ
 	return tx
 }
 
-// testPeer is a simulated peer to allow testing direct network calls.
+// testPeer is a simulated Peer to allow testing direct network calls.
 type testPeer struct {
 	net p2p.MsgReadWriter // Network layer reader/writer to simulate remote messaging
 	app *p2p.MsgPipeRW    // Application layer reader/writer to simulate the local side
-	*peer
+	*Peer
 }
 
-// newTestPeer creates a new peer registered at the given protocol manager.
+// newTestPeer creates a new Peer registered at the given protocol manager.
 func newTestPeer(name string, version int, pm *ProtocolManager, shake bool) (*testPeer, <-chan error) {
 	// Create a message pipe to communicate through
 	app, net := p2p.MsgPipe()
 
-	// Generate a random id and create the peer
+	// Generate a random id and create the Peer
 	var id enode.ID
 	rand.Read(id[:])
 
-	peer := pm.newPeer(version, p2p.NewPeer(id, name, nil), net)
+	peer := pm.NewPeer(version, p2p.NewPeer(id, name, nil), net)
 
-	// Start the peer on a new thread
+	// Start the Peer on a new thread
 	errc := make(chan error, 1)
 	go func() {
 		select {
@@ -191,7 +191,7 @@ func newTestPeer(name string, version int, pm *ProtocolManager, shake bool) (*te
 			errc <- p2p.DiscQuitting
 		}
 	}()
-	tp := &testPeer{app: app, net: net, peer: peer}
+	tp := &testPeer{app: app, net: net, Peer: peer}
 	// Execute any implicitly requested handshakes and return
 	if shake {
 		var (
@@ -204,15 +204,15 @@ func newTestPeer(name string, version int, pm *ProtocolManager, shake bool) (*te
 	return tp, errc
 }
 
-// newTestPeerFromNode creates a new peer from a node registered at the given protocol manager.
+// newTestPeerFromNode creates a new Peer from a node registered at the given protocol manager.
 // Its used in TestFindPeers
 func newTestPeerFromNode(name string, version int, pm *ProtocolManager, shake bool, node *enode.Node) (*testPeer, <-chan error) {
 	// Create a message pipe to communicate through
 	app, net := p2p.MsgPipe()
 
-	peer := pm.newPeer(version, p2p.NewPeerFromNode(node, name, nil), net)
+	peer := pm.NewPeer(version, p2p.NewPeerFromNode(node, name, nil), net)
 
-	// Start the peer on a new thread
+	// Start the Peer on a new thread
 	errc := make(chan error, 1)
 	go func() {
 		select {
@@ -222,7 +222,7 @@ func newTestPeerFromNode(name string, version int, pm *ProtocolManager, shake bo
 			errc <- p2p.DiscQuitting
 		}
 	}()
-	tp := &testPeer{app: app, net: net, peer: peer}
+	tp := &testPeer{app: app, net: net, Peer: peer}
 	// Execute any implicitly requested handshakes and return
 	if shake {
 		var (
@@ -253,7 +253,7 @@ func (p *testPeer) handshake(t *testing.T, td *big.Int, head common.Hash, genesi
 	}
 }
 
-// close terminates the local side of the peer, notifying the remote protocol
+// close terminates the local side of the Peer, notifying the remote protocol
 // manager of termination.
 func (p *testPeer) close() {
 	p.app.Close()
@@ -265,4 +265,11 @@ func mustGeneratePrivateKey(t *testing.T) *ecdsa.PrivateKey {
 		t.Fail()
 	}
 	return privateKey
+}
+
+func RegisterNewPeer(pm *ProtocolManager, p *Peer) error {
+	if err := pm.peers.Register(p); err != nil {
+		return err
+	}
+	return nil
 }

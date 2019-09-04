@@ -168,3 +168,16 @@ func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/
 
 // Policy get proposal policy
 func (valSet *defaultSet) Policy() tendermint.ProposerPolicy { return valSet.policy }
+
+//CalcProposer implement valSet.CalcProposer. Based on the proposer selection scheme,
+//it will set valSet.proposer to the address of the pre-determined round.
+func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64) {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+	valSet.proposer = valSet.selector(valSet, lastProposer, round)
+}
+
+//GetProposer return the current proposer of this valSet
+func (valSet *defaultSet) GetProposer() tendermint.Validator {
+	return valSet.proposer
+}

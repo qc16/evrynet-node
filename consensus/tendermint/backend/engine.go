@@ -64,8 +64,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	// clear previous data of proposal
 
 	// post block into tendermint engine
-	go sb.EventMux().Post(tendermint.RequestEvent{
-		Proposal: block,
+	go sb.EventMux().Post(tendermint.NewBlockEvent{
+		Block: block,
 	})
 
 	//TODO: faking logic to approve the block immediately

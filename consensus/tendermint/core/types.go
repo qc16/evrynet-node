@@ -31,6 +31,7 @@ type message struct {
 	Msg           []byte
 	Address       common.Address
 	Signature     []byte
+	//TODO: Is CommitedSeal needed in message of Tendermint?
 	CommittedSeal []byte
 }
 
@@ -67,8 +68,8 @@ type messageSet struct {
 func newMessageSet(valSet tendermint.ValidatorSet) *messageSet {
 	return &messageSet{
 		view: &tendermint.View{
-			Round:  new(big.Int),
-			Height: new(big.Int),
+			Round:       new(big.Int),
+			BlockNumber: new(big.Int),
 		},
 		messagesMu: new(sync.Mutex),
 		messages:   make(map[common.Address]*message),
