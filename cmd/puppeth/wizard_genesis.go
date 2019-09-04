@@ -144,8 +144,9 @@ func (w *wizard) makeGenesis() {
 		tendermintExtra := types.TendermintExtra{
 			Validators: validators,
 		}
-		genesis.ExtraData, _ = rlp.EncodeToBytes(&tendermintExtra)
-
+		extraData, _ := rlp.EncodeToBytes(&tendermintExtra)
+		tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
+		genesis.ExtraData = append(tendermintExtraVanity, extraData...)
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}

@@ -241,6 +241,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 	// If Tendermint is requested, set it up
 	if chainConfig.Tendermint != nil {
 		config.Tendermint.ProposerPolicy = tendermint.ProposerPolicy(chainConfig.Tendermint.ProposerPolicy)
+		config.Tendermint.Epoch = chainConfig.Tendermint.Epoch
 		log.Info("Create Tendermint consensus engine")
 		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey(), tendermintBackend.WithDB(db))
 	}
