@@ -60,8 +60,43 @@ var (
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
 func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
-	//TODO: need to validate address, block period and update block
-	// clear previous data of proposal
+	// update the block header timestamp and signature and propose the block to core engine
+	header := block.Header()
+	blockNumber := header.Number.Uint64()
+
+	// validate address of the validator
+	// get snapshot
+	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+
+	// checks the address must stored in snapshot
+	if _, v := snap.ValSet.GetByAddress(sb.address); v == nil {
+		return errUnauthorized
+	}
+
+	// update seal to header of the block
+	parent := chain.GetHeader(header.ParentHash, blockNumber-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+	block, err = sb.updateBlock(parent, block)
+	if err != nil {
+		return err
+	}
+
+	// wait for the timestamp of header, make sure this block does not come from the future
+	headerTime := int64(block.Header().Time)
+	delay := time.Unix(headerTime, 0).Sub(now())
+	select {
+	case <-time.After(delay):
+	case <-stop:
+		results <- nil
+		return nil
+	}
+
+	//TODO: clear previous data of proposal
 
 	// post block into tendermint engine
 	go sb.EventMux().Post(tendermint.NewBlockEvent{
@@ -72,6 +107,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	go func() {
 		select {
 		case results <- block:
+		case <-stop:
+			results <- nil
 		default:
 			log.Warn("Sealing result is not read by miner")
 		}
@@ -496,6 +533,23 @@ func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
 	}
 
 	return append(buf.Bytes(), payload...), nil
+}
+
+// update timestamp and signature of the block based on its number of transactions
+func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
+	header := block.Header()
+	// sign the hash
+	seal, err := sb.Sign(sigHash(header).Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	err = writeSeal(header, seal)
+	if err != nil {
+		return nil, err
+	}
+
+	return block.WithSeal(header), nil
 }
 
 // writeSeal writes the extra-data field of the given header with the given seals.
