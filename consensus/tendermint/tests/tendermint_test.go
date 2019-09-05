@@ -3,10 +3,12 @@ package tests
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -53,6 +55,19 @@ func TestStartingTendermint(t *testing.T) {
 	assert.NoError(t, eth.RegisterNewPeer(pm1, p1))
 	assert.NoError(t, eth.RegisterNewPeer(pm1, p2))
 
+	headHash := pm1.NodeInfo().Head
+	genesisHash := core.DefaultGenesisBlock().ToBlock(nil).Hash()
+	// Must Handshake for peer to init peer.td, peer.head
+	go func() {
+		err := p1.Handshake(eth.DefaultConfig.NetworkId, big.NewInt(0), headHash, genesisHash)
+		assert.NoError(t, err)
+	}()
+	go func() {
+		err := p2.Handshake(eth.DefaultConfig.NetworkId, big.NewInt(0), headHash, genesisHash)
+		assert.NoError(t, err)
+	}()
+	time.Sleep(2 * time.Second) // Wait for handshaking
+
 	//Making sure that the handlingMsg is done by calling pm.handleMsg
 	var (
 		errCh         = make(chan error, totalPeers)
@@ -81,12 +96,12 @@ outer:
 		case <-doneCh:
 			receivedCount++
 			if receivedCount >= expectedCount {
-				fmt.Printf("handling done ")
+				fmt.Println("handling done ")
 				break outer
 			}
 
 		case <-timeout:
-			fmt.Printf("timdeout")
+			fmt.Println("timdeout")
 
 			t.Fail()
 			break outer

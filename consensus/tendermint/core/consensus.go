@@ -58,7 +58,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round *big.Int) {
 //it will prioritize validBlock, else will get its own block from tx_pool
 func (c *core) defaultDecideProposal(round *big.Int) tendermint.Proposal {
 	var (
-		state     = c.currentState
+		state = c.currentState
 	)
 	// if there is validBlock, propose it.
 	if state.ValidRound() != nil {

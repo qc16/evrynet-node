@@ -1,6 +1,5 @@
 package core
 
-
 // RoundStepType enumerates the state of the consensus state machine
 type RoundStepType uint8 // These must be numeric, ordered.
 

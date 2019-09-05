@@ -27,10 +27,10 @@ const (
 )
 
 type message struct {
-	Code          uint64
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
+	Code      uint64
+	Msg       []byte
+	Address   common.Address
+	Signature []byte
 	//TODO: Is CommitedSeal needed in message of Tendermint?
 	CommittedSeal []byte
 }
