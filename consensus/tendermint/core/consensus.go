@@ -17,7 +17,7 @@ import (
 // - +2/3 precommits for nil at (height,round-1)
 // - +2/3 prevotes any or +2/3 precommits for block or any from (height, round)
 // NOTE: cs.StartTime was already set for height.
-func (c *core) enterNewRound(blockNumber *big.Int, round *big.Int) {
+func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	//This is strictly use with pointer for state update.
 	var (
 		state         = c.currentState
@@ -25,30 +25,30 @@ func (c *core) enterNewRound(blockNumber *big.Int, round *big.Int) {
 		sRound        = state.Round()
 		sStep         = state.Step()
 	)
-	if sBlockNunmber.Cmp(blockNumber) != 0 || round.Cmp(sRound) < 0 || (sRound.Cmp(round) == 0 && sStep != RoundStepNewHeight) {
+	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep != RoundStepNewHeight) {
 		log.Debug("enterNewRound ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound.String(), "input_round", round.String(),
+			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
 		return
 	}
 
 	log.Debug("enterNewRound",
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-		"current_round", sRound.String(), "input_round", round.String(),
+		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
 
 	//if the round we enter is higher than current round, we'll have to adjust the proposer.
-	if sRound.Cmp(round) < 0 {
+	if sRound < round {
 		currentProposer := c.valSet.GetProposer()
-		c.valSet.CalcProposer(currentProposer.Address(), round.Uint64())
+		c.valSet.CalcProposer(currentProposer.Address(), round)
 	}
 
 	//Update to RoundStepNewRound
 	state.UpdateRoundStep(round, RoundStepNewRound)
 
 	//Upon NewRound, there should be no valid block yet
-	state.SetValidRoundAndBlock(nil, nil)
+	state.SetValidRoundAndBlock(-1, nil)
 
 	c.enterPropose(blockNumber, round)
 
@@ -56,24 +56,27 @@ func (c *core) enterNewRound(blockNumber *big.Int, round *big.Int) {
 
 //defaultDecideProposal is the default proposal selector
 //it will prioritize validBlock, else will get its own block from tx_pool
-func (c *core) defaultDecideProposal(round *big.Int) tendermint.Proposal {
+func (c *core) defaultDecideProposal(round int64) tendermint.Proposal {
 	var (
-		state     = c.currentState
+		state = c.currentState
 	)
 	// if there is validBlock, propose it.
-	if state.ValidRound() != nil {
+	if state.ValidRound() != -1 {
+		log.Debug("getting the core's valid", "block", state.ValidBlock())
+
 		return tendermint.Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
 			POLRound: state.ValidRound(),
 		}
 	}
-
+	//TODO: remove this
+	log.Debug("getting the core's block", "block", state.Block())
 	//get the block node currently received from tx_pool
 	return tendermint.Proposal{
 		Block:    state.Block(),
 		Round:    round,
-		POLRound: big.NewInt(-1),
+		POLRound: -1,
 	}
 }
 
@@ -83,7 +86,7 @@ func (c *core) defaultDecideProposal(round *big.Int) tendermint.Proposal {
 //otherwise it will set timeout and eventually call enterPrevote
 //enterPropose is called after:
 // enterNewRound(blockNumber,round)
-func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
+func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	//This is strictly use with pointer for state update.
 	var (
 		state         = c.currentState
@@ -91,17 +94,17 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 		sRound        = state.Round()
 		sStep         = state.Step()
 	)
-	if sBlockNunmber.Cmp(blockNumber) != 0 || sRound.Cmp(round) > 0 || (sRound.Cmp(round) == 0 && sStep >= RoundStepPropose) {
+	if sBlockNunmber.Cmp(blockNumber) != 0 || sRound > round || (sRound == round && sStep >= RoundStepPropose) {
 		log.Debug("enterPropose ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound.String(), "input_round", round.String(),
+			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPropose.String())
 		return
 	}
 
 	log.Debug("enterPropose",
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-		"current_round", sRound.String(), "input_round", round.String(),
+		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepPropose.String())
 
 	defer func() {
@@ -126,7 +129,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 	})
 
 	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		log.Debug("this node is not a validator of this round", "address", c.backend.Address().String(), "block_number", blockNumber.String(), "round", round.String())
+		log.Debug("this node is not a validator of this round", "address", c.backend.Address().String(), "block_number", blockNumber.String(), "round", round)
 		return
 	}
 	//if we are proposer, find the latest block we're having to propose
@@ -137,7 +140,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 			lockedBlock = state.LockedBlock()
 		)
 		// if there is a lockedBlock, set validRound and validBlock to locked one
-		if lockedRound != nil {
+		if lockedRound != -1 {
 			state.SetValidRoundAndBlock(lockedRound, lockedBlock)
 
 		}
@@ -147,11 +150,11 @@ func (c *core) enterPropose(blockNumber *big.Int, round *big.Int) {
 	}
 }
 
-func (c *core) enterPrevote(blockNumber *big.Int, round *big.Int) {
+func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 	//TODO: implement this
 }
 
-func (c *core) enterPrecommit(blockNumber *big.Int, round *big.Int) {
+func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	//TODO: implement this
 }
 
@@ -161,5 +164,5 @@ func (c *core) startRoundZero() {
 		c.valSet = c.backend.Validators(c.currentState.BlockNumber())
 
 	}
-	c.enterNewRound(c.currentState.view.BlockNumber, big.NewInt(0))
+	c.enterNewRound(c.currentState.view.BlockNumber, 0)
 }

@@ -5,6 +5,9 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -17,6 +20,8 @@ import (
 type Engine interface {
 	Start() error
 	Stop() error
+	//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
+	SetBlockForProposal(block *types.Block)
 }
 
 // TODO: More msg codes here if needed
@@ -27,10 +32,10 @@ const (
 )
 
 type message struct {
-	Code          uint64
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
+	Code      uint64
+	Msg       []byte
+	Address   common.Address
+	Signature []byte
 	//TODO: Is CommitedSeal needed in message of Tendermint?
 	CommittedSeal []byte
 }
@@ -57,6 +62,30 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+func (m *message) PayLoadWithoutSignature() ([]byte, error) {
+	return rlp.EncodeToBytes(&message{
+		Code:          m.Code,
+		Address:       m.Address,
+		Msg:           m.Msg,
+		Signature:     []byte{},
+		CommittedSeal: m.CommittedSeal,
+	})
+}
+
+// GetAddressFromSignature gets the signer address from the signature
+func (m *message) GetAddressFromSignature() (common.Address, error) {
+	payLoad, err := m.PayLoadWithoutSignature()
+	if err != nil {
+		return common.Address{}, err
+	}
+	// 2. Recover public key
+	pubkey, err := crypto.SigToPub(payLoad, m.Signature)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
 type messageSet struct {
 	view       *tendermint.View
 	valSet     tendermint.ValidatorSet
@@ -68,7 +97,7 @@ type messageSet struct {
 func newMessageSet(valSet tendermint.ValidatorSet) *messageSet {
 	return &messageSet{
 		view: &tendermint.View{
-			Round:       new(big.Int),
+			Round:       0,
 			BlockNumber: new(big.Int),
 		},
 		messagesMu: new(sync.Mutex),

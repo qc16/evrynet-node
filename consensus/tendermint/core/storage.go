@@ -18,14 +18,15 @@ func (c *core) getStoredState() *roundState {
 	//TODO: init block 0
 	if rs == nil {
 		view := tendermint.View{
-			Round:       big.NewInt(0),
+			Round:       0,
 			BlockNumber: big.NewInt(1),
 		}
 		rs = &roundState{
-			view:  &view,
-			mu:    &sync.RWMutex{},
-			step:  RoundStepNewHeight,
-			block: types.NewBlockWithHeader(&types.Header{}),
+			view:        &view,
+			mu:          &sync.RWMutex{},
+			step:        RoundStepNewHeight,
+			block:       types.NewBlockWithHeader(&types.Header{}),
+			lockedRound: -1,
 			//TODO: timeout setup
 		}
 	}

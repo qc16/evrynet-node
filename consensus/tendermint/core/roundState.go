@@ -29,8 +29,8 @@ import (
 // newRoundState creates a new roundState instance with the given view and validatorSet
 func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
 	proposalReceived *tendermint.Proposal, block *types.Block,
-	lockedRound *big.Int, lockedBlock *types.Block,
-	validRound *big.Int, validBlock *types.Block) *roundState {
+	lockedRound int64, lockedBlock *types.Block,
+	validRound int64, validBlock *types.Block) *roundState {
 	return &roundState{
 		view:               view,
 		block:              block,
@@ -38,7 +38,7 @@ func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
 		lockedBlock:        lockedBlock,
 		validRound:         validRound,
 		validBlock:         validBlock,
-		ProposalReceived:   proposalReceived,
+		proposalReceived:   proposalReceived,
 		PrevotesReceived:   newMessageSet(validatorSet),
 		PrecommitsReceived: newMessageSet(validatorSet),
 		mu:                 new(sync.RWMutex),
@@ -50,13 +50,13 @@ type roundState struct {
 	view  *tendermint.View // view contains round and height
 	block *types.Block     // current proposed block
 
-	lockedRound *big.Int     // lockedRound is latest round it is locked
+	lockedRound int64     // lockedRound is latest round it is locked
 	lockedBlock *types.Block // lockedBlock is block it is locked at lockedRound above
 
-	validRound *big.Int     // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
+	validRound int64     // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
 	validBlock *types.Block // validBlock is last known block of PoLC above
 
-	ProposalReceived   *tendermint.Proposal //
+	proposalReceived   *tendermint.Proposal //
 	PrevotesReceived   *messageSet
 	PrecommitsReceived *messageSet
 
@@ -66,6 +66,7 @@ type roundState struct {
 
 	mu *sync.RWMutex
 }
+
 
 func (s *roundState) Step() RoundStepType {
 	s.mu.RLock()
@@ -79,24 +80,31 @@ func (s *roundState) BlockNumber() *big.Int {
 	return s.view.BlockNumber
 }
 
-func (s *roundState) Round() *big.Int {
+func (s *roundState) Round() int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.view.Round
 }
 
-func (s *roundState) UpdateRoundStep(round *big.Int, step RoundStepType) {
+func (s *roundState) UpdateRoundStep(round int64, step RoundStepType) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.view.Round = round
 	s.step = step
 }
 
+func (s *roundState) ProposalReceived() *tendermint.Proposal{
+	s.mu.Lock()
+	defer s.mu.RUnlock()
+	return s.proposalReceived
+}
+
+
 func (s *roundState) SetProposalReceived(proposalReceived *tendermint.Proposal) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.ProposalReceived = proposalReceived
+	s.proposalReceived = proposalReceived
 }
 
 func (s *roundState) SetView(v *tendermint.View) {
@@ -134,7 +142,7 @@ func (s *roundState) Block() *types.Block {
 	return s.block
 }
 
-func (s *roundState) SetLockedRoundAndBlock(lockedR *big.Int, lockedBl *types.Block) {
+func (s *roundState) SetLockedRoundAndBlock(lockedR int64, lockedBl *types.Block) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -142,7 +150,7 @@ func (s *roundState) SetLockedRoundAndBlock(lockedR *big.Int, lockedBl *types.Bl
 	s.lockedBlock = lockedBl
 }
 
-func (s *roundState) LockedRound() *big.Int {
+func (s *roundState) LockedRound() int64{
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -156,7 +164,7 @@ func (s *roundState) LockedBlock() *types.Block {
 	return s.lockedBlock
 }
 
-func (s *roundState) SetValidRoundAndBlock(validR *big.Int, validBl *types.Block) {
+func (s *roundState) SetValidRoundAndBlock(validR int64, validBl *types.Block) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -164,7 +172,7 @@ func (s *roundState) SetValidRoundAndBlock(validR *big.Int, validBl *types.Block
 	s.validBlock = validBl
 }
 
-func (s *roundState) ValidRound() *big.Int {
+func (s *roundState) ValidRound() int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -185,11 +193,11 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	var ss struct {
 		View               *tendermint.View
 		Block              *types.Block
-		LockedRound        *big.Int
+		LockedRound        int64
 		LockedBlock        *types.Block
-		ValidRound         *big.Int
+		ValidRound         int64
 		ValidBlock         *types.Block
-		ProposalReceived   *tendermint.Proposal
+		proposalReceived   *tendermint.Proposal
 		PrevotesReceived   *messageSet
 		PrecommitsReceived *messageSet
 	}
@@ -200,7 +208,7 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	s.view, s.block = ss.View, ss.Block
 	s.lockedRound, s.lockedBlock = ss.LockedRound, ss.LockedBlock
 	s.validRound, s.validBlock = ss.ValidRound, ss.ValidBlock
-	s.ProposalReceived = ss.ProposalReceived
+	s.proposalReceived = ss.proposalReceived
 	s.PrevotesReceived = ss.PrevotesReceived
 	s.PrecommitsReceived = ss.PrecommitsReceived
 	s.mu = new(sync.RWMutex)
@@ -227,7 +235,7 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 		s.lockedBlock,
 		s.validRound,
 		s.validBlock,
-		s.ProposalReceived,
+		s.proposalReceived,
 		s.PrevotesReceived,
 		s.PrecommitsReceived,
 	})

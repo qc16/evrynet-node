@@ -77,10 +77,10 @@ func (valSet *defaultSet) List() []tendermint.Validator {
 
 // GetByIndex will return validator by index in defaultSet
 // If the index >= size of validators, return nil
-func (valSet *defaultSet) GetByIndex(i uint64) tendermint.Validator {
+func (valSet *defaultSet) GetByIndex(i int64) tendermint.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-	if i < uint64(valSet.Size()) {
+	if i < int64(valSet.Size()) {
 		return valSet.validators[i]
 	}
 	return nil
@@ -97,43 +97,43 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, tendermint.Val
 	return -1, nil
 }
 
-func calcSeed(valSet tendermint.ValidatorSet, proposer common.Address, round uint64) uint64 {
+func calcSeed(valSet tendermint.ValidatorSet, proposer common.Address, round int64) int64 {
 	offset := 0
 	if idx, val := valSet.GetByAddress(proposer); val != nil {
 		offset = idx
 	}
-	return uint64(offset) + round
+	return int64(offset) + round
 }
 
 func emptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
 
-func roundRobinProposer(valSet tendermint.ValidatorSet, proposer common.Address, round uint64) tendermint.Validator {
+func roundRobinProposer(valSet tendermint.ValidatorSet, proposer common.Address, round int64) tendermint.Validator {
 	if valSet.Size() == 0 {
 		return nil
 	}
-	seed := uint64(0)
+	seed := int64(0)
 	if emptyAddress(proposer) {
 		seed = round
 	} else {
 		seed = calcSeed(valSet, proposer, round) + 1
 	}
-	pick := seed % uint64(valSet.Size())
+	pick := seed % int64(valSet.Size())
 	return valSet.GetByIndex(pick)
 }
 
-func stickyProposer(valSet tendermint.ValidatorSet, proposer common.Address, round uint64) tendermint.Validator {
+func stickyProposer(valSet tendermint.ValidatorSet, proposer common.Address, round int64) tendermint.Validator {
 	if valSet.Size() == 0 {
 		return nil
 	}
-	seed := uint64(0)
+	seed := int64(0)
 	if emptyAddress(proposer) {
 		seed = round
 	} else {
 		seed = calcSeed(valSet, proposer, round)
 	}
-	pick := seed % uint64(valSet.Size())
+	pick := seed % int64(valSet.Size())
 	return valSet.GetByIndex(pick)
 }
 
@@ -171,7 +171,7 @@ func (valSet *defaultSet) Policy() tendermint.ProposerPolicy { return valSet.pol
 
 //CalcProposer implement valSet.CalcProposer. Based on the proposer selection scheme,
 //it will set valSet.proposer to the address of the pre-determined round.
-func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64) {
+func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round int64) {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	valSet.proposer = valSet.selector(valSet, lastProposer, round)

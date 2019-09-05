@@ -6,6 +6,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -86,13 +87,9 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
-func (c *core) FinalizeMsg(msg message) ([]byte, error) {
+func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 	msg.Address = c.backend.Address()
-	msgPayLoadWithoutSignature, err := rlp.EncodeToBytes(message{
-		Code:    msg.Code,
-		Address: msg.Address,
-		Msg:     msg.Msg,
-	})
+	msgPayLoadWithoutSignature, err := msg.PayLoadWithoutSignature()
 	if err != nil {
 		return nil, err
 	}
@@ -103,11 +100,13 @@ func (c *core) FinalizeMsg(msg message) ([]byte, error) {
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
 func (c *core) SendPropose(propose *tendermint.Proposal) {
+	//TODO: remove these log in production
+	log.Debug("prepare to send proposal", "proposal", propose)
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
 		log.Error("Failed to encode Proposal to bytes", "error", err)
 	}
-	payload, err := c.FinalizeMsg(message{
+	payload, err := c.FinalizeMsg(&message{
 		Code: msgPropose,
 		Msg:  msgData,
 	})
@@ -118,4 +117,8 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	if err := c.backend.Gossip(c.valSet, payload); err != nil {
 		log.Error("Failed to Gossip proposal", "error", err)
 	}
+}
+
+func (c *core) SetBlockForProposal(b *types.Block) {
+	c.currentState.SetBlock(b)
 }

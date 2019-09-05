@@ -44,7 +44,7 @@ type ValidatorSet interface {
 	// Return the validator array
 	List() []Validator
 	// Get validator by index
-	GetByIndex(i uint64) Validator
+	GetByIndex(i int64) Validator
 	// Get validator by given address
 	GetByAddress(addr common.Address) (int, Validator)
 	// RemoveValidator remove the input validator from a list. It return false if the validator exist and is removed.
@@ -59,17 +59,17 @@ type ValidatorSet interface {
 	// Check whether the validator with given address is a proposer
 	IsProposer(address common.Address) bool
 	// CalcProposer return the proposer for the different of round number indicated
-	CalcProposer(lastProposer common.Address, roundDiff uint64)
+	CalcProposer(lastProposer common.Address, roundDiff int64)
 	// GetProposer return the current proposer
 	GetProposer() Validator
 }
 
 // ----------------------------------------------------------------------------
 
-type ProposalSelector func(ValidatorSet, common.Address, uint64) Validator
+type ProposalSelector func(ValidatorSet, common.Address, int64) Validator
 
 // View includes a round number and a height of block we want to commit
 type View struct {
-	Round       *big.Int
+	Round      int64
 	BlockNumber *big.Int
 }
