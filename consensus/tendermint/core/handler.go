@@ -22,6 +22,7 @@ func (c *core) subscribeEvents() {
 		// external events
 		tendermint.NewBlockEvent{},
 		tendermint.MessageEvent{},
+		tendermint.Proposal{},
 	)
 }
 
