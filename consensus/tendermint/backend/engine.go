@@ -149,14 +149,11 @@ func (sb *backend) Stop() error {
 	return nil
 }
 
-// Author retrieves the Ethereum address of the account that minted the given
+// Author retrieves the Evrynet address of the account that minted the given
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	log.Warn("Author: implement me")
-
-	//TODO: fake return address from a signed header.
-	return common.Address{}, nil
+	return blockProposer(header)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of a
@@ -229,11 +226,11 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	if err := sb.verifyProposalSeal(header, parents, snap); err != nil {
+	if err := sb.verifyProposalSeal(header, snap); err != nil {
 		return err
 	}
 
-	return sb.verifyCommittedSeals(header, parents, snap)
+	return sb.verifyCommittedSeals(header, snap)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -241,8 +238,20 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 // a results channel to retrieve the async verifications (the order is that of
 // the input slice).
 func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	panic("VerifyHeaders: implement me")
-	//TODO: Research & Implement
+	passed := make(chan struct{})
+	errorHeaders := make(chan error, len(headers))
+	go func() {
+		for i, header := range headers {
+			err := sb.verifyHeader(chain, header, headers[:i])
+
+			select {
+			case <-passed:
+				return
+			case errorHeaders <- err:
+			}
+		}
+	}()
+	return passed, errorHeaders
 }
 
 func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
@@ -250,16 +259,69 @@ func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block)
 	//TODO: Research & Implement
 }
 
+// VerifySeal checks whether the crypto seal on a header is valid according to
+// the consensus rules of the given engine.
 func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	panic("VerifySeal: implement me")
-	//TODO: Research & Implement
+	// get parent header and ensure the signer is in parent's validator set
+	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		return errUnknownBlock
+	}
+
+	// ensure that the difficulty equals to defaultDifficulty
+	if header.Difficulty.Cmp(defaultDifficulty) != 0 {
+		return errInvalidDifficulty
+	}
+
+	// get snap shoot to prepare for the verify proposal
+	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+
+	return sb.verifyProposalSeal(header, snap)
 }
 
+// Prepare initializes the consensus fields of a block header according to the
+// rules of a particular engine. The changes are executed inline.
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
+	// set coinbase with the proposer's address
+	header.Coinbase = sb.Address()
+	// use the same difficulty and mixDigest for all blocks
 	header.Difficulty = defaultDifficulty
-	log.Warn("Prepare: implement me")
+	header.MixDigest = types.TendermintDigest
+	// use the same difficulty for all blocks
+	header.Difficulty = defaultDifficulty
 
-	//TODO: Research & Implement
+	// get parent
+	blockNumber := header.Number.Uint64()
+	parent := chain.GetHeader(header.ParentHash, blockNumber-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// get snapshot
+	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+	// add validators in snapshot to extraData's validators section
+	extra, err := prepareExtra(header, snap.validators())
+	if err != nil {
+		return err
+	}
+	header.Extra = extra
+
+	// set header's timestamp from parent's timestamp and blockperiod
+	parentTime := new(big.Int).SetUint64(parent.Time)
+	blockPeriod := new(big.Int).SetUint64(sb.config.BlockPeriod)
+	headerTime := new(big.Int).Add(parentTime, blockPeriod)
+	if headerTime.Int64() < time.Now().Unix() {
+		header.Time = uint64(time.Now().Unix())
+	} else {
+		header.Time = headerTime.Uint64()
+	}
+
 	return nil
 }
 
@@ -282,28 +344,9 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
 
+// SealHash returns the hash of a block prior to it being sealed.
 func (sb *backend) SealHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewLegacyKeccak256()
-
-	//TODO: this logic is temporary.
-	// I wanna make hash is different when SealHash() was called to bypass `func (w *worker) taskLoop()`
-	_ = rlp.Encode(hasher, []interface{}{
-		header.ParentHash,
-		header.UncleHash,
-		header.Coinbase,
-		header.Root,
-		header.TxHash,
-		header.ReceiptHash,
-		header.Bloom,
-		header.Difficulty,
-		header.Number,
-		header.GasLimit,
-		header.GasUsed,
-		header.Time,
-		header.Extra,
-	})
-	hasher.Sum(hash[:0])
-	return hash
+	return sigHash(header)
 }
 
 func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
@@ -406,7 +449,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 }
 
 // verifyProposalSeal checks proposal seal is signed by validator
-func (sb *backend) verifyProposalSeal(header *types.Header, parents []*types.Header, snap *Snapshot) error {
+func (sb *backend) verifyProposalSeal(header *types.Header, snap *Snapshot) error {
 	// resolve the authorization key and check against signers
 	signer, err := blockProposer(header)
 	if err != nil {
@@ -425,7 +468,7 @@ func (sb *backend) verifyProposalSeal(header *types.Header, parents []*types.Hea
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (sb *backend) verifyCommittedSeals(header *types.Header, parents []*types.Header, snap *Snapshot) error {
+func (sb *backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) error {
 	extra, err := types.ExtractTendermintExtra(header)
 	if err != nil {
 		return err
