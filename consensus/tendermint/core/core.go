@@ -117,6 +117,8 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	if err := c.backend.Gossip(c.valSet, payload); err != nil {
 		log.Error("Failed to Gossip proposal", "error", err)
 	}
+	//TODO: remove this log in production
+	log.Debug("sent proposal", "proposal", propose)
 }
 
 func (c *core) SetBlockForProposal(b *types.Block) {

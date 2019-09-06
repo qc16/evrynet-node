@@ -64,7 +64,7 @@ func (c *core) handleEvents() {
 					}
 				}
 			default:
-				fmt.Printf("--- Unknow event :%v", ev)
+				log.Debug("Unknown event ", "event", ev)
 			}
 		case ti := <-c.timeout.Chan(): //something from timeout...
 			c.handleTimeout(ti)
