@@ -15,12 +15,15 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
 	"golang.org/x/crypto/sha3"
 )
 
 var (
+	TendermintBlockReward = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
+
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
 )
@@ -55,6 +58,8 @@ var (
 	errInvalidVotingChain = errors.New("invalid voting chain")
 	// errCoinBaseInvalid is returned if the value of coin base is not equals proposer's address in header
 	errCoinBaseInvalid = errors.New("invalid coin base address")
+	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
+	errInvalidUncleHash = errors.New("non empty uncle hash")
 )
 
 // Seal generates a new block for the given input block with the local miner's
@@ -254,9 +259,13 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	return passed, errorHeaders
 }
 
+// VerifyUncles verifies that the given block's uncles conform to the consensus
+// rules of a given engine.
 func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
-	panic("VerifyUncles: implement me")
-	//TODO: Research & Implement
+	if len(block.Uncles()) > 0 {
+		return errInvalidUncleHash
+	}
+	return nil
 }
 
 // VerifySeal checks whether the crypto seal on a header is valid according to
@@ -325,16 +334,27 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	return nil
 }
 
+// Finalize runs any post-transaction state modifications (e.g. block rewards)
+//
+// Note, the block header and state database might be updated to reflect any
+// consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
-	log.Warn("Finalize: implement me")
-	//TODO: Research & Implement
+	// Accumulate any block rewards and commit the final state root
+	accumulateRewards(chain.Config(), state, header)
+
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 
+// FinalizeAndAssemble runs any post-transaction state modifications (e.g. block rewards)
+// and assembles the final block.
+//
+// Note, the block header and state database might be updated to reflect any
+// consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	log.Warn("FinalizeAndAssemble: implement me")
-	//TODO: Research & Implement
+	// Accumulate any block rewards and commit the final state root
+	accumulateRewards(chain.Config(), state, header)
 
 	// No block rewards, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -644,4 +664,16 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 
 	h.Extra = append(h.Extra[:types.TendermintExtraVanity], payload...)
 	return nil
+}
+
+// AccumulateRewards credits the coinbase of the given block with the proposing
+// reward.
+func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
+	// Select the correct block reward based on chain progression
+	blockReward := TendermintBlockReward
+
+	// Accumulate the rewards for the proposer
+	reward := new(big.Int).Set(blockReward)
+
+	state.AddBalance(header.Coinbase, reward)
 }
