@@ -35,6 +35,7 @@ func (c *core) unsubscribeEvents() {
 func (c *core) handleEvents() {
 	// Clear state
 	defer func() {
+		c.currentState = nil
 		c.handlerWg.Done()
 	}()
 
@@ -53,7 +54,6 @@ func (c *core) handleEvents() {
 				log.Debug("Received New Block event", "event", ev)
 				c.currentState.SetBlock(ev.Block)
 			case tendermint.MessageEvent:
-
 				log.Debug("Received Message event", "message", ev)
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 				var msg message
@@ -64,6 +64,8 @@ func (c *core) handleEvents() {
 						log.Error("failed decode msg", "error", err)
 					}
 				}
+			case tendermint.Proposal:
+				log.Debug("Received Proposal message", "message", ev)
 			default:
 				log.Debug("Unknown event ", "event", ev)
 			}
