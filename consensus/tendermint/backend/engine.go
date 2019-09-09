@@ -14,6 +14,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -277,11 +278,6 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 		return errUnknownBlock
 	}
 
-	// ensure that the difficulty equals to defaultDifficulty
-	if header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
-	}
-
 	// get snap shoot to prepare for the verify proposal
 	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, nil)
 	if err != nil {
@@ -299,7 +295,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// use the same difficulty and mixDigest for all blocks
 	header.MixDigest = types.TendermintDigest
 	// use the same difficulty for all blocks
-	header.Difficulty = defaultDifficulty
+	header.Difficulty = sb.CalcDifficulty(chain, header.Time, nil)
 
 	// get parent
 	blockNumber := header.Number.Uint64()
@@ -309,7 +305,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// prepare extra data without validators
-	extra, err := prepareExtra(header, nil)
+	extra, err := prepareExtra(header)
 	if err != nil {
 		return err
 	}
@@ -568,7 +564,7 @@ func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 }
 
 // prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
+func prepareExtra(header *types.Header) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
@@ -577,12 +573,7 @@ func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
 	}
 	buf.Write(header.Extra[:types.TendermintExtraVanity])
 
-	tdm := &types.TendermintExtra{
-		Validators:    vals,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
+	tdm := &types.TendermintExtra{}
 	payload, err := rlp.EncodeToBytes(&tdm)
 	if err != nil {
 		return nil, err

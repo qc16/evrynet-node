@@ -36,7 +36,7 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 	assert.Equal(t, true, engine.coreStarted)
 
 	// without seal
-	block := makeBlockWithoutSeal(genesisHeader, validators)
+	block := makeBlockWithoutSeal(genesisHeader)
 	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
 
 	err = engine.Seal(chain, block, nil, nil)
@@ -69,7 +69,7 @@ func TestAuthor(t *testing.T) {
 	assert.NotNil(t, engine)
 	assert.Equal(t, true, engine.coreStarted)
 
-	block := makeBlockWithSeal(engine, genesisHeader, validators)
+	block := makeBlockWithSeal(engine, genesisHeader)
 	header := block.Header()
 	signer, err := engine.Author(header)
 	assert.NoError(t, err)
@@ -95,7 +95,7 @@ func TestPrepare(t *testing.T) {
 	assert.NotNil(t, engine)
 	assert.Equal(t, true, engine.coreStarted)
 
-	block := makeBlockWithoutSeal(genesisHeader, validators)
+	block := makeBlockWithoutSeal(genesisHeader)
 	header := block.Header()
 
 	err = engine.Prepare(chain, header)
@@ -129,35 +129,30 @@ func TestVerifySeal(t *testing.T) {
 	err = engine.VerifySeal(chain, genesisHeader)
 	assert.Equal(t, errUnknownBlock, err)
 
-	block := makeBlockWithSeal(engine, genesisHeader, validators)
+	block := makeBlockWithSeal(engine, genesisHeader)
 	err = engine.VerifySeal(chain, block.Header())
 	assert.NoError(t, err)
 }
 
 // TestPrepareExtra
-// 0xf86df8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44094000000000000000000000000000000000000000080c0
+// 0xd8c094000000000000000000000000000000000000000080c0
 func TestPrepareExtra(t *testing.T) {
-	validators := make([]common.Address, 4)
-	validators[0] = common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a"))
-	validators[1] = common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212"))
-	validators[2] = common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6"))
-	validators[3] = common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440"))
-
 	vanity := make([]byte, types.TendermintExtraVanity)
-	expectedResult := append(vanity, hexutil.MustDecode("0xf86df8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44094000000000000000000000000000000000000000080c0")...)
+	data := hexutil.MustDecode("0xd8c094000000000000000000000000000000000000000080c0")
+	expectedResult := append(vanity, data...)
 
 	header := &types.Header{
 		Extra: vanity,
 	}
 
-	payload, err := prepareExtra(header, validators)
+	payload, err := prepareExtra(header)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, payload)
 
 	// append useless information to extra-data
 	header.Extra = append(vanity, make([]byte, 15)...)
 
-	payload, err = prepareExtra(header, validators)
+	payload, err = prepareExtra(header)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, payload)
 }
