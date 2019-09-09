@@ -297,7 +297,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// set coinbase with the proposer's address
 	header.Coinbase = sb.Address()
 	// use the same difficulty and mixDigest for all blocks
-	header.Difficulty = defaultDifficulty
 	header.MixDigest = types.TendermintDigest
 	// use the same difficulty for all blocks
 	header.Difficulty = defaultDifficulty
@@ -309,13 +308,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		return consensus.ErrUnknownAncestor
 	}
 
-	// get snapshot
-	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, nil)
-	if err != nil {
-		return err
-	}
-	// add validators in snapshot to extraData's validators section
-	extra, err := prepareExtra(header, snap.validators())
+	// prepare extra data without validators
+	extra, err := prepareExtra(header, nil)
 	if err != nil {
 		return err
 	}
@@ -369,10 +363,9 @@ func (sb *backend) SealHash(header *types.Header) (hash common.Hash) {
 	return sigHash(header)
 }
 
+// CalcDifficulty tempo return default difficulty
 func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	log.Warn("CalcDifficulty: implement me")
-	//TODO: Research & Implement
-	return nil
+	return defaultDifficulty
 }
 
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {

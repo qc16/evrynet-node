@@ -177,7 +177,7 @@ type mockChain struct {
 //GetHeader implement a mock version of chainReader.GetHeader
 //It returns correctParentHeader with Number set to input blockNumber
 func (mc *mockChain) GetHeader(hash common.Hash, blockNumber uint64) *types.Header {
-	if blockNumber == 0 {
+	if mc.genesisHeader.Hash() == hash {
 		return mc.genesisHeader
 	}
 
@@ -187,10 +187,7 @@ func (mc *mockChain) GetHeader(hash common.Hash, blockNumber uint64) *types.Head
 //GetHeaderByNumber implement a mock version of chainReader.GetHeaderByNumber
 //It returns genesis Header if blockNumber is 0, else return an empty Header
 func (mc *mockChain) GetHeaderByNumber(blockNumber uint64) *types.Header {
-	if blockNumber == 0 {
-		return mc.genesisHeader
-	}
-	return nil
+	return mc.genesisHeader
 }
 
 func (mc *mockChain) Config() *params.ChainConfig {
