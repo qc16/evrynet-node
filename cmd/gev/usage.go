@@ -249,6 +249,11 @@ var AppHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name: "MISC",
+	}, {
+		Name: "TENDERMINT",
+		Flags: []cli.Flag{
+			utils.TendermintBlockPeriodFlag,
+		},
 	},
 }
 

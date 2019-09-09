@@ -146,6 +146,7 @@ var (
 		utils.EWASMInterpreterFlag,
 		utils.EVMInterpreterFlag,
 		configFileFlag,
+		utils.TendermintBlockPeriodFlag,
 	}
 
 	rpcFlags = []cli.Flag{

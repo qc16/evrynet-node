@@ -25,6 +25,7 @@ type Config struct {
 var DefaultConfig = &Config{
 	ProposerPolicy:      RoundRobin,
 	Epoch:               30000,
+	BlockPeriod:         1,                       // 1 seconds
 	TimeoutPropose:      3000 * time.Millisecond, //This is taken from tendermint. Might need tuning
 	TimeoutProposeDelta: 500 * time.Millisecond,  //This is taken from tendermint. Might need tunning
 	TimeoutPrevote:      1000 * time.Millisecond,

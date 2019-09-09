@@ -667,6 +667,13 @@ var (
 		Usage: "Restrict connection between two whisper light clients",
 	}
 
+	// Tendermint settings
+	TendermintBlockPeriodFlag = cli.Uint64Flag{
+		Name:  "tendermint.blockperiod",
+		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
+		Value: eth.DefaultConfig.Tendermint.BlockPeriod,
+	}
+
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -1318,6 +1325,13 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 	}
 }
 
+// set tendermint config
+func setTendermint(ctx *cli.Context, cfg *eth.Config) {
+	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
+		cfg.Tendermint.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
+	}
+}
+
 // checkExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
@@ -1389,6 +1403,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	setEthash(ctx, cfg)
 	setMiner(ctx, &cfg.Miner)
 	setWhitelist(ctx, cfg)
+	setTendermint(ctx, cfg)
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
