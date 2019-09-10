@@ -120,11 +120,6 @@ func (c *core) handlePropose(msg message) error {
 		return err
 	}
 
-	// signature must come from Proposer of this round
-	if c.valSet.GetProposer().Address() != signer {
-		return ErrInvalidProposalSignature
-	}
-
 	state.SetProposalReceived(&proposal)
 	//// TODO: We can check if Proposal is for a different block as this is a sign of misbehavior!
 	log.Info("received proposal", "proposal", proposal)

@@ -155,8 +155,10 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	}
 }
 
-//defaultDecideProposal is the default proposal selector
-//it will prioritize validBlock, else will get its own block from tx_pool
+//defaultDoPrevote is the default process of select a block for pretoe
+//it will: - prevote lockedBlock if lockedBlock !=nil
+//		   - prevote for proposalReceived if valid
+//		   - prevote nil otherwise
 func (c *core) defaultDoPrevote(round int64) {
 	var (
 		state = c.currentState

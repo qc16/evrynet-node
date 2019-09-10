@@ -120,7 +120,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		return
 	}
 
-	if err := c.backend.Gossip(c.valSet, payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 		log.Error("Failed to Broadcast proposal", "error", err)
 		return
 	}
@@ -135,6 +135,11 @@ func (c *core) SetBlockForProposal(b *types.Block) {
 //SendVote send broadcast its vote to the network
 //it only accept 2 voteType: msgPrevote and msgcommit
 func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
+	//This should never happen, but it is a safe guard
+	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
+		log.Debug("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
+		return
+	}
 	if voteType != msgPrevote && voteType != msgCommit {
 		return
 	}
@@ -160,7 +165,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		log.Error("Failed to Finalize Vote", "error", err)
 		return
 	}
-	if err := c.backend.Gossip(c.valSet, payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 		log.Error("Failed to Broadcast vote", "error", err)
 		return
 	}

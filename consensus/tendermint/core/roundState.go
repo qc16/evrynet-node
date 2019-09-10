@@ -148,7 +148,7 @@ func (s *roundState) SetLockedRoundAndBlock(lockedR int64, lockedBl *types.Block
 	s.lockedBlock = lockedBl
 }
 
-func (s *roundState) LockedRound() int64{
+func (s *roundState) LockedRound() int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
