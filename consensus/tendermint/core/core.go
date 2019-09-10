@@ -131,3 +131,38 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 func (c *core) SetBlockForProposal(b *types.Block) {
 	c.currentState.SetBlock(b)
 }
+
+//SendVote send broadcast its vote to the network
+//it only accept 2 voteType: msgPrevote and msgcommit
+func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
+	if voteType != msgPrevote && voteType != msgCommit {
+		return
+	}
+	var blockHash = common.Hash{}
+	if block != nil {
+		blockHash = block.Hash()
+	}
+
+	vote := &tendermint.Vote{
+		BlockHash: &blockHash,
+		Round:     round,
+	}
+	msgData, err := rlp.EncodeToBytes(vote)
+	if err != nil {
+		log.Error("Failed to encode Vote to bytes", "error", err)
+		return
+	}
+	payload, err := c.FinalizeMsg(&message{
+		Code: voteType,
+		Msg:  msgData,
+	})
+	if err != nil {
+		log.Error("Failed to Finalize Vote", "error", err)
+		return
+	}
+	if err := c.backend.Gossip(c.valSet, payload); err != nil {
+		log.Error("Failed to Broadcast vote", "error", err)
+		return
+	}
+	log.Debug("sent vote", "vote", vote)
+}

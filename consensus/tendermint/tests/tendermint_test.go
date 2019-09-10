@@ -71,7 +71,7 @@ func TestStartingTendermint(t *testing.T) {
 		errCh         = make(chan error, totalPeers)
 		doneCh        = make(chan struct{}, totalPeers)
 		receivedCount int
-		expectedCount = 2
+		expectedCount = 10
 	)
 	timeout := time.After(30 * time.Second)
 

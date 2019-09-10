@@ -51,17 +51,17 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case tendermint.NewBlockEvent:
-				log.Debug("Received New Block event", "event", ev)
+				log.Debug("received New Block event", "event", ev)
 				c.currentState.SetBlock(ev.Block)
 			case tendermint.MessageEvent:
-				log.Debug("Received Message event", "message", ev)
+				log.Debug("received Message event", "message", ev)
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 				var msg message
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
 					log.Error("failed to decode msg", "error", err)
 				} else {
 					if err := c.handleMsg(msg); err != nil {
-						log.Error("failed decode msg", "error", err)
+						log.Error("failed to handle msg", "error", err)
 					}
 				}
 			case tendermint.Proposal:
@@ -111,15 +111,33 @@ func (c *core) handlePropose(msg message) error {
 	}
 	// Does not apply, this is not an error but may happen due to network lattency
 	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		log.Debug("Received proposal with different height/round")
+		log.Debug("received proposal with different height/round",
+			"current block number", state.BlockNumber().String(), "received block number", proposal.Block.Number().String(),
+			"current round", state.Round(), "received round", proposal.Round)
 		return nil
 	}
 	if err := c.verifyProposal(proposal, msg); err != nil {
 		return err
 	}
+
+	// signature must come from Proposer of this round
+	if c.valSet.GetProposer().Address() != signer {
+		return ErrInvalidProposalSignature
+	}
+
 	state.SetProposalReceived(&proposal)
 	//// TODO: We can check if Proposal is for a different block as this is a sign of misbehavior!
-	log.Info("Received proposal", "proposal", proposal)
+	log.Info("received proposal", "proposal", proposal)
+	return nil
+}
+
+func (c *core) handlePrevote(msg message) error {
+	var vote tendermint.Vote
+	log.Info("handling prevote ...")
+	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
+		return err
+	}
+	log.Info("received prevote", "prevote", vote)
 	return nil
 }
 
@@ -127,6 +145,8 @@ func (c *core) handleMsg(msg message) error {
 	switch msg.Code {
 	case msgPropose:
 		return c.handlePropose(msg)
+	case msgPrevote:
+		return c.handlePrevote(msg)
 	default:
 		return fmt.Errorf("unknown msg code %d", msg.Code)
 	}
