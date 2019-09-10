@@ -57,7 +57,7 @@ func (c *core) handleEvents() {
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 				var msg message
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
-					log.Error("failed decode msg", "error", err)
+					log.Error("failed to decode msg", "error", err)
 				} else {
 					if err := c.handleMsg(msg); err != nil {
 						log.Error("failed decode msg", "error", err)
@@ -77,8 +77,8 @@ func (c *core) handlePropose(msg message) error {
 		state    = c.currentState
 		proposal tendermint.Proposal
 	)
-	if err := rlp.DecodeBytes(msg.Msg, proposal); err != nil {
-		return fmt.Errorf("failed ")
+	if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
+		return err
 	}
 	// Already have one
 	// TODO: possibly catch double proposals

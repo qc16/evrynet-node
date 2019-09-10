@@ -93,8 +93,12 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return c.backend.Sign(msgPayLoadWithoutSignature)
+	signature, err := c.backend.Sign(msgPayLoadWithoutSignature)
+	if err != nil {
+		return nil, err
+	}
+	msg.Signature = signature
+	return rlp.EncodeToBytes(msg)
 }
 
 //SendPropose will Finalize the Proposal in term of signature and
@@ -105,17 +109,20 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
 		log.Error("Failed to encode Proposal to bytes", "error", err)
+		return
 	}
 	payload, err := c.FinalizeMsg(&message{
 		Code: msgPropose,
 		Msg:  msgData,
 	})
 	if err != nil {
-		log.Error("Failed to Finalize Message", "error", err)
+		log.Error("Failed to Finalize Proposal", "error", err)
+		return
 	}
 
 	if err := c.backend.Gossip(c.valSet, payload); err != nil {
-		log.Error("Failed to Gossip proposal", "error", err)
+		log.Error("Failed to Broadcast proposal", "error", err)
+		return
 	}
 	//TODO: remove this log in production
 	log.Debug("sent proposal", "proposal", propose)

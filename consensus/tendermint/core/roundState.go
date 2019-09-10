@@ -93,8 +93,8 @@ func (s *roundState) UpdateRoundStep(round int64, step RoundStepType) {
 	s.step = step
 }
 
-func (s *roundState) ProposalReceived() *tendermint.Proposal{
-	s.mu.Lock()
+func (s *roundState) ProposalReceived() *tendermint.Proposal {
+	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.proposalReceived
 }

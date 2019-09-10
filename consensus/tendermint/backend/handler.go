@@ -54,11 +54,11 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 		go func() {
 			//TODO: remove this log
-			log.Debug("Posting it mofos")
-			if err := sb.EventMux().Post(data); err != nil {
+			if err := sb.EventMux().Post(tendermint.MessageEvent{
+				Payload:data,
+			}); err != nil {
 				log.Error("failed to Post msg to core", "error", err)
 			}
-			log.Debug("Posted it mofos")
 		}()
 
 		return true, nil
