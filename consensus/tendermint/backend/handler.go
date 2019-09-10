@@ -3,12 +3,12 @@ package backend
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"golang.org/x/crypto/sha3"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -49,12 +49,14 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 			return true, errDecodeFailed
 		}
 		//log is used at local package level for testing now
-		log.Printf("--- Message from peer %s, msgCode is %d msg Hash is %s \n", addr.Hex(), msg.Code, hash.String())
+		log.Debug("Received Message from peer", "address", addr.Hex(), "code", msg.Code, "hash", hash.String())
 		//TODO: mark peer's message and self known message with the hash get from message
 
 		go func() {
-			if err := sb.tendermintEventMux.Post(data); err != nil {
-				log.Printf("error in Post event %v", err)
+			if err := sb.EventMux().Post(tendermint.MessageEvent{
+				Payload: data,
+			}); err != nil {
+				log.Error("failed to Post msg to core", "error", err)
 			}
 		}()
 

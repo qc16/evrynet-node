@@ -25,7 +25,7 @@ type TimeoutTicker interface {
 type timeoutInfo struct {
 	Duration    time.Duration `json:"duration"`
 	BlockNumber *big.Int      `json:"block_number"`
-	Round       *big.Int      `json:"round"`
+	Round       int64         `json:"round"`
 	Step        RoundStepType `json:"step"`
 }
 
@@ -39,10 +39,10 @@ func (A timeoutInfo) earlierOrEqual(B timeoutInfo) bool {
 	}
 
 	if A.BlockNumber.Cmp(B.BlockNumber) == 0 {
-		if A.Round.Cmp(B.Round) < 0 {
+		if A.Round < B.Round {
 			return true
 		}
-		if A.Round.Cmp(B.Round) == 0 && (A.Step > 0 && A.Step <= B.Step) {
+		if A.Round == B.Round && (A.Step > 0 && A.Step <= B.Step) {
 			return true
 		}
 	}
@@ -115,7 +115,7 @@ func (tt *timeoutTicker) stopTimer() {
 func (tt *timeoutTicker) timeoutRoutine() {
 	var ti = timeoutInfo{
 		BlockNumber: big.NewInt(0),
-		Round:       big.NewInt(0),
+		Round:       0,
 	}
 	//TODO: DO we need mutex for this?
 	for {

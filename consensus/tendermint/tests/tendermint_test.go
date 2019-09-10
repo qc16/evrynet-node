@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/eth"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -38,13 +41,12 @@ func TestStartingTendermint(t *testing.T) {
 		totalPeers = 2
 		n1         = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk1.PublicKey)[1:]) + "@33.4.2.1:30303")
 		n2         = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk2.PublicKey)[1:]) + "@33.4.2.1:30304")
+		header     = &types.Header{
+			Number: big.NewInt(1),
+		}
+		block = types.NewBlockWithHeader(header)
 	)
-	assert.NoError(t, tbe1.Start(nil, nil))
 	pm1, err := eth.NewTestProtocolManagerWithConsensus(tbe1)
-	time.Sleep(2 * time.Second)
-	assert.NoError(t, err)
-	defer pm1.Stop()
-
 	//Create 2 Pipe for read and write. These are full duplex
 	io1, io2 := p2p.MsgPipe()
 	//p1 will write to io2, p2 will receive from io1 and vice versal.
@@ -52,7 +54,18 @@ func TestStartingTendermint(t *testing.T) {
 	p2 := pm1.NewPeer(63, p2p.NewPeerFromNode(n2, fmt.Sprintf("peer %d", 1), nil), io1)
 	assert.NoError(t, eth.RegisterNewPeer(pm1, p1))
 	assert.NoError(t, eth.RegisterNewPeer(pm1, p2))
-
+	headHash := pm1.NodeInfo().Head
+	// Must Handshake for peer to init peer.td, peer.head
+	genesisHash := core.DefaultGenesisBlock().ToBlock(nil).Hash()
+	go func() {
+		err := p1.Handshake(eth.DefaultConfig.NetworkId, big.NewInt(0), headHash, genesisHash)
+		assert.NoError(t, err)
+	}()
+	go func() {
+		err := p2.Handshake(eth.DefaultConfig.NetworkId, big.NewInt(0), headHash, genesisHash)
+		assert.NoError(t, err)
+	}()
+	time.Sleep(2 * time.Second) // Wait for handshaking
 	//Making sure that the handlingMsg is done by calling pm.handleMsg
 	var (
 		errCh         = make(chan error, totalPeers)
@@ -60,7 +73,8 @@ func TestStartingTendermint(t *testing.T) {
 		receivedCount int
 		expectedCount = 2
 	)
-	timeout := time.After(20 * time.Second)
+	timeout := time.After(30 * time.Second)
+
 	for _, p := range []*eth.Peer{p1, p2} {
 		go func(p *eth.Peer) {
 			for {
@@ -72,6 +86,17 @@ func TestStartingTendermint(t *testing.T) {
 			}
 		}(p)
 	}
+	assert.NoError(t, err)
+	assert.NoError(t, tbe1.Start(nil, nil))
+
+	be, ok := tbe1.(tendermint.Backend)
+	assert.Equal(t, true, ok)
+	//This is unsafe (it might send new block after core get into propose
+	//but repeated run will get a correct case. It is the easiest way to inject a valid block for proposal
+	go be.EventMux().Post(tendermint.NewBlockEvent{
+		Block: block,
+	})
+
 outer:
 	for {
 		select {

@@ -1,7 +1,6 @@
 package tendermint
 
 import (
-	"math/big"
 	"time"
 )
 
@@ -30,8 +29,8 @@ var DefaultConfig = &Config{
 
 //ProposeTimeout return the timeout for a specific round
 //The formula is timeout= TimeoutPropose + round*TimeoutProposeDelta
-func (cfg Config) ProposeTimeout(round *big.Int) time.Duration {
+func (cfg Config) ProposeTimeout(round int64) time.Duration {
 	return time.Duration(
-		cfg.TimeoutPropose.Nanoseconds()+cfg.TimeoutProposeDelta.Nanoseconds()*(round.Int64()),
+		cfg.TimeoutPropose.Nanoseconds()+cfg.TimeoutProposeDelta.Nanoseconds()*(round),
 	) * time.Nanosecond
 }
