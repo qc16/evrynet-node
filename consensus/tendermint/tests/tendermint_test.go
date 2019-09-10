@@ -28,7 +28,7 @@ const (
 
 //TestStartingTendermint setup a test to with actual running components of a tendermint consensus
 //The test is not finished yet but by running it, the procedure of a tendermint in implementation can be seens
-//Current Expectation: if backend isc reated with nodePk1, it will be come proposer of the round and try to send propose message
+//Current Expectation: if backend is created with nodePk1, it will be come proposer of the round and try to send propose message
 // 					   if backend is created with nodePk2, it will wait for propose message and timeout
 // 					   other logs are printed to indicate flow logic of core's consensus.
 func TestStartingTendermint(t *testing.T) {
@@ -71,7 +71,7 @@ func TestStartingTendermint(t *testing.T) {
 		errCh         = make(chan error, totalPeers)
 		doneCh        = make(chan struct{}, totalPeers)
 		receivedCount int
-		expectedCount = 2
+		expectedCount = 10
 	)
 	timeout := time.After(30 * time.Second)
 
@@ -93,7 +93,7 @@ func TestStartingTendermint(t *testing.T) {
 	assert.Equal(t, true, ok)
 	//This is unsafe (it might send new block after core get into propose
 	//but repeated run will get a correct case. It is the easiest way to inject a valid block for proposal
-	go be.EventMux().Post(tendermint.NewBlockEvent{
+	go be.EventMux().Post(tendermint.Proposal{
 		Block: block,
 	})
 

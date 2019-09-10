@@ -20,8 +20,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/params"
 )
 
-
-
 func TestBackend_VerifyHeader(t *testing.T) {
 	var (
 		nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
@@ -41,26 +39,26 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.Equal(t, true, engine.coreStarted)
 
 	// without seal
-	block := makeBlockWithoutSeal(genesisHeader,validators)
+	block := makeBlockWithoutSeal(genesisHeader, validators)
 	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with seal but incorrect coinbase
-	block = makeBlockWithSeal(engine, genesisHeader,validators)
+	block = makeBlockWithSeal(engine, genesisHeader, validators)
 	header := block.Header()
 	header.Coinbase = common.Address{}
 	appendSeal(header, engine)
 	assert.Equal(t, errCoinBaseInvalid, engine.VerifyHeader(chain, header, false))
 
 	// without committed seal
-	block = makeBlockWithSeal(engine, genesisHeader,validators)
+	block = makeBlockWithSeal(engine, genesisHeader, validators)
 	assert.Equal(t, errEmptyCommittedSeals, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with committed seal but is invalid
-	block = mustMakeBlockWithCommittedSealInvalid(engine, genesisHeader,validators)
+	block = mustMakeBlockWithCommittedSealInvalid(engine, genesisHeader, validators)
 	assert.Equal(t, errInvalidSignature, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with committed seal
-	block = mustMakeBlockWithCommittedSeal(engine, genesisHeader,validators)
+	block = mustMakeBlockWithCommittedSeal(engine, genesisHeader, validators)
 	assert.NotNil(t, chain)
 	err = engine.VerifyHeader(chain, block.Header(), false)
 	assert.NoError(t, err)
@@ -104,7 +102,7 @@ func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types
 }
 
 func makeBlockWithoutSeal(pHeader *types.Header, validators []common.Address) *types.Block {
-	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader),validators)
+	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader), validators)
 	return types.NewBlockWithHeader(header)
 }
 
@@ -115,7 +113,7 @@ func makeBlockWithSeal(engine *backend, pHeader *types.Header, validators []comm
 }
 
 func mustMakeBlockWithCommittedSealInvalid(engine *backend, pHeader *types.Header, validators []common.Address) *types.Block {
-	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader),validators)
+	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader), validators)
 	appendSeal(header, engine)
 	invalidCommitSeal := make([]byte, types.TendermintExtraSeal)
 	_, err := rand.Read(invalidCommitSeal)
@@ -127,7 +125,7 @@ func mustMakeBlockWithCommittedSealInvalid(engine *backend, pHeader *types.Heade
 }
 
 func mustMakeBlockWithCommittedSeal(engine *backend, pHeader *types.Header, validators []common.Address) *types.Block {
-	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader),validators)
+	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader), validators)
 	appendSeal(header, engine)
 	commitHash := tendermintCore.PrepareCommittedSeal(header.Hash())
 	committedSeal, err := engine.Sign(commitHash)

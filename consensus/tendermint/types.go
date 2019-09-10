@@ -4,6 +4,7 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -45,5 +46,35 @@ func (p *Proposal) DecodeRLP(s *rlp.Stream) error {
 	p.Block = ps.Block
 	p.Round = round
 	p.POLRound = polcr
+	return nil
+}
+
+type Vote struct {
+	BlockHash *common.Hash
+	Round     int64
+	//TODO: check if we need block Height
+}
+
+func (v *Vote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{
+		v.BlockHash,
+		strconv.FormatInt(v.Round, 10),
+	})
+}
+
+func (v *Vote) DecodeRLP(s *rlp.Stream) error {
+	var vs struct {
+		BlockHash *common.Hash
+		RStr      string
+	}
+	if err := s.Decode(&vs); err != nil {
+		return err
+	}
+	round, err := strconv.ParseInt(vs.RStr, 10, 64)
+	if err != nil {
+		return err
+	}
+	v.BlockHash = vs.BlockHash
+	v.Round = round
 	return nil
 }

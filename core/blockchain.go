@@ -42,7 +42,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/trie"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 var (

@@ -1,4 +1,3 @@
-
 package backend
 
 import (
@@ -19,22 +18,21 @@ const (
 // Snapshot is the state of the authorization voting at a given point in time.
 // It doesn't have anything to do with voting of creating new Block, only voting for changes in validator sets
 type Snapshot struct {
-	Epoch uint64 // The number of blocks after which to checkpoint and reset the pending votes
-	Number uint64                   // Block number where the snapshot was created
+	Epoch  uint64 // The number of blocks after which to checkpoint and reset the pending votes
+	Number uint64 // Block number where the snapshot was created
 
 	//TODO: Add Tally to count votes and determine kicking/adding validators
-	Hash   common.Hash              // Block hash where the snapshot was created
-	ValSet tendermint.ValidatorSet    // Set of authorized validators at this moment
+	Hash   common.Hash             // Block hash where the snapshot was created
+	ValSet tendermint.ValidatorSet // Set of authorized validators at this moment
 }
 
-
 type snapshotJSON struct {
-	Epoch  uint64                   `json:"epoch"`
-	Number uint64                   `json:"number"`
-	Hash   common.Hash              `json:"hash"`
+	Epoch  uint64      `json:"epoch"`
+	Number uint64      `json:"number"`
+	Hash   common.Hash `json:"hash"`
 
 	// for validator set
-	Validators []common.Address        `json:"validators"`
+	Validators []common.Address          `json:"validators"`
 	Policy     tendermint.ProposerPolicy `json:"policy"`
 }
 

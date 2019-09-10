@@ -48,7 +48,10 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	state.UpdateRoundStep(round, RoundStepNewRound)
 
 	//Upon NewRound, there should be no valid block yet
-	state.SetValidRoundAndBlock(-1, nil)
+	//This is only valid in round 0
+	if round == 0 {
+		state.SetValidRoundAndBlock(-1, nil)
+	}
 
 	c.enterPropose(blockNumber, round)
 
@@ -135,23 +138,90 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	//if we are proposer, find the latest block we're having to propose
 	if c.valSet.IsProposer(c.backend.Address()) {
 		log.Info("this node is proposer of this round")
-		var (
-			lockedRound = state.LockedRound()
-			lockedBlock = state.LockedBlock()
-		)
-		// if there is a lockedBlock, set validRound and validBlock to locked one
-		if lockedRound != -1 {
-			state.SetValidRoundAndBlock(lockedRound, lockedBlock)
+		//TODO : find out if this is better than current Tendermint implementation
+		//var (
+		//	lockedRound = state.LockedRound()
+		//	lockedBlock = state.LockedBlock()
+		//)
+		//// if there is a lockedBlock, set validRound and validBlock to locked one
 
-		}
+		//if lockedRound != -1 {
+		//	state.SetValidRoundAndBlock(lockedRound, lockedBlock)
+		//
+		//}
 		proposal := c.defaultDecideProposal(round)
 
 		c.SendPropose(&proposal)
 	}
 }
 
+//defaultDoPrevote is the default process of select a block for pretoe
+//it will: - prevote lockedBlock if lockedBlock !=nil
+//		   - prevote for proposalReceived if valid
+//		   - prevote nil otherwise
+func (c *core) defaultDoPrevote(round int64) {
+	var (
+		state = c.currentState
+	)
+	// If a block is locked, prevote that.
+	if state.LockedBlock() != nil {
+		log.Info("prevote for locked Block")
+		c.SendVote(msgPrevote, state.LockedBlock(), round)
+		return
+	}
+
+	// If ProposalBlock is nil, prevote nil.
+	if state.ProposalReceived() == nil {
+		log.Info("prevote nil")
+		c.SendVote(msgPrevote, nil, round)
+		return
+	}
+
+	// TODO: Validate proposal block
+	//}
+
+	// Prevote cs.ProposalBlock
+	// NOTE: the proposal signature is validated when it is received,
+	log.Info("prevote for proposal block")
+	c.SendVote(msgPrevote, state.ProposalReceived().Block, round)
+	//core.signAddVote(types.PrevoteType, cs.ProposalBlock.Hash(), cs.ProposalBlockParts.Header())
+}
+
+// enterPrevote set core to prevote state, at which step it will:
+// - decide to whether it needs to unlock if PoLCR>LLR
+// - broadcastPrevote on lockedBlock if locked, or prevote for a valid proposal, else prevote nil
+// - wait until it receveid 2F+1 prevotes
+// - set timer if the prevotes receives dont reach majority
+// enterPrevote is called
+// - when `timeoutPropose` after entering Propose.
+// - when proposal block and POL is ready.
 func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
-	//TODO: implement this
+	//TODO: write a function for this at all enter step
+	//This is strictly use with pointer for state update.
+	var (
+		state         = c.currentState
+		sBlockNunmber = state.BlockNumber()
+		sRound        = state.Round()
+		sStep         = state.Step()
+	)
+	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
+		log.Debug("enterPrevote ignore: we are in a state that is ahead of the input state",
+			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
+			"current_round", sRound, "input_round", round,
+			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
+		return
+	}
+
+	log.Debug("enterPrevote",
+		"current_block_number", sBlockNunmber.String(),
+		"current_round", sRound, "input_round", round,
+		"current_step", sStep.String())
+
+	//eventually we'll enterPrevote
+	defer func() {
+		state.UpdateRoundStep(round, RoundStepPrevote)
+	}()
+	c.defaultDoPrevote(round)
 }
 
 func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
