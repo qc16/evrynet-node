@@ -72,25 +72,8 @@ func (c *core) handleEvents() {
 	}
 }
 
-func (c *core) handlePropose(msg message) error {
-	var (
-		state    = c.currentState
-		proposal tendermint.Proposal
-	)
-	if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
-		return err
-	}
-	// Already have one
-	// TODO: possibly catch double proposals
-	if state.ProposalReceived() != nil {
-		return nil
-	}
+func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 
-	// Does not apply
-	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		log.Debug("Received proposal with different height/round")
-		return nil
-	}
 	// Verify POLRound, which must be nil or in range [0, proposal.Round).
 	if proposal.POLRound != -1 &&
 		(proposal.POLRound >= 0) && proposal.POLRound >= proposal.Round {
@@ -107,7 +90,30 @@ func (c *core) handlePropose(msg message) error {
 	if c.valSet.GetProposer().Address() != signer {
 		return ErrInvalidProposalSignature
 	}
+	return nil
+}
 
+func (c *core) handlePropose(msg message) error {
+	var (
+		state    = c.currentState
+		proposal tendermint.Proposal
+	)
+	if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
+		return err
+	}
+	// Already have one
+	// TODO: possibly catch double proposals
+	if state.ProposalReceived() != nil {
+		return nil
+	}
+	// Does not apply, this is not an error but may happen due to network lattency
+	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
+		log.Debug("Received proposal with different height/round")
+		return nil
+	}
+	if err := c.verifyProposal(proposal, msg); err != nil {
+		return err
+	}
 	state.SetProposalReceived(&proposal)
 	//// TODO: We can check if Proposal is for a different block as this is a sign of misbehavior!
 	log.Info("Received proposal", "proposal", proposal)

@@ -50,10 +50,10 @@ type roundState struct {
 	view  *tendermint.View // view contains round and height
 	block *types.Block     // current proposed block
 
-	lockedRound int64     // lockedRound is latest round it is locked
+	lockedRound int64        // lockedRound is latest round it is locked
 	lockedBlock *types.Block // lockedBlock is block it is locked at lockedRound above
 
-	validRound int64     // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
+	validRound int64        // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
 	validBlock *types.Block // validBlock is last known block of PoLC above
 
 	proposalReceived   *tendermint.Proposal //
@@ -66,7 +66,6 @@ type roundState struct {
 
 	mu *sync.RWMutex
 }
-
 
 func (s *roundState) Step() RoundStepType {
 	s.mu.RLock()
@@ -98,7 +97,6 @@ func (s *roundState) ProposalReceived() *tendermint.Proposal {
 	defer s.mu.RUnlock()
 	return s.proposalReceived
 }
-
 
 func (s *roundState) SetProposalReceived(proposalReceived *tendermint.Proposal) {
 	s.mu.Lock()
@@ -150,7 +148,7 @@ func (s *roundState) SetLockedRoundAndBlock(lockedR int64, lockedBl *types.Block
 	s.lockedBlock = lockedBl
 }
 
-func (s *roundState) LockedRound() int64{
+func (s *roundState) LockedRound() int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

@@ -70,6 +70,6 @@ type ProposalSelector func(ValidatorSet, common.Address, int64) Validator
 
 // View includes a round number and a height of block we want to commit
 type View struct {
-	Round      int64
+	Round       int64
 	BlockNumber *big.Int
 }

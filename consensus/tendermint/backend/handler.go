@@ -53,9 +53,8 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		//TODO: mark peer's message and self known message with the hash get from message
 
 		go func() {
-			//TODO: remove this log
 			if err := sb.EventMux().Post(tendermint.MessageEvent{
-				Payload:data,
+				Payload: data,
 			}); err != nil {
 				log.Error("failed to Post msg to core", "error", err)
 			}

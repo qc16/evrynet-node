@@ -25,7 +25,7 @@ type TimeoutTicker interface {
 type timeoutInfo struct {
 	Duration    time.Duration `json:"duration"`
 	BlockNumber *big.Int      `json:"block_number"`
-	Round       int64     `json:"round"`
+	Round       int64         `json:"round"`
 	Step        RoundStepType `json:"step"`
 }
 
@@ -39,10 +39,10 @@ func (A timeoutInfo) earlierOrEqual(B timeoutInfo) bool {
 	}
 
 	if A.BlockNumber.Cmp(B.BlockNumber) == 0 {
-		if A.Round<B.Round  {
+		if A.Round < B.Round {
 			return true
 		}
-		if A.Round==B.Round && (A.Step > 0 && A.Step <= B.Step) {
+		if A.Round == B.Round && (A.Step > 0 && A.Step <= B.Step) {
 			return true
 		}
 	}

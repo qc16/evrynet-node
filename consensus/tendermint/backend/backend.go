@@ -15,7 +15,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
-		"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/log"
 )
 
 const (
@@ -131,7 +131,7 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		ps := sb.broadcaster.FindPeers(targets)
 		for _, p := range ps {
 			//TODO: remove these logs in production
-			log.Info("sending msg", "from" , sb.address.Hex(),"to",p.Address().Hex())
+			log.Info("sending msg", "from", sb.address.Hex(), "to", p.Address().Hex())
 			//TODO: check for recent messsages using lru.ARCCache
 			go func(p consensus.Peer) {
 				if err := p.Send(tendermintMsg, payload); err != nil {
