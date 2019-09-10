@@ -3,7 +3,6 @@ package backend
 import (
 	"crypto/ecdsa"
 	"errors"
-
 	"math/big"
 	"sync"
 
