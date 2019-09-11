@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -267,8 +268,93 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	})
 }
 
+// enterPrecommit sets core to precommit state:
+// Enter: `timeoutPrecommit` after any +2/3 precommits.
+// Enter: +2/3 precomits for block or nil.
+// Lock & precommit the ProposalBlock if we have enough prevotes for it (a POL in this round)
+// else, unlock an existing lock and precommit nil if +2/3 of prevotes were nil,
+// else, precommit nil otherwise.
 func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
-	//TODO: implement this
+	var (
+		state         = c.currentState
+		sBlockNunmber = state.BlockNumber()
+		sRound        = state.Round()
+		sStep         = state.Step()
+	)
+
+	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrecommit) {
+		log.Debug("enterPrecommit ignore: we are in a state that is ahead of the input state",
+			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
+			"current_round", sRound, "input_round", round,
+			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
+		return
+	}
+
+	log.Debug("enterPrecommit",
+		"current_block_number", sBlockNunmber.String(),
+		"current_round", sRound, "input_round", round,
+		"current_step", sStep.String())
+
+	defer func() {
+		// Done enterPrecommit:
+		state.UpdateRoundStep(round, RoundStepPrecommit)
+	}()
+
+	// Note: Liem has already implemented GetPrevotesByRound(round), will change once the PR is merged
+	block, ok := state.TwoThirdsMajority(round)
+	// if we don't have polka, must precommit nil
+	if !ok {
+		if state.LockedBlock() != nil {
+			log.Info("enterPrecommit: No +2/3 prevotes during enterPrecommit while we're locked. Precommitting nil")
+		} else {
+			log.Info("enterPrecommit: No +2/3 prevotes during enterPrecommit. Precommitting nil.")
+		}
+		c.SendVote(msgPrecommit, nil, round)
+		return
+	}
+
+	// The last PoLR should be this round
+	polRound, _ := state.POLInfo()
+	if polRound < round {
+		panic(fmt.Sprintf("This POLRound should be %v but got %v", round, polRound))
+	}
+
+	// +2/3 prevoted nil. Unlock and precommit nil.
+	if len(block.Hash()) == 0 {
+		if state.LockedBlock() == nil {
+			log.Info("enterPrecommit: +2/3 prevoted for nil.")
+		} else {
+			log.Info("enterPrecommit: +2/3 prevoted for nil. Unlocking")
+			state.SetLockedRoundAndBlock(-1, nil)
+		}
+		c.SendVote(msgPrecommit, nil, round)
+		return
+	}
+
+	// At this point, +2/3 prevoted for a particular block.
+	// If we're already locked on that block, precommit it, and update the LockedRound
+	if state.LockedBlock().Hash() == block.Hash() {
+		log.Info("enterPrecommit: +2/3 prevoted locked block. Relocking")
+		state.SetLockedRoundAndBlock(round, state.LockedBlock())
+		c.SendVote(msgPrecommit, state.LockedBlock(), round)
+		return
+	}
+
+	// If +2/3 prevoted for proposal block, stage and precommit it
+	if state.ProposalReceived().Block.Hash() == block.Hash() {
+		log.Info("enterPrecommit: +2/3 prevoted proposal block. Locking", "hash", block.Hash())
+		// TODO: Validate the block before locking and precommit
+		state.SetLockedRoundAndBlock(round, state.ProposalReceived().Block)
+		c.SendVote(msgPrecommit, state.ProposalReceived().Block, round)
+		return
+	}
+
+	// There was a polka in this round for a block we don't have.
+	// TODO: Fetch that block, unlock, and precommit nil.
+	// The +2/3 prevotes for this round is the POL for our unlock.
+	log.Info("enterPrecommit: +2/3 prevoted a block we don't have. Fetch. Unlock and Precommit nil", "hash", block.Hash())
+	state.SetLockedRoundAndBlock(-1, nil)
+	c.SendVote(msgPrecommit, nil, round)
 }
 
 func (c *core) startRoundZero() {

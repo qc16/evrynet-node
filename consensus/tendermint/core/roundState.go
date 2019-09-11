@@ -154,6 +154,28 @@ func (s *roundState) ValidBlock() *types.Block {
 	return s.validBlock
 }
 
+// If there was a +2/3 majority for block, return block and true.
+// Else, return the empty types.Block{} and false.
+func (s *roundState) TwoThirdsMajority(r int64) (block types.Block, ok bool) {
+	// TODO: Check if there is a polka at round r then return block and true,
+	return types.Block{}, false
+}
+
+// Last round and block that has +2/3 prevotes for a particular block or nil.
+// Returns -1 if no such round exists.
+func (s *roundState) POLInfo() (polRound int64, polBlock types.Block) {
+	// TODO: Just a sample
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for r := s.Round(); r >= 0; r-- {
+		polBlock, ok := s.TwoThirdsMajority(r)
+		if ok {
+			return r, polBlock
+		}
+	}
+	return -1, types.Block{}
+}
+
 // The DecodeRLP method should read one value from the given
 // Stream. It is not forbidden to read less or more, but it might
 // be confusing.
