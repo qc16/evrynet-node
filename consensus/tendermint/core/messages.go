@@ -113,24 +113,27 @@ type messageSet struct {
 // Construct a new message set to accumulate messages for given height/view number.
 func newMessageSet(valSet tendermint.ValidatorSet, code uint64, view *tendermint.View) *messageSet {
 	return &messageSet{
-		view:       view,
-		msgCode:    code,
-		messagesMu: new(sync.Mutex),
-		messages:   make(map[common.Address]*message),
-		valSet:     valSet,
+		view:        view,
+		msgCode:     code,
+		messagesMu:  new(sync.Mutex),
+		messages:    make(map[common.Address]*message),
+		voteByBlock: make(map[common.Hash]*blockVotes),
+		valSet:      valSet,
 	}
 }
 
-func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) error {
+func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) {
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
 	if ms.msgCode != msg.Code {
-		return ErrDifferentMsgType
+		return false, ErrDifferentMsgType
 	}
 	index, _ := ms.valSet.GetByAddress(msg.Address)
 	if index == -1 {
-		return errors.Wrapf(ErrVoteHeightMismatch, "address in vote message:%s ", msg.Address.String())
+		return false, errors.Wrapf(ErrVoteHeightMismatch, "address in vote message:%s ", msg.Address.String())
 	}
 	if ms.view.Round != vote.Round || ms.view.BlockNumber.Cmp(vote.BlockNumber) != 0 {
-		return ErrVoteHeightMismatch
+		return false, ErrVoteHeightMismatch
 	}
 	//Signer is supposed to be checked at previous steps so it doesn't need to be check again.
 
@@ -139,24 +142,25 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) error {
 	if existed {
 		var currentVote tendermint.Vote
 		if err := rlp.DecodeBytes(current.Msg, &currentVote); err != nil {
-			return err
+			return false, err
 		}
 		if currentVote.BlockHash.Hex() != vote.BlockHash.Hex() {
-			return ErrConflictingVotes
+			return false, ErrConflictingVotes
 		}
 		log.Info("already got vote, skipping", "from", msg.Address, "block_hash")
-		return nil
+		return false, nil
 	}
 
 	ms.messages[msg.Address] = &msg
 	ms.totalReceived++
 	ms.addVoteToBlockVote(vote, index)
+
 	if ms.voteByBlock[*(vote.BlockHash)].totalReceived > 2*ms.valSet.F() {
 		if ms.maj23 == nil {
 			ms.maj23 = vote.BlockHash
 		}
 	}
-	return nil
+	return true, nil
 }
 
 func (ms *messageSet) addVoteToBlockVote(vote *tendermint.Vote, index int) error {
@@ -193,4 +197,18 @@ func (ms *messageSet) HasTwoThirdAny() bool {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 	return ms.totalReceived > ms.valSet.F()*2
+}
+
+//TwoThirdMajority return a blockHash and a bool inidicate if this messageSet hash got a
+//TwoThirdMajority on a block
+func (ms *messageSet) TwoThirdMajority() (*common.Hash, bool) {
+	if ms == nil {
+		return nil, false
+	}
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
+	if ms.maj23 != nil {
+		return ms.maj23, true
+	}
+	return nil, false
 }

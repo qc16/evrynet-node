@@ -21,10 +21,11 @@ func (c *core) getStoredState() *roundState {
 			BlockNumber: big.NewInt(1),
 		}
 		lockedRound      int64 = -1
-		lockedBlock      types.Block
+		lockedBlock      *types.Block
 		validRound       int64 = -1
-		validBlock       types.Block
-		proposalReceived tendermint.Proposal
+		validBlock       *types.Block
+		proposalReceived *tendermint.Proposal
+		step             = RoundStepNewHeight
 	)
 	//TODO: Implement storage
 
@@ -33,9 +34,10 @@ func (c *core) getStoredState() *roundState {
 	if rs == nil {
 
 		rs = newRoundState(&view, prevotesReceived, precommitReceived, block,
-			lockedRound, &lockedBlock,
-			validRound, &validBlock,
-			&proposalReceived,
+			lockedRound, lockedBlock,
+			validRound, validBlock,
+			proposalReceived,
+			step,
 		)
 
 		//TODO: timeout setup

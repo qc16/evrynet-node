@@ -77,10 +77,8 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	if err != nil {
 		return err
 	}
-	v = &Vote{
-		BlockHash:   vs.BlockHash,
-		BlockNumber: vs.BlockNumber,
-		Round:       round,
-	}
+	v.BlockHash = vs.BlockHash
+	v.BlockNumber = vs.BlockNumber
+	v.Round = round
 	return nil
 }
