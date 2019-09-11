@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
@@ -66,6 +66,53 @@ func TestValidators(t *testing.T) {
 	if valSet2.Size() != 0 {
 		t.Errorf("Valset size of block 2th should be 0, get: %d", valSet2.Size())
 	}
+}
+
+func TestVerify(t *testing.T) {
+	var (
+		nodePrivateKey = makeNodeKey()
+		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators     = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = makeGenesisHeader(validators)
+	)
+
+	//create New test backend and newMockChain
+	chain, engine := mustStartTestChainAndBackend(nodePrivateKey, genesisHeader)
+	assert.NotNil(t, chain)
+	assert.NotNil(t, engine)
+	assert.Equal(t, true, engine.coreStarted)
+
+	// --------CASE 1--------
+	// without seal & transactions
+	block := makeBlockWithoutSeal(genesisHeader)
+	proposal := tendermint.Proposal{
+		Block:    block,
+		Round:    0,
+		POLRound: 0,
+	}
+	err := engine.Verify(proposal)
+	// Should get error if transactions in block is 0
+	assert.Error(t, err, errMismatchTxhashes)
+
+	// --------CASE 2--------
+	// without seal & have transactions
+	tx1 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), 50000, big.NewInt(10), nil)
+	tx1, err = types.SignTx(tx1, types.HomesteadSigner{}, nodePrivateKey)
+	assert.NoError(t, err)
+
+	block = types.NewBlock(genesisHeader, []*types.Transaction{tx1}, []*types.Header{}, []*types.Receipt{})
+	assert.Len(t, block.Transactions(), 1)
+	assert.Equal(t, tx1.Hash(), block.Transactions()[0].Hash())
+	proposal = tendermint.Proposal{
+		Block:    block,
+		Round:    0,
+		POLRound: 0,
+	}
+	err = engine.Verify(proposal)
+	// Should get no error if block has transactions
+	assert.NoError(t, engine.Verify(proposal))
 }
 
 /**
