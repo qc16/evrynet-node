@@ -63,6 +63,7 @@ func TestBackend_Genesis_block(t *testing.T) {
 
 	valSet := genesisSnapshot.ValSet
 	validator := valSet.GetByIndex(0)
+	assert.NotNil(t, validator)
 
 	fmt.Println("First set validators")
 	fmt.Println(validator)

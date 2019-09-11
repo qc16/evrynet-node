@@ -4,7 +4,7 @@
     ```shell
     $ go build ./cmd/gev
     $ go build ./cmd/bootnode
-    $ go build ./cmd/pupeth
+    $ go build ./cmd/puppeth
     $ export PATH=$(pwd):$PATH
     ```
 
@@ -26,7 +26,7 @@
 
 5. Generate tendermint genesis.json from pupeth
      ```shell
-    $ ./pupeth    
+    $ ./puppeth    
     ```
 
 Following steps to generate tendermint genesis.json. In step ask for first validator, enter address from nodekey, which is generated above

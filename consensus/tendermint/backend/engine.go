@@ -23,7 +23,9 @@ import (
 )
 
 var (
-	TendermintBlockReward = big.NewInt(5e+18) // Block reward in wei for successfully mining a block
+	// TendermintBlockReward tempo fix the Block reward in wei for successfully mining a block
+	// TODO: will modify after
+	TendermintBlockReward = big.NewInt(5e+18)
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
@@ -333,6 +335,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
 
+	// update state trie and reassign root hash for this block
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 

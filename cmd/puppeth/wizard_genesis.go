@@ -133,18 +133,14 @@ func (w *wizard) makeGenesis() {
 				break
 			}
 		}
-		// Sort the signers and embed into the extra-data section
-		for i := 0; i < len(validators); i++ {
-			for j := i + 1; j < len(validators); j++ {
-				if bytes.Compare(validators[i][:], validators[j][:]) > 0 {
-					validators[i], validators[j] = validators[j], validators[i]
-				}
-			}
-		}
 		tendermintExtra := types.TendermintExtra{
 			Validators: validators,
 		}
-		extraData, _ := rlp.EncodeToBytes(&tendermintExtra)
+		extraData, err := rlp.EncodeToBytes(&tendermintExtra)
+		if err != nil {
+			log.Error("rlp encode got error", "error", err)
+			return
+		}
 		tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
 		genesis.ExtraData = append(tendermintExtraVanity, extraData...)
 	default:
