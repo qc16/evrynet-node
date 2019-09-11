@@ -2,15 +2,21 @@ package core
 
 import (
 	"io"
-	"math/big"
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/pkg/errors"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
+)
+
+var (
+	ErrConflictingVotes = errors.New("vote received from the same validator for different block in the same round")
+	ErrDifferentMsgType = errors.New("message set is not of the same type of the received message")
 )
 
 //Engine abstract the core's functionalities
@@ -86,22 +92,105 @@ func (m *message) GetAddressFromSignature() (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
+//blockVotes store the voting received for a particular block
+type blockVotes struct {
+	votes         []*tendermint.Vote // validatorIndex -> *Vote
+	totalReceived int
+}
+
 type messageSet struct {
-	view       *tendermint.View
-	valSet     tendermint.ValidatorSet
-	messagesMu *sync.Mutex
-	messages   map[common.Address]*message
+	view          *tendermint.View
+	valSet        tendermint.ValidatorSet
+	msgCode       uint64
+	messagesMu    *sync.Mutex
+	messages      map[common.Address]*message
+	voteByBlock   map[common.Hash]*blockVotes
+	maj23         *common.Hash
+	totalReceived int
+	//TODO: Do we have to keep track of which peer has 2/3Majority?
 }
 
 // Construct a new message set to accumulate messages for given height/view number.
-func newMessageSet(valSet tendermint.ValidatorSet) *messageSet {
+func newMessageSet(valSet tendermint.ValidatorSet, code uint64, view *tendermint.View) *messageSet {
 	return &messageSet{
-		view: &tendermint.View{
-			Round:       0,
-			BlockNumber: new(big.Int),
-		},
+		view:       view,
+		msgCode:    code,
 		messagesMu: new(sync.Mutex),
 		messages:   make(map[common.Address]*message),
 		valSet:     valSet,
 	}
+}
+
+func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) error {
+	if ms.msgCode != msg.Code {
+		return ErrDifferentMsgType
+	}
+	index, _ := ms.valSet.GetByAddress(msg.Address)
+	if index == -1 {
+		return errors.Wrapf(ErrVoteHeightMismatch, "address in vote message:%s ", msg.Address.String())
+	}
+	if ms.view.Round != vote.Round || ms.view.BlockNumber.Cmp(vote.BlockNumber) != 0 {
+		return ErrVoteHeightMismatch
+	}
+	//Signer is supposed to be checked at previous steps so it doesn't need to be check again.
+
+	// if this message set already got this msg, check if the vote is duplicate or double voting
+	current, existed := ms.messages[msg.Address]
+	if existed {
+		var currentVote tendermint.Vote
+		if err := rlp.DecodeBytes(current.Msg, &currentVote); err != nil {
+			return err
+		}
+		if currentVote.BlockHash.Hex() != vote.BlockHash.Hex() {
+			return ErrConflictingVotes
+		}
+		log.Info("already got vote, skipping", "from", msg.Address, "block_hash")
+		return nil
+	}
+
+	ms.messages[msg.Address] = &msg
+	ms.totalReceived++
+	ms.addVoteToBlockVote(vote, index)
+	if ms.voteByBlock[*(vote.BlockHash)].totalReceived > 2*ms.valSet.F() {
+		if ms.maj23 == nil {
+			ms.maj23 = vote.BlockHash
+		}
+	}
+	return nil
+}
+
+func (ms *messageSet) addVoteToBlockVote(vote *tendermint.Vote, index int) error {
+	bvotes, exist := ms.voteByBlock[*(vote.BlockHash)]
+	if !exist {
+		bvotes = &blockVotes{
+			votes:         make([]*tendermint.Vote, ms.valSet.Size()),
+			totalReceived: 0,
+		}
+	}
+	//shouldn't happen but just making sure
+	if bvotes.votes[index] != nil && bvotes.votes[index].BlockHash.Hex() != vote.BlockHash.Hex() {
+		return ErrConflictingVotes
+	}
+	bvotes.votes[index] = vote
+	bvotes.totalReceived++
+	ms.voteByBlock[*(vote.BlockHash)] = bvotes
+	return nil
+}
+
+func (ms *messageSet) HasMajority() bool {
+	if ms == nil {
+		return false
+	}
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
+	return ms.maj23 != nil
+}
+
+func (ms *messageSet) HasTwoThirdAny() bool {
+	if ms == nil {
+		return false
+	}
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
+	return ms.totalReceived > ms.valSet.F()*2
 }

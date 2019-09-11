@@ -149,8 +149,9 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	}
 
 	vote := &tendermint.Vote{
-		BlockHash: &blockHash,
-		Round:     round,
+		BlockHash:   &blockHash,
+		Round:       round,
+		BlockNumber: c.currentState.BlockNumber(),
 	}
 	msgData, err := rlp.EncodeToBytes(vote)
 	if err != nil {

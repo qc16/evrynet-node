@@ -26,11 +26,11 @@ import (
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
-// newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
-	proposalReceived *tendermint.Proposal, block *types.Block,
+//newRoundState creates a new roundState instance with the given view and validatorSet
+func newRoundState(view *tendermint.View, prevotesReceived, precommitsReceived map[int64]*messageSet, block *types.Block,
 	lockedRound int64, lockedBlock *types.Block,
-	validRound int64, validBlock *types.Block) *roundState {
+	validRound int64, validBlock *types.Block,
+	proposalReceived *tendermint.Proposal) *roundState {
 	return &roundState{
 		view:               view,
 		block:              block,
@@ -39,8 +39,8 @@ func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
 		validRound:         validRound,
 		validBlock:         validBlock,
 		proposalReceived:   proposalReceived,
-		PrevotesReceived:   newMessageSet(validatorSet),
-		PrecommitsReceived: newMessageSet(validatorSet),
+		PrevotesReceived:   prevotesReceived,
+		PrecommitsReceived: precommitsReceived,
 		mu:                 new(sync.RWMutex),
 	}
 }
@@ -56,9 +56,9 @@ type roundState struct {
 	validRound int64        // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
 	validBlock *types.Block // validBlock is last known block of PoLC above
 
-	proposalReceived   *tendermint.Proposal //
-	PrevotesReceived   *messageSet
-	PrecommitsReceived *messageSet
+	proposalReceived   *tendermint.Proposal  //
+	PrevotesReceived   map[int64]*messageSet //This is the prevote received for each round
+	PrecommitsReceived map[int64]*messageSet //this is the precommit received for each round
 
 	//step is the enumerate Step that currently the core is at.
 	//to jump to the next step, UpdateRoundStep is called.
@@ -196,8 +196,8 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 		ValidRound         int64
 		ValidBlock         *types.Block
 		proposalReceived   *tendermint.Proposal
-		PrevotesReceived   *messageSet
-		PrecommitsReceived *messageSet
+		PrevotesReceived   map[int64]*messageSet
+		PrecommitsReceived map[int64]*messageSet
 	}
 
 	if err := stream.Decode(&ss); err != nil {
@@ -237,4 +237,15 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 		s.PrevotesReceived,
 		s.PrecommitsReceived,
 	})
+}
+
+func (s *roundState) addPrevote(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.PrevotesReceived[vote.Round]
+	if !ok {
+		s.PrevotesReceived[vote.Round] = newMessageSet(valset, msgPrevote, s.View())
+		_ = s.PrevotesReceived[vote.Round]
+	}
+	return s.PrevotesReceived[vote.Round].AddVote(msg, vote)
 }
