@@ -60,6 +60,8 @@ var (
 	errInvalidUncleHash = errors.New("non empty uncle hash")
 	// errMalformedChannelData is returned if data return from blockFinalization does not conform to its struct definition
 	errMalformedChannelData = errors.New("data received is not an event type")
+	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
+	errMismatchTxhashes = errors.New("mismatch transcations hashes")
 )
 
 func (sb *backend) addProposalSeal(h *types.Header) error {
