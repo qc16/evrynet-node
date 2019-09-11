@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
+	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
-	queue "github.com/enriquebris/goconcurrentqueue"
 )
 
 const (
@@ -21,12 +21,12 @@ const (
 // New creates an Tendermint consensus core
 func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 	c := &core{
-		handlerWg:     new(sync.WaitGroup),
-		backend:       backend,
-		timeout:       NewTimeoutTicker(),
-		config:        config,
-		mu:            &sync.RWMutex{},
-		blockFinalize: new(event.TypeMux),
+		handlerWg:      new(sync.WaitGroup),
+		backend:        backend,
+		timeout:        NewTimeoutTicker(),
+		config:         config,
+		mu:             &sync.RWMutex{},
+		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewFIFO(),
 	}
 	return c

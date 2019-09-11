@@ -229,3 +229,22 @@ func (sb *backend) ClearStoringMsg() {
 	log.Info("Clear storing msg queue")
 	sb.storingMsgs = queue.NewFIFO()
 }
+
+// Verify implements tendermint.Backend.Verify
+func (sb *backend) Verify(proposal tendermint.Proposal) error {
+	block := proposal.Block
+
+	// check block body
+	txnHash := types.DeriveSha(block.Transactions())
+	if txnHash != block.Header().TxHash {
+		return errMismatchTxhashes
+	}
+
+	// verify the header of proposed block
+	err := sb.VerifyHeader(sb.chain, block.Header(), false)
+	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
+	if err == nil || err == errEmptyCommittedSeals {
+		return nil
+	}
+	return err
+}
