@@ -58,4 +58,7 @@ type Backend interface {
 
 	//Chain return chain reader
 	Chain() consensus.ChainReader
+
+	// Verify verifies the proposal
+	Verify(Proposal) error
 }
