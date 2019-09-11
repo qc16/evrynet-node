@@ -117,6 +117,12 @@ func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 	if proposal.Block == nil || (proposal.Block != nil && proposal.Block.Hash().Hex() == emptyBlockHash.Hex()) {
 		return ErrEmptyBlockProposal
 	}
+
+	// check transaction hash & header
+	if err := c.backend.Verify(proposal); err != nil {
+		return err
+	}
+
 	return nil
 }
 
