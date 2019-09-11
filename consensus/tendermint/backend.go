@@ -52,4 +52,10 @@ type Backend interface {
 	// this function supports to get validator's addresses in case a miner not run yet.
 	// for reason because when the miner not run then chaỉn-reader in core not initialized.
 	ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
+
+	//ClearStoringMsg will delete all item in queue
+	ClearStoringMsg()
+
+	// Verify verifies the proposal
+	Verify(Proposal) error
 }

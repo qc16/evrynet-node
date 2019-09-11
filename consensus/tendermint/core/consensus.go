@@ -596,7 +596,7 @@ func (c *core) updateStateForNewblock() {
 	}
 	//this is to safeguard the case where miner send a newer block, which should not be discarded.
 	//
-	if state.Block()!=nil && state.Block().Number().Cmp(state.BlockNumber()) < 0 {
+	if state.Block() != nil && state.Block().Number().Cmp(state.BlockNumber()) < 0 {
 		state.SetBlock(nil)
 	}
 	state.SetLockedRoundAndBlock(-1, nil)
