@@ -301,7 +301,11 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	}()
 
 	// Note: Liem has already implemented GetPrevotesByRound(round), will change once the PR is merged
-	block, ok := state.TwoThirdsMajority(round)
+	prevotes, ok := state.GetPrevotesByRound(round)
+	if !ok {
+		log.Debug("enterPrecommit ignore: there is no prevotes", "round", round)
+	}
+	blockHash, ok := prevotes.TwoThirdMajority()
 	// if we don't have polka, must precommit nil
 	if !ok {
 		if state.LockedBlock() != nil {
@@ -320,12 +324,12 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	}
 
 	// +2/3 prevoted nil. Unlock and precommit nil.
-	if len(block.Hash()) == 0 {
+	if len(blockHash) == 0 {
 		if state.LockedBlock() == nil {
 			log.Info("enterPrecommit: +2/3 prevoted for nil.")
 		} else {
 			log.Info("enterPrecommit: +2/3 prevoted for nil. Unlocking")
-			state.SetLockedRoundAndBlock(-1, nil)
+			state.Unlock()
 		}
 		c.SendVote(msgPrecommit, nil, round)
 		return
@@ -333,7 +337,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 
 	// At this point, +2/3 prevoted for a particular block.
 	// If we're already locked on that block, precommit it, and update the LockedRound
-	if state.LockedBlock().Hash() == block.Hash() {
+	if state.LockedBlock().Hash().Hex() == blockHash.Hex() {
 		log.Info("enterPrecommit: +2/3 prevoted locked block. Relocking")
 		state.SetLockedRoundAndBlock(round, state.LockedBlock())
 		c.SendVote(msgPrecommit, state.LockedBlock(), round)
@@ -341,8 +345,8 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	}
 
 	// If +2/3 prevoted for proposal block, stage and precommit it
-	if state.ProposalReceived().Block.Hash() == block.Hash() {
-		log.Info("enterPrecommit: +2/3 prevoted proposal block. Locking", "hash", block.Hash())
+	if state.ProposalReceived().Block.Hash().Hex() == blockHash.Hex() {
+		log.Info("enterPrecommit: +2/3 prevoted proposal block. Locking", "hash", blockHash)
 		// TODO: Validate the block before locking and precommit
 		state.SetLockedRoundAndBlock(round, state.ProposalReceived().Block)
 		c.SendVote(msgPrecommit, state.ProposalReceived().Block, round)
@@ -353,7 +357,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	// TODO: Fetch that block, unlock, and precommit nil.
 	// The +2/3 prevotes for this round is the POL for our unlock.
 	log.Info("enterPrecommit: +2/3 prevoted a block we don't have. Fetch. Unlock and Precommit nil", "hash", block.Hash())
-	state.SetLockedRoundAndBlock(-1, nil)
+	state.Unlock()
 	c.SendVote(msgPrecommit, nil, round)
 }
 

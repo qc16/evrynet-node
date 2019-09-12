@@ -165,8 +165,6 @@ func (s *roundState) TwoThirdsMajority(r int64) (block types.Block, ok bool) {
 // Returns -1 if no such round exists.
 func (s *roundState) POLInfo() (polRound int64, polBlock types.Block) {
 	// TODO: Just a sample
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	for r := s.Round(); r >= 0; r-- {
 		polBlock, ok := s.TwoThirdsMajority(r)
 		if ok {
