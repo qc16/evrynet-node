@@ -2,6 +2,7 @@ package tendermint
 
 import (
 	"io"
+	"math/big"
 	"strconv"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -50,22 +51,24 @@ func (p *Proposal) DecodeRLP(s *rlp.Stream) error {
 }
 
 type Vote struct {
-	BlockHash *common.Hash
-	Round     int64
-	//TODO: check if we need block Height
+	BlockHash   *common.Hash
+	BlockNumber *big.Int
+	Round       int64
 }
 
 func (v *Vote) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		v.BlockHash,
+		v.BlockNumber,
 		strconv.FormatInt(v.Round, 10),
 	})
 }
 
 func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	var vs struct {
-		BlockHash *common.Hash
-		RStr      string
+		BlockHash   *common.Hash
+		BlockNumber *big.Int
+		RStr        string
 	}
 	if err := s.Decode(&vs); err != nil {
 		return err
@@ -75,6 +78,7 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 	v.BlockHash = vs.BlockHash
+	v.BlockNumber = vs.BlockNumber
 	v.Round = round
 	return nil
 }

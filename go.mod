@@ -47,7 +47,7 @@ require (
 	github.com/oschwald/maxminddb-golang v1.3.1 // indirect
 	github.com/pborman/uuid v1.2.0
 	github.com/peterh/liner v1.1.0
-	github.com/pkg/errors v0.8.1 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
 	github.com/prometheus/tsdb v0.10.0

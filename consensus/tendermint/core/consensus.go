@@ -20,7 +20,7 @@ import (
 func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	//This is strictly use with pointer for state update.
 	var (
-		state         = c.currentState
+		state         = c.CurrentState()
 		sBlockNunmber = state.BlockNumber()
 		sRound        = state.Round()
 		sStep         = state.Step()
@@ -61,7 +61,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 //it will prioritize validBlock, else will get its own block from tx_pool
 func (c *core) defaultDecideProposal(round int64) tendermint.Proposal {
 	var (
-		state = c.currentState
+		state = c.CurrentState()
 	)
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
@@ -92,7 +92,7 @@ func (c *core) defaultDecideProposal(round int64) tendermint.Proposal {
 func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	//This is strictly use with pointer for state update.
 	var (
-		state         = c.currentState
+		state         = c.CurrentState()
 		sBlockNunmber = state.BlockNumber()
 		sRound        = state.Round()
 		sStep         = state.Step()
@@ -114,7 +114,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		// Done enterPropose:
 		state.UpdateRoundStep(round, RoundStepPropose)
 
-		// If we have the whole proposal + POL, then goto Prevote now.
+		// If we have the whole proposal + POL, then goto PrevoteTimeout now.
 		// else, we'll enterPrevote when the rest of the proposal is received (in AddProposalBlockPart),
 		if state.IsProposalComplete() {
 			c.enterPrevote(blockNumber, sRound)
@@ -161,10 +161,10 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 //		   - prevote nil otherwise
 func (c *core) defaultDoPrevote(round int64) {
 	var (
-		state = c.currentState
+		state = c.CurrentState()
 	)
 	// If a block is locked, prevote that.
-	if state.LockedBlock() != nil {
+	if state.LockedRound() != -1 {
 		log.Info("prevote for locked Block")
 		c.SendVote(msgPrevote, state.LockedBlock(), round)
 		return
@@ -180,7 +180,7 @@ func (c *core) defaultDoPrevote(round int64) {
 	// TODO: Validate proposal block
 	//}
 
-	// Prevote cs.ProposalBlock
+	// PrevoteTimeout cs.ProposalBlock
 	// NOTE: the proposal signature is validated when it is received,
 	log.Info("prevote for proposal block")
 	c.SendVote(msgPrevote, state.ProposalReceived().Block, round)
@@ -199,7 +199,7 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 	//TODO: write a function for this at all enter step
 	//This is strictly use with pointer for state update.
 	var (
-		state         = c.currentState
+		state         = c.CurrentState()
 		sBlockNunmber = state.BlockNumber()
 		sRound        = state.Round()
 		sStep         = state.Step()
@@ -224,6 +224,49 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 	c.defaultDoPrevote(round)
 }
 
+// Enter: if received +2/3 precommits for next round.
+// Enter: any +2/3 prevotes at next round.
+func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
+	var (
+		state        = c.CurrentState()
+		sBlockNumber = state.BlockNumber()
+		sRound       = state.Round()
+		sStep        = state.Step()
+	)
+
+	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && RoundStepPrevoteWait <= sStep) {
+		log.Debug("enterPrevoteWait ignore: we are in a state that is ahead of the input state",
+			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
+			"current_round", sRound, "input_round", round,
+			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
+		return
+	}
+	prevotes, ok := state.GetPrevotesByRound(round)
+	if !ok {
+		log.Debug("enterPrevoteWait ignore: there is no prevotes", "round", round)
+	}
+	if !prevotes.HasTwoThirdAny() {
+		log.Debug("enterPrevoteWait ignore: there is no two third votes received", "round", round)
+	}
+	log.Debug("enterPrevoteWait",
+		"current_block_number", sBlockNumber.String(),
+		"current_round", sRound, "input_round", round,
+		"current_step", sStep.String())
+
+	defer func() {
+		// Done enterPrevoteWait:
+		state.UpdateRoundStep(round, RoundStepPrevoteWait)
+	}()
+
+	// Wait for some more prevotes; enterPrecommit
+	c.timeout.ScheduleTimeout(timeoutInfo{
+		Duration:    c.config.PrevoteTimeout(round),
+		BlockNumber: blockNumber,
+		Round:       round,
+		Step:        RoundStepPrevoteWait,
+	})
+}
+
 func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	//TODO: implement this
 }
@@ -231,8 +274,8 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 func (c *core) startRoundZero() {
 	//init valset from backend
 	if c.valSet == nil {
-		c.valSet = c.backend.Validators(c.currentState.BlockNumber())
+		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 
 	}
-	c.enterNewRound(c.currentState.view.BlockNumber, 0)
+	c.enterNewRound(c.CurrentState().view.BlockNumber, 0)
 }

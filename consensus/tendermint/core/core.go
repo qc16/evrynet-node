@@ -23,6 +23,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		backend:   backend,
 		timeout:   NewTimeoutTicker(),
 		config:    config,
+		mu:        &sync.RWMutex{},
 	}
 	return c
 }
@@ -55,6 +56,8 @@ type core struct {
 	timeout TimeoutTicker
 	//config store the config of the chain
 	config *tendermint.Config
+	//mutex mark critical section of core which should not be accessed parralel
+	mu *sync.RWMutex
 }
 
 // Start implements core.Engine.Start
@@ -129,7 +132,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 }
 
 func (c *core) SetBlockForProposal(b *types.Block) {
-	c.currentState.SetBlock(b)
+	c.CurrentState().SetBlock(b)
 }
 
 //SendVote send broadcast its vote to the network
@@ -143,14 +146,15 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	if voteType != msgPrevote && voteType != msgCommit {
 		return
 	}
-	var blockHash = common.Hash{}
+	var blockHash = emtpyBlockHash
 	if block != nil {
 		blockHash = block.Hash()
 	}
 
 	vote := &tendermint.Vote{
-		BlockHash: &blockHash,
-		Round:     round,
+		BlockHash:   &blockHash,
+		Round:       round,
+		BlockNumber: c.CurrentState().BlockNumber(),
 	}
 	msgData, err := rlp.EncodeToBytes(vote)
 	if err != nil {
@@ -170,4 +174,8 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		return
 	}
 	log.Debug("sent vote", "vote", vote)
+}
+
+func (c *core) CurrentState() *roundState {
+	return c.currentState
 }

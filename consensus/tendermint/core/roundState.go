@@ -19,18 +19,17 @@ package core
 import (
 	"io"
 	"math/big"
-	"sync"
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
-// newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
-	proposalReceived *tendermint.Proposal, block *types.Block,
+//newRoundState creates a new roundState instance with the given view and validatorSet
+func newRoundState(view *tendermint.View, prevotesReceived, precommitsReceived map[int64]*messageSet, block *types.Block,
 	lockedRound int64, lockedBlock *types.Block,
-	validRound int64, validBlock *types.Block) *roundState {
+	validRound int64, validBlock *types.Block,
+	proposalReceived *tendermint.Proposal, step RoundStepType) *roundState {
 	return &roundState{
 		view:               view,
 		block:              block,
@@ -39,9 +38,9 @@ func newRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet,
 		validRound:         validRound,
 		validBlock:         validBlock,
 		proposalReceived:   proposalReceived,
-		PrevotesReceived:   newMessageSet(validatorSet),
-		PrecommitsReceived: newMessageSet(validatorSet),
-		mu:                 new(sync.RWMutex),
+		PrevotesReceived:   prevotesReceived,
+		PrecommitsReceived: precommitsReceived,
+		step:               step,
 	}
 }
 
@@ -56,131 +55,102 @@ type roundState struct {
 	validRound int64        // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
 	validBlock *types.Block // validBlock is last known block of PoLC above
 
-	proposalReceived   *tendermint.Proposal //
-	PrevotesReceived   *messageSet
-	PrecommitsReceived *messageSet
+	proposalReceived   *tendermint.Proposal  //
+	PrevotesReceived   map[int64]*messageSet //This is the prevote received for each round
+	PrecommitsReceived map[int64]*messageSet //this is the precommit received for each round
 
 	//step is the enumerate Step that currently the core is at.
 	//to jump to the next step, UpdateRoundStep is called.
 	step RoundStepType
-
-	mu *sync.RWMutex
 }
 
 func (s *roundState) Step() RoundStepType {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	return s.step
 }
 
 func (s *roundState) BlockNumber() *big.Int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	return s.view.BlockNumber
 }
 
 func (s *roundState) Round() int64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	return s.view.Round
 }
 
 func (s *roundState) UpdateRoundStep(round int64, step RoundStepType) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.view.Round = round
 	s.step = step
 }
 
 func (s *roundState) ProposalReceived() *tendermint.Proposal {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	return s.proposalReceived
 }
 
 func (s *roundState) SetProposalReceived(proposalReceived *tendermint.Proposal) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	s.proposalReceived = proposalReceived
 }
 
 func (s *roundState) SetView(v *tendermint.View) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	s.view = v
 }
 
 // IsProposalComplete Returns true if the proposal block is complete &&
 // (if POLRound was proposed, we have +2/3 prevotes from there).
 func (s *roundState) IsProposalComplete() bool {
-	//TODO: implement this, it have to do with number of votes receives (in handle prevotes)
-	return true
+	if s.proposalReceived == nil {
+		return false
+	}
+	if s.proposalReceived.POLRound < 0 {
+		return true
+	}
+	prevotes, ok := s.PrevotesReceived[s.proposalReceived.POLRound]
+	if !ok {
+		return false
+	}
+
+	return prevotes.HasMajority()
 }
 
 func (s *roundState) View() *tendermint.View {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.view
 }
 
 func (s *roundState) SetBlock(bl *types.Block) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	s.block = bl
 }
 
 func (s *roundState) Block() *types.Block {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.block
 }
 
 func (s *roundState) SetLockedRoundAndBlock(lockedR int64, lockedBl *types.Block) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	s.lockedRound = lockedR
 	s.lockedBlock = lockedBl
 }
 
-func (s *roundState) LockedRound() int64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (s *roundState) Unlock() {
+	s.lockedRound = -1
+	s.lockedBlock = nil
+}
 
+func (s *roundState) LockedRound() int64 {
 	return s.lockedRound
 }
 
 func (s *roundState) LockedBlock() *types.Block {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.lockedBlock
 }
 
 func (s *roundState) SetValidRoundAndBlock(validR int64, validBl *types.Block) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	s.validRound = validR
 	s.validBlock = validBl
 }
 
 func (s *roundState) ValidRound() int64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.validRound
 }
 
 func (s *roundState) ValidBlock() *types.Block {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.validBlock
 }
 
@@ -196,8 +166,8 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 		ValidRound         int64
 		ValidBlock         *types.Block
 		proposalReceived   *tendermint.Proposal
-		PrevotesReceived   *messageSet
-		PrecommitsReceived *messageSet
+		PrevotesReceived   map[int64]*messageSet
+		PrecommitsReceived map[int64]*messageSet
 	}
 
 	if err := stream.Decode(&ss); err != nil {
@@ -209,7 +179,6 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	s.proposalReceived = ss.proposalReceived
 	s.PrevotesReceived = ss.PrevotesReceived
 	s.PrecommitsReceived = ss.PrecommitsReceived
-	s.mu = new(sync.RWMutex)
 
 	return nil
 }
@@ -223,8 +192,6 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 // recommended to write only a single value but writing multiple
 // values or no value at all is also permitted.
 func (s *roundState) EncodeRLP(w io.Writer) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 
 	return rlp.Encode(w, []interface{}{
 		s.view,
@@ -237,4 +204,19 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 		s.PrevotesReceived,
 		s.PrecommitsReceived,
 	})
+}
+
+func (s *roundState) addPrevote(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+	msgSet, ok := s.PrevotesReceived[vote.Round]
+	if !ok {
+		msgSet = newMessageSet(valset, msgPrevote, s.view)
+		s.PrevotesReceived[vote.Round] = msgSet
+	}
+	return msgSet.AddVote(msg, vote)
+}
+
+//GetPrevotesByRound return prevote messageSet for that round, if there is no prevotes message on the said round, return nil and false
+func (s *roundState) GetPrevotesByRound(round int64) (*messageSet, bool) {
+	msgSet, ok := s.PrevotesReceived[round]
+	return msgSet, ok
 }

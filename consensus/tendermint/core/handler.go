@@ -4,14 +4,18 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 var (
-	ErrInvalidProposalPOLRound  = errors.New("Error invalid proposal POL round")
-	ErrInvalidProposalSignature = errors.New("Error invalid proposal signature")
+	ErrInvalidProposalPOLRound     = errors.New("invalid proposal POL round")
+	ErrInvalidProposalSignature    = errors.New("invalid proposal signature")
+	ErrVoteHeightMismatch          = errors.New("vote height mismatch")
+	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
+	emtpyBlockHash                 = common.Hash{}
 )
 
 // ----------------------------------------------------------------------------
@@ -35,7 +39,6 @@ func (c *core) unsubscribeEvents() {
 func (c *core) handleEvents() {
 	// Clear state
 	defer func() {
-		c.currentState = nil
 		c.handlerWg.Done()
 	}()
 
@@ -52,7 +55,7 @@ func (c *core) handleEvents() {
 			switch ev := event.Data.(type) {
 			case tendermint.NewBlockEvent:
 				log.Debug("received New Block event", "event", ev)
-				c.currentState.SetBlock(ev.Block)
+				c.CurrentState().SetBlock(ev.Block)
 			case tendermint.MessageEvent:
 				log.Debug("received Message event", "message", ev)
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
@@ -97,18 +100,24 @@ func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 }
 
 func (c *core) handlePropose(msg message) error {
+	log.Info("handling propose...")
 	var (
-		state    = c.currentState
+		state    = c.CurrentState()
 		proposal tendermint.Proposal
 	)
+
 	if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
 		return err
 	}
+	log.Info("prepare to check Proposal received...")
+
 	// Already have one
 	// TODO: possibly catch double proposals
 	if state.ProposalReceived() != nil {
 		return nil
 	}
+	log.Info("prepare to check blockNumber...")
+
 	// Does not apply, this is not an error but may happen due to network lattency
 	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
 		log.Debug("received proposal with different height/round",
@@ -119,6 +128,7 @@ func (c *core) handlePropose(msg message) error {
 	if err := c.verifyProposal(proposal, msg); err != nil {
 		return err
 	}
+	log.Info("setProposal receive...")
 
 	state.SetProposalReceived(&proposal)
 	//// TODO: We can check if Proposal is for a different block as this is a sign of misbehavior!
@@ -127,16 +137,92 @@ func (c *core) handlePropose(msg message) error {
 }
 
 func (c *core) handlePrevote(msg message) error {
-	var vote tendermint.Vote
+	var (
+		vote  tendermint.Vote
+		state = c.CurrentState()
+	)
 	log.Info("handling prevote ...")
 	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
 		return err
 	}
-	log.Info("received prevote", "prevote", vote)
+	if vote.BlockHash == nil {
+		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
+	}
+	log.Info("received prevote", "prevote", vote, "from", msg.Address)
+	added, err := state.addPrevote(msg, &vote, c.valSet)
+	if err != nil {
+		return err
+	}
+	if !added {
+		log.Info("known vote, skipping status check change")
+		return nil
+	}
+	log.Info("added vote into roundState", "vote", vote)
+	prevotes, ok := state.GetPrevotesByRound(vote.Round)
+	if !ok {
+		panic("expec prevotes to exist now")
+	}
+	//at this stage, state.PrevoteReceived[vote.Round] is guaranted to exist.
+	if blockHash, ok := prevotes.TwoThirdMajority(); ok {
+		log.Info("got 2/3 majority on a block", "block", blockHash)
+		var (
+			lockedRound = state.LockedRound()
+			lockedBlock = state.LockedBlock()
+		)
+		//if there is a lockedRound<vote.Round <= state.Round
+		//and lockedBlock != nil
+		if lockedRound != -1 && lockedRound < vote.Round && vote.Round <= state.Round() && lockedBlock.Hash().Hex() != blockHash.Hex() {
+			log.Info("unlocking because of POL", "lockedRound", lockedRound, "POLRound", vote.Round)
+			state.Unlock()
+		}
+
+		//set valid Block if the polka is not emptyBlock
+		if blockHash.Hex() != emtpyBlockHash.Hex() && state.ValidRound() < vote.Round && vote.Round == state.Round() {
+			if state.ProposalReceived() != nil && state.ProposalReceived().Block.Hash().Hex() == blockHash.Hex() {
+				log.Info("updating validblock because of POL", "validRound", state.ValidRound(), "POLRound", vote.Round)
+				state.SetValidRoundAndBlock(vote.Round, state.ProposalReceived().Block)
+			} else {
+				log.Info("updating proposalBlock to nil since we received a valid block we don't know about")
+				state.SetProposalReceived(nil)
+			}
+		}
+	}
+	//rebroadcast
+	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
+	go func() {
+		payload, err := rlp.EncodeToBytes(&msg)
+		if err != nil {
+			log.Error("failed to encode msg", "error", err)
+			return
+		}
+		if err := c.backend.Gossip(c.valSet, payload); err != nil {
+			log.Error("failed to re-gossip the vote received", "error", err)
+		}
+	}()
+	//if we receive a future roundthat come to 2/3 of prevotes on any block
+	switch {
+	case state.Round() < vote.Round && prevotes.HasTwoThirdAny():
+		//Skip to vote.round
+		c.enterNewRound(state.BlockNumber(), vote.Round)
+	case state.Round() == vote.Round && RoundStepPrevote <= state.Step(): // current round
+		blockHash, ok := prevotes.TwoThirdMajority()
+		if ok && state.IsProposalComplete() || blockHash.Hex() != emtpyBlockHash.Hex() {
+			c.enterPrecommit(state.BlockNumber(), vote.Round)
+		} else if prevotes.HasTwoThirdAny() {
+			//wait till we got a majority
+			c.enterPrevoteWait(state.BlockNumber(), vote.Round)
+		}
+	case state.ProposalReceived() != nil && 0 <= state.ProposalReceived().POLRound && state.ProposalReceived().POLRound == vote.Round:
+		if state.IsProposalComplete() {
+			c.enterPrevote(state.BlockNumber(), vote.Round)
+		}
+	}
 	return nil
 }
 
 func (c *core) handleMsg(msg message) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	switch msg.Code {
 	case msgPropose:
 		return c.handlePropose(msg)
@@ -150,9 +236,9 @@ func (c *core) handleMsg(msg message) error {
 func (c *core) handleTimeout(ti timeoutInfo) {
 	log.Debug("Received timeout signal from core.timeout", "timeout", ti.Duration, "block_number", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
 	var (
-		round       = c.currentState.Round()
-		blockNumber = c.currentState.BlockNumber()
-		step        = c.currentState.Step()
+		round       = c.CurrentState().Round()
+		blockNumber = c.CurrentState().BlockNumber()
+		step        = c.CurrentState().Step()
 	)
 	// timeouts must be for current height, round, step
 	if ti.BlockNumber.Cmp(blockNumber) != 0 || ti.Round < round || (ti.Round == round && ti.Step < step) {
@@ -161,8 +247,8 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 	}
 
 	// the timeout will now cause a state transition
-	c.currentState.mu.Lock()
-	defer c.currentState.mu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	switch ti.Step {
 	case RoundStepNewHeight:
