@@ -3,7 +3,9 @@ package core
 import (
 	"fmt"
 	"math/big"
+	"time"
 
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -48,6 +50,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 
 	//Update to RoundStepNewRound
 	state.UpdateRoundStep(round, RoundStepNewRound)
+	state.setPrecommitWaited(false)
 
 	//Upon NewRound, there should be no valid block yet
 	//This is only valid in round 0
@@ -269,6 +272,49 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	})
 }
 
+func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
+	var (
+		state        = c.CurrentState()
+		sBlockNumber = state.BlockNumber()
+		sRound       = state.Round()
+		sStep        = state.Step()
+	)
+
+	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && state.getPrecommitWaited()) {
+		log.Debug("enterPrecommitWait ignore: we are in a state that is not suitable to enter precommit with input state",
+			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
+			"current_round", sRound, "input_round", round, "precommitWaited", state.getPrecommitWaited())
+		return
+	}
+
+	precommits, ok := state.GetPrecommitsByRound(round)
+	if !ok {
+		log.Error("enterPrecommitWait with no precommit votes", "block_number", sBlockNumber, "round", sRound)
+		panic("enterPrecommitWait with no precommit votes")
+	}
+	if !precommits.HasTwoThirdAny() {
+		panic("enterPrecommitWait without precommits has 2/3 of votes")
+	}
+	log.Debug("enterPrecommitWait",
+		"current_block_number", sBlockNumber.String(),
+		"current_round", sRound, "input_round", round,
+		"current_step", sStep.String())
+
+	//after this we setPrecommitWaited to true to make sure that the wait happens only once each round
+	defer func() {
+		state.setPrecommitWaited(true)
+	}()
+
+	c.timeout.ScheduleTimeout(timeoutInfo{
+		Duration:    c.config.PrecommitTimeout(round),
+		BlockNumber: blockNumber,
+		Round:       round,
+		Step:        RoundStepPrecommitWait,
+	})
+
+}
+
+
 // enterPrecommit sets core to precommit state:
 // Enter: `timeoutPrecommit` after any +2/3 precommits.
 // Enter: +2/3 precomits for block or nil.
@@ -363,11 +409,125 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	c.SendVote(msgPrecommit, nil, round)
 }
 
+func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
+	var state = c.currentState
+	if state.BlockNumber().Cmp(blockNumber) != 0 || state.Step() >= RoundStepPrecommit {
+		log.Debug("enterCommit ignore: we are in a state that is ahead of the input state",
+			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
+			"current_step", state.Step().String(), "input_step", RoundStepPrevote.String())
+		return
+	}
+
+	defer func() {
+		// Done enterCommit:
+		// keep state.Round the same, commitRound points to the right Precommits set.
+		state.UpdateRoundStep(state.Round(), RoundStepCommit)
+		state.commitRound = commitRound
+		state.commitTime = uint64(time.Now().Unix())
+
+		c.finalizeCommit(blockNumber)
+	}()
+
+	precommits, ok := state.GetPrecommitsByRound(commitRound)
+
+	if !ok {
+		panic("commit round must have a set of precommits")
+	}
+
+	blockHash, ok := precommits.TwoThirdMajority()
+
+	if !ok {
+		panic("commit round must has a majority block")
+	}
+	var (
+		lockedBlock = state.LockedBlock()
+	)
+	//if lockBlock is the same as the hash, move it to Proposal
+	//it will be cleared upon entering newHeight
+	if lockedBlock != nil && lockedBlock.Hash().Hex() == blockHash.Hex() {
+		log.Info("Commit is for locked block. Set ProposalBlock=LockedBlock", "blockHash", blockHash.Hex())
+		state.SetProposalReceived(&tendermint.Proposal{
+			Block: lockedBlock,
+			Round: commitRound,
+		})
+	}
+	var (
+		proposalReceived = state.ProposalReceived()
+	)
+	// If we don't have the block being commit, we set proposalReceived to nil and wait
+	if proposalReceived != nil && proposalReceived.Block.Hash().Hex() != blockHash.Hex() {
+		state.SetProposalReceived(nil)
+	}
+
+}
+
+func (c *core) finalizeCommit(blockNumber *big.Int) {
+	var state = c.CurrentState()
+	if state.BlockNumber().Cmp(blockNumber) != 0 {
+		log.Error("finalize a commit at different state block number", "current_block_number", state.BlockNumber(), "commit_block_number", blockNumber)
+		panic("finalize a commit at different block number")
+	}
+	precommits, ok := state.GetPrecommitsByRound(state.commitRound)
+	if !ok {
+		log.Error("no precommits at commitRound")
+		return
+	}
+	blockHash, ok := precommits.TwoThirdMajority()
+	if !ok {
+		log.Error("no 2/3 majority for a block at commitRound")
+		return
+	}
+	if blockHash.Hex() == emptyBlockHash.Hex() {
+		log.Error("nil majority at commitRound")
+		return
+	}
+	proposal := state.ProposalReceived()
+	if proposal == nil {
+		log.Info("empty proposal at finalizeCommit: no proposal has been received")
+		return
+	}
+	if proposal.Block != nil && proposal.Block.Hash().Hex() != blockHash.Hex() {
+		log.Info("the proposal received was not the commit hash. Finalize failed")
+		return
+	}
+
+	if state.Step() != RoundStepCommit {
+		log.Error("finalizeCommit invalid: we are in a state that is invalid for commit",
+			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
+			"current_step", state.Step().String(), "input_step", RoundStepPrevote.String())
+		return
+	}
+
+	//TODO: do we need revalidating block at this step?
+
+	log.Info("finalizing Block", "block_hash", blockHash.Hex())
+
+	block := c.FinalizeBlock(state.ProposalReceived().Block)
+	c.blockFinalize.Post(tendermint.BlockFinalizedEvent{
+		Block: block,
+	})
+
+	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
+
+	c.updateStateForNewblock()
+	c.startRoundZero()
+}
+
+//FinalizeBlock will fill extradata with signature and return the ready to store block
+func (c *core) FinalizeBlock(block *types.Block) *types.Block {
+	return block
+}
+
 func (c *core) startRoundZero() {
 	//init valset from backend
+	//TODO: we need to fix this function call to a timeout otherwise it will block the last block finalize
 	if c.valSet == nil {
 		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 
 	}
 	c.enterNewRound(c.CurrentState().view.BlockNumber, 0)
+}
+
+func (c *core) updateStateForNewblock() {
+	//TODO: implement this, it will update core for new height
 }

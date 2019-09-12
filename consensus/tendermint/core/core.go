@@ -19,11 +19,12 @@ const (
 // New creates an Tendermint consensus core
 func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 	c := &core{
-		handlerWg: new(sync.WaitGroup),
-		backend:   backend,
-		timeout:   NewTimeoutTicker(),
-		config:    config,
-		mu:        &sync.RWMutex{},
+		handlerWg:     new(sync.WaitGroup),
+		backend:       backend,
+		timeout:       NewTimeoutTicker(),
+		config:        config,
+		mu:            &sync.RWMutex{},
+		blockFinalize: new(event.TypeMux),
 	}
 	return c
 }
@@ -38,6 +39,9 @@ type core struct {
 	//- NewBlockEvent: when there is a new composed block from Tx_pool
 	//- MessageEvent: when there is a new message from other validators/ peers
 	events *event.TypeMuxSubscription
+
+	//BlockFinalizeEvent
+	blockFinalize *event.TypeMux
 	//handleWg will help core stop gracefully, i.e, core will wait till handlingEvents done before reutrning.
 	handlerWg *sync.WaitGroup
 
@@ -47,17 +51,16 @@ type core struct {
 	//it contain round/ block number as well as how many votes this machine has received.
 	currentState *roundState
 
-	//timeoutProposal is the channel to receive proposal timeout.
-	//TODO: check if the timeout can be done without relating to the current state of core.
-	timeoutProposal *event.TypeMuxSubscription
-	// timeoutPrevote = channel  or TimeoutPrecommit depends on current round step
-	timeoutPrevote *event.TypeMuxSubscription
 	//timeout will schedule all timeout requirement and fire the timeout event once it's finished.
 	timeout TimeoutTicker
 	//config store the config of the chain
 	config *tendermint.Config
 	//mutex mark critical section of core which should not be accessed parralel
 	mu *sync.RWMutex
+}
+
+func (c *core) EventMux() *event.TypeMux {
+	return c.blockFinalize
 }
 
 // Start implements core.Engine.Start
@@ -146,7 +149,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	if voteType != msgPrevote && voteType != msgCommit {
 		return
 	}
-	var blockHash = emtpyBlockHash
+	var blockHash = emptyBlockHash
 	if block != nil {
 		blockHash = block.Hash()
 	}
