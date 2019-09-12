@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/log"
 )
@@ -301,11 +302,12 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	}()
 
 	// Note: Liem has already implemented GetPrevotesByRound(round), will change once the PR is merged
+	var blockHash *common.Hash
 	prevotes, ok := state.GetPrevotesByRound(round)
-	if !ok {
-		log.Debug("enterPrecommit ignore: there is no prevotes", "round", round)
+	if ok {
+		blockHash, ok = prevotes.TwoThirdMajority()
 	}
-	blockHash, ok := prevotes.TwoThirdMajority()
+
 	// if we don't have polka, must precommit nil
 	if !ok {
 		if state.LockedBlock() != nil {
@@ -337,7 +339,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 
 	// At this point, +2/3 prevoted for a particular block.
 	// If we're already locked on that block, precommit it, and update the LockedRound
-	if state.LockedBlock().Hash().Hex() == blockHash.Hex() {
+	if state.LockedBlock() != nil && state.LockedBlock().Hash().Hex() == blockHash.Hex() {
 		log.Info("enterPrecommit: +2/3 prevoted locked block. Relocking")
 		state.SetLockedRoundAndBlock(round, state.LockedBlock())
 		c.SendVote(msgPrecommit, state.LockedBlock(), round)
@@ -345,7 +347,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	}
 
 	// If +2/3 prevoted for proposal block, stage and precommit it
-	if state.ProposalReceived().Block.Hash().Hex() == blockHash.Hex() {
+	if state.ProposalReceived() != nil && state.ProposalReceived().Block.Hash().Hex() == blockHash.Hex() {
 		log.Info("enterPrecommit: +2/3 prevoted proposal block. Locking", "hash", blockHash)
 		// TODO: Validate the block before locking and precommit
 		state.SetLockedRoundAndBlock(round, state.ProposalReceived().Block)
@@ -356,7 +358,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	// There was a polka in this round for a block we don't have.
 	// TODO: Fetch that block, unlock, and precommit nil.
 	// The +2/3 prevotes for this round is the POL for our unlock.
-	log.Info("enterPrecommit: +2/3 prevoted a block we don't have. Fetch. Unlock and Precommit nil", "hash", block.Hash())
+	log.Info("enterPrecommit: +2/3 prevoted a block we don't have. Fetch. Unlock and Precommit nil", "hash", blockHash.Hex())
 	state.Unlock()
 	c.SendVote(msgPrecommit, nil, round)
 }

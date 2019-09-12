@@ -20,6 +20,7 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -154,24 +155,20 @@ func (s *roundState) ValidBlock() *types.Block {
 	return s.validBlock
 }
 
-// If there was a +2/3 majority for block, return block and true.
-// Else, return the empty types.Block{} and false.
-func (s *roundState) TwoThirdsMajority(r int64) (block types.Block, ok bool) {
-	// TODO: Check if there is a polka at round r then return block and true,
-	return types.Block{}, false
-}
-
 // Last round and block that has +2/3 prevotes for a particular block or nil.
 // Returns -1 if no such round exists.
-func (s *roundState) POLInfo() (polRound int64, polBlock types.Block) {
+func (s *roundState) POLInfo() (polRound int64, polBlockHash *common.Hash) {
 	// TODO: Just a sample
 	for r := s.Round(); r >= 0; r-- {
-		polBlock, ok := s.TwoThirdsMajority(r)
+		prevotes, ok := s.GetPrevotesByRound(r)
 		if ok {
-			return r, polBlock
+			polBlockHash, ok = prevotes.TwoThirdMajority()
+		}
+		if ok {
+			return r, polBlockHash
 		}
 	}
-	return -1, types.Block{}
+	return -1, nil
 }
 
 // The DecodeRLP method should read one value from the given
