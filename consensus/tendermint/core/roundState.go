@@ -128,6 +128,11 @@ func (s *roundState) SetLockedRoundAndBlock(lockedR int64, lockedBl *types.Block
 	s.lockedBlock = lockedBl
 }
 
+func (s *roundState) Unlock() {
+	s.lockedRound = -1
+	s.lockedBlock = nil
+}
+
 func (s *roundState) LockedRound() int64 {
 	return s.lockedRound
 }

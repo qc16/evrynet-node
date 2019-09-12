@@ -173,7 +173,7 @@ func (c *core) handlePrevote(msg message) error {
 		//and lockedBlock != nil
 		if lockedRound != -1 && lockedRound < vote.Round && vote.Round <= state.Round() && lockedBlock.Hash().Hex() != blockHash.Hex() {
 			log.Info("unlocking because of POL", "lockedRound", lockedRound, "POLRound", vote.Round)
-			state.SetLockedRoundAndBlock(vote.Round, nil)
+			state.Unlock()
 		}
 
 		//set valid Block if the polka is not emptyBlock
