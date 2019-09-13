@@ -14,13 +14,19 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+
 	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
 	"golang.org/x/crypto/sha3"
 )
 
 var (
+	// TendermintBlockReward tempo fix the Block reward in wei for successfully mining a block
+	// TODO: will modify after
+	TendermintBlockReward = big.NewInt(5e+18)
+
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
 )
@@ -55,13 +61,50 @@ var (
 	errInvalidVotingChain = errors.New("invalid voting chain")
 	// errCoinBaseInvalid is returned if the value of coin base is not equals proposer's address in header
 	errCoinBaseInvalid = errors.New("invalid coin base address")
+	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
+	errInvalidUncleHash = errors.New("non empty uncle hash")
 )
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
 func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
-	//TODO: need to validate address, block period and update block
-	// clear previous data of proposal
+	// update the block header timestamp and signature and propose the block to core engine
+	header := block.Header()
+	blockNumber := header.Number.Uint64()
+
+	// validate address of the validator
+	// get snapshot
+	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+
+	// checks the address must stored in snapshot
+	if _, v := snap.ValSet.GetByAddress(sb.address); v == nil {
+		return errUnauthorized
+	}
+
+	// update seal to header of the block
+	parent := chain.GetHeader(header.ParentHash, blockNumber-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+	block, err = sb.updateBlock(parent, block)
+	if err != nil {
+		return err
+	}
+
+	// wait for the timestamp of header, make sure this block does not come from the future
+	headerTime := int64(block.Header().Time)
+	delay := time.Unix(headerTime, 0).Sub(now())
+	select {
+	case <-time.After(delay):
+	case <-stop:
+		results <- nil
+		return nil
+	}
+
+	//TODO: clear previous data of proposal
 
 	// post block into tendermint engine
 	go sb.EventMux().Post(tendermint.NewBlockEvent{
@@ -72,6 +115,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	go func() {
 		select {
 		case results <- block:
+		case <-stop:
+			results <- nil
 		default:
 			log.Warn("Sealing result is not read by miner")
 		}
@@ -112,14 +157,11 @@ func (sb *backend) Stop() error {
 	return nil
 }
 
-// Author retrieves the Ethereum address of the account that minted the given
+// Author retrieves the Evrynet address of the account that minted the given
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	log.Warn("Author: implement me")
-
-	//TODO: fake return address from a signed header.
-	return common.Address{}, nil
+	return blockProposer(header)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of a
@@ -192,11 +234,11 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	if err := sb.verifyProposalSeal(header, parents, snap); err != nil {
+	if err := sb.verifyProposalSeal(header, snap); err != nil {
 		return err
 	}
 
-	return sb.verifyCommittedSeals(header, parents, snap)
+	return sb.verifyCommittedSeals(header, snap)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -204,38 +246,117 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 // a results channel to retrieve the async verifications (the order is that of
 // the input slice).
 func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	panic("VerifyHeaders: implement me")
-	//TODO: Research & Implement
+	abort := make(chan struct{})
+	errorHeaders := make(chan error, len(headers))
+	go func() {
+		for i, header := range headers {
+			err := sb.verifyHeader(chain, header, headers[:i])
+
+			select {
+			case <-abort:
+				return
+			case errorHeaders <- err:
+			}
+		}
+	}()
+	return abort, errorHeaders
 }
 
+// VerifyUncles verifies that the given block's uncles conform to the consensus
+// rules of a given engine.
 func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
-	panic("VerifyUncles: implement me")
-	//TODO: Research & Implement
-}
-
-func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	panic("VerifySeal: implement me")
-	//TODO: Research & Implement
-}
-
-func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
-	header.Difficulty = defaultDifficulty
-	log.Warn("Prepare: implement me")
-
-	//TODO: Research & Implement
+	if len(block.Uncles()) > 0 {
+		return errInvalidUncleHash
+	}
 	return nil
 }
 
-func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header) {
-	log.Warn("Finalize: implement me")
-	//TODO: Research & Implement
+// VerifySeal checks whether the crypto seal on a header is valid according to
+// the consensus rules of the given engine.
+func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
+	// get parent header and ensure the signer is in parent's validator set
+	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		return errUnknownBlock
+	}
+
+	// get snap shoot to prepare for the verify proposal
+	snap, err := sb.snapshot(chain, blockNumber-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+
+	return sb.verifyProposalSeal(header, snap)
 }
 
+// Prepare initializes the consensus fields of a block header according to the
+// rules of a particular engine. The changes are executed inline.
+func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
+	// set coinbase with the proposer's address
+	header.Coinbase = sb.Address()
+	// use the same difficulty and mixDigest for all blocks
+	header.MixDigest = types.TendermintDigest
+	// use the same difficulty for all blocks
+	// TODO: thight might reflect 2F+1 value since our block have nothing included to indicate it
+	header.Difficulty = sb.CalcDifficulty(chain, header.Time, nil)
+
+	// get parent
+	var (
+		blockNumber = header.Number.Uint64()
+		parent      = chain.GetHeader(header.ParentHash, blockNumber-1)
+	)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// prepare extra data without validators
+	extra, err := prepareExtra(header)
+	if err != nil {
+		return err
+	}
+	header.Extra = extra
+
+	// set header's timestamp from parent's timestamp and blockperiod
+	var (
+		parentTime  = new(big.Int).SetUint64(parent.Time)
+		blockPeriod = new(big.Int).SetUint64(sb.config.BlockPeriod)
+		headerTime  = new(big.Int).Add(parentTime, blockPeriod)
+	)
+
+	if headerTime.Int64() < time.Now().Unix() {
+		header.Time = uint64(time.Now().Unix())
+	} else {
+		header.Time = headerTime.Uint64()
+	}
+
+	//TODO: modify valset data if epoch is reached.
+
+	return nil
+}
+
+// Finalize runs any post-transaction state modifications (e.g. block rewards)
+//
+// Note, the block header and state database might be updated to reflect any
+// consensus rules that happen at finalization (e.g. block rewards).
+func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+	uncles []*types.Header) {
+	// Accumulate any block rewards and commit the final state root
+	accumulateRewards(chain.Config(), state, header)
+
+	// Since there is a change in stateDB, its trie must be update
+	// In case block reached EIP158 hash, the state will attempt to delete empty object as EIP158 sepcification
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+}
+
+// FinalizeAndAssemble runs any post-transaction state modifications (e.g. block rewards)
+// and assembles the final block.
+//
+// Note, the block header and state database might be updated to reflect any
+// consensus rules that happen at finalization (e.g. block rewards).
 func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	log.Warn("FinalizeAndAssemble: implement me")
-	//TODO: Research & Implement
+	// Accumulate any block rewards and commit the final state root
+	accumulateRewards(chain.Config(), state, header)
 
 	// No block rewards, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -245,34 +366,14 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 	return types.NewBlock(header, txs, nil, receipts), nil
 }
 
+// SealHash returns the hash of a block prior to it being sealed.
 func (sb *backend) SealHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewLegacyKeccak256()
-
-	//TODO: this logic is temporary.
-	// I wanna make hash is different when SealHash() was called to bypass `func (w *worker) taskLoop()`
-	_ = rlp.Encode(hasher, []interface{}{
-		header.ParentHash,
-		header.UncleHash,
-		header.Coinbase,
-		header.Root,
-		header.TxHash,
-		header.ReceiptHash,
-		header.Bloom,
-		header.Difficulty,
-		header.Number,
-		header.GasLimit,
-		header.GasUsed,
-		header.Time,
-		header.Extra,
-	})
-	hasher.Sum(hash[:0])
-	return hash
+	return sigHash(header)
 }
 
+// CalcDifficulty tempo return default difficulty
 func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	log.Warn("CalcDifficulty: implement me")
-	//TODO: Research & Implement
-	return nil
+	return defaultDifficulty
 }
 
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
@@ -369,7 +470,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 }
 
 // verifyProposalSeal checks proposal seal is signed by validator
-func (sb *backend) verifyProposalSeal(header *types.Header, parents []*types.Header, snap *Snapshot) error {
+func (sb *backend) verifyProposalSeal(header *types.Header, snap *Snapshot) error {
 	// resolve the authorization key and check against signers
 	signer, err := blockProposer(header)
 	if err != nil {
@@ -388,7 +489,7 @@ func (sb *backend) verifyProposalSeal(header *types.Header, parents []*types.Hea
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (sb *backend) verifyCommittedSeals(header *types.Header, parents []*types.Header, snap *Snapshot) error {
+func (sb *backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) error {
 	extra, err := types.ExtractTendermintExtra(header)
 	if err != nil {
 		return err
@@ -475,7 +576,7 @@ func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 }
 
 // prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
+func prepareExtra(header *types.Header) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
@@ -484,18 +585,30 @@ func prepareExtra(header *types.Header, vals []common.Address) ([]byte, error) {
 	}
 	buf.Write(header.Extra[:types.TendermintExtraVanity])
 
-	tdm := &types.TendermintExtra{
-		Validators:    vals,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
+	tdm := &types.TendermintExtra{}
 	payload, err := rlp.EncodeToBytes(&tdm)
 	if err != nil {
 		return nil, err
 	}
 
 	return append(buf.Bytes(), payload...), nil
+}
+
+// update timestamp and signature of the block based on its number of transactions
+func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
+	header := block.Header()
+	// sign the hash
+	seal, err := sb.Sign(sigHash(header).Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	err = writeSeal(header, seal)
+	if err != nil {
+		return nil, err
+	}
+
+	return block.WithSeal(header), nil
 }
 
 // writeSeal writes the extra-data field of the given header with the given seals.
@@ -547,4 +660,13 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 
 	h.Extra = append(h.Extra[:types.TendermintExtraVanity], payload...)
 	return nil
+}
+
+// AccumulateRewards credits the coinbase of the given block with the proposing
+// reward.
+func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
+	// Accumulate the rewards for the proposer
+	reward := new(big.Int).Set(TendermintBlockReward)
+
+	state.AddBalance(header.Coinbase, reward)
 }

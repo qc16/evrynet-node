@@ -31,8 +31,10 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 // makeGenesis creates a new genesis struct based on some user input.
@@ -57,6 +59,7 @@ func (w *wizard) makeGenesis() {
 	fmt.Println("Which consensus engine to use? (default = clique)")
 	fmt.Println(" 1. Ethash - proof-of-work")
 	fmt.Println(" 2. Clique - proof-of-authority")
+	fmt.Println(" 3. Tendermint - practical-byzantine-fault-tolerance")
 
 	choice := w.read()
 	switch {
@@ -65,7 +68,7 @@ func (w *wizard) makeGenesis() {
 		genesis.Config.Ethash = new(params.EthashConfig)
 		genesis.ExtraData = make([]byte, 32)
 
-	case choice == "" || choice == "2":
+	case choice == "2":
 		// In the case of clique, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
 		genesis.Config.Clique = &params.CliqueConfig{
@@ -102,7 +105,44 @@ func (w *wizard) makeGenesis() {
 		for i, signer := range signers {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
+	case choice == "" || choice == "3":
+		fmt.Println("How many block (Epoch) after which to checkpoint and reset the pending votes (default 30000)")
+		epoch := uint64(w.readDefaultInt(30000))
 
+		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
+		policy := uint64(w.readDefaultInt(0))
+
+		genesis.Config.Tendermint = &params.TendermintConfig{
+			Epoch:          epoch,
+			ProposerPolicy: policy,
+		}
+		// In the case of Tendermint, configure the consensus parameters
+		genesis.Difficulty = big.NewInt(1)
+
+		// We also need the initial list of validators
+		fmt.Println()
+		fmt.Println("Which accounts are validators? (mandatory at least one)")
+
+		var validators []common.Address
+		for {
+			if address := w.readAddress(); address != nil {
+				validators = append(validators, *address)
+				continue
+			}
+			if len(validators) > 0 {
+				break
+			}
+		}
+		tendermintExtra := types.TendermintExtra{
+			Validators: validators,
+		}
+		extraData, err := rlp.EncodeToBytes(&tendermintExtra)
+		if err != nil {
+			log.Error("rlp encode got error", "error", err)
+			return
+		}
+		tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
+		genesis.ExtraData = append(tendermintExtraVanity, extraData...)
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
