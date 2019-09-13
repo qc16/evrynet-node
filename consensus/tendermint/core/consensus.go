@@ -467,6 +467,12 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 		log.Error("finalize a commit at different state block number", "current_block_number", state.BlockNumber(), "commit_block_number", blockNumber)
 		panic("finalize a commit at different block number")
 	}
+	if state.Step() != RoundStepCommit {
+		log.Error("finalizeCommit invalid: we are in a state that is invalid for commit",
+			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
+			"current_step", state.Step().String(), "input_step", RoundStepCommit.String())
+		return
+	}
 	precommits, ok := state.GetPrecommitsByRound(state.commitRound)
 	if !ok {
 		log.Error("no precommits at commitRound")
@@ -488,13 +494,6 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	}
 	if proposal.Block != nil && proposal.Block.Hash().Hex() != blockHash.Hex() {
 		log.Info("the proposal received was not the commit hash. Finalize failed")
-		return
-	}
-
-	if state.Step() != RoundStepCommit {
-		log.Error("finalizeCommit invalid: we are in a state that is invalid for commit",
-			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
-			"current_step", state.Step().String(), "input_step", RoundStepPrevote.String())
 		return
 	}
 
