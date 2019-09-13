@@ -246,20 +246,20 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 // a results channel to retrieve the async verifications (the order is that of
 // the input slice).
 func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	passed := make(chan struct{})
+	abort := make(chan struct{})
 	errorHeaders := make(chan error, len(headers))
 	go func() {
 		for i, header := range headers {
 			err := sb.verifyHeader(chain, header, headers[:i])
 
 			select {
-			case <-passed:
+			case <-abort:
 				return
 			case errorHeaders <- err:
 			}
 		}
 	}()
-	return passed, errorHeaders
+	return abort, errorHeaders
 }
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
@@ -297,11 +297,14 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// use the same difficulty and mixDigest for all blocks
 	header.MixDigest = types.TendermintDigest
 	// use the same difficulty for all blocks
+	// TODO: thight might reflect 2F+1 value since our block have nothing included to indicate it
 	header.Difficulty = sb.CalcDifficulty(chain, header.Time, nil)
 
 	// get parent
-	blockNumber := header.Number.Uint64()
-	parent := chain.GetHeader(header.ParentHash, blockNumber-1)
+	var (
+		blockNumber = header.Number.Uint64()
+		parent      = chain.GetHeader(header.ParentHash, blockNumber-1)
+	)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
@@ -314,14 +317,19 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.Extra = extra
 
 	// set header's timestamp from parent's timestamp and blockperiod
-	parentTime := new(big.Int).SetUint64(parent.Time)
-	blockPeriod := new(big.Int).SetUint64(sb.config.BlockPeriod)
-	headerTime := new(big.Int).Add(parentTime, blockPeriod)
+	var (
+		parentTime  = new(big.Int).SetUint64(parent.Time)
+		blockPeriod = new(big.Int).SetUint64(sb.config.BlockPeriod)
+		headerTime  = new(big.Int).Add(parentTime, blockPeriod)
+	)
+
 	if headerTime.Int64() < time.Now().Unix() {
 		header.Time = uint64(time.Now().Unix())
 	} else {
 		header.Time = headerTime.Uint64()
 	}
+
+	//TODO: modify valset data if epoch is reached.
 
 	return nil
 }
@@ -335,7 +343,8 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
 
-	// update state trie and reassign root hash for this block
+	// Since there is a change in stateDB, its trie must be update
+	// In case block reached EIP158 hash, the state will attempt to delete empty object as EIP158 sepcification
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 
@@ -656,11 +665,8 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 // AccumulateRewards credits the coinbase of the given block with the proposing
 // reward.
 func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
-	// Select the correct block reward based on chain progression
-	blockReward := TendermintBlockReward
-
 	// Accumulate the rewards for the proposer
-	reward := new(big.Int).Set(blockReward)
+	reward := new(big.Int).Set(TendermintBlockReward)
 
 	state.AddBalance(header.Coinbase, reward)
 }
