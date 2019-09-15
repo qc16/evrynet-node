@@ -22,13 +22,13 @@ type Config struct {
 	TimeoutPrevoteDelta   time.Duration  //Increment if timeout happens at prevoteWait to reach eventually synchronous
 	TimeoutPrecommit      time.Duration  //Duration waiting for more precommit after 2/3 received
 	TimeoutPrecommitDelta time.Duration  //Duration waiting to increase if precommit wait expired to reach eventually synchronous
-	TimeoutCommit         time.Duration
+	TimeoutCommit         time.Duration  //Duration waiting to start round with new height
 }
 
 var DefaultConfig = &Config{
 	ProposerPolicy:        RoundRobin,
 	Epoch:                 30000,
-		BlockPeriod:         1,                       // 1 seconds
+	BlockPeriod:           1,                       // 1 seconds
 	TimeoutPropose:        3000 * time.Millisecond, //This is taken from tendermint. Might need tuning
 	TimeoutProposeDelta:   500 * time.Millisecond,  //This is taken from tendermint. Might need tunning
 	TimeoutPrevote:        1000 * time.Millisecond,
@@ -58,4 +58,9 @@ func (cfg *Config) PrecommitTimeout(round int64) time.Duration {
 	return time.Duration(
 		cfg.TimeoutPrecommit.Nanoseconds()+cfg.TimeoutPrecommitDelta.Nanoseconds()*int64(round),
 	) * time.Nanosecond
+}
+
+// Commit returns the amount of time to wait for straggler votes after receiving +2/3 precommits for a single block (ie. a commit).
+func (cfg *Config) Commit(t time.Time) time.Time {
+	return t.Add(cfg.TimeoutCommit)
 }

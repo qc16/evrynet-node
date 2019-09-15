@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
@@ -314,7 +314,6 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 
 }
 
-
 // enterPrecommit sets core to precommit state:
 // Enter: `timeoutPrecommit` after any +2/3 precommits.
 // Enter: +2/3 precomits for block or nil.
@@ -423,7 +422,7 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 		// keep state.Round the same, commitRound points to the right Precommits set.
 		state.UpdateRoundStep(state.Round(), RoundStepCommit)
 		state.commitRound = commitRound
-		state.commitTime = uint64(time.Now().Unix())
+		state.commitTime = time.Now()
 
 		c.finalizeCommit(blockNumber)
 	}()
@@ -518,15 +517,60 @@ func (c *core) FinalizeBlock(block *types.Block) *types.Block {
 }
 
 func (c *core) startRoundZero() {
-	//init valset from backend
-	//TODO: we need to fix this function call to a timeout otherwise it will block the last block finalize
-	if c.valSet == nil {
-		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
-
-	}
-	c.enterNewRound(c.CurrentState().view.BlockNumber, 0)
+	var state = c.CurrentState()
+	sleepDuration := state.startTime.Sub(time.Now())
+	c.timeout.ScheduleTimeout(timeoutInfo{
+		Duration:    sleepDuration,
+		BlockNumber: state.BlockNumber(),
+		Round:       0,
+		Step:        RoundStepNewHeight,
+	})
 }
 
 func (c *core) updateStateForNewblock() {
-	//TODO: implement this, it will update core for new height
+	var state = c.CurrentState()
+
+	if state.commitRound > -1 {
+		// having commit round, should have seen +2/3 precommits
+		precommits, ok := state.GetPrecommitsByRound(state.commitRound)
+		_, ok = precommits.TwoThirdMajority()
+		if !ok {
+			log.Error("updateStateForNewblock(): Having commitRound with no +2/3 precommits")
+			return
+		}
+	}
+
+	// Update all roundState's fields
+	height := state.BlockNumber()
+	state.SetView(&tendermint.View{
+		Round:       0,
+		BlockNumber: height.Add(height, big.NewInt(1)),
+	})
+	state.UpdateRoundStep(0, RoundStepNewHeight)
+
+	if state.commitTime.IsZero() {
+		// "Now" makes it easier to sync up dev nodes.
+		// We add timeoutCommit to allow transactions
+		// to be gathered for the first block.
+		// And alternative solution that relies on clocks:
+		state.startTime = c.config.Commit(time.Now())
+	} else {
+		state.startTime = c.config.Commit(state.commitTime)
+	}
+
+	state.SetBlock(nil)
+	state.SetLockedRoundAndBlock(-1, nil)
+	state.SetValidRoundAndBlock(-1, nil)
+	state.SetProposalReceived(nil)
+
+	state.commitRound = -1
+	state.PrevotesReceived = nil
+	state.PrecommitsReceived = nil
+	state.PrecommitWaited = false
+
+	c.currentState = state
+
+	if c.valSet == nil {
+		c.valSet = c.backend.Validators(state.BlockNumber())
+	}
 }
