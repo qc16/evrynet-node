@@ -19,6 +19,7 @@ package core
 import (
 	"io"
 	"math/big"
+	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -56,8 +57,9 @@ type roundState struct {
 	validRound int64        // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
 	validBlock *types.Block // validBlock is last known block of PoLC above
 
-	commitRound int64  //commit Round is the round where it receive 2/3 precommit and enter commit stage.
-	commitTime  uint64 //commit timestamp in ms
+	commitRound int64     //commit Round is the round where it receive 2/3 precommit and enter commit stage.
+	commitTime  time.Time // commit timestamp
+	startTime   time.Time // time to start new round
 
 	proposalReceived   *tendermint.Proposal  //
 	PrevotesReceived   map[int64]*messageSet //This is the prevote received for each round
