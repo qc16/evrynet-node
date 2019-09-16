@@ -146,7 +146,6 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	//TODO: implement this with snapshot
 	return validator.NewSet([]common.Address{
-		common.HexToAddress("0xb61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B"),
-		common.HexToAddress("0xF837F945733a512A087866462B2a4b82FED11146"),
+		common.HexToAddress("0x18d06b4a57409e231f2fe06fd3617e58013cc5da"),
 	}, tendermint.RoundRobin)
 }
