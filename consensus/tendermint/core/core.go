@@ -6,6 +6,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -112,6 +113,14 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 func (c *core) SendPropose(propose *tendermint.Proposal) {
 	//TODO: remove these log in production
 	log.Debug("prepare to send proposal", "proposal", propose)
+	if propose.Block != nil {
+		seal, err := c.backend.Sign(utils.SigHash(propose.Block.Header()).Bytes())
+		if err != nil {
+			log.Error("failed to sign the seal ")
+		}
+		propose.Seal = seal
+	}
+
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
 		log.Error("Failed to encode Proposal to bytes", "error", err)
@@ -149,15 +158,23 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	if voteType != msgPrevote && voteType != msgCommit {
 		return
 	}
-	var blockHash = emptyBlockHash
+	var (
+		blockHash = emptyBlockHash
+		seal      []byte
+	)
 	if block != nil {
-		blockHash = block.Hash()
+		var err error
+		seal, err = c.backend.Sign(utils.SigHash(block.Header()).Bytes())
+		if err != nil {
+			log.Error("failed to sign seal", seal)
+			return
+		}
 	}
-
 	vote := &tendermint.Vote{
 		BlockHash:   &blockHash,
 		Round:       round,
 		BlockNumber: c.CurrentState().BlockNumber(),
+		Seal:        seal,
 	}
 	msgData, err := rlp.EncodeToBytes(vote)
 	if err != nil {
