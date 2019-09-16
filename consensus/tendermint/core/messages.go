@@ -10,6 +10,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -28,6 +29,7 @@ type Engine interface {
 	Stop() error
 	//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
 	SetBlockForProposal(block *types.Block)
+	EventMux() *event.TypeMux
 }
 
 // TODO: More msg codes here if needed

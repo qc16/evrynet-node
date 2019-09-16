@@ -14,3 +14,8 @@ type NewBlockEvent struct {
 type MessageEvent struct {
 	Payload []byte
 }
+
+// BlockFinalizedEvent is posted from core to backend when a block has enough votes to commit
+type BlockFinalizedEvent struct {
+	Block *types.Block
+}

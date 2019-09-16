@@ -15,7 +15,7 @@ var (
 	ErrInvalidProposalSignature    = errors.New("invalid proposal signature")
 	ErrVoteHeightMismatch          = errors.New("vote height mismatch")
 	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
-	emtpyBlockHash                 = common.Hash{}
+	emptyBlockHash                 = common.Hash{}
 )
 
 // ----------------------------------------------------------------------------
@@ -157,10 +157,10 @@ func (c *core) handlePrevote(msg message) error {
 		log.Info("known vote, skipping status check change")
 		return nil
 	}
-	log.Info("added vote into roundState", "vote", vote)
+	log.Info("added prevote vote into roundState", "vote", vote)
 	prevotes, ok := state.GetPrevotesByRound(vote.Round)
 	if !ok {
-		panic("expec prevotes to exist now")
+		panic("expect prevotes to exist now")
 	}
 	//at this stage, state.PrevoteReceived[vote.Round] is guaranted to exist.
 	if blockHash, ok := prevotes.TwoThirdMajority(); ok {
@@ -177,7 +177,7 @@ func (c *core) handlePrevote(msg message) error {
 		}
 
 		//set valid Block if the polka is not emptyBlock
-		if blockHash.Hex() != emtpyBlockHash.Hex() && state.ValidRound() < vote.Round && vote.Round == state.Round() {
+		if blockHash.Hex() != emptyBlockHash.Hex() && state.ValidRound() < vote.Round && vote.Round == state.Round() {
 			if state.ProposalReceived() != nil && state.ProposalReceived().Block.Hash().Hex() == blockHash.Hex() {
 				log.Info("updating validblock because of POL", "validRound", state.ValidRound(), "POLRound", vote.Round)
 				state.SetValidRoundAndBlock(vote.Round, state.ProposalReceived().Block)
@@ -206,7 +206,7 @@ func (c *core) handlePrevote(msg message) error {
 		c.enterNewRound(state.BlockNumber(), vote.Round)
 	case state.Round() == vote.Round && RoundStepPrevote <= state.Step(): // current round
 		blockHash, ok := prevotes.TwoThirdMajority()
-		if ok && state.IsProposalComplete() || blockHash.Hex() != emtpyBlockHash.Hex() {
+		if ok && state.IsProposalComplete() || blockHash.Hex() != emptyBlockHash.Hex() {
 			c.enterPrecommit(state.BlockNumber(), vote.Round)
 		} else if prevotes.HasTwoThirdAny() {
 			//wait till we got a majority
@@ -220,6 +220,75 @@ func (c *core) handlePrevote(msg message) error {
 	return nil
 }
 
+func (c *core) handlePrecommit(msg message) error {
+	var (
+		vote  tendermint.Vote
+		state = c.CurrentState()
+	)
+	log.Info("handling precommit ...")
+	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
+		return err
+	}
+	if vote.BlockHash == nil {
+		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
+	}
+	log.Info("received precommit", "precommit", vote, "from", msg.Address)
+	added, err := state.addPrecommit(msg, &vote, c.valSet)
+	if err != nil {
+		return err
+	}
+	if !added {
+		log.Info("known vote, skipping status check change and skipping re-broadcast")
+		return nil
+	}
+	log.Info("added precommit vote into roundState", "vote", vote)
+
+	//rebroadcast
+	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
+	go func() {
+		payload, err := rlp.EncodeToBytes(&msg)
+		if err != nil {
+			log.Error("failed to encode msg", "error", err)
+			return
+		}
+		if err := c.backend.Gossip(c.valSet, payload); err != nil {
+			log.Error("failed to re-gossip the vote received", "error", err)
+		}
+	}()
+
+	precommits, ok := state.GetPrecommitsByRound(vote.Round)
+	if !ok {
+		panic("expect precommits to exist now")
+	}
+	//at this stage, state.PrevoteReceived[vote.Round] is guaranted to exist.
+
+	blockHash, ok := precommits.TwoThirdMajority()
+	if ok {
+		log.Info(" got 2/3 precommits  majority on a block", "block", blockHash)
+		//this will go through the roundstep again to update core's roundState accordingly in case the vote Round is higher than core's Round
+		c.enterNewRound(state.BlockNumber(), vote.Round)
+		c.enterPrecommit(state.BlockNumber(), vote.Round)
+		//if the precommit are not nil, enter commit
+		if blockHash.Hex() != emptyBlockHash.Hex() {
+			c.enterCommit(state.BlockNumber(), vote.Round)
+			//TODO: if we need to skip when precommits has all votes
+		} else {
+			//wait for more precommit
+			c.enterPrecommitWait(state.BlockNumber(), vote.Round)
+		}
+		return nil
+	}
+
+	//if there is no majority block
+	if state.Round() <= vote.Round && precommits.HasTwoThirdAny() {
+		//go through roundstep again to update round state
+		c.enterNewRound(state.BlockNumber(), vote.Round)
+		//wait for more precommit
+		c.enterPrecommitWait(state.BlockNumber(), vote.Round)
+	}
+	return nil
+}
+
 func (c *core) handleMsg(msg message) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -228,6 +297,8 @@ func (c *core) handleMsg(msg message) error {
 		return c.handlePropose(msg)
 	case msgPrevote:
 		return c.handlePrevote(msg)
+	case msgPrecommit:
+		return c.handlePrecommit(msg)
 	default:
 		return fmt.Errorf("unknown msg code %d", msg.Code)
 	}

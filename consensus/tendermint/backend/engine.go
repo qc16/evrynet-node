@@ -111,6 +111,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		Block: block,
 	})
 
+	//TODO: read from sb.blockFinalized and return it to result chan or timeout
+
 	//TODO: faking logic to approve the block immediately
 	go func() {
 		select {
@@ -134,7 +136,9 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 
 	//TODO: clear previous data of proposal
-
+	sb.blockFinalized = sb.core.EventMux().Subscribe(
+		tendermint.BlockFinalizedEvent{},
+	)
 	if err := sb.core.Start(); err != nil {
 		return err
 	}

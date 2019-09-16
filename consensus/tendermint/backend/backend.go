@@ -70,6 +70,7 @@ type backend struct {
 	db                 ethdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
+	blockFinalized     *event.TypeMuxSubscription
 
 	coreStarted bool
 	coreMu      sync.RWMutex

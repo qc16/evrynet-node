@@ -56,9 +56,13 @@ type roundState struct {
 	validRound int64        // validRound is last known round with PoLC for non-nil valid block, i.e, a block with a valid polka
 	validBlock *types.Block // validBlock is last known block of PoLC above
 
+	commitRound int64  //commit Round is the round where it receive 2/3 precommit and enter commit stage.
+	commitTime  uint64 //commit timestamp in ms
+
 	proposalReceived   *tendermint.Proposal  //
 	PrevotesReceived   map[int64]*messageSet //This is the prevote received for each round
 	PrecommitsReceived map[int64]*messageSet //this is the precommit received for each round
+	PrecommitWaited    bool                  //we only wait for precommit once each round
 
 	//step is the enumerate Step that currently the core is at.
 	//to jump to the next step, UpdateRoundStep is called.
@@ -236,4 +240,27 @@ func (s *roundState) addPrevote(msg message, vote *tendermint.Vote, valset tende
 func (s *roundState) GetPrevotesByRound(round int64) (*messageSet, bool) {
 	msgSet, ok := s.PrevotesReceived[round]
 	return msgSet, ok
+}
+
+func (s *roundState) addPrecommit(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+	msgSet, ok := s.PrecommitsReceived[vote.Round]
+	if !ok {
+		msgSet = newMessageSet(valset, msgPrecommit, s.view)
+		s.PrecommitsReceived[vote.Round] = msgSet
+	}
+	return msgSet.AddVote(msg, vote)
+}
+
+//GetPrecommitsByRound return precommit messageSet for that round, if there is no precommit message on the said round, return nil and false
+func (s *roundState) GetPrecommitsByRound(round int64) (*messageSet, bool) {
+	msgSet, ok := s.PrevotesReceived[round]
+	return msgSet, ok
+}
+
+func (s *roundState) getPrecommitWaited() bool {
+	return s.PrecommitWaited
+}
+
+func (s *roundState) setPrecommitWaited(waited bool) {
+	s.PrecommitWaited = waited
 }
