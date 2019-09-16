@@ -106,6 +106,7 @@ type messageSet struct {
 	msgCode       uint64
 	messagesMu    *sync.Mutex
 	messages      map[common.Address]*message
+	voteByAddress map[common.Address]*tendermint.Vote
 	voteByBlock   map[common.Hash]*blockVotes
 	maj23         *common.Hash
 	totalReceived int
@@ -115,13 +116,26 @@ type messageSet struct {
 // Construct a new message set to accumulate messages for given height/view number.
 func newMessageSet(valSet tendermint.ValidatorSet, code uint64, view *tendermint.View) *messageSet {
 	return &messageSet{
-		view:        view,
-		msgCode:     code,
-		messagesMu:  new(sync.Mutex),
-		messages:    make(map[common.Address]*message),
-		voteByBlock: make(map[common.Hash]*blockVotes),
-		valSet:      valSet,
+		view:          view,
+		msgCode:       code,
+		messagesMu:    new(sync.Mutex),
+		messages:      make(map[common.Address]*message),
+		voteByBlock:   make(map[common.Hash]*blockVotes),
+		voteByAddress: make(map[common.Address]*tendermint.Vote),
+		valSet:        valSet,
 	}
+}
+
+func (ms *messageSet) VotesByAddress() map[common.Address]*tendermint.Vote {
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
+	var (
+		ret = make(map[common.Address]*tendermint.Vote)
+	)
+	for addr, vote := range ms.voteByAddress {
+		ret[addr] = vote
+	}
+	return ret
 }
 
 func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) {
@@ -154,6 +168,7 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 	}
 
 	ms.messages[msg.Address] = &msg
+	ms.voteByAddress[msg.Address] = vote
 	ms.totalReceived++
 	ms.addVoteToBlockVote(vote, index)
 

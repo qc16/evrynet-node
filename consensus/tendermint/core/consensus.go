@@ -5,9 +5,10 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
@@ -65,7 +66,6 @@ func (c *core) defaultDecideProposal(round int64) tendermint.Proposal {
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
 		log.Debug("getting the core's valid", "block", state.ValidBlock())
-
 		return tendermint.Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
@@ -75,6 +75,7 @@ func (c *core) defaultDecideProposal(round int64) tendermint.Proposal {
 	//TODO: remove this
 	log.Debug("getting the core's block", "block", state.Block())
 	//get the block node currently received from tx_pool
+
 	return tendermint.Proposal{
 		Block:    state.Block(),
 		Round:    round,
@@ -308,6 +309,7 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 
 }
 
+
 // enterPrecommit sets core to precommit state:
 // Enter: `timeoutPrecommit` after any +2/3 precommits.
 // Enter: +2/3 precomits for block or nil.
@@ -494,7 +496,10 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 
 	log.Info("finalizing Block", "block_hash", blockHash.Hex())
 
-	block := c.FinalizeBlock(state.ProposalReceived().Block)
+	block, err := c.FinalizeBlock(state.ProposalReceived())
+	if err != nil {
+		log.Error("block finalized failed", "error", err)
+	}
 	c.blockFinalize.Post(tendermint.BlockFinalizedEvent{
 		Block: block,
 	})
@@ -506,8 +511,35 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
-func (c *core) FinalizeBlock(block *types.Block) *types.Block {
-	return block
+func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error) {
+	var (
+		state           = c.currentState
+		round           = state.commitRound
+		totalPrecommits = 0
+		commitSeals     = [][]byte{}
+		header          = proposal.Block.Header()
+		fx2             = c.valSet.F()
+	)
+	precommits, ok := state.GetPrecommitsByRound(round)
+	if !ok {
+		panic("no precommits at commitRound")
+	}
+	//commitVotes := precommits.VoteByAddress()
+	for _, vote := range precommits.VotesByAddress() {
+		commitSeals = append(commitSeals, vote.Seal)
+		totalPrecommits++
+		if totalPrecommits > fx2 {
+			break
+		}
+	}
+
+	if totalPrecommits <= fx2 {
+		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", fx2+1, totalPrecommits)
+	}
+	//writeProposalSeal
+	utils.WriteSeal(header, proposal.Seal)
+	utils.WriteCommittedSeals(header, commitSeals)
+	return proposal.Block.WithSeal(header), nil
 }
 
 func (c *core) startRoundZero() {

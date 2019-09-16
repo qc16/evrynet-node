@@ -13,6 +13,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
@@ -161,8 +162,8 @@ func mustMakeBlockWithCommittedSeal(engine *backend, pHeader *types.Header, vali
 //appendSeal sign the header with the engine's key and write the seal to the input header's extra data
 func appendSeal(header *types.Header, engine *backend) {
 	// sign the hash
-	seal, _ := engine.Sign(sigHash(header).Bytes())
-	writeSeal(header, seal)
+	seal, _ := engine.Sign(utils.SigHash(header).Bytes())
+	utils.WriteSeal(header, seal)
 }
 
 //appendCommittedSeal
@@ -171,7 +172,7 @@ func appendCommittedSeal(header *types.Header, committedSeal []byte) {
 	committedSeals := make([][]byte, 1)
 	committedSeals[0] = make([]byte, types.TendermintExtraSeal)
 	copy(committedSeals[0][:], committedSeal[:])
-	writeCommittedSeals(header, committedSeals)
+	utils.WriteCommittedSeals(header, committedSeals)
 }
 
 //makeHeaderFromParent return a new block With valid information from its parents.

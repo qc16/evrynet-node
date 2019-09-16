@@ -10,16 +10,14 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
-
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
-	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -375,7 +373,7 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 
 // SealHash returns the hash of a block prior to it being sealed.
 func (sb *backend) SealHash(header *types.Header) (hash common.Hash) {
-	return sigHash(header)
+	return utils.SigHash(header)
 }
 
 // CalcDifficulty tempo return default difficulty
@@ -513,7 +511,7 @@ func (sb *backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) er
 	// 1. Get committed seals from current header
 	for _, seal := range extra.CommittedSeal {
 		// 2. Get the original address by seal and parent block hash
-		addr, err := getSignatureAddress(proposalSeal, seal)
+		addr, err := utils.GetSignatureAddress(proposalSeal, seal)
 		if err != nil {
 			log.Error("not a valid address", "err", err)
 			return errInvalidSignature
@@ -545,41 +543,12 @@ func blockProposer(header *types.Header) (common.Address, error) {
 		return common.Address{}, err
 	}
 
-	addr, err := getSignatureAddress(sigHash(header).Bytes(), extra.Seal)
+	addr, err := utils.GetSignatureAddress(utils.SigHash(header).Bytes(), extra.Seal)
 	if err != nil {
 		return addr, err
 	}
 	//TODO: will be caching address
 	return addr, nil
-}
-
-// sigHash returns the hash
-// signing. It is the hash of the entire header apart from the 65 byte signature
-// contained at the end of the extra data.
-//
-// Note, the method requires the extra data to be at least 65 bytes, otherwise it
-// panics. This is done to avoid accidentally using both forms (signature present
-// or not), which could be abused to produce different hashes for the same header.
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.New256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.TendermintFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-
-	return hash
-}
-
-// GetSignatureAddress gets the signer address from the signature
-func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
-	// 1. Keccak data
-	hashData := crypto.Keccak256(data)
-	// 2. Recover public key
-	pubkey, err := crypto.SigToPub(hashData, sig)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
 // prepareExtra returns a extra-data of the given header and validators
@@ -605,68 +574,17 @@ func prepareExtra(header *types.Header) ([]byte, error) {
 func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
 	header := block.Header()
 	// sign the hash
-	seal, err := sb.Sign(sigHash(header).Bytes())
+	seal, err := sb.Sign(utils.SigHash(header).Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	err = writeSeal(header, seal)
+	err = utils.WriteSeal(header, seal)
 	if err != nil {
 		return nil, err
 	}
 
 	return block.WithSeal(header), nil
-}
-
-// writeSeal writes the extra-data field of the given header with the given seals.
-// suggest to rename to writeSeal.
-func writeSeal(h *types.Header, seal []byte) error {
-	if len(seal)%types.TendermintExtraSeal != 0 {
-		return errInvalidSignature
-	}
-
-	tendermintExtra, err := types.ExtractTendermintExtra(h)
-	if err != nil {
-		return err
-	}
-
-	tendermintExtra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&tendermintExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.TendermintExtraVanity], payload...)
-	return nil
-}
-
-// writeCommittedSeals writes the extra-data field of a block header with given committed seals.
-func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
-	if len(committedSeals) == 0 {
-		return errInvalidCommittedSeals
-	}
-
-	for _, seal := range committedSeals {
-		if len(seal) != types.TendermintExtraSeal {
-			return errInvalidCommittedSeals
-		}
-	}
-
-	tendermintExtra, err := types.ExtractTendermintExtra(h)
-	if err != nil {
-		return err
-	}
-
-	tendermintExtra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(tendermintExtra.CommittedSeal, committedSeals)
-
-	payload, err := rlp.EncodeToBytes(&tendermintExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.TendermintExtraVanity], payload...)
-	return nil
 }
 
 // AccumulateRewards credits the coinbase of the given block with the proposing
