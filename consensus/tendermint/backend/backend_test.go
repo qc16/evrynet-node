@@ -9,8 +9,10 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
+	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -85,34 +87,64 @@ func TestVerify(t *testing.T) {
 	assert.Equal(t, true, engine.coreStarted)
 
 	// --------CASE 1--------
-	// without seal & transactions
+	// Will get errMismatchTxhashes
 	block := makeBlockWithoutSeal(genesisHeader)
 	proposal := tendermint.Proposal{
 		Block:    block,
 		Round:    0,
 		POLRound: 0,
 	}
-	err := engine.Verify(proposal)
 	// Should get error if transactions in block is 0
-	assert.Error(t, err, errMismatchTxhashes)
+	assert.Error(t, engine.Verify(proposal), errMismatchTxhashes)
 
 	// --------CASE 2--------
-	// without seal & have transactions
-	tx1 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), 50000, big.NewInt(10), nil)
-	tx1, err = types.SignTx(tx1, types.HomesteadSigner{}, nodePrivateKey)
+	// Pass all validation
+	tx1 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
+	tx1, err := types.SignTx(tx1, types.HomesteadSigner{}, nodePrivateKey)
 	assert.NoError(t, err)
 
-	block = types.NewBlock(genesisHeader, []*types.Transaction{tx1}, []*types.Header{}, []*types.Receipt{})
-	assert.Len(t, block.Transactions(), 1)
-	assert.Equal(t, tx1.Hash(), block.Transactions()[0].Hash())
+	block2 := types.NewBlock(genesisHeader, []*types.Transaction{tx1}, []*types.Header{}, []*types.Receipt{})
+	assert.Len(t, block2.Transactions(), 1)
+	assert.Equal(t, tx1.Hash(), block2.Transactions()[0].Hash())
 	proposal = tendermint.Proposal{
-		Block:    block,
-		Round:    0,
-		POLRound: 0,
+		Block: block2,
 	}
 	err = engine.Verify(proposal)
 	// Should get no error if block has transactions
 	assert.NoError(t, engine.Verify(proposal))
+
+	// --------CASE 3--------
+	// Will get ErrInsufficientFunds
+	tx2 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), params.GasPriceConfig, big.NewInt(params.GasPriceConfig), nil)
+	tx2, err = types.SignTx(tx2, types.HomesteadSigner{}, nodePrivateKey)
+	assert.NoError(t, err)
+
+	block3 := types.NewBlock(genesisHeader, []*types.Transaction{tx2}, []*types.Header{}, []*types.Receipt{})
+	assert.Len(t, block3.Transactions(), 1)
+	assert.Equal(t, tx2.Hash(), block3.Transactions()[0].Hash())
+	proposal = tendermint.Proposal{
+		Block: block3,
+	}
+	// Should get error ErrInsufficientFunds
+	assert.Error(t, engine.Verify(proposal), core.ErrInsufficientFunds)
+
+	// --------CASE 4--------
+	// Header Difficulty is nil
+	// backend.VerifyHeader() will return error
+	tx3 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), params.GasPriceConfig, big.NewInt(params.GasPriceConfig), nil)
+	tx3, err = types.SignTx(tx3, types.HomesteadSigner{}, nodePrivateKey)
+	assert.NoError(t, err)
+
+	editedHeader := *genesisHeader
+	editedHeader.Difficulty = nil
+	block4 := types.NewBlock(&editedHeader, []*types.Transaction{tx3}, []*types.Header{}, []*types.Receipt{})
+	assert.Len(t, block4.Transactions(), 1)
+	assert.Equal(t, tx3.Hash(), block4.Transactions()[0].Hash())
+	proposal = tendermint.Proposal{
+		Block: block4,
+	}
+	// Should get error when header Header Difficulty is nil
+	assert.Error(t, engine.Verify(proposal), errInvalidDifficulty)
 }
 
 /**

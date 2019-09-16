@@ -41,6 +41,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/eth/downloader"
 	"github.com/evrynet-official/evrynet-client/eth/filters"
 	"github.com/evrynet-official/evrynet-client/eth/gasprice"
+	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/internal/ethapi"
@@ -137,12 +138,13 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	config.GPO.GasPrice = config.GasPrice
 	config.Miner.GasPrice = config.GasPrice
 
+	txPoolOpts := &transaction.TxPoolOpts{}
 	eth := &Ethereum{
 		config:         config,
 		chainDb:        chainDb,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, chainConfig, config, config.Miner.Notify, config.Miner.Noverify, chainDb),
+		engine:         CreateConsensusEngine(ctx, chainConfig, config, config.Miner.Notify, config.Miner.Noverify, chainDb, txPoolOpts),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		gasPrice:       config.GasPrice,
@@ -196,6 +198,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	eth.txPool = core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
+	txPoolOpts.CoreTxPool = eth.txPool
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieCleanLimit + cacheConfig.TrieDirtyLimit
@@ -233,7 +236,7 @@ func makeExtraData(extra []byte) []byte {
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
-func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *Config, notify []string, noverify bool, db ethdb.Database, txPoolOpts *transaction.TxPoolOpts) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -243,7 +246,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		config.Tendermint.ProposerPolicy = tendermint.ProposerPolicy(chainConfig.Tendermint.ProposerPolicy)
 		config.Tendermint.Epoch = chainConfig.Tendermint.Epoch
 		log.Info("Create Tendermint consensus engine")
-		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey(), tendermintBackend.WithDB(db))
+		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey(), tendermintBackend.WithTxPoolOpts(txPoolOpts), tendermintBackend.WithDB(db))
 	}
 
 	// Otherwise assume proof-of-work
