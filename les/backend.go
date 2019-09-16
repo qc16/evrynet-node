@@ -35,6 +35,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/eth/downloader"
 	"github.com/evrynet-official/evrynet-client/eth/filters"
 	"github.com/evrynet-official/evrynet-client/eth/gasprice"
+	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/internal/ethapi"
 	"github.com/evrynet-official/evrynet-client/light"
@@ -43,7 +44,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/p2p/discv5"
 	"github.com/evrynet-official/evrynet-client/params"
-	rpc "github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
 type LightEthereum struct {
@@ -92,6 +93,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	peers := newPeerSet()
 	quitSync := make(chan struct{})
 
+	txPoolOpts := &transaction.TxPoolOpts{}
 	leth := &LightEthereum{
 		lesCommons: lesCommons{
 			chainDb: chainDb,
@@ -103,7 +105,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 		peers:          peers,
 		reqDist:        newRequestDistributor(peers, quitSync, &mclock.System{}),
 		accountManager: ctx.AccountManager,
-		engine:         eth.CreateConsensusEngine(ctx, chainConfig, config, nil, false, chainDb),
+		engine:         eth.CreateConsensusEngine(ctx, chainConfig, config, nil, false, chainDb, txPoolOpts),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
@@ -141,6 +143,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	}
 
 	leth.txPool = light.NewTxPool(leth.chainConfig, leth.blockchain, leth.relay)
+	txPoolOpts.LightTxPool = leth.txPool
 
 	if leth.protocolManager, err = NewProtocolManager(
 		leth.chainConfig,

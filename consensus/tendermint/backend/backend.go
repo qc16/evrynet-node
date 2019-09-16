@@ -13,6 +13,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -38,6 +39,14 @@ func WithDB(db ethdb.Database) Option {
 	}
 }
 
+//WithTxPoolOpts return an option to set backend's txpool
+func WithTxPoolOpts(txPoolOpts *transaction.TxPoolOpts) Option {
+	return func(b *backend) error {
+		b.txPool = txPoolOpts
+		return nil
+	}
+}
+
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
@@ -49,10 +58,10 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		commitChs:          make(map[string]chan *types.Block),
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
+
 	for _, opt := range opts {
 		if err := opt(be); err != nil {
-			log.Error("error at initialization of backend",
-				err)
+			log.Error("error at initialization of backend", err)
 		}
 	}
 	return be
@@ -72,6 +81,7 @@ type backend struct {
 	db                 ethdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
+	txPool             *transaction.TxPoolOpts
 
 	//once voting finish, the block will be send for commit here
 	//it is a map of
@@ -213,9 +223,19 @@ func (sb *backend) Verify(proposal tendermint.Proposal) error {
 	block := proposal.Block
 
 	// check block body
-	txnHash := types.DeriveSha(block.Transactions())
+	txs := block.Transactions()
+	txnHash := types.DeriveSha(txs)
 	if txnHash != block.Header().TxHash {
 		return errMismatchTxhashes
+	}
+
+	// Verify transaction for CoreTxPool
+	if sb.txPool.CoreTxPool != nil {
+		for _, t := range txs {
+			if err := sb.txPool.CoreTxPool.ValidateTx(t, false); err != nil {
+				return err
+			}
+		}
 	}
 
 	// verify the header of proposed block
