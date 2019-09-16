@@ -113,7 +113,7 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 	backend.core = tendermintCore.New(backend, config.Tendermint)
 
 	//init tendermint engine
-	engine := New(config.Tendermint, nodePK, WithDB(db))
+	engine := New(config.Tendermint, nodePK, nil, WithDB(db))
 
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)
