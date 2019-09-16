@@ -52,12 +52,6 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	state.UpdateRoundStep(round, RoundStepNewRound)
 	state.setPrecommitWaited(false)
 
-	//Upon NewRound, there should be no valid block yet
-	//This is only valid in round 0
-	if round == 0 {
-		state.SetValidRoundAndBlock(-1, nil)
-	}
-
 	c.enterPropose(blockNumber, round)
 
 }
