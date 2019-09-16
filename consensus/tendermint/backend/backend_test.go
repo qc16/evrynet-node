@@ -2,12 +2,14 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"math/big"
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
@@ -29,6 +31,28 @@ func TestSign(t *testing.T) {
 
 	if signer != getAddress() {
 		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
+	}
+}
+
+func TestValidators(t *testing.T) {
+	backend, _, blockchain, err := createBlockchainAndBackendFromGenesis()
+	assert.NoError(t, err)
+
+	backend.Start(blockchain, nil)
+
+	valSet0 := backend.Validators(big.NewInt(0))
+	if valSet0.Size() != 1 {
+		t.Errorf("Valset size of zero block should be 1, get: %d", valSet0.Size())
+	}
+
+	valSet1 := backend.Validators(big.NewInt(1))
+	if valSet1.Size() != 1 {
+		t.Errorf("Valset size of block 1st should be 1, get: %d", valSet1.Size())
+	}
+
+	valSet2 := backend.Validators(big.NewInt(2))
+	if valSet2.Size() != 0 {
+		t.Errorf("Valset size of block 2th should be 0, get: %d", valSet2.Size())
 	}
 }
 

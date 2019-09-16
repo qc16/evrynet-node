@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/vm"
@@ -24,37 +26,7 @@ var (
 )
 
 func TestBackend_Genesis_block(t *testing.T) {
-	config, err := makeNodeConfig()
-	assert.NoError(t, err)
-
-	nodePK, err := crypto.HexToECDSA(nodePKString)
-	assert.NoError(t, err)
-
-	dir, err := ioutil.TempDir("", "eth-chain-genesis")
-	assert.NoError(t, err)
-
-	//create db instance with implement leveldb
-	db, err := rawdb.NewLevelDBDatabase(dir, 128, 1024, "")
-	assert.NoError(t, err)
-
-	//init tendermint backend
-	backend := backend{
-		config:             config.Tendermint,
-		tendermintEventMux: new(event.TypeMux),
-		privateKey:         nodePK,
-		address:            crypto.PubkeyToAddress(nodePK.PublicKey),
-		db:                 db,
-	}
-
-	//init tendermint engine
-	engine := New(config.Tendermint, nodePK, WithDB(db))
-
-	//set up genesis block
-	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)
-	assert.NoError(t, err)
-
-	//init block chain with tendermint engine
-	blockchain, err := core.NewBlockChain(db, nil, chainConfig, engine, vm.Config{}, nil)
+	backend, _, blockchain, err := createBlockchainAndBackendFromGenesis()
 	assert.NoError(t, err)
 
 	//take snapshop at the genesis block
@@ -106,4 +78,53 @@ func getGenesisConf() (*core.Genesis, error) {
 	}
 
 	return config, nil
+}
+
+func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.BlockChain, error) {
+	config, err := makeNodeConfig()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	nodePK, err := crypto.HexToECDSA(nodePKString)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	dir, err := ioutil.TempDir("", "eth-chain-genesis")
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	//create db instance with implement leveldb
+	db, err := rawdb.NewLevelDBDatabase(dir, 128, 1024, "")
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	//init tendermint backend
+	backend := &backend{
+		config:             config.Tendermint,
+		tendermintEventMux: new(event.TypeMux),
+		privateKey:         nodePK,
+		address:            crypto.PubkeyToAddress(nodePK.PublicKey),
+		db:                 db,
+	}
+	backend.core = tendermintCore.New(backend, config.Tendermint)
+
+	//init tendermint engine
+	engine := New(config.Tendermint, nodePK, WithDB(db))
+
+	//set up genesis block
+	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	//init block chain with tendermint engine
+	blockchain, err := core.NewBlockChain(db, nil, chainConfig, engine, vm.Config{}, nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return backend, engine, blockchain, nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
@@ -74,6 +75,7 @@ type backend struct {
 
 	coreStarted bool
 	coreMu      sync.RWMutex
+	chain       consensus.ChainReader
 }
 
 // EventMux implements tendermint.Backend.EventMux
@@ -143,10 +145,26 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 	return nil
 }
 
+// Validators return validator set for a block number
 func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
-	//TODO: implement this with snapshot
-	return validator.NewSet([]common.Address{
-		common.HexToAddress("0xb61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B"),
-		common.HexToAddress("0xF837F945733a512A087866462B2a4b82FED11146"),
-	}, tendermint.RoundRobin)
+	var (
+		previousBlock uint64
+		header        *types.Header
+		err           error
+		snap          *Snapshot
+	)
+	// check if blockNumber is zero
+	if blockNumber.Cmp(big.NewInt(0)) == 0 {
+		previousBlock = 0
+	} else {
+		previousBlock = uint64(blockNumber.Int64() - 1)
+	}
+	header = sb.chain.GetHeaderByNumber(previousBlock)
+	if header != nil {
+		snap, err = sb.snapshot(sb.chain, previousBlock, header.Hash(), nil)
+		if err == nil {
+			return snap.ValSet
+		}
+	}
+	return validator.NewSet(nil, sb.config.ProposerPolicy)
 }
