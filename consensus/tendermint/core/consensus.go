@@ -31,14 +31,14 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 		sStep         = state.Step()
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep != RoundStepNewHeight) {
-		log.Debug("enterNewRound ignore: we are in a state that is ahead of the input state",
+		log.Info("enterNewRound ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
 		return
 	}
 
-	log.Debug("enterNewRound",
+	log.Info("enterNewRound",
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
@@ -59,24 +59,27 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 
 //defaultDecideProposal is the default proposal selector
 //it will prioritize validBlock, else will get its own block from tx_pool
-func (c *core) defaultDecideProposal(round int64) tendermint.Proposal {
+func (c *core) defaultDecideProposal(round int64) *tendermint.Proposal {
 	var (
 		state = c.CurrentState()
 	)
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
-		log.Debug("getting the core's valid", "block", state.ValidBlock())
-		return tendermint.Proposal{
+		log.Info("core has ValidBlock, propose it", "valid_round", state.ValidRound())
+		return &tendermint.Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
 			POLRound: state.ValidRound(),
 		}
 	}
+	//if we hasn't received a legit block from miner, don't propose
+	if (state.Block() == nil) || (state.Block() != nil && state.Block().Hash().Hex() == emptyBlockHash.Hex()) {
+		return nil
+	}
 	//TODO: remove this
-	log.Debug("getting the core's block", "block", state.Block())
-	//get the block node currently received from tx_pool
+	//get the block node currently received from miner
 
-	return tendermint.Proposal{
+	return &tendermint.Proposal{
 		Block:    state.Block(),
 		Round:    round,
 		POLRound: -1,
@@ -98,14 +101,14 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		sStep         = state.Step()
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || sRound > round || (sRound == round && sStep >= RoundStepPropose) {
-		log.Debug("enterPropose ignore: we are in a state that is ahead of the input state",
+		log.Info("enterPropose ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPropose.String())
 		return
 	}
 
-	log.Debug("enterPropose",
+	log.Info("enterPropose",
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepPropose.String())
@@ -132,7 +135,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	})
 
 	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		log.Debug("this node is not a validator of this round", "address", c.backend.Address().String(), "block_number", blockNumber.String(), "round", round)
+		log.Info("this node is not a validator of this round", "address", c.backend.Address().String(), "block_number", blockNumber.String(), "round", round)
 		return
 	}
 	//if we are proposer, find the latest block we're having to propose
@@ -150,8 +153,9 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		//
 		//}
 		proposal := c.defaultDecideProposal(round)
-
-		c.SendPropose(&proposal)
+		if proposal != nil {
+			c.SendPropose(proposal)
+		}
 	}
 }
 
@@ -182,7 +186,7 @@ func (c *core) defaultDoPrevote(round int64) {
 
 	// PrevoteTimeout cs.ProposalBlock
 	// NOTE: the proposal signature is validated when it is received,
-	log.Info("prevote for proposal block")
+	log.Info("prevote for proposal block", "block_hash", state.ProposalReceived().Block.Hash())
 	c.SendVote(msgPrevote, state.ProposalReceived().Block, round)
 	//core.signAddVote(types.PrevoteType, cs.ProposalBlock.Hash(), cs.ProposalBlockParts.Header())
 }
@@ -205,14 +209,14 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 		sStep         = state.Step()
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
-		log.Debug("enterPrevote ignore: we are in a state that is ahead of the input state",
+		log.Info("enterPrevote ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
 		return
 	}
 
-	log.Debug("enterPrevote",
+	log.Info("enterPrevote",
 		"current_block_number", sBlockNunmber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String())
@@ -235,7 +239,7 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && RoundStepPrevoteWait <= sStep) {
-		log.Debug("enterPrevoteWait ignore: we are in a state that is ahead of the input state",
+		log.Info("enterPrevoteWait ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
@@ -243,12 +247,12 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	}
 	prevotes, ok := state.GetPrevotesByRound(round)
 	if !ok {
-		log.Debug("enterPrevoteWait ignore: there is no prevotes", "round", round)
+		log.Info("enterPrevoteWait ignore: there is no prevotes", "round", round)
 	}
 	if !prevotes.HasTwoThirdAny() {
-		log.Debug("enterPrevoteWait ignore: there is no two third votes received", "round", round)
+		log.Info("enterPrevoteWait ignore: there is no two third votes received", "round", round)
 	}
-	log.Debug("enterPrevoteWait",
+	log.Info("enterPrevoteWait",
 		"current_block_number", sBlockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String())
@@ -276,7 +280,7 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && state.getPrecommitWaited()) {
-		log.Debug("enterPrecommitWait ignore: we are in a state that is not suitable to enter precommit with input state",
+		log.Info("enterPrecommitWait ignore: we are in a state that is not suitable to enter precommit with input state",
 			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round, "precommitWaited", state.getPrecommitWaited())
 		return
@@ -290,7 +294,7 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 	if !precommits.HasTwoThirdAny() {
 		panic("enterPrecommitWait without precommits has 2/3 of votes")
 	}
-	log.Debug("enterPrecommitWait",
+	log.Info("enterPrecommitWait",
 		"current_block_number", sBlockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String())
@@ -325,14 +329,14 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	)
 
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrecommit) {
-		log.Debug("enterPrecommit ignore: we are in a state that is ahead of the input state",
+		log.Info("enterPrecommit ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
-			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
+			"current_step", sStep.String(), "input_step", RoundStepPrecommit.String())
 		return
 	}
 
-	log.Debug("enterPrecommit",
+	log.Info("enterPrecommit",
 		"current_block_number", sBlockNunmber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String())
@@ -342,7 +346,6 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 		state.UpdateRoundStep(round, RoundStepPrecommit)
 	}()
 
-	// Note: Liem has already implemented GetPrevotesByRound(round), will change once the PR is merged
 	var blockHash *common.Hash
 	prevotes, ok := state.GetPrevotesByRound(round)
 	if ok {
@@ -367,7 +370,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	}
 
 	// +2/3 prevoted nil. Unlock and precommit nil.
-	if len(blockHash) == 0 {
+	if blockHash.Hex() == emptyBlockHash.Hex() {
 		if state.LockedBlock() == nil {
 			log.Info("enterPrecommit: +2/3 prevoted for nil.")
 		} else {
@@ -406,10 +409,10 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 
 func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	var state = c.currentState
-	if state.BlockNumber().Cmp(blockNumber) != 0 || state.Step() >= RoundStepPrecommit {
-		log.Debug("enterCommit ignore: we are in a state that is ahead of the input state",
+	if state.BlockNumber().Cmp(blockNumber) != 0 || state.Step() >= RoundStepCommit {
+		log.Info("enterCommit ignore: we are in a state that is ahead of the input state",
 			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
-			"current_step", state.Step().String(), "input_step", RoundStepPrevote.String())
+			"current_step", state.Step().String(), "input_step", RoundStepCommit.String())
 		return
 	}
 

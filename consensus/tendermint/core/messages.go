@@ -86,8 +86,10 @@ func (m *message) GetAddressFromSignature() (common.Address, error) {
 	if err != nil {
 		return common.Address{}, err
 	}
+	hashData := crypto.Keccak256(payLoad)
+
 	// 2. Recover public key
-	pubkey, err := crypto.SigToPub(payLoad, m.Signature)
+	pubkey, err := crypto.SigToPub(hashData, m.Signature)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -163,7 +165,7 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 		if currentVote.BlockHash.Hex() != vote.BlockHash.Hex() {
 			return false, ErrConflictingVotes
 		}
-		log.Info("already got vote, skipping", "from", msg.Address, "block_hash")
+		log.Info("already got vote, skipping", "from", msg.Address, "round", vote.Round)
 		return false, nil
 	}
 
@@ -177,6 +179,7 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 			ms.maj23 = vote.BlockHash
 		}
 	}
+
 	return true, nil
 }
 

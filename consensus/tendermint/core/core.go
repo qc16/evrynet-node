@@ -155,7 +155,8 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		log.Debug("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
 		return
 	}
-	if voteType != msgPrevote && voteType != msgCommit {
+	if voteType != msgPrevote && voteType != msgPrecommit {
+		log.Error("vote type is invalid")
 		return
 	}
 	var (
@@ -169,6 +170,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 			log.Error("failed to sign seal", seal)
 			return
 		}
+		blockHash = block.Hash()
 	}
 	vote := &tendermint.Vote{
 		BlockHash:   &blockHash,

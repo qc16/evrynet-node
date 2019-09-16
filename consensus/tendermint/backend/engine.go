@@ -61,6 +61,8 @@ var (
 	errCoinBaseInvalid = errors.New("invalid coin base address")
 	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
 	errInvalidUncleHash = errors.New("non empty uncle hash")
+	// errMalformedChannelData is returned if data return from blockFinalization does not conform to its struct definition
+	errMalformedChannelData = errors.New("data received is not an event type")
 )
 
 // Seal generates a new block for the given input block with the local miner's
@@ -87,12 +89,9 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	block, err = sb.updateBlock(parent, block)
-	if err != nil {
-		return err
-	}
 
 	// wait for the timestamp of header, make sure this block does not come from the future
+	//TODO: revise delay
 	headerTime := int64(block.Header().Time)
 	delay := time.Unix(headerTime, 0).Sub(now())
 	select {
@@ -103,22 +102,28 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	}
 
 	//TODO: clear previous data of proposal
-
 	// post block into tendermint engine
 	go sb.EventMux().Post(tendermint.NewBlockEvent{
 		Block: block,
 	})
 
-	//TODO: read from sb.blockFinalized and return it to result chan or timeout
-
-	//TODO: faking logic to approve the block immediately
+	//TODO: DO we need timeout for consensus?
 	go func() {
 		select {
-		case results <- block:
+		case event, ok := <-sb.blockFinalized.Chan():
+			if !ok {
+				log.Error(errMalformedChannelData.Error())
+				return
+			}
+			switch ev := event.Data.(type) {
+			case tendermint.BlockFinalizedEvent:
+				log.Info("block finalized", "event", ev)
+				results <- ev.Block
+			default:
+				log.Error("unknown event", "event", ev)
+			}
 		case <-stop:
 			results <- nil
-		default:
-			log.Warn("Sealing result is not read by miner")
 		}
 	}()
 
@@ -412,13 +417,14 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			if err != nil {
 				log.Warn("cannot load snapshot from db", "error", err)
 			} else {
-				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
+				log.Debug("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
 				break
 			}
 		}
 		// If we're at block zero, make a snapshot
 		if number == 0 {
+			log.Debug("creating snapshot at block 0")
 			genesis := chain.GetHeaderByNumber(0)
 			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
@@ -570,22 +576,6 @@ func prepareExtra(header *types.Header) ([]byte, error) {
 	return append(buf.Bytes(), payload...), nil
 }
 
-// update timestamp and signature of the block based on its number of transactions
-func (sb *backend) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
-	header := block.Header()
-	// sign the hash
-	seal, err := sb.Sign(utils.SigHash(header).Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	err = utils.WriteSeal(header, seal)
-	if err != nil {
-		return nil, err
-	}
-
-	return block.WithSeal(header), nil
-}
 
 // AccumulateRewards credits the coinbase of the given block with the proposing
 // reward.
