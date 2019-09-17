@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
@@ -124,12 +124,15 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		}
 	}()
 
+	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
+	timeOutBlock := big.NewInt(0).Set(blockNumber)
+
 	// if timeOutPropose, it will eventually come to enterPrevote, but the timeout might interrupt the timeOutPropose
 	// to jump to a better state. Imagine that at line 91, we come to enterPrevote and a new timeout is call from there,
 	// the timeout can skip this timeOutPropose.
 	c.timeout.ScheduleTimeout(timeoutInfo{
 		Duration:    c.config.ProposeTimeout(round),
-		BlockNumber: blockNumber,
+		BlockNumber: timeOutBlock,
 		Round:       round,
 		Step:        RoundStepPropose,
 	})
@@ -262,10 +265,13 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 		state.UpdateRoundStep(round, RoundStepPrevoteWait)
 	}()
 
+	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
+	timeOutBlock := big.NewInt(0).Set(blockNumber)
+
 	// Wait for some more prevotes; enterPrecommit
 	c.timeout.ScheduleTimeout(timeoutInfo{
 		Duration:    c.config.PrevoteTimeout(round),
-		BlockNumber: blockNumber,
+		BlockNumber: timeOutBlock,
 		Round:       round,
 		Step:        RoundStepPrevoteWait,
 	})
@@ -303,16 +309,16 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 	defer func() {
 		state.setPrecommitWaited(true)
 	}()
-
+	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
+	timeOutBlock := big.NewInt(0).Set(blockNumber)
 	c.timeout.ScheduleTimeout(timeoutInfo{
 		Duration:    c.config.PrecommitTimeout(round),
-		BlockNumber: blockNumber,
+		BlockNumber: timeOutBlock,
 		Round:       round,
 		Step:        RoundStepPrecommitWait,
 	})
 
 }
-
 
 // enterPrecommit sets core to precommit state:
 // Enter: `timeoutPrecommit` after any +2/3 precommits.
@@ -503,9 +509,11 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	if err != nil {
 		log.Error("block finalized failed", "error", err)
 	}
-	c.blockFinalize.Post(tendermint.BlockFinalizedEvent{
-		Block: block,
-	})
+	go func() {
+		if err := c.blockFinalize.Post(tendermint.BlockFinalizedEvent{Block: block}); err != nil {
+			log.Error("cannot post block Finalization to backend", "error", err)
+		}
+	}()
 
 	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
 
@@ -521,7 +529,7 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 		totalPrecommits = 0
 		commitSeals     = [][]byte{}
 		header          = proposal.Block.Header()
-		fx2             = c.valSet.F()
+		fx2             = c.valSet.F() * 2
 	)
 	precommits, ok := state.GetPrecommitsByRound(round)
 	if !ok {
@@ -548,9 +556,14 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 func (c *core) startRoundZero() {
 	var state = c.CurrentState()
 	sleepDuration := state.startTime.Sub(time.Now())
+	if c.valSet == nil {
+		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+	}
+	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
+	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
 	c.timeout.ScheduleTimeout(timeoutInfo{
 		Duration:    sleepDuration,
-		BlockNumber: state.BlockNumber(),
+		BlockNumber: timeOutBlock,
 		Round:       0,
 		Step:        RoundStepNewHeight,
 	})
@@ -593,8 +606,8 @@ func (c *core) updateStateForNewblock() {
 	state.SetProposalReceived(nil)
 
 	state.commitRound = -1
-	state.PrevotesReceived = nil
-	state.PrecommitsReceived = nil
+	state.PrevotesReceived = make(map[int64]*messageSet)
+	state.PrecommitsReceived = make(map[int64]*messageSet)
 	state.PrecommitWaited = false
 
 	c.currentState = state

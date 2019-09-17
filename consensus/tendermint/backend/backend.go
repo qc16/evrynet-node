@@ -10,7 +10,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
@@ -145,7 +144,5 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 
 func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	//TODO: implement this with snapshot
-	return validator.NewSet([]common.Address{
-		common.HexToAddress("0x18d06b4a57409e231f2fe06fd3617e58013cc5da"),
-	}, tendermint.RoundRobin)
+	panic("you must manually set this function to avoid wrong result")
 }
