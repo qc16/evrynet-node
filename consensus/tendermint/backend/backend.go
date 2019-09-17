@@ -146,6 +146,7 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 }
 
 // Validators return validator set for a block number
+// TODO: revise this function once auth vote is implemented
 func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	var (
 		previousBlock uint64

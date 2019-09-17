@@ -2,14 +2,16 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"log"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
@@ -44,12 +46,22 @@ func TestValidators(t *testing.T) {
 	if valSet0.Size() != 1 {
 		t.Errorf("Valset size of zero block should be 1, get: %d", valSet0.Size())
 	}
+	list := valSet0.List()
+	log.Println("validator set of block 0 is")
 
+	for _, val := range list {
+		log.Println(val.String())
+	}
 	valSet1 := backend.Validators(big.NewInt(1))
 	if valSet1.Size() != 1 {
 		t.Errorf("Valset size of block 1st should be 1, get: %d", valSet1.Size())
 	}
+	list = valSet1.List()
+	log.Println("validator set of block 1 is")
 
+	for _, val := range list {
+		log.Println(val.String())
+	}
 	valSet2 := backend.Validators(big.NewInt(2))
 	if valSet2.Size() != 0 {
 		t.Errorf("Valset size of block 2th should be 0, get: %d", valSet2.Size())
