@@ -513,6 +513,9 @@ func (c *core) FinalizeBlock(block *types.Block) *types.Block {
 func (c *core) startRoundZero() {
 	var state = c.CurrentState()
 	sleepDuration := state.startTime.Sub(time.Now())
+	if c.valSet == nil {
+		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+	}
 	c.timeout.ScheduleTimeout(timeoutInfo{
 		Duration:    sleepDuration,
 		BlockNumber: state.BlockNumber(),
