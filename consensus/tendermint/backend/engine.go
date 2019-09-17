@@ -117,8 +117,9 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 			}
 			switch ev := event.Data.(type) {
 			case tendermint.BlockFinalizedEvent:
-				log.Info("block finalized", "event", ev)
+				log.Info("block finalized", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
 				results <- ev.Block
+				return
 			default:
 				log.Error("unknown event", "event", ev)
 			}
@@ -575,7 +576,6 @@ func prepareExtra(header *types.Header) ([]byte, error) {
 
 	return append(buf.Bytes(), payload...), nil
 }
-
 
 // AccumulateRewards credits the coinbase of the given block with the proposing
 // reward.

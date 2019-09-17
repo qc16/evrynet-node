@@ -121,9 +121,12 @@ func (tt *timeoutTicker) timeoutRoutine() {
 	for {
 		select {
 		case newti := <-tt.tickChan:
-
 			// ignore tickers for old height/round/step
 			if newti.earlierOrEqual(ti) {
+				log.Info("timeout ignore: New ticker is not ealier or equal to current ticker",
+					"new_ticker_block_number", newti.BlockNumber, "current_ticker_block_number", ti.BlockNumber,
+					"new_ticker_round", newti.Round, "current_ticker_round", ti.Round,
+					"new_ticker_step", newti.Step.String(), "current_ticker_step", ti.Step)
 				continue
 			}
 			// stop the last timer
@@ -133,9 +136,9 @@ func (tt *timeoutTicker) timeoutRoutine() {
 			// NOTE time.Timer allows duration to be non-positive
 			ti = newti
 			tt.timer.Reset(ti.Duration)
-			log.Debug("Scheduled timeout", "dur", ti.Duration, "height", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
+			log.Info("Scheduled timeout", "dur", ti.Duration, "block_number", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
 		case <-tt.timer.C:
-			log.Info("Timed out", "dur", ti.Duration, "height", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
+			log.Info("Timed out", "dur", ti.Duration, "block_number", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
 			// go routine here guarantees timeoutRoutine doesn't block.
 			// Determinism comes from playback in the handleEvents.
 			// We can eliminate it by merging the timeoutRoutine into receiveRoutine
