@@ -149,10 +149,14 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 	}
 	index, _ := ms.valSet.GetByAddress(msg.Address)
 	if index == -1 {
-		return false, errors.Wrapf(ErrVoteHeightMismatch, "address in vote message:%s ", msg.Address.String())
+		return false, errors.Wrapf(ErrVoteInvalidValidatorAddress, "address in vote message:%s ", msg.Address.String())
 	}
-	if ms.view.Round != vote.Round || ms.view.BlockNumber.Cmp(vote.BlockNumber) != 0 {
+	if ms.view.BlockNumber.Cmp(vote.BlockNumber) != 0 {
 		return false, ErrVoteHeightMismatch
+	}
+	if ms.view.Round != vote.Round {
+		log.Error("message set round is not the same as vote round", "msg_set_round", ms.view.Round, "vote_round", vote.Round)
+		return false, errors.New("invalid vote for the message set")
 	}
 	//Signer is supposed to be checked at previous steps so it doesn't need to be check again.
 

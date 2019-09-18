@@ -230,9 +230,13 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 }
 
 func (s *roundState) addPrevote(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+	view := tendermint.View{
+		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
+		Round:       vote.Round,
+	}
 	msgSet, ok := s.PrevotesReceived[vote.Round]
 	if !ok {
-		msgSet = newMessageSet(valset, msgPrevote, s.view)
+		msgSet = newMessageSet(valset, msgPrevote, &view)
 		s.PrevotesReceived[vote.Round] = msgSet
 	}
 	return msgSet.AddVote(msg, vote)
@@ -245,9 +249,13 @@ func (s *roundState) GetPrevotesByRound(round int64) (*messageSet, bool) {
 }
 
 func (s *roundState) addPrecommit(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+	view := tendermint.View{
+		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
+		Round:       vote.Round,
+	}
 	msgSet, ok := s.PrecommitsReceived[vote.Round]
 	if !ok {
-		msgSet = newMessageSet(valset, msgPrecommit, s.view)
+		msgSet = newMessageSet(valset, msgPrecommit, &view)
 		s.PrecommitsReceived[vote.Round] = msgSet
 	}
 	return msgSet.AddVote(msg, vote)
