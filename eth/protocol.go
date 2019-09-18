@@ -32,6 +32,9 @@ import (
 const (
 	eth62 = 62
 	eth63 = 63
+	//Version 64 contain the extra message namely TendermintMsg, which supports
+	//The Tendermint consensus implementation
+	//TODO: official declaration of this protocol with an EIP
 	eth64 = 64
 )
 
