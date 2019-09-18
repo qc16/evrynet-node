@@ -263,7 +263,7 @@ func (s *roundState) addPrecommit(msg message, vote *tendermint.Vote, valset ten
 
 //GetPrecommitsByRound return precommit messageSet for that round, if there is no precommit message on the said round, return nil and false
 func (s *roundState) GetPrecommitsByRound(round int64) (*messageSet, bool) {
-	msgSet, ok := s.PrevotesReceived[round]
+	msgSet, ok := s.PrecommitsReceived[round]
 	return msgSet, ok
 }
 
