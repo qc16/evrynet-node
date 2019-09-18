@@ -352,7 +352,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 		state.UpdateRoundStep(round, RoundStepPrecommit)
 	}()
 
-	var blockHash *common.Hash
+	var blockHash = common.Hash{}
 	prevotes, ok := state.GetPrevotesByRound(round)
 	if ok {
 		blockHash, ok = prevotes.TwoThirdMajority()

@@ -209,7 +209,7 @@ func (c *core) handlePrevote(msg message) error {
 		c.enterNewRound(state.BlockNumber(), vote.Round)
 	case state.Round() == vote.Round && RoundStepPrevote <= state.Step(): // current round
 		blockHash, ok := prevotes.TwoThirdMajority()
-		if ok && state.IsProposalComplete() || blockHash.Hex() == emptyBlockHash.Hex() {
+		if ok && (state.IsProposalComplete() || blockHash.Hex() == emptyBlockHash.Hex()) {
 			c.enterPrecommit(state.BlockNumber(), vote.Round)
 		} else if prevotes.HasTwoThirdAny() {
 			//wait till we got a majority

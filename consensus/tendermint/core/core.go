@@ -112,7 +112,6 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 //Gossip it to other nodes
 func (c *core) SendPropose(propose *tendermint.Proposal) {
 	//TODO: remove these log in production
-	log.Debug("prepare to send proposal", "proposal", propose)
 	if propose.Block != nil {
 		seal, err := c.backend.Sign(utils.SigHash(propose.Block.Header()).Bytes())
 		if err != nil {
@@ -140,7 +139,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		return
 	}
 	//TODO: remove this log in production
-	log.Debug("sent proposal", "proposal", propose)
+	log.Info("sent proposal", "round", propose.Round, "block_number", propose.Block.Number(), "block_hash", propose.Block.Hash())
 }
 
 func (c *core) SetBlockForProposal(b *types.Block) {
@@ -152,7 +151,7 @@ func (c *core) SetBlockForProposal(b *types.Block) {
 func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	//This should never happen, but it is a safe guard
 	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		log.Debug("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
+		log.Warn("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
 		return
 	}
 	if voteType != msgPrevote && voteType != msgPrecommit {
@@ -195,7 +194,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		log.Error("Failed to Broadcast vote", "error", err)
 		return
 	}
-	log.Debug("sent vote", "vote", vote)
+	log.Info("sent vote", "round", vote.Round, "block_number", vote.BlockNumber, "block_hash", vote.BlockHash.Hex())
 }
 
 func (c *core) CurrentState() *roundState {

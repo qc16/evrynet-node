@@ -143,6 +143,7 @@ func (ms *messageSet) VotesByAddress() map[common.Address]*tendermint.Vote {
 func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
+	copyHash := common.HexToHash(vote.BlockHash.Hex())
 	if ms.msgCode != msg.Code {
 		return false, ErrDifferentMsgType
 	}
@@ -174,9 +175,9 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 	ms.totalReceived++
 	ms.addVoteToBlockVote(vote, index)
 
-	if ms.voteByBlock[*(vote.BlockHash)].totalReceived > 2*ms.valSet.F() {
+	if ms.voteByBlock[copyHash].totalReceived > 2*ms.valSet.F() {
 		if ms.maj23 == nil {
-			ms.maj23 = vote.BlockHash
+			ms.maj23 = &copyHash
 		}
 	}
 
@@ -221,14 +222,14 @@ func (ms *messageSet) HasTwoThirdAny() bool {
 
 //TwoThirdMajority return a blockHash and a bool inidicate if this messageSet hash got a
 //TwoThirdMajority on a block
-func (ms *messageSet) TwoThirdMajority() (*common.Hash, bool) {
+func (ms *messageSet) TwoThirdMajority() (common.Hash, bool) {
 	if ms == nil {
-		return nil, false
+		return common.Hash{}, false
 	}
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 	if ms.maj23 != nil {
-		return ms.maj23, true
+		return common.HexToHash(ms.maj23.Hex()), true
 	}
-	return nil, false
+	return common.Hash{}, false
 }

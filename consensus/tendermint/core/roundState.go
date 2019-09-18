@@ -163,7 +163,7 @@ func (s *roundState) ValidBlock() *types.Block {
 
 // Last round and block that has +2/3 prevotes for a particular block or nil.
 // Returns -1 if no such round exists.
-func (s *roundState) POLInfo() (polRound int64, polBlockHash *common.Hash) {
+func (s *roundState) POLInfo() (polRound int64, polBlockHash common.Hash) {
 	// TODO: Just a sample
 	for r := s.Round(); r >= 0; r-- {
 		prevotes, ok := s.GetPrevotesByRound(r)
@@ -174,7 +174,7 @@ func (s *roundState) POLInfo() (polRound int64, polBlockHash *common.Hash) {
 			return r, polBlockHash
 		}
 	}
-	return -1, nil
+	return -1, common.Hash{}
 }
 
 // The DecodeRLP method should read one value from the given
