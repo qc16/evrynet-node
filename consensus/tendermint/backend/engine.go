@@ -65,6 +65,15 @@ var (
 	errMalformedChannelData = errors.New("data received is not an event type")
 )
 
+func (sb *backend) addProposalSeal(h *types.Header) error {
+	seal, err := sb.Sign(utils.SigHash(h).Bytes())
+	if err != nil {
+		return err
+	}
+	utils.WriteSeal(h, seal)
+	return nil
+}
+
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
 func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
@@ -78,7 +87,10 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	if err != nil {
 		return err
 	}
-
+	if err = sb.addProposalSeal(header); err != nil {
+		return err
+	}
+	block = block.WithSeal(header)
 	// checks the address must stored in snapshot
 	if _, v := snap.ValSet.GetByAddress(sb.address); v == nil {
 		return errUnauthorized
@@ -101,6 +113,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return nil
 	}
 
+	//block = sb.Prepare()
 	//TODO: clear previous data of proposal
 	// post block into tendermint engine
 	go sb.EventMux().Post(tendermint.NewBlockEvent{
@@ -108,25 +121,29 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	})
 
 	//TODO: DO we need timeout for consensus?
-	go func() {
-		select {
-		case event, ok := <-sb.blockFinalized.Chan():
-			if !ok {
-				log.Error(errMalformedChannelData.Error())
-				return
-			}
-			switch ev := event.Data.(type) {
-			case tendermint.BlockFinalizedEvent:
-				log.Info("block finalized", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
-				results <- ev.Block
-				return
-			default:
-				log.Error("unknown event", "event", ev)
-			}
-		case <-stop:
-			results <- nil
+	//go func() {
+	select {
+	case event, ok := <-sb.blockFinalized.Chan():
+		if !ok {
+			log.Error(errMalformedChannelData.Error())
+			return errMalformedChannelData
 		}
-	}()
+		switch ev := event.Data.(type) {
+		case tendermint.BlockFinalizedEvent:
+			log.Info("block finalized", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
+			//we only posted the block back to the miner if and only if the block is the same
+			if ev.Block.Hash() == block.Hash() {
+				results <- ev.Block
+				return nil
+			}
+		default:
+			log.Error("unknown event", "event", ev)
+		}
+	case <-stop:
+		results <- nil
+		return nil
+	}
+	//}()
 
 	return nil
 }
@@ -486,6 +503,7 @@ func (sb *backend) verifyProposalSeal(header *types.Header, snap *Snapshot) erro
 	// resolve the authorization key and check against signers
 	signer, err := blockProposer(header)
 	if err != nil {
+		log.Error("proposal seal is invalid", "error", err)
 		return err
 	}
 	// compare with coin base that contain the address of proposer.
@@ -549,7 +567,6 @@ func blockProposer(header *types.Header) (common.Address, error) {
 	if err != nil {
 		return common.Address{}, err
 	}
-
 	addr, err := utils.GetSignatureAddress(utils.SigHash(header).Bytes(), extra.Seal)
 	if err != nil {
 		return addr, err

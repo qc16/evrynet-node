@@ -16,8 +16,6 @@ type Proposal struct {
 	Block    *types.Block
 	Round    int64
 	POLRound int64
-	Seal     []byte
-	//TODO: check if we need block Height
 }
 
 func (p *Proposal) EncodeRLP(w io.Writer) error {
@@ -25,7 +23,6 @@ func (p *Proposal) EncodeRLP(w io.Writer) error {
 		p.Block,
 		strconv.FormatInt(p.Round, 10),
 		strconv.FormatInt(p.POLRound, 10),
-		p.Seal,
 	})
 }
 
@@ -34,7 +31,6 @@ func (p *Proposal) DecodeRLP(s *rlp.Stream) error {
 		Block   *types.Block
 		RStr    string
 		POLRStr string
-		Seal    []byte
 	}
 	if err := s.Decode(&ps); err != nil {
 		return err
@@ -50,7 +46,6 @@ func (p *Proposal) DecodeRLP(s *rlp.Stream) error {
 	p.Block = ps.Block
 	p.Round = round
 	p.POLRound = polcr
-	p.Seal = ps.Seal
 	return nil
 }
 

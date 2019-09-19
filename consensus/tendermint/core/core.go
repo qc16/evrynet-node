@@ -6,7 +6,6 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -113,11 +112,6 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 func (c *core) SendPropose(propose *tendermint.Proposal) {
 	//TODO: remove these log in production
 	if propose.Block != nil {
-		seal, err := c.backend.Sign(utils.SigHash(propose.Block.Header()).Bytes())
-		if err != nil {
-			log.Error("failed to sign the seal ")
-		}
-		propose.Seal = seal
 	}
 
 	msgData, err := rlp.EncodeToBytes(propose)
@@ -164,7 +158,8 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	)
 	if block != nil {
 		var err error
-		seal, err = c.backend.Sign(utils.SigHash(block.Header()).Bytes())
+		commitHash := PrepareCommittedSeal(block.Header().Hash())
+		seal, err = c.backend.Sign(commitHash)
 		if err != nil {
 			log.Error("failed to sign seal", seal)
 			return

@@ -58,7 +58,6 @@ func (c *core) handleEvents() {
 				log.Info("received New Block event", "block_number", ev.Block.Number(), "block_hash", ev.Block.Hash())
 				c.CurrentState().SetBlock(ev.Block)
 			case tendermint.MessageEvent:
-				log.Info("received Message event")
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 				var msg message
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
@@ -81,7 +80,7 @@ func (c *core) handleEvents() {
 func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 
 	// Verify POLRound, which must be nil or in range [0, proposal.Round).
-	if proposal.POLRound != -1 &&
+	if proposal.POLRound < -1 &&
 		(proposal.POLRound >= 0) && proposal.POLRound >= proposal.Round {
 		return ErrInvalidProposalPOLRound
 	}
@@ -144,12 +143,16 @@ func (c *core) handlePrevote(msg message) error {
 		vote  tendermint.Vote
 		state = c.CurrentState()
 	)
-	log.Info("handling prevote ...")
 	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
 		return err
 	}
 	if vote.BlockHash == nil {
 		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
+	}
+
+	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
+		log.Warn("vote's block is different with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber)
+		return nil
 	}
 	log.Info("received prevote", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
 	added, err := state.addPrevote(msg, &vote, c.valSet)
@@ -157,10 +160,10 @@ func (c *core) handlePrevote(msg message) error {
 		return err
 	}
 	if !added {
-		log.Info("known vote, skipping status check change")
 		return nil
 	}
-	log.Info("added prevote vote into roundState", "vote", vote)
+
+	log.Info("added prevote vote into roundState", "from", msg.Address, "vote_block_number", vote.BlockNumber, "vote_round", vote.Round, "block_hash", vote.BlockHash.Hex())
 	prevotes, ok := state.GetPrevotesByRound(vote.Round)
 	if !ok {
 		panic("expect prevotes to exist now")
@@ -193,6 +196,10 @@ func (c *core) handlePrevote(msg message) error {
 	//rebroadcast
 	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
 	go func() {
+		//We don't re-gossip if this is our own message
+		if msg.Address == c.backend.Address() {
+			return
+		}
 		payload, err := rlp.EncodeToBytes(&msg)
 		if err != nil {
 			log.Error("failed to encode msg", "error", err)
@@ -235,6 +242,10 @@ func (c *core) handlePrecommit(msg message) error {
 	if vote.BlockHash == nil {
 		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
 	}
+	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
+		log.Error("vote's block is different with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber)
+		return nil
+	}
 	log.Info("received precommit", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
 	added, err := state.addPrecommit(msg, &vote, c.valSet)
 	if err != nil {
@@ -249,6 +260,10 @@ func (c *core) handlePrecommit(msg message) error {
 	//rebroadcast
 	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
 	go func() {
+		//we don't re-gossip if this is our own message
+		if msg.Address == c.backend.Address() {
+			return
+		}
 		payload, err := rlp.EncodeToBytes(&msg)
 		if err != nil {
 			log.Error("failed to encode msg", "error", err)

@@ -143,7 +143,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	}
 	//if we are proposer, find the latest block we're having to propose
 	if c.valSet.IsProposer(c.backend.Address()) {
-		log.Info("this node is proposer of this round")
+		log.Info("this node is proposer of this round", "node_address", c.backend.Address(), "round", round, "state_round", sRound)
 		//TODO : find out if this is better than current Tendermint implementation
 		//var (
 		//	lockedRound = state.LockedRound()
@@ -453,6 +453,7 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 		state.SetProposalReceived(&tendermint.Proposal{
 			Block: lockedBlock,
 			Round: commitRound,
+			POLRound: state.LockedRound(),
 		})
 	}
 	var (
@@ -547,8 +548,7 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	if totalPrecommits <= fx2 {
 		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", fx2+1, totalPrecommits)
 	}
-	//writeProposalSeal
-	utils.WriteSeal(header, proposal.Seal)
+	//writeCommitSeals
 	utils.WriteCommittedSeals(header, commitSeals)
 	return proposal.Block.WithSeal(header), nil
 }
