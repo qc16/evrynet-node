@@ -204,19 +204,15 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 
 // ExtraDataDetails is a details for the extradata of a block
 type ExtraDataDetails struct {
-	RawData       []*byte
-	BlockProposer *common.Address
-	CommitSigners []*common.Address
+	RawData       hexutil.Bytes     `json:"rawData"`
+	BlockProposer *common.Address   `json:"blockProposer"`
+	CommitSigners []*common.Address `json:"commitSigners"`
 }
 
 // UnmarshalJSON unmarshals from JSON.
 func (h *ExtraDataDetails) UnmarshalJSON(input []byte) error {
-	type ExtraDataDetails struct {
-		RawData       []*byte           `json:"rawData"       gencodec:"required"`
-		BlockProposer *common.Address   `json:"blockProposer"       gencodec:"required"`
-		CommitSigners []*common.Address `json:"commitSigners"            gencodec:"required"`
-	}
-	var dec ExtraDataDetails
+	type extraDataDetails ExtraDataDetails
+	var dec extraDataDetails
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
