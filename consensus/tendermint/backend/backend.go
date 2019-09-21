@@ -168,3 +168,18 @@ func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	}
 	return validator.NewSet(nil, sb.config.ProposerPolicy)
 }
+
+func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
+	targets := make(map[common.Address]bool)
+	for _, val := range valSet.List() {
+		if val.Address() != sb.Address() {
+			targets[val.Address()] = true
+		}
+	}
+
+	rs := sb.broadcaster.FindPeers(targets)
+	if len(rs) > valSet.F() {
+		return true
+	}
+	return false
+}
