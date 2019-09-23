@@ -170,7 +170,7 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 		if currentVote.BlockHash.Hex() != vote.BlockHash.Hex() {
 			return false, ErrConflictingVotes
 		}
-		log.Info("already got vote, skipping", "from", msg.Address, "round", vote.Round)
+		//log.Info("already got vote, skipping", "from", msg.Address, "round", vote.Round)
 		return false, nil
 	}
 

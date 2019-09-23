@@ -44,12 +44,12 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 			return true, tendermint.ErrStoppedEngine
 		}
 
-		data, hash, err := sb.decode(msg)
+		data, _, err := sb.decode(msg)
 		if err != nil {
 			return true, errDecodeFailed
 		}
 		//log is used at local package level for testing now
-		log.Debug("Received Message from peer", "address", addr.Hex(), "code", msg.Code, "hash", hash.String())
+		//log.Debug("Received Message from peer", "address", addr.Hex(), "code", msg.Code, "hash", hash.String())
 		//TODO: mark peer's message and self known message with the hash get from message
 
 		go func() {

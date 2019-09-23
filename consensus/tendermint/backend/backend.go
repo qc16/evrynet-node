@@ -131,9 +131,8 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 	}
 	if len(targets) > 0 {
 		ps := sb.broadcaster.FindPeers(targets)
+		log.Info("prepare to send message to peers", "total_peers", len(ps))
 		for _, p := range ps {
-			//TODO: remove these logs in production
-			log.Info("sending msg", "from", sb.address.Hex(), "to", p.Address().Hex())
 			//TODO: check for recent messsages using lru.ARCCache
 			go func(p consensus.Peer) {
 				if err := p.Send(tendermintMsg, payload); err != nil {

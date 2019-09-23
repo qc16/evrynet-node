@@ -121,7 +121,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	})
 
 	//TODO: DO we need timeout for consensus?
-	//go func() {
 	select {
 	case event, ok := <-sb.blockFinalized.Chan():
 		if !ok {
@@ -130,12 +129,15 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		}
 		switch ev := event.Data.(type) {
 		case tendermint.BlockFinalizedEvent:
-			log.Info("block finalized", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
 			//we only posted the block back to the miner if and only if the block is the same
 			if ev.Block.Hash() == block.Hash() {
+				log.Info("returned block to miner", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
 				results <- ev.Block
-				return nil
+			} else {
+				log.Info("not our block, returned nil to miner", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
+				results <- nil
 			}
+			return nil
 		default:
 			log.Error("unknown event", "event", ev)
 		}
@@ -143,8 +145,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		results <- nil
 		return nil
 	}
-	//}()
-
 	return nil
 }
 

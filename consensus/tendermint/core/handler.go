@@ -6,6 +6,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -46,7 +47,6 @@ func (c *core) handleEvents() {
 	c.handlerWg.Add(1)
 
 	for {
-		log.Info("core's waiting for new events...")
 		select {
 		case event, ok := <-c.events.Chan(): //backend sending something...
 			if !ok {
@@ -55,15 +55,14 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case tendermint.NewBlockEvent:
-				log.Info("received New Block event", "block_number", ev.Block.Number(), "block_hash", ev.Block.Hash())
-				c.CurrentState().SetBlock(ev.Block)
+				c.handleNewBlock(ev.Block)
 			case tendermint.MessageEvent:
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 				var msg message
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
 					log.Error("failed to decode msg", "error", err)
 				} else {
-					log.Info("received Message event", "from", msg.Address, "msg_Code", msg.Code)
+					//log.Info("received Message event", "from", msg.Address, "msg_Code", msg.Code)
 					if err := c.handleMsg(msg); err != nil {
 						log.Error("failed to handle msg", "error", err)
 					}
@@ -71,10 +70,29 @@ func (c *core) handleEvents() {
 			default:
 				log.Info("Unknown event ", "event", ev)
 			}
-		case ti := <-c.timeout.Chan(): //something from timeout...
+		case ti, ok := <-c.timeout.Chan(): //something from timeout...
+			if !ok {
+				return
+			}
 			c.handleTimeout(ti)
 		}
 	}
+}
+
+func (c *core) handleNewBlock(block *types.Block) {
+	var state = c.CurrentState()
+	log.Info("received New Block event", "block_number", block.Number(), "block_hash", block.Hash())
+
+	if state.BlockNumber().Cmp(block.Number()) > 0 {
+		//This is temporary to let miner come up with a newer block
+		log.Error("new block is older than current consensus state", "block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
+		//return a nil block to allow miner to send over a new one
+		if err := c.blockFinalize.Post(tendermint.BlockFinalizedEvent{Block: types.NewBlockWithHeader(&types.Header{})}); err != nil {
+			log.Error("cannot post block Finalization to backend", "error", err)
+		}
+		return
+	}
+	state.SetBlock(block)
 }
 
 func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
@@ -103,7 +121,6 @@ func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 }
 
 func (c *core) handlePropose(msg message) error {
-	log.Info("handling propose...")
 	var (
 		state    = c.CurrentState()
 		proposal tendermint.Proposal
@@ -119,11 +136,10 @@ func (c *core) handlePropose(msg message) error {
 	if state.ProposalReceived() != nil {
 		return nil
 	}
-	log.Info("prepare to check blockNumber...")
 
 	// Does not apply, this is not an error but may happen due to network lattency
 	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		log.Info("received proposal with different height/round",
+		log.Warn("received proposal with different height/round. Skip processing it",
 			"current block number", state.BlockNumber().String(), "received block number", proposal.Block.Number().String(),
 			"current round", state.Round(), "received round", proposal.Round)
 		return nil
@@ -151,10 +167,10 @@ func (c *core) handlePrevote(msg message) error {
 	}
 
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		log.Warn("vote's block is different with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber)
+		log.Warn("vote's block is different with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
 		return nil
 	}
-	log.Info("received prevote", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
+	//log.Info("received prevote", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
 	added, err := state.addPrevote(msg, &vote, c.valSet)
 	if err != nil {
 		return err
@@ -197,7 +213,7 @@ func (c *core) handlePrevote(msg message) error {
 	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
 	go func() {
 		//We don't re-gossip if this is our own message
-		if msg.Address == c.backend.Address() {
+		if msg.Address.Hex() == c.backend.Address().Hex() {
 			return
 		}
 		payload, err := rlp.EncodeToBytes(&msg)
@@ -235,7 +251,6 @@ func (c *core) handlePrecommit(msg message) error {
 		vote  tendermint.Vote
 		state = c.CurrentState()
 	)
-	log.Info("handling precommit ...")
 	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
 		return err
 	}
@@ -243,16 +258,15 @@ func (c *core) handlePrecommit(msg message) error {
 		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
 	}
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		log.Error("vote's block is different with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber)
+		log.Warn("vote's block is different with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
 		return nil
 	}
-	log.Info("received precommit", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
+	//log.Info("received precommit", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
 	added, err := state.addPrecommit(msg, &vote, c.valSet)
 	if err != nil {
 		return err
 	}
 	if !added {
-		log.Info("known vote, skipping status check change and skipping re-broadcast")
 		return nil
 	}
 	log.Info("added precommit vote into roundState", "round", vote.Round, "block_hash", vote.BlockHash.Hex(), "from", msg.Address.Hex())
@@ -261,7 +275,7 @@ func (c *core) handlePrecommit(msg message) error {
 	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
 	go func() {
 		//we don't re-gossip if this is our own message
-		if msg.Address == c.backend.Address() {
+		if msg.Address.Hex() == c.backend.Address().Hex() {
 			return
 		}
 		payload, err := rlp.EncodeToBytes(&msg)

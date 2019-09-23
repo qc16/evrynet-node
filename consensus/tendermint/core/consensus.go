@@ -48,7 +48,10 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 		currentProposer := c.valSet.GetProposer()
 		c.valSet.CalcProposer(currentProposer.Address(), round)
 	}
-
+	if round > 0 {
+		//reset proposal upon new round
+		state.SetProposalReceived(nil)
+	}
 	//Update to RoundStepNewRound
 	state.UpdateRoundStep(round, RoundStepNewRound)
 	state.setPrecommitWaited(false)
@@ -451,8 +454,8 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	if lockedBlock != nil && lockedBlock.Hash().Hex() == blockHash.Hex() {
 		log.Info("Commit is for locked block. Set ProposalBlock=LockedBlock", "blockHash", blockHash.Hex())
 		state.SetProposalReceived(&tendermint.Proposal{
-			Block: lockedBlock,
-			Round: commitRound,
+			Block:    lockedBlock,
+			Round:    commitRound,
 			POLRound: state.LockedRound(),
 		})
 	}
@@ -515,7 +518,6 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 			log.Error("cannot post block Finalization to backend", "error", err)
 		}
 	}()
-
 	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
 
 	c.updateStateForNewblock()
@@ -615,4 +617,5 @@ func (c *core) updateStateForNewblock() {
 	if c.valSet == nil {
 		c.valSet = c.backend.Validators(state.BlockNumber())
 	}
+	log.Info("updated to new block", "new_block_number", state.BlockNumber())
 }

@@ -61,7 +61,7 @@ type timeoutTicker struct {
 	timer    *time.Timer
 	tickChan chan timeoutInfo // for scheduling timeouts
 	tockChan chan timeoutInfo // for notifying about them
-	Quit     <-chan struct{}
+	Quit     chan struct{}
 }
 
 // NewTimeoutTicker returns a new TimeoutTicker that's ready to use
@@ -70,18 +70,21 @@ func NewTimeoutTicker() TimeoutTicker {
 	tt := &timeoutTicker{
 		timer:    time.NewTimer(time.Duration(1<<63 - 1)),
 		tickChan: make(chan timeoutInfo, tickTockBufferSize),
-		tockChan: make(chan timeoutInfo, tickTockBufferSize),
+		Quit:     make(chan struct{}),
 	}
 	return tt
 }
 
 func (tt *timeoutTicker) Start() error {
+	tt.tockChan = make(chan timeoutInfo, tickTockBufferSize)
 	go tt.timeoutRoutine()
 	return nil
 }
 
 func (tt *timeoutTicker) Stop() error {
 	tt.stopTimer()
+	tt.Quit <- struct{}{}
+	close(tt.tockChan)
 	return nil
 }
 

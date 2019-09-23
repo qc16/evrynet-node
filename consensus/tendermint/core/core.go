@@ -68,6 +68,7 @@ func (c *core) EventMux() *event.TypeMux {
 func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
+	log.Info("starting Tendermint's core...")
 	c.currentState = c.getStoredState()
 	c.subscribeEvents()
 	if err := c.timeout.Start(); err != nil {
@@ -80,6 +81,8 @@ func (c *core) Start() error {
 
 // Stop implements core.Engine.Stop
 func (c *core) Stop() error {
+	log.Info("stopping Tendermint's timeout core...")
+	c.timeout.Stop()
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
 	return nil
