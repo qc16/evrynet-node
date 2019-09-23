@@ -30,8 +30,8 @@ type Backend interface {
 	// Validators returns the validator set
 	Validators(blockNumber *big.Int) ValidatorSet
 
-	// LastProposal get the last proposal of chain
-	LastProposal() Proposal
+	// CurrentHeadBlock get the current block of from the canonical chain.
+	CurrentHeadBlock() Proposal
 
 	// FindPeers check peer exist or not by address
 	FindPeers(targets ValidatorSet) bool

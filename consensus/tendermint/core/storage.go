@@ -29,9 +29,9 @@ func (c *core) getStoredState() *roundState {
 		step             = RoundStepNewHeight
 	)
 
-	//get lastProposal
-	lastProposal := c.backend.LastProposal()
-	lastHeight := lastProposal.Height()
+	//get currenHeadBlock
+	currenHeadBlock := c.backend.CurrentHeadBlock()
+	lastHeight := currenHeadBlock.Height()
 
 	// Increase block number to 1 block
 	view.BlockNumber = new(big.Int).Add(lastHeight, big.NewInt(1))
