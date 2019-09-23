@@ -76,6 +76,8 @@ type backend struct {
 	coreStarted bool
 	coreMu      sync.RWMutex
 	chain       consensus.ChainReader
+
+	currentBlock func() *types.Block
 }
 
 // EventMux implements tendermint.Backend.EventMux
@@ -186,4 +188,11 @@ func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 		return true
 	}
 	return false
+}
+
+func (sb *backend) LastProposal() tendermint.Proposal {
+	block := sb.currentBlock()
+	return tendermint.Proposal{
+		Block: block,
+	}
 }
