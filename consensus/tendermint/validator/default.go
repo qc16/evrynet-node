@@ -97,41 +97,41 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, tendermint.Val
 	return -1, nil
 }
 
-func calcSeed(valSet tendermint.ValidatorSet, proposer common.Address, round int64) int64 {
+func calcSeed(valSet tendermint.ValidatorSet, proposer common.Address, roundDiff int64) int64 {
 	offset := 0
 	if idx, val := valSet.GetByAddress(proposer); val != nil {
 		offset = idx
 	}
-	return int64(offset) + round
+	return int64(offset) + roundDiff
 }
 
 func emptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
 
-func roundRobinProposer(valSet tendermint.ValidatorSet, proposer common.Address, round int64) tendermint.Validator {
+func roundRobinProposer(valSet tendermint.ValidatorSet, proposer common.Address, roundDiff int64) tendermint.Validator {
 	if valSet.Size() == 0 {
 		return nil
 	}
 	seed := int64(0)
 	if emptyAddress(proposer) {
-		seed = round
+		seed = roundDiff
 	} else {
-		seed = calcSeed(valSet, proposer, round) + 1
+		seed = calcSeed(valSet, proposer, roundDiff) + 1
 	}
 	pick := seed % int64(valSet.Size())
 	return valSet.GetByIndex(pick)
 }
 
-func stickyProposer(valSet tendermint.ValidatorSet, proposer common.Address, round int64) tendermint.Validator {
+func stickyProposer(valSet tendermint.ValidatorSet, proposer common.Address, roundDiff int64) tendermint.Validator {
 	if valSet.Size() == 0 {
 		return nil
 	}
 	seed := int64(0)
 	if emptyAddress(proposer) {
-		seed = round
+		seed = roundDiff
 	} else {
-		seed = calcSeed(valSet, proposer, round)
+		seed = calcSeed(valSet, proposer, roundDiff)
 	}
 	pick := seed % int64(valSet.Size())
 	return valSet.GetByIndex(pick)
@@ -171,10 +171,10 @@ func (valSet *defaultSet) Policy() tendermint.ProposerPolicy { return valSet.pol
 
 //CalcProposer implement valSet.CalcProposer. Based on the proposer selection scheme,
 //it will set valSet.proposer to the address of the pre-determined round.
-func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round int64) {
+func (valSet *defaultSet) CalcProposer(lastProposer common.Address, roundDiff int64) {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-	valSet.proposer = valSet.selector(valSet, lastProposer, round)
+	valSet.proposer = valSet.selector(valSet, lastProposer, roundDiff)
 }
 
 //GetProposer return the current proposer of this valSet
