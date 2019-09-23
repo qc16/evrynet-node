@@ -2,7 +2,6 @@ package validator
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -37,19 +36,10 @@ func testNewValidatorSet(t *testing.T) {
 	}
 
 	// Create ValidatorSet
-	valSet := NewSet(ExtractValidators(b), tendermint.RoundRobin)
+	valSet := NewSet(ExtractValidators(b), tendermint.RoundRobin, int64(0))
 	if valSet == nil {
 		t.Errorf("the validator byte array cannot be parsed")
 		t.FailNow()
-	}
-
-	// Check validators sorting: should be in ascending order
-	for i := 0; i < ValCnt-1; i++ {
-		val := valSet.GetByIndex(uint64(i))
-		nextVal := valSet.GetByIndex(uint64(i + 1))
-		if strings.Compare(val.String(), nextVal.String()) >= 0 {
-			t.Errorf("validator set is not sorted in ascending order")
-		}
 	}
 }
 
@@ -61,7 +51,7 @@ func testNormalValSet(t *testing.T) {
 	val1 := New(addr1)
 	val2 := New(addr2)
 
-	valSet := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin)
+	valSet := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin, int64(0))
 	assert.NotNil(t, valSet, "the format of validator set is invalid")
 
 	// check size
@@ -69,11 +59,11 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("the size of validator set is wrong: have %v, want 2", size)
 	}
 	// test get by index
-	if val := valSet.GetByIndex(uint64(0)); !reflect.DeepEqual(val, val1) {
+	if val := valSet.GetByIndex(int64(0)); !reflect.DeepEqual(val, val1) {
 		t.Errorf("validator mismatch: have %v, want %v", val, val1)
 	}
 	// test get by invalid index
-	if val := valSet.GetByIndex(uint64(2)); val != nil {
+	if val := valSet.GetByIndex(int64(2)); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
 	// test get by address
@@ -85,10 +75,28 @@ func testNormalValSet(t *testing.T) {
 	if _, val := valSet.GetByAddress(invalidAddr); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
+
+	blockHeight := 1
+	valSetWilHeight := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin, int64(blockHeight))
+	assert.NotNil(t, valSet, "the format of validator set is invalid")
+	// test get by first index
+	if val := valSetWilHeight.GetProposer(); !reflect.DeepEqual(val, val2) {
+		t.Errorf("validator mismatch: have %v, want %v", val, val2)
+	}
+	valSetWilHeight.CalcProposer(addr2, int64(1))
+	// test get by second index
+	if val := valSetWilHeight.GetProposer(); !reflect.DeepEqual(val, val1) {
+		t.Errorf("validator mismatch: have %v, want %v", val, val1)
+	}
+	//test Height of valSet
+	if height := valSetWilHeight.Height(); !reflect.DeepEqual(height, int64(blockHeight)) {
+		t.Errorf("height mismatch: have %v, want %v", height, blockHeight)
+	}
+
 }
 
 func testEmptyValSet(t *testing.T) {
-	valSet := NewSet(ExtractValidators([]byte{}), tendermint.RoundRobin)
+	valSet := NewSet(ExtractValidators([]byte{}), tendermint.RoundRobin, int64(0))
 	if valSet == nil {
 		t.Errorf("validator set should not be nil")
 	}

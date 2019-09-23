@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"bytes"
 	"encoding/json"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -51,12 +50,13 @@ func (s *Snapshot) copy() *Snapshot {
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
 func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
+	countHeader := len(headers)
 	// Allow passing in no headers for cleaner code
-	if len(headers) == 0 {
+	if countHeader == 0 {
 		return s, nil
 	}
 	// Sanity check that the headers can be applied
-	for i := 0; i < len(headers)-1; i++ {
+	for i := 0; i < countHeader-1; i++ {
 		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
 			return nil, errInvalidVotingChain
 		}
@@ -68,25 +68,21 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	snap := s.copy()
 
 	// TODO: Research & Implement Tally vote to add/remove validator from validator set
+	//Recalcualte valset
+	newValSet := validator.NewSet(snap.validators(), snap.ValSet.Policy(), snap.ValSet.Height()+int64(countHeader))
+	snap.ValSet = newValSet
 
-	snap.Number += uint64(len(headers))
-	snap.Hash = headers[len(headers)-1].Hash()
+	snap.Number += uint64(countHeader)
+	snap.Hash = headers[countHeader-1].Hash()
 
 	return snap, nil
 }
 
-// validators retrieves the list of authorized validators in ascending order.
+// validators retrieves the list of authorized validators.
 func (s *Snapshot) validators() []common.Address {
 	validators := make([]common.Address, 0, s.ValSet.Size())
 	for _, validator := range s.ValSet.List() {
 		validators = append(validators, validator.Address())
-	}
-	for i := 0; i < len(validators); i++ {
-		for j := i + 1; j < len(validators); j++ {
-			if bytes.Compare(validators[i][:], validators[j][:]) > 0 {
-				validators[i], validators[j] = validators[j], validators[i]
-			}
-		}
 	}
 	return validators
 }
@@ -148,7 +144,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Epoch = j.Epoch
 	s.Number = j.Number
 	s.Hash = j.Hash
-	s.ValSet = validator.NewSet(j.Validators, j.Policy)
+	s.ValSet = validator.NewSet(j.Validators, j.Policy, int64(j.Number))
 	return nil
 }
 

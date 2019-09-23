@@ -18,7 +18,7 @@ func TestSaveAndLoad(t *testing.T) {
 		valSet = validator.NewSet([]common.Address{
 			common.HexToAddress("1234567894"),
 			common.HexToAddress("1234567895"),
-		}, tendermint.RoundRobin)
+		}, tendermint.RoundRobin, int64(0))
 		snap = newSnapshot(5, 10, hash, valSet)
 	)
 

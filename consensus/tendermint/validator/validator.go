@@ -15,8 +15,8 @@ func New(addr common.Address) tendermint.Validator {
 }
 
 // NewSet will create new validator set by address list & policy
-func NewSet(addrs []common.Address, policy tendermint.ProposerPolicy) tendermint.ValidatorSet {
-	return newDefaultSet(addrs, policy)
+func NewSet(addrs []common.Address, policy tendermint.ProposerPolicy, height int64) tendermint.ValidatorSet {
+	return newDefaultSet(addrs, policy, height)
 }
 
 // IsProposer will be checking whether the validator with given address is a proposer

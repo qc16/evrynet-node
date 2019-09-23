@@ -90,6 +90,6 @@ func newTestValidatorSet(n int) tendermint.ValidatorSet {
 		privateKey, _ := crypto.GenerateKey()
 		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
 	}
-	vset := validator.NewSet(addrs, tendermint.RoundRobin)
+	vset := validator.NewSet(addrs, tendermint.RoundRobin, int64(0))
 	return vset
 }

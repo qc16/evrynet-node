@@ -2,7 +2,6 @@ package validator
 
 import (
 	"math"
-	"sort"
 	"sync"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -35,9 +34,11 @@ type defaultSet struct {
 	proposer    tendermint.Validator
 	validatorMu sync.RWMutex
 	selector    tendermint.ProposalSelector
+
+	height int64 // current height when backend init validator set
 }
 
-func newDefaultSet(addrs []common.Address, policy tendermint.ProposerPolicy) *defaultSet {
+func newDefaultSet(addrs []common.Address, policy tendermint.ProposerPolicy, height int64) *defaultSet {
 	valSet := &defaultSet{}
 
 	valSet.policy = policy
@@ -46,17 +47,19 @@ func newDefaultSet(addrs []common.Address, policy tendermint.ProposerPolicy) *de
 	for i, addr := range addrs {
 		valSet.validators[i] = New(addr)
 	}
-	// sort validator
-	sort.Sort(valSet.validators)
+
 	// init proposer
 	if valSet.Size() > 0 {
-		valSet.proposer = valSet.GetByIndex(0)
+		index := height % int64(valSet.Size())
+		valSet.proposer = valSet.GetByIndex(index)
 	}
 	if policy == tendermint.Sticky {
 		valSet.selector = stickyProposer
 	} else {
 		valSet.selector = roundRobinProposer
 	}
+
+	valSet.height = height
 
 	return valSet
 }
@@ -117,7 +120,7 @@ func roundRobinProposer(valSet tendermint.ValidatorSet, proposer common.Address,
 	if emptyAddress(proposer) {
 		seed = roundDiff
 	} else {
-		seed = calcSeed(valSet, proposer, roundDiff) + 1
+		seed = calcSeed(valSet, proposer, roundDiff)
 	}
 	pick := seed % int64(valSet.Size())
 	return valSet.GetByIndex(pick)
@@ -160,7 +163,7 @@ func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
 	for _, v := range valSet.validators {
 		addresses = append(addresses, v.Address())
 	}
-	return NewSet(addresses, valSet.policy)
+	return NewSet(addresses, valSet.policy, valSet.height)
 }
 
 // F get the maximum number of faulty nodes
@@ -180,4 +183,9 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, roundDiff in
 //GetProposer return the current proposer of this valSet
 func (valSet *defaultSet) GetProposer() tendermint.Validator {
 	return valSet.proposer
+}
+
+// Height return block height when valSet is init
+func (valSet *defaultSet) Height() int64 {
+	return valSet.height
 }

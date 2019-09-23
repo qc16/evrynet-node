@@ -166,7 +166,7 @@ func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 			return snap.ValSet
 		}
 	}
-	return validator.NewSet(nil, sb.config.ProposerPolicy)
+	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
 }
 
 func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
