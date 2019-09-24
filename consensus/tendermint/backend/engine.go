@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
@@ -27,10 +28,16 @@ var (
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
+
+	// Magic nonce number to vote on adding a new validator
+	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff")
+	// Magic nonce number to vote on removing a validator.
+	nonceDropVote = hexutil.MustDecode("0x0000000000000000")
 )
 
 const (
-	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	// Number of blocks after which to save the vote snapshot to the database
+	checkpointInterval = 1024
 )
 
 var (
@@ -63,6 +70,11 @@ var (
 	errInvalidUncleHash = errors.New("non empty uncle hash")
 	// errMalformedChannelData is returned if data return from blockFinalization does not conform to its struct definition
 	errMalformedChannelData = errors.New("data received is not an event type")
+	// errInvalidVote is returned if a nonce value is something else that the two
+	// allowed constants of 0x00..0 or 0xff..f.
+	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
+	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
+	errInvalidCandidate = errors.New("candidate for validator is invalid")
 )
 
 func (sb *backend) addProposalSeal(h *types.Header) error {
