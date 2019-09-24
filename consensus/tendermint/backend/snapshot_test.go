@@ -1,18 +1,60 @@
 package backend
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/stretchr/testify/assert"
 )
+
+type testerVote struct {
+	validator string
+	voted     string
+	auth      bool
+}
+
+// testerAccountPool is a pool to maintain currently active tester accounts,
+// mapped from textual names used in the tests below to actual Ethereum private
+// keys capable of signing transactions.
+type testerAccountPool struct {
+	accounts map[string]*ecdsa.PrivateKey
+}
+
+func newTesterAccountPool() *testerAccountPool {
+	return &testerAccountPool{
+		accounts: make(map[string]*ecdsa.PrivateKey),
+	}
+}
+
+func (ap *testerAccountPool) sign(header *types.Header, validator string) {
+	// Ensure we have a persistent key for the validator
+	if ap.accounts[validator] == nil {
+		ap.accounts[validator], _ = crypto.GenerateKey()
+	}
+	// Sign the header and embed the signature in extra data
+	hashData := crypto.Keccak256([]byte(utils.SigHash(header).Bytes()))
+	sig, _ := crypto.Sign(hashData, ap.accounts[validator])
+
+	utils.WriteSeal(header, sig)
+}
+
+func (ap *testerAccountPool) address(account string) common.Address {
+	// Ensure we have a persistent key for the account
+	if ap.accounts[account] == nil {
+		ap.accounts[account], _ = crypto.GenerateKey()
+	}
+	// Resolve and return the Ethereum address
+	return crypto.PubkeyToAddress(ap.accounts[account].PublicKey)
+}
 
 func TestSaveAndLoad(t *testing.T) {
 	var (
@@ -102,4 +144,45 @@ func createHeaderArr(startNumber int, countHeader int) []*types.Header {
 		}
 	}
 	return headers
+}
+
+func TestVoting(t *testing.T) {
+	// Define the various voting scenarios to test
+	// tests := []struct {
+	// 	epoch      uint64
+	// 	validators []string
+	// 	votes      []testerVote
+	// 	results    []string
+	// }{{
+	// 	// Single validator, no votes cast
+	// 	validators: []string{"A"},
+	// 	votes:      []testerVote{{validator: "A"}},
+	// 	results:    []string{"A"},
+	// }, {
+	// 	// Single validator, voting to add two others (only accept first, second needs 2 votes)
+	// 	validators: []string{"A"},
+	// 	votes: []testerVote{
+	// 		{validator: "A", voted: "B", auth: true},
+	// 		{validator: "B"},
+	// 		{validator: "A", voted: "C", auth: true},
+	// 	},
+	// 	results: []string{"A", "B"},
+	// }}
+
+	// for i, tt := range tests {
+	// 	// Create the account pool and generate the initial set of validators
+	// 	accounts := newTesterAccountPool()
+
+	// 	validators := make([]common.Address, len(tt.validators))
+	// 	for j, validator := range tt.validators {
+	// 		validators[j] = accounts.address(validator)
+	// 	}
+	// 	for j := 0; j < len(validators); j++ {
+	// 		for k := j + 1; k < len(validators); k++ {
+	// 			if bytes.Compare(validators[j][:], validators[k][:]) > 0 {
+	// 				validators[j], validators[k] = validators[k], validators[j]
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
