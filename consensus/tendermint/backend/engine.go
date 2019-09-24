@@ -103,48 +103,53 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	}
 
 	// wait for the timestamp of header, make sure this block does not come from the future
-	//TODO: revise delay
 	headerTime := int64(block.Header().Time)
 	delay := time.Unix(headerTime, 0).Sub(now())
+	//TODO: revise delay
 	select {
 	case <-time.After(delay):
 	case <-stop:
 		results <- nil
-		return nil
+		return
 	}
 
 	//block = sb.Prepare()
 	//TODO: clear previous data of proposal
 	// post block into tendermint engine
-	go sb.EventMux().Post(tendermint.NewBlockEvent{
-		Block: block,
-	})
+	go func(block *types.Block) {
+		sb.EventMux().Post(tendermint.NewBlockEvent{
+			Block: block,
+		})
+	}(block)
 
-	//TODO: DO we need timeout for consensus?
-	select {
-	case event, ok := <-sb.blockFinalized.Chan():
-		if !ok {
-			log.Error(errMalformedChannelData.Error())
-			return errMalformedChannelData
-		}
-		switch ev := event.Data.(type) {
-		case tendermint.BlockFinalizedEvent:
-			//we only posted the block back to the miner if and only if the block is the same
-			if ev.Block.Hash() == block.Hash() {
-				log.Info("returned block to miner", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
-				results <- ev.Block
-			} else {
-				log.Info("not our block, returned nil to miner", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
-				results <- nil
+	go func() {
+		//TODO: DO we need timeout for consensus?
+		select {
+		case event, ok := <-sb.blockFinalized.Chan():
+			if !ok {
+				log.Error(errMalformedChannelData.Error())
+				err = errMalformedChannelData
 			}
-			return nil
-		default:
-			log.Error("unknown event", "event", ev)
+			switch ev := event.Data.(type) {
+			//TODO: maybe make a separated channel for this
+			case tendermint.BlockFinalizedEvent:
+				//we only posted the block back to the miner if and only if the block is ours
+				if ev.Block.Coinbase() == sb.address {
+					log.Info("returned block to miner", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
+					results <- ev.Block
+
+				} else {
+					log.Info("not this node's block, exit and let downloader sync the block from proposer...")
+				}
+				return
+			default:
+				log.Error("unknown event", "event", ev)
+			}
+		case <-stop:
+			results <- nil
+			return
 		}
-	case <-stop:
-		results <- nil
-		return nil
-	}
+	}()
 	return nil
 }
 

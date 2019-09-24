@@ -278,7 +278,7 @@ func (w *worker) start() {
 // stop sets the running status as 0.
 func (w *worker) stop() {
 	if tendermint, ok := w.engine.(consensus.Tendermint); ok {
-		if err := tendermint.Stop(); err!=nil {
+		if err := tendermint.Stop(); err != nil {
 			log.Error("Failed to stop Tendermint engine", "err", err)
 		}
 	}

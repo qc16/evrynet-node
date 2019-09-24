@@ -46,7 +46,11 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	//if the round we enter is higher than current round, we'll have to adjust the proposer.
 	if sRound < round {
 		currentProposer := c.valSet.GetProposer()
-		c.valSet.CalcProposer(currentProposer.Address(), round)
+		c.valSet.CalcProposer(currentProposer.Address(), round-sRound)
+	} else {
+		//if it reached here meaning we're going forward one round. recalculate proposer with 1
+		currentProposer := c.valSet.GetProposer()
+		c.valSet.CalcProposer(currentProposer.Address(), 1)
 	}
 	if round > 0 {
 		//reset proposal upon new round

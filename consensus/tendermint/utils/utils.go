@@ -18,7 +18,6 @@ var (
 // sigHash returns the hash
 // signing. It is the hash of the entire header apart from the 65 byte signature
 // contained at the end of the extra data.
-// if keepSeal = true, the SigHash will return the hash with proposalSeal, otherwise the pure hash
 func SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.New256()
 

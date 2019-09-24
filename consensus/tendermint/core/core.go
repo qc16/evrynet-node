@@ -69,7 +69,9 @@ func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	log.Info("starting Tendermint's core...")
-	c.currentState = c.getStoredState()
+	if c.currentState == nil {
+		c.currentState = c.getStoredState()
+	}
 	c.subscribeEvents()
 	if err := c.timeout.Start(); err != nil {
 		return err
