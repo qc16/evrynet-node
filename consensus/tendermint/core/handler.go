@@ -359,10 +359,6 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 	case RoundStepNewRound:
 		c.enterPropose(ti.BlockNumber, 0)
 	case RoundStepPropose:
-		if c.backend.FindPeers(c.valSet) {
-			log.Warn("--- Enough peers to prevote")
-			c.enterPrevote(ti.BlockNumber, ti.Round)
-		}
 		c.enterPrevote(ti.BlockNumber, ti.Round)
 	case RoundStepPrevoteWait:
 		c.enterPrecommit(ti.BlockNumber, ti.Round)
