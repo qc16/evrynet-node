@@ -80,13 +80,13 @@ func testNormalValSet(t *testing.T) {
 	valSetWilHeight := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin, int64(blockHeight))
 	assert.NotNil(t, valSet, "the format of validator set is invalid")
 	// test get by first index
-	if val := valSetWilHeight.GetProposer(); !reflect.DeepEqual(val, val2) {
-		t.Errorf("validator mismatch: have %v, want %v", val, val2)
-	}
-	valSetWilHeight.CalcProposer(addr2, int64(1))
-	// test get by second index
 	if val := valSetWilHeight.GetProposer(); !reflect.DeepEqual(val, val1) {
 		t.Errorf("validator mismatch: have %v, want %v", val, val1)
+	}
+	valSetWilHeight.CalcProposer(addr1, int64(1))
+	// test get by second index
+	if val := valSetWilHeight.GetProposer(); !reflect.DeepEqual(val, val2) {
+		t.Errorf("validator mismatch: have %v, want %v", val, val2)
 	}
 	//test Height of valSet
 	if height := valSetWilHeight.Height(); !reflect.DeepEqual(height, int64(blockHeight)) {

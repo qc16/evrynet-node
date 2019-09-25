@@ -50,7 +50,12 @@ func newDefaultSet(addrs []common.Address, policy tendermint.ProposerPolicy, hei
 
 	// init proposer
 	if valSet.Size() > 0 {
-		index := height % int64(valSet.Size())
+		// this ensure first validator in array can propose block height 1
+		shiftHeight := height
+		if shiftHeight > 0 {
+			shiftHeight = shiftHeight - 1
+		}
+		index := shiftHeight % int64(valSet.Size())
 		valSet.proposer = valSet.GetByIndex(index)
 	}
 	if policy == tendermint.Sticky {
