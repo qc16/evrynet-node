@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"bytes"
 	"log"
 	"reflect"
 	"strings"
@@ -40,16 +39,6 @@ func testNewValidatorSet(t *testing.T) {
 		b = append(b, val.Address().Bytes()...)
 	}
 
-	//sort validators
-	for i := 0; i < len(validators); i++ {
-		for j := i + 1; j < len(validators); j++ {
-			addi := validators[i].Address().Bytes()
-			addj := validators[j].Address().Bytes()
-			if bytes.Compare(addi, addj) > 0 {
-				validators[i], validators[j] = validators[j], validators[i]
-			}
-		}
-	}
 
 	// Create ValidatorSet
 	valSet := NewSet(ExtractValidators(b), tendermint.RoundRobin, int64(0))
@@ -66,14 +55,14 @@ func testNewValidatorSet(t *testing.T) {
 			t.Errorf("validator set is not sorted in ascending order")
 		}
 	}
-	valSet.CalcProposer(validators[0].Address(), 0)
-	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[0].Address().Hex())
-	valSet.CalcProposer(validators[0].Address(), 1)
-	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[1].Address().Hex())
-	valSet.CalcProposer(validators[0].Address(), 2)
-	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[2].Address().Hex())
-	valSet.CalcProposer(validators[0].Address(), 3)
-	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[0].Address().Hex())
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 0)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(0).Address().Hex())
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 1)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(1).Address().Hex())
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 2)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(2).Address().Hex())
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 3)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(0).Address().Hex())
 
 }
 
