@@ -29,4 +29,7 @@ type Backend interface {
 
 	// Validators returns the validator set
 	Validators(blockNumber *big.Int) ValidatorSet
+
+	// FindPeers check peer exist or not by address
+	FindPeers(targets ValidatorSet) bool
 }
