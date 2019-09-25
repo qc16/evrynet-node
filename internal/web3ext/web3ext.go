@@ -483,6 +483,18 @@ web3._extend({
     		inputFormatter: [null, web3._extend.formatters.inputAddressFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'getExtraDataByBlockHash',
+			call: 'eth_getExtraDataByBlockHash',
+			params: 1,
+    		inputFormatter: [web3._extend.utils.toHex]
+		}),
+		new web3._extend.Method({
+			name: 'getExtraDataByBlockNumber',
+			call: 'eth_getExtraDataByBlockNumber',
+			params: 1,
+    		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'submitTransaction',
 			call: 'eth_submitTransaction',
 			params: 1,

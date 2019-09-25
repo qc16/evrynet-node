@@ -34,6 +34,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/math"
 	"github.com/evrynet-official/evrynet-client/consensus/clique"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/types"
@@ -46,6 +47,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -648,6 +650,24 @@ func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Addre
 	}, state.Error()
 }
 
+// GetExtraDataByBlockHash return to requested extradata's infor with the fields blockProposer, commitSigner via the block's hash
+func (s *PublicBlockChainAPI) GetExtraDataByBlockHash(ctx context.Context, blockHash common.Hash) (map[string]interface{}, error) {
+	block, err := s.b.GetBlock(ctx, blockHash)
+	if block != nil {
+		return s.rpcOutputExtraData(block)
+	}
+	return nil, err
+}
+
+// GetExtraDataByBlockNumber return to requested extradata's infor with the fields blockProposer, commitSigner via the block's number
+func (s *PublicBlockChainAPI) GetExtraDataByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) (map[string]interface{}, error) {
+	block, err := s.b.BlockByNumber(ctx, blockNr)
+	if block != nil {
+		return s.rpcOutputExtraData(block)
+	}
+	return nil, err
+}
+
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
@@ -1014,6 +1034,74 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 	fields["uncles"] = uncleHashes
 
 	return fields, nil
+}
+
+// RPCMarshalExtraData converts the given extra data with (extraData, blockProposer, commitSigners to the RPC output
+func RPCMarshalExtraData(b *types.Block) (map[string]interface{}, error) {
+	blockHeader := b.Header() // copies the header once
+	fields := map[string]interface{}{
+		"rawData": hexutil.Bytes(blockHeader.Extra),
+	}
+
+	// extract the extra data from header
+	extra, err := types.ExtractTendermintExtra(blockHeader)
+	if err != nil {
+		return fields, err
+	}
+
+	// get address of block proposer
+	blockProposer, err := getSignatureAddress(sigHash(blockHeader).Bytes(), extra.Seal)
+	if err != nil {
+		return fields, err
+	}
+	fields["blockProposer"] = blockProposer
+
+	// get all committed's signer
+	var commitSigner []common.Address
+	proposalSeal := tendermintCore.PrepareCommittedSeal(blockHeader.Hash())
+	log.Info("RPCMarshalExtraData", "committedSeal", extra.CommittedSeal)
+	for _, seal := range extra.CommittedSeal {
+		// Get the original address by seal and parent block hash
+		addr, err := getSignatureAddress(proposalSeal, seal)
+		if err != nil {
+			return fields, err
+		}
+		commitSigner = append(commitSigner, addr)
+	}
+
+	fields["commitSigners"] = commitSigner
+
+	return fields, nil
+}
+
+func sigHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.New256()
+
+	// Clean seal is required for calculating proposer seal.
+	rlp.Encode(hasher, types.TendermintFilteredHeader(header, false))
+	hasher.Sum(hash[:0])
+
+	return hash
+}
+
+// GetSignatureAddress gets the signer address from the signature
+func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
+	// 1. Keccak data
+	hashData := crypto.Keccak256(data)
+	// 2. Recover public key
+	pubkey, err := crypto.SigToPub(hashData, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func (s *PublicBlockChainAPI) rpcOutputExtraData(b *types.Block) (map[string]interface{}, error) {
+	fields, err := RPCMarshalExtraData(b)
+	if err != nil {
+		return nil, err
+	}
+	return fields, err
 }
 
 // rpcOutputBlock uses the generalized output filler, then adds the total difficulty field, which requires

@@ -88,6 +88,28 @@ func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Bl
 	return ec.getBlock(ctx, "eth_getBlockByNumber", toBlockNumArg(number), true)
 }
 
+// ExtraDataByBlockNumber returns datas from the current extra data about (blocksigner and commitSigners)
+// the input is block's number
+func (ec *Client) ExtraDataByBlockNumber(ctx context.Context, number *big.Int) (*ExtraDataDetails, error) {
+	var json *ExtraDataDetails
+	err := ec.c.CallContext(ctx, &json, "eth_getExtraDataByBlockNumber", toBlockNumArg(number))
+	if err == nil && json == nil {
+		err = ethereum.NotFound
+	}
+	return json, err
+}
+
+// ExtraDataByBlockHash returns datas from the current extra data about (blocksigner and commitSigners)
+// the input is block's hash
+func (ec *Client) ExtraDataByBlockHash(ctx context.Context, hash common.Hash) (*ExtraDataDetails, error) {
+	var json *ExtraDataDetails
+	err := ec.c.CallContext(ctx, &json, "eth_getExtraDataByBlockHash", hash)
+	if err == nil && json == nil {
+		err = ethereum.NotFound
+	}
+	return json, err
+}
+
 type rpcBlock struct {
 	Hash         common.Hash      `json:"hash"`
 	Transactions []rpcTransaction `json:"transactions"`
@@ -178,6 +200,26 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 		err = ethereum.NotFound
 	}
 	return head, err
+}
+
+// ExtraDataDetails is a details for the extradata of a block
+type ExtraDataDetails struct {
+	RawData       hexutil.Bytes     `json:"rawData"`
+	BlockProposer *common.Address   `json:"blockProposer"`
+	CommitSigners []*common.Address `json:"commitSigners"`
+}
+
+// UnmarshalJSON unmarshals from JSON.
+func (h *ExtraDataDetails) UnmarshalJSON(input []byte) error {
+	type extraDataDetails ExtraDataDetails
+	var dec extraDataDetails
+	if err := json.Unmarshal(input, &dec); err != nil {
+		return err
+	}
+	h.RawData = dec.RawData
+	h.BlockProposer = dec.BlockProposer
+	h.CommitSigners = dec.CommitSigners
+	return nil
 }
 
 type rpcTransaction struct {
