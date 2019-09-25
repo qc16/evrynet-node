@@ -97,9 +97,9 @@ func (c *core) handleNewBlock(block *types.Block) {
 
 func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 
-	// Verify POLRound, which must be nil or in range [0, proposal.Round).
-	if proposal.POLRound < -1 &&
-		(proposal.POLRound >= 0) && proposal.POLRound >= proposal.Round {
+	// Verify POLRound, which must be -1 or in range [0, proposal.Round).
+	if proposal.POLRound < -1 ||
+		((proposal.POLRound >= 0) && proposal.POLRound >= proposal.Round) {
 		return ErrInvalidProposalPOLRound
 	}
 

@@ -115,9 +115,6 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
 func (c *core) SendPropose(propose *tendermint.Proposal) {
-	//TODO: remove these log in production
-	if propose.Block != nil {
-	}
 
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
