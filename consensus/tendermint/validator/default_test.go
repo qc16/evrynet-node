@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -24,7 +25,7 @@ func TestValidatorSet(t *testing.T) {
 
 func testNewValidatorSet(t *testing.T) {
 	var validators []tendermint.Validator
-	const ValCnt = 100
+	const ValCnt = 3
 
 	// Create 100 validators with random addresses
 	var b []byte
@@ -33,6 +34,8 @@ func testNewValidatorSet(t *testing.T) {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		val := New(addr)
 		validators = append(validators, val)
+		log.Printf("index %d address %s", i, addr.Hex())
+
 		b = append(b, val.Address().Bytes()...)
 	}
 
@@ -51,6 +54,15 @@ func testNewValidatorSet(t *testing.T) {
 			t.Errorf("validator set is not sorted in ascending order")
 		}
 	}
+	valSet.CalcProposer(validators[0].Address(), 0)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[0].Address().Hex())
+	valSet.CalcProposer(validators[0].Address(), 1)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[1].Address().Hex())
+	valSet.CalcProposer(validators[0].Address(), 2)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[2].Address().Hex())
+	valSet.CalcProposer(validators[0].Address(), 3)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), validators[0].Address().Hex())
+
 }
 
 func testNormalValSet(t *testing.T) {
