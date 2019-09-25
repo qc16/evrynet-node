@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"log"
 	"reflect"
 	"strings"
@@ -37,6 +38,17 @@ func testNewValidatorSet(t *testing.T) {
 		log.Printf("index %d address %s", i, addr.Hex())
 
 		b = append(b, val.Address().Bytes()...)
+	}
+
+	//sort validators
+	for i := 0; i < len(validators); i++ {
+		for j := i + 1; j < len(validators); j++ {
+			addi := validators[i].Address().Bytes()
+			addj := validators[j].Address().Bytes()
+			if bytes.Compare(addi, addj) > 0 {
+				validators[i], validators[j] = validators[j], validators[i]
+			}
+		}
 	}
 
 	// Create ValidatorSet
