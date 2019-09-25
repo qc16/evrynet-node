@@ -63,6 +63,8 @@ type ValidatorSet interface {
 	CalcProposer(lastProposer common.Address, roundDiff int64)
 	// GetProposer return the current proposer
 	GetProposer() Validator
+	// Height return block height when valSet is init
+	Height() int64
 }
 
 // ----------------------------------------------------------------------------

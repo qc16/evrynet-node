@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -24,7 +25,7 @@ func TestValidatorSet(t *testing.T) {
 
 func testNewValidatorSet(t *testing.T) {
 	var validators []tendermint.Validator
-	const ValCnt = 100
+	const ValCnt = 3
 
 	// Create 100 validators with random addresses
 	var b []byte
@@ -33,11 +34,14 @@ func testNewValidatorSet(t *testing.T) {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		val := New(addr)
 		validators = append(validators, val)
+		log.Printf("index %d address %s", i, addr.Hex())
+
 		b = append(b, val.Address().Bytes()...)
 	}
 
+
 	// Create ValidatorSet
-	valSet := NewSet(ExtractValidators(b), tendermint.RoundRobin)
+	valSet := NewSet(ExtractValidators(b), tendermint.RoundRobin, int64(0))
 	if valSet == nil {
 		t.Errorf("the validator byte array cannot be parsed")
 		t.FailNow()
@@ -45,12 +49,21 @@ func testNewValidatorSet(t *testing.T) {
 
 	// Check validators sorting: should be in ascending order
 	for i := 0; i < ValCnt-1; i++ {
-		val := valSet.GetByIndex(uint64(i))
-		nextVal := valSet.GetByIndex(uint64(i + 1))
+		val := valSet.GetByIndex(int64(i))
+		nextVal := valSet.GetByIndex(int64(i + 1))
 		if strings.Compare(val.String(), nextVal.String()) >= 0 {
 			t.Errorf("validator set is not sorted in ascending order")
 		}
 	}
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 0)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(0).Address().Hex())
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 1)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(1).Address().Hex())
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 2)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(2).Address().Hex())
+	valSet.CalcProposer(valSet.GetByIndex(0).Address(), 3)
+	assert.Equal(t, valSet.GetProposer().Address().Hex(), valSet.GetByIndex(0).Address().Hex())
+
 }
 
 func testNormalValSet(t *testing.T) {
@@ -61,7 +74,7 @@ func testNormalValSet(t *testing.T) {
 	val1 := New(addr1)
 	val2 := New(addr2)
 
-	valSet := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin)
+	valSet := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin, int64(0))
 	assert.NotNil(t, valSet, "the format of validator set is invalid")
 
 	// check size
@@ -69,11 +82,11 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("the size of validator set is wrong: have %v, want 2", size)
 	}
 	// test get by index
-	if val := valSet.GetByIndex(uint64(0)); !reflect.DeepEqual(val, val1) {
+	if val := valSet.GetByIndex(int64(0)); !reflect.DeepEqual(val, val1) {
 		t.Errorf("validator mismatch: have %v, want %v", val, val1)
 	}
 	// test get by invalid index
-	if val := valSet.GetByIndex(uint64(2)); val != nil {
+	if val := valSet.GetByIndex(int64(2)); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
 	// test get by address
@@ -85,10 +98,28 @@ func testNormalValSet(t *testing.T) {
 	if _, val := valSet.GetByAddress(invalidAddr); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
+
+	blockHeight := 1
+	valSetWilHeight := newDefaultSet([]common.Address{addr1, addr2}, tendermint.RoundRobin, int64(blockHeight))
+	assert.NotNil(t, valSet, "the format of validator set is invalid")
+	// test get by first index
+	if val := valSetWilHeight.GetProposer(); !reflect.DeepEqual(val, val1) {
+		t.Errorf("validator mismatch: have %v, want %v", val, val1)
+	}
+	valSetWilHeight.CalcProposer(addr1, int64(1))
+	// test get by second index
+	if val := valSetWilHeight.GetProposer(); !reflect.DeepEqual(val, val2) {
+		t.Errorf("validator mismatch: have %v, want %v", val, val2)
+	}
+	//test Height of valSet
+	if height := valSetWilHeight.Height(); !reflect.DeepEqual(height, int64(blockHeight)) {
+		t.Errorf("height mismatch: have %v, want %v", height, blockHeight)
+	}
+
 }
 
 func testEmptyValSet(t *testing.T) {
-	valSet := NewSet(ExtractValidators([]byte{}), tendermint.RoundRobin)
+	valSet := NewSet(ExtractValidators([]byte{}), tendermint.RoundRobin, int64(0))
 	if valSet == nil {
 		t.Errorf("validator set should not be nil")
 	}
