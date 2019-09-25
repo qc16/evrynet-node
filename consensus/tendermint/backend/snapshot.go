@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -78,11 +79,18 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	return snap, nil
 }
 
-// validators retrieves the list of authorized validators.
+// validators retrieves the list of authorized validators in ascending order.
 func (s *Snapshot) validators() []common.Address {
 	validators := make([]common.Address, 0, s.ValSet.Size())
 	for _, validator := range s.ValSet.List() {
 		validators = append(validators, validator.Address())
+	}
+	for i := 0; i < len(validators); i++ {
+		for j := i + 1; j < len(validators); j++ {
+			if bytes.Compare(validators[i][:], validators[j][:]) > 0 {
+				validators[i], validators[j] = validators[j], validators[i]
+			}
+		}
 	}
 	return validators
 }

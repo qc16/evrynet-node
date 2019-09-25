@@ -2,6 +2,7 @@ package validator
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -40,6 +41,15 @@ func testNewValidatorSet(t *testing.T) {
 	if valSet == nil {
 		t.Errorf("the validator byte array cannot be parsed")
 		t.FailNow()
+	}
+
+	// Check validators sorting: should be in ascending order
+	for i := 0; i < ValCnt-1; i++ {
+		val := valSet.GetByIndex(int64(i))
+		nextVal := valSet.GetByIndex(int64(i + 1))
+		if strings.Compare(val.String(), nextVal.String()) >= 0 {
+			t.Errorf("validator set is not sorted in ascending order")
+		}
 	}
 }
 

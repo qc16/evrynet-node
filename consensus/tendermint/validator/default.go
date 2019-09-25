@@ -2,6 +2,7 @@ package validator
 
 import (
 	"math"
+	"sort"
 	"sync"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -47,6 +48,9 @@ func newDefaultSet(addrs []common.Address, policy tendermint.ProposerPolicy, hei
 	for i, addr := range addrs {
 		valSet.validators[i] = New(addr)
 	}
+
+	// sort validator
+	sort.Sort(valSet.validators)
 
 	// init proposer
 	if valSet.Size() > 0 {
