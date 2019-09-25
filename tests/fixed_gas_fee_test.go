@@ -22,8 +22,8 @@ To run these test, please deploy your own account/ contract and extract privatek
 func TestSendNormalTxWithFixedFee(t *testing.T) {
 	const (
 		normalAddress = "0xBBD9e63B95308358AAfb20d6606701A4b6429f5e"
-		senderPK      = "112CD7FA616EF6499DA9FA0A227AC73B4B109CC3F7F94C2BEFB3346CCB18CD08"
-		senderAddrStr = "0xa091e44e0B6Adc71ce1f58B81337343597301FF6"
+		senderPK      = "62199ECEC394ED8B6BEB52924B8AF3AE41D1887D624A368A3305ED8894B99DCF"
+		senderAddrStr = "0xc1d38df8d2342c84faab9623b2d021466fb2844c"
 
 		testBal1     = 1000000 //1e6
 		testBal2     = 2000000 //2e6
@@ -39,7 +39,7 @@ func TestSendNormalTxWithFixedFee(t *testing.T) {
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:9015")
+	ethClient, err := ethclient.Dial("http://localhost:22001")
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)

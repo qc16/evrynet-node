@@ -4,13 +4,13 @@ package test
 const (
 	// this is just a random address to run negative test
 	normalAddress                  = "0x7e8A370FD68DeBe1f6B5f3537061F1069BAC783C"
-	senderPK                       = "CAB57E606531AF83BFD023F55E1673713DA7E161D2612570A0ABAAA9507AACDF"
-	senderAddrStr                  = "0xF837F945733a512A087866462B2a4b82FED11146"
+	senderPK                       = "62199ECEC394ED8B6BEB52924B8AF3AE41D1887D624A368A3305ED8894B99DCF"
+	senderAddrStr                  = "0xc1d38df8d2342c84faab9623b2d021466fb2844c"
 	contractAddrStrWithoutProvider = "0x7Dadf7b6c9C828afd6E814cDb3e820f9F3261e49"
-	contractAddrStrWithProvider    = "0x5ee9b4b36a1c259a376513fb807f6ab32218d60c"
+	contractAddrStrWithProvider    = "0xe09faac3574aa5f498b8006b0974aace2ee90b06"
 
-	providerPK         = "AEC5EB6A80CC094363D206949C3ED475C2C5060A23049150310D4FD39F95AF99"
-	providerAddrStr    = "0xb61f4c3e676ce9f4fbf7f5597a303eeec3ae531b"
+	providerPK         = "1E85810610998B50AF1FD7D3F6526CAE8EF497FC9A95CA5E3F42D019D0B0F860"
+	providerAddrStr    = "0x13BA40986098A83520C06028c6a6470De246b92E"
 	invadlidProviderPK = "5564a4ddd059ba6352aae637812ea6be7d818f92b5aff3564429478fcdfe4e8a"
 
 	// payload to create a smart contract
@@ -20,11 +20,11 @@ const (
 	providerWithoutGasPK       = "34b377a903b4a01c55062d978160084992271c4f89797caa18fd4e1d61123fbb"
 	contractProviderWithoutGas = "0xd8bC6551dCc074f845ba036b84174ec9276C4a37"
 
-	senderWithoutGasPK      = "CD79C18795A866C4A7FA8D3A88494F618AB0E69B1493382D638A6483538EEA97"
-	senderWithoutGasAddrStr = "0xBBD9e63B95308358AAfb20d6606701A4b6429f5e"
+	senderWithoutGasPK      = "AEC5EB6A80CC094363D206949C3ED475C2C5060A23049150310D4FD39F95AF99"
+	senderWithoutGasAddrStr = "0xb61F4c3E676cE9f4FbF7f5597A303eEeC3AE531B"
 
 	testGasLimit   = 1000000
 	testGasPrice   = 1000000000
 	testAmountSend = 1000000000
-	ethRPCEndpoint = "http://localhost:8545"
+	ethRPCEndpoint = "http://localhost:22001"
 )
