@@ -86,8 +86,10 @@ func (m *message) GetAddressFromSignature() (common.Address, error) {
 	if err != nil {
 		return common.Address{}, err
 	}
+	hashData := crypto.Keccak256(payLoad)
+
 	// 2. Recover public key
-	pubkey, err := crypto.SigToPub(payLoad, m.Signature)
+	pubkey, err := crypto.SigToPub(hashData, m.Signature)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -106,6 +108,7 @@ type messageSet struct {
 	msgCode       uint64
 	messagesMu    *sync.Mutex
 	messages      map[common.Address]*message
+	voteByAddress map[common.Address]*tendermint.Vote
 	voteByBlock   map[common.Hash]*blockVotes
 	maj23         *common.Hash
 	totalReceived int
@@ -115,27 +118,45 @@ type messageSet struct {
 // Construct a new message set to accumulate messages for given height/view number.
 func newMessageSet(valSet tendermint.ValidatorSet, code uint64, view *tendermint.View) *messageSet {
 	return &messageSet{
-		view:        view,
-		msgCode:     code,
-		messagesMu:  new(sync.Mutex),
-		messages:    make(map[common.Address]*message),
-		voteByBlock: make(map[common.Hash]*blockVotes),
-		valSet:      valSet,
+		view:          view,
+		msgCode:       code,
+		messagesMu:    new(sync.Mutex),
+		messages:      make(map[common.Address]*message),
+		voteByBlock:   make(map[common.Hash]*blockVotes),
+		voteByAddress: make(map[common.Address]*tendermint.Vote),
+		valSet:        valSet,
 	}
+}
+
+func (ms *messageSet) VotesByAddress() map[common.Address]*tendermint.Vote {
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
+	var (
+		ret = make(map[common.Address]*tendermint.Vote)
+	)
+	for addr, vote := range ms.voteByAddress {
+		ret[addr] = vote
+	}
+	return ret
 }
 
 func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
+	copyHash := common.HexToHash(vote.BlockHash.Hex())
 	if ms.msgCode != msg.Code {
 		return false, ErrDifferentMsgType
 	}
 	index, _ := ms.valSet.GetByAddress(msg.Address)
 	if index == -1 {
-		return false, errors.Wrapf(ErrVoteHeightMismatch, "address in vote message:%s ", msg.Address.String())
+		return false, errors.Wrapf(ErrVoteInvalidValidatorAddress, "address in vote message:%s ", msg.Address.String())
 	}
-	if ms.view.Round != vote.Round || ms.view.BlockNumber.Cmp(vote.BlockNumber) != 0 {
+	if ms.view.BlockNumber.Cmp(vote.BlockNumber) != 0 {
 		return false, ErrVoteHeightMismatch
+	}
+	if ms.view.Round != vote.Round {
+		log.Error("message set round is not the same as vote round", "msg_set_round", ms.view.Round, "vote_round", vote.Round)
+		return false, errors.New("invalid vote for the message set")
 	}
 	//Signer is supposed to be checked at previous steps so it doesn't need to be check again.
 
@@ -149,19 +170,21 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 		if currentVote.BlockHash.Hex() != vote.BlockHash.Hex() {
 			return false, ErrConflictingVotes
 		}
-		log.Info("already got vote, skipping", "from", msg.Address, "block_hash")
+		//log.Info("already got vote, skipping", "from", msg.Address, "round", vote.Round)
 		return false, nil
 	}
 
 	ms.messages[msg.Address] = &msg
+	ms.voteByAddress[msg.Address] = vote
 	ms.totalReceived++
 	ms.addVoteToBlockVote(vote, index)
 
-	if ms.voteByBlock[*(vote.BlockHash)].totalReceived > 2*ms.valSet.F() {
+	if ms.voteByBlock[copyHash].totalReceived > 2*ms.valSet.F() {
 		if ms.maj23 == nil {
-			ms.maj23 = vote.BlockHash
+			ms.maj23 = &copyHash
 		}
 	}
+
 	return true, nil
 }
 
@@ -203,14 +226,14 @@ func (ms *messageSet) HasTwoThirdAny() bool {
 
 //TwoThirdMajority return a blockHash and a bool inidicate if this messageSet hash got a
 //TwoThirdMajority on a block
-func (ms *messageSet) TwoThirdMajority() (*common.Hash, bool) {
+func (ms *messageSet) TwoThirdMajority() (common.Hash, bool) {
 	if ms == nil {
-		return nil, false
+		return common.Hash{}, false
 	}
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 	if ms.maj23 != nil {
-		return ms.maj23, true
+		return common.HexToHash(ms.maj23.Hex()), true
 	}
-	return nil, false
+	return common.Hash{}, false
 }

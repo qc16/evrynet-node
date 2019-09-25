@@ -341,6 +341,14 @@ func (s *Ethereum) Etherbase() (eb common.Address, err error) {
 	etherbase := s.etherbase
 	s.lock.RUnlock()
 
+	if tendermint, ok := s.engine.(consensus.Tendermint); ok {
+		eb = tendermint.Address()
+		if eb == (common.Address{}) {
+			return eb, errors.New("etherbase is missing from tendermint")
+		}
+		return eb, nil
+	}
+
 	if etherbase != (common.Address{}) {
 		return etherbase, nil
 	}

@@ -157,6 +157,9 @@ type Tendermint interface {
 
 	// Stop stops the engine
 	Stop() error
+
+	//Address return the coinbase of the engine
+	Address() common.Address
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message

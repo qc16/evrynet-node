@@ -16,7 +16,6 @@ type Proposal struct {
 	Block    *types.Block
 	Round    int64
 	POLRound int64
-	//TODO: check if we need block Height
 }
 
 func (p *Proposal) EncodeRLP(w io.Writer) error {
@@ -54,6 +53,7 @@ type Vote struct {
 	BlockHash   *common.Hash
 	BlockNumber *big.Int
 	Round       int64
+	Seal        []byte
 }
 
 func (v *Vote) EncodeRLP(w io.Writer) error {
@@ -61,6 +61,7 @@ func (v *Vote) EncodeRLP(w io.Writer) error {
 		v.BlockHash,
 		v.BlockNumber,
 		strconv.FormatInt(v.Round, 10),
+		v.Seal,
 	})
 }
 
@@ -69,6 +70,7 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 		BlockHash   *common.Hash
 		BlockNumber *big.Int
 		RStr        string
+		Seal        []byte
 	}
 	if err := s.Decode(&vs); err != nil {
 		return err
@@ -80,5 +82,6 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	v.BlockHash = vs.BlockHash
 	v.BlockNumber = vs.BlockNumber
 	v.Round = round
+	v.Seal = vs.Seal
 	return nil
 }

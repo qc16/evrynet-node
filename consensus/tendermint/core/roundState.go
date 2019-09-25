@@ -163,7 +163,7 @@ func (s *roundState) ValidBlock() *types.Block {
 
 // Last round and block that has +2/3 prevotes for a particular block or nil.
 // Returns -1 if no such round exists.
-func (s *roundState) POLInfo() (polRound int64, polBlockHash *common.Hash) {
+func (s *roundState) POLInfo() (polRound int64, polBlockHash common.Hash) {
 	// TODO: Just a sample
 	for r := s.Round(); r >= 0; r-- {
 		prevotes, ok := s.GetPrevotesByRound(r)
@@ -174,7 +174,7 @@ func (s *roundState) POLInfo() (polRound int64, polBlockHash *common.Hash) {
 			return r, polBlockHash
 		}
 	}
-	return -1, nil
+	return -1, common.Hash{}
 }
 
 // The DecodeRLP method should read one value from the given
@@ -230,9 +230,13 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 }
 
 func (s *roundState) addPrevote(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+	view := tendermint.View{
+		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
+		Round:       vote.Round,
+	}
 	msgSet, ok := s.PrevotesReceived[vote.Round]
 	if !ok {
-		msgSet = newMessageSet(valset, msgPrevote, s.view)
+		msgSet = newMessageSet(valset, msgPrevote, &view)
 		s.PrevotesReceived[vote.Round] = msgSet
 	}
 	return msgSet.AddVote(msg, vote)
@@ -245,9 +249,13 @@ func (s *roundState) GetPrevotesByRound(round int64) (*messageSet, bool) {
 }
 
 func (s *roundState) addPrecommit(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+	view := tendermint.View{
+		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
+		Round:       vote.Round,
+	}
 	msgSet, ok := s.PrecommitsReceived[vote.Round]
 	if !ok {
-		msgSet = newMessageSet(valset, msgPrecommit, s.view)
+		msgSet = newMessageSet(valset, msgPrecommit, &view)
 		s.PrecommitsReceived[vote.Round] = msgSet
 	}
 	return msgSet.AddVote(msg, vote)
@@ -255,7 +263,7 @@ func (s *roundState) addPrecommit(msg message, vote *tendermint.Vote, valset ten
 
 //GetPrecommitsByRound return precommit messageSet for that round, if there is no precommit message on the said round, return nil and false
 func (s *roundState) GetPrecommitsByRound(round int64) (*messageSet, bool) {
-	msgSet, ok := s.PrevotesReceived[round]
+	msgSet, ok := s.PrecommitsReceived[round]
 	return msgSet, ok
 }
 

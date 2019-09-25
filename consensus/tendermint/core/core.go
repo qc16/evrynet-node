@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"sync"
+	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -68,18 +69,36 @@ func (c *core) EventMux() *event.TypeMux {
 func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
-	c.currentState = c.getStoredState()
-	c.subscribeEvents()
-	if err := c.timeout.Start(); err != nil {
-		return err
+	log.Info("starting Tendermint's core...")
+	if c.currentState == nil {
+		c.currentState = c.getStoredState()
 	}
+	c.subscribeEvents()
 	go c.handleEvents()
-	c.startRoundZero()
+
+	// Waiting for 2F+1 peers
+	valSet := c.backend.Validators(c.CurrentState().BlockNumber())
+	for {
+		if c.backend.FindPeers(valSet) {
+			log.Info("Enough peers to start core")
+			// Tests will handle events itself, so we have to make subscribeEvents()
+			// be able to call in test.
+			if err := c.timeout.Start(); err != nil {
+				return err
+			}
+			c.startRoundZero()
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+
 	return nil
 }
 
 // Stop implements core.Engine.Stop
 func (c *core) Stop() error {
+	log.Info("stopping Tendermint's timeout core...")
+	c.timeout.Stop()
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
 	return nil
@@ -110,8 +129,7 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
 func (c *core) SendPropose(propose *tendermint.Proposal) {
-	//TODO: remove these log in production
-	log.Debug("prepare to send proposal", "proposal", propose)
+
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
 		log.Error("Failed to encode Proposal to bytes", "error", err)
@@ -131,7 +149,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		return
 	}
 	//TODO: remove this log in production
-	log.Debug("sent proposal", "proposal", propose)
+	log.Info("sent proposal", "round", propose.Round, "block_number", propose.Block.Number(), "block_hash", propose.Block.Hash())
 }
 
 func (c *core) SetBlockForProposal(b *types.Block) {
@@ -143,21 +161,32 @@ func (c *core) SetBlockForProposal(b *types.Block) {
 func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	//This should never happen, but it is a safe guard
 	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		log.Debug("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
+		log.Warn("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
 		return
 	}
-	if voteType != msgPrevote && voteType != msgCommit {
+	if voteType != msgPrevote && voteType != msgPrecommit {
+		log.Error("vote type is invalid")
 		return
 	}
-	var blockHash = emptyBlockHash
+	var (
+		blockHash = emptyBlockHash
+		seal      []byte
+	)
 	if block != nil {
+		var err error
+		commitHash := PrepareCommittedSeal(block.Header().Hash())
+		seal, err = c.backend.Sign(commitHash)
+		if err != nil {
+			log.Error("failed to sign seal", seal)
+			return
+		}
 		blockHash = block.Hash()
 	}
-
 	vote := &tendermint.Vote{
 		BlockHash:   &blockHash,
 		Round:       round,
 		BlockNumber: c.CurrentState().BlockNumber(),
+		Seal:        seal,
 	}
 	msgData, err := rlp.EncodeToBytes(vote)
 	if err != nil {
@@ -176,7 +205,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		log.Error("Failed to Broadcast vote", "error", err)
 		return
 	}
-	log.Debug("sent vote", "vote", vote)
+	log.Info("sent vote", "round", vote.Round, "block_number", vote.BlockNumber, "block_hash", vote.BlockHash.Hex())
 }
 
 func (c *core) CurrentState() *roundState {
