@@ -159,6 +159,8 @@ func (valSet *defaultSet) AddValidator(address common.Address) bool {
 		}
 	}
 	valSet.validators = append(valSet.validators, New(address))
+
+	//TODO: Should we re-arrange the validators array here?
 	return true
 }
 

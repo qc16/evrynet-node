@@ -364,8 +364,43 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		return consensus.ErrUnknownAncestor
 	}
 
-	// prepare extra data without validators
-	extra, err := prepareExtra(header)
+	// get a snap shot to prepare for the process of pick one candidate below
+	snap, err := sb.snapshot(chain, blockNumber-1, parent.Hash(), nil)
+	if err != nil {
+		return err
+	}
+	// get valid candidate list
+	var (
+		addresses  []common.Address
+		authorizes []bool
+	)
+	sb.candidatesLock.RLock()
+	for address, authorize := range sb.candidates {
+		if snap.checkVote(address, authorize) {
+			addresses = append(addresses, address)
+			authorizes = append(authorizes, authorize)
+		}
+	}
+	sb.candidatesLock.RUnlock()
+
+	var (
+		candidateAddress *common.Address
+		cLength          = uint64(len(addresses))
+	)
+	// pick one of the candidates base on block number
+	if cLength > 0 {
+		// get index random base on block number
+		index := blockNumber % cLength
+		candidateAddress = &addresses[index]
+		if authorizes[index] {
+			copy(header.Nonce[:], nonceAuthVote)
+		} else {
+			copy(header.Nonce[:], nonceDropVote)
+		}
+	}
+
+	// prepare extra data and attach candidate's address to the extra data
+	extra, err := prepareExtra(header, candidateAddress)
 	if err != nil {
 		return err
 	}
@@ -603,7 +638,7 @@ func blockProposer(header *types.Header) (common.Address, error) {
 }
 
 // prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.Header) ([]byte, error) {
+func prepareExtra(header *types.Header, candidateAddress *common.Address) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
@@ -613,6 +648,10 @@ func prepareExtra(header *types.Header) ([]byte, error) {
 	buf.Write(header.Extra[:types.TendermintExtraVanity])
 
 	tdm := &types.TendermintExtra{}
+	if candidateAddress != nil {
+		tdm.ModifiedValidator = *candidateAddress
+	}
+
 	payload, err := rlp.EncodeToBytes(&tdm)
 	if err != nil {
 		return nil, err

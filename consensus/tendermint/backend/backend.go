@@ -83,6 +83,10 @@ type backend struct {
 	chain       consensus.ChainReader
 
 	currentBlock func() *types.Block
+	// Current list of candidates we are pushing
+	candidates map[common.Address]bool
+	// Protects the signer fields
+	candidatesLock sync.RWMutex
 }
 
 // EventMux implements tendermint.Backend.EventMux

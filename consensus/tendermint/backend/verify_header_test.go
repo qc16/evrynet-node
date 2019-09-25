@@ -78,7 +78,7 @@ func makeGenesisHeader(validators []common.Address) *types.Header {
 		Difficulty: defaultDifficulty,
 		MixDigest:  types.TendermintDigest,
 	}
-	extra, _ := prepareExtra(header)
+	extra, _ := prepareExtra(header, nil)
 
 	var buf bytes.Buffer
 	buf.Write(extra[:types.TendermintExtraVanity])
@@ -186,7 +186,7 @@ func makeHeaderFromParent(parent *types.Block) *types.Header {
 		Difficulty: defaultDifficulty,
 		MixDigest:  types.TendermintDigest,
 	}
-	extra, _ := prepareExtra(header)
+	extra, _ := prepareExtra(header, nil)
 	header.Extra = extra
 	return header
 }

@@ -145,14 +145,14 @@ func TestPrepareExtra(t *testing.T) {
 		Extra: vanity,
 	}
 
-	payload, err := prepareExtra(header)
+	payload, err := prepareExtra(header, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, payload)
 
 	// append useless information to extra-data
 	header.Extra = append(vanity, make([]byte, 15)...)
 
-	payload, err = prepareExtra(header)
+	payload, err = prepareExtra(header, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, payload)
 }

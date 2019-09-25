@@ -326,7 +326,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Hash = j.Hash
 	s.Votes = j.Votes
 	s.Tally = j.Tally
-	s.ValSet = validator.NewSet(j.Validators, j.Policy)
+	s.ValSet = validator.NewSet(j.Validators, j.Policy, int64(j.Number))
 	return nil
 }
 
