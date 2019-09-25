@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"log"
 	"math/big"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ import (
 // curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_getExtraDataByBlockNumber","params":["0x5"],"id":1}' http://localhost:8545
 // curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_getExtraDataByBlockHash","params":["0x4cddd578050781138591684e16674e7056ce89fb2706cf72b9f946e7e168d73b"],"id":1}' http://localhost:8545
 func TestGetExtraData(t *testing.T) {
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	ethClient, err := ethclient.Dial("http://localhost:8454")
 	assert.NoError(t, err)
 	fakeBlockNumber := big.NewInt(5)
 
@@ -40,10 +41,15 @@ func TestGetExtraData(t *testing.T) {
 			assert.NotNil(t, extra)
 			assert.NotNil(t, extra.BlockProposer)
 			assert.NotEqual(t, common.Address{}, extra.BlockProposer)
+			log.Printf("proposer is %s", extra.BlockProposer.Hex())
+			for i, signer := range extra.CommitSigners {
+				log.Printf("index %d signer %s", i, signer.Hex())
+			}
 			break
 		}
 		time.Sleep(2 * time.Second)
 		trie--
+		log.Printf("failed to get block, attempt left: %d, error: %s", trie, err)
 	}
 
 }

@@ -617,5 +617,7 @@ func (c *core) updateStateForNewblock() {
 	if c.valSet == nil {
 		c.valSet = c.backend.Validators(state.BlockNumber())
 	}
+	//TODO: fix this logic
+	c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 1)
 	log.Info("updated to new block", "new_block_number", state.BlockNumber())
 }

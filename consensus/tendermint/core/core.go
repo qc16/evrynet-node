@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"sync"
-	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -74,23 +73,15 @@ func (c *core) Start() error {
 		c.currentState = c.getStoredState()
 	}
 	c.subscribeEvents()
+
+	// Tests will handle events itself, so we have to make subscribeEvents()
+	// be able to call in test.
+	if err := c.timeout.Start(); err != nil {
+		return err
+	}
 	go c.handleEvents()
 
-	// Waiting for 2F+1 peers
-	valSet := c.backend.Validators(c.CurrentState().BlockNumber())
-	for {
-		if c.backend.FindPeers(valSet) {
-			log.Info("Enough peers to start core")
-			// Tests will handle events itself, so we have to make subscribeEvents()
-			// be able to call in test.
-			if err := c.timeout.Start(); err != nil {
-				return err
-			}
-			c.startRoundZero()
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	c.startRoundZero()
 
 	return nil
 }

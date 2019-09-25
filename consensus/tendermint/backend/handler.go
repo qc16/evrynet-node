@@ -33,6 +33,14 @@ func (sb *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	return data, rLPHash(data), nil
 }
 
+func (sb *backend) sendDataToCore(data []byte) {
+	if err := sb.EventMux().Post(tendermint.MessageEvent{
+		Payload: data,
+	}); err != nil {
+		log.Error("failed to Post msg to core", "error", err)
+	}
+}
+
 // HandleMsg implements consensus.Handler.HandleMsg
 // return false if the message cannot be handle by Tendermint Backend
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
@@ -43,22 +51,14 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		if !sb.coreStarted {
 			return true, tendermint.ErrStoppedEngine
 		}
-
 		data, _, err := sb.decode(msg)
 		if err != nil {
 			return true, errDecodeFailed
 		}
-		//log is used at local package level for testing now
 		//log.Debug("Received Message from peer", "address", addr.Hex(), "code", msg.Code, "hash", hash.String())
 		//TODO: mark peer's message and self known message with the hash get from message
 
-		go func() {
-			if err := sb.EventMux().Post(tendermint.MessageEvent{
-				Payload: data,
-			}); err != nil {
-				log.Error("failed to Post msg to core", "error", err)
-			}
-		}()
+		go sb.sendDataToCore(data)
 
 		return true, nil
 	default:

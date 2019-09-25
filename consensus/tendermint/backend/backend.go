@@ -160,11 +160,15 @@ func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 		previousBlock = uint64(blockNumber.Int64() - 1)
 	}
 	header = sb.chain.GetHeaderByNumber(previousBlock)
-	if header != nil {
-		snap, err = sb.snapshot(sb.chain, previousBlock, header.Hash(), nil)
-		if err == nil {
-			return snap.ValSet
-		}
+	if header == nil {
+		log.Error("cannot get valSet since previousBlock is not available", "block_number", blockNumber)
+	}
+	snap, err = sb.snapshot(sb.chain, previousBlock, header.Hash(), nil)
+	if err != nil {
+		log.Error("cannot load snapshot", "error", err)
+	}
+	if err == nil {
+		return snap.ValSet
 	}
 	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
 }
