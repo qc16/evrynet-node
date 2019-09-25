@@ -127,8 +127,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		select {
 		case event, ok := <-sb.blockFinalized.Chan():
 			if !ok {
-				log.Error(errMalformedChannelData.Error())
-				err = errMalformedChannelData
+				log.Info("finalized Channel closed, exit seal...")
+				return
 			}
 			switch ev := event.Data.(type) {
 			//TODO: maybe make a separated channel for this
@@ -186,6 +186,7 @@ func (sb *backend) Stop() error {
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}
+	sb.blockFinalized.Unsubscribe()
 	sb.coreStarted = false
 	return nil
 }
