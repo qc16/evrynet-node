@@ -355,7 +355,6 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 
 	switch ti.Step {
 	case RoundStepNewHeight:
-		// NewRound event fired from enterNewRound.
 		c.enterNewRound(ti.BlockNumber, 0)
 	case RoundStepNewRound:
 		c.enterPropose(ti.BlockNumber, 0)

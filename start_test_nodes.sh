@@ -7,10 +7,10 @@ sh ./stop_test_nodes.sh
 for i in 1 2 3 4
 do
   echo "--- Create genesis block for node $i ..."
-  ./gev --datadir ./tests/test_nodes/node"$i"/data init ./tests/test_nodes/node"$i"/genesis.json
+  ./gev --datadir ./tests/test_nodes/node"$i"/data init ./tests/test_nodes/genesis.json
 
   echo "--- Start test node $i ..."
-  ./gev --datadir ./tests/test_nodes/node"$i"/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 \
+  ./gev --datadir ./tests/test_nodes/node"$i"/data --nodiscover --tendermint.blockperiod 1 --syncmode fast --mine --minerthreads 1 --networkid 15 \
     --rpc --rpcaddr 0.0.0.0 --rpcport 2200"$i" --port 3030"$i" \
-    --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 &
+    --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3  &
 done
