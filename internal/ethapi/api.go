@@ -650,8 +650,8 @@ func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Addre
 	}, state.Error()
 }
 
-// GetExtraDataByBlockHash return to requested extradata's infor with the fields blockProposer, commitSigner via the block's hash
-func (s *PublicBlockChainAPI) GetExtraDataByBlockHash(ctx context.Context, blockHash common.Hash) (map[string]interface{}, error) {
+// GetBlockSignerByHash return to requested extradata's infor with the fields blockProposer, commitSigner via the block's hash
+func (s *PublicBlockChainAPI) GetBlockSignerByHash(ctx context.Context, blockHash common.Hash) (map[string]interface{}, error) {
 	block, err := s.b.GetBlock(ctx, blockHash)
 	if block != nil {
 		return s.rpcOutputExtraData(block)
@@ -659,8 +659,8 @@ func (s *PublicBlockChainAPI) GetExtraDataByBlockHash(ctx context.Context, block
 	return nil, err
 }
 
-// GetExtraDataByBlockNumber return to requested extradata's infor with the fields blockProposer, commitSigner via the block's number
-func (s *PublicBlockChainAPI) GetExtraDataByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) (map[string]interface{}, error) {
+// GetBlockSignerByNumber return to requested extradata's infor with the fields blockProposer, commitSigner via the block's number
+func (s *PublicBlockChainAPI) GetBlockSignerByNumber(ctx context.Context, blockNr rpc.BlockNumber) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil {
 		return s.rpcOutputExtraData(block)

@@ -88,22 +88,22 @@ func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Bl
 	return ec.getBlock(ctx, "eth_getBlockByNumber", toBlockNumArg(number), true)
 }
 
-// ExtraDataByBlockNumber returns datas from the current extra data about (blocksigner and commitSigners)
+// GetBlockSignerByNumber returns datas from the current extra data about (blockSigner and commitSigners)
 // the input is block's number
-func (ec *Client) ExtraDataByBlockNumber(ctx context.Context, number *big.Int) (*ExtraDataDetails, error) {
+func (ec *Client) GetBlockSignerByNumber(ctx context.Context, number *big.Int) (*ExtraDataDetails, error) {
 	var json *ExtraDataDetails
-	err := ec.c.CallContext(ctx, &json, "eth_getExtraDataByBlockNumber", toBlockNumArg(number))
+	err := ec.c.CallContext(ctx, &json, "eth_getBlockSignerByNumber", toBlockNumArg(number))
 	if err == nil && json == nil {
 		err = ethereum.NotFound
 	}
 	return json, err
 }
 
-// ExtraDataByBlockHash returns datas from the current extra data about (blocksigner and commitSigners)
+// GetBlockSignerByHash returns datas from the current extra data about (blockSigner and commitSigners)
 // the input is block's hash
-func (ec *Client) ExtraDataByBlockHash(ctx context.Context, hash common.Hash) (*ExtraDataDetails, error) {
+func (ec *Client) GetBlockSignerByHash(ctx context.Context, hash common.Hash) (*ExtraDataDetails, error) {
 	var json *ExtraDataDetails
-	err := ec.c.CallContext(ctx, &json, "eth_getExtraDataByBlockHash", hash)
+	err := ec.c.CallContext(ctx, &json, "eth_getBlockSignerByHash", hash)
 	if err == nil && json == nil {
 		err = ethereum.NotFound
 	}
