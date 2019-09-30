@@ -12,7 +12,8 @@ import (
 func (c *core) getStoredState() *roundState {
 	var (
 		//these are default config at block 1 round 0
-		rs                *roundState
+		rs *roundState
+
 		prevotesReceived  = make(map[int64]*messageSet)
 		precommitReceived = make(map[int64]*messageSet)
 		block             = types.NewBlockWithHeader(&types.Header{})
@@ -27,20 +28,20 @@ func (c *core) getStoredState() *roundState {
 		proposalReceived *tendermint.Proposal
 		step             = RoundStepNewHeight
 	)
-	//TODO: Implement storage
 
-	//if there is no stored roundState, init new one
-	//TODO: init block 0
-	if rs == nil {
+	//to continue from a stored State, get the last known block height
+	lastKnownHeight := c.backend.CurrentHeadBlock().Number()
 
-		rs = newRoundState(&view, prevotesReceived, precommitReceived, block,
-			lockedRound, lockedBlock,
-			validRound, validBlock,
-			proposalReceived,
-			step,
-		)
+	// Increase block number to 1 block
+	view.BlockNumber = new(big.Int).Add(lastKnownHeight, big.NewInt(1))
 
-		//TODO: timeout setup
-	}
+	rs = newRoundState(&view, prevotesReceived, precommitReceived, block,
+		lockedRound, lockedBlock,
+		validRound, validBlock,
+		proposalReceived,
+		step,
+	)
+
+	//TODO: timeout setup
 	return rs
 }

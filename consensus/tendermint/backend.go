@@ -3,6 +3,8 @@ package tendermint
 import (
 	"math/big"
 
+	"github.com/evrynet-official/evrynet-client/core/types"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/event"
 )
@@ -29,6 +31,9 @@ type Backend interface {
 
 	// Validators returns the validator set
 	Validators(blockNumber *big.Int) ValidatorSet
+
+	// CurrentHeadBlock get the current block of from the canonical chain.
+	CurrentHeadBlock() *types.Block
 
 	// FindPeers check peer exist or not by address
 	FindPeers(targets ValidatorSet) bool

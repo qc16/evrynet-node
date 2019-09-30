@@ -163,6 +163,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 
 	//set chain reader
 	sb.chain = chain
+	sb.currentBlock = currentBlock
 
 	//TODO: clear previous data of proposal
 	sb.blockFinalized = sb.core.EventMux().Subscribe(
