@@ -507,17 +507,14 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 
 	//TODO: do we need revalidating block at this step?
 
-	log.Info("finalizing Block", "block_hash", blockHash.Hex())
+	log.Info("committing: write seals onto Block", "block_hash", blockHash.Hex())
 
 	block, err := c.FinalizeBlock(state.ProposalReceived())
 	if err != nil {
-		log.Error("block finalized failed", "error", err)
+		log.Error("block committing failed", "error", err)
 	}
-	go func() {
-		if err := c.blockFinalize.Post(tendermint.BlockFinalizedEvent{Block: block}); err != nil {
-			log.Error("cannot post block Finalization to backend", "error", err)
-		}
-	}()
+
+	c.backend.Commit(block)
 	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
 
 	c.updateStateForNewblock()

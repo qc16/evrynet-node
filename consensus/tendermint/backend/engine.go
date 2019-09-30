@@ -125,26 +125,19 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	go func() {
 		//TODO: DO we need timeout for consensus?
 		select {
-		case event, ok := <-sb.blockFinalized.Chan():
+		case block, ok := <-sb.commitCh:
 			if !ok {
-				log.Info("finalized Channel closed, exit seal...")
+				log.Info("committing... Channel closed, exit seal...")
 				return
 			}
-			switch ev := event.Data.(type) {
-			//TODO: maybe make a separated channel for this
-			case tendermint.BlockFinalizedEvent:
-				//we only posted the block back to the miner if and only if the block is ours
-				if ev.Block.Coinbase() == sb.address {
-					log.Info("returned block to miner", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
-					results <- ev.Block
-
-				} else {
-					log.Info("not this node's block, exit and let downloader sync the block from proposer...")
-				}
-				return
-			default:
-				log.Error("unknown event", "event", ev)
+			//we only posted the block back to the miner if and only if the block is ours
+			if block.Coinbase() == sb.address {
+				log.Info("committing... returned block to miner", "block_hash", block.Hash(), "number", block.Number())
+				results <- block
+			} else {
+				log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...")
 			}
+			return
 		case <-stop:
 			results <- nil
 			return
@@ -165,10 +158,13 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.chain = chain
 	sb.currentBlock = currentBlock
 
+	if sb.commitCh != nil {
+		close(sb.commitCh)
+	}
+	sb.commitCh = make(chan *types.Block, 1)
+
 	//TODO: clear previous data of proposal
-	sb.blockFinalized = sb.core.EventMux().Subscribe(
-		tendermint.BlockFinalizedEvent{},
-	)
+
 	if err := sb.core.Start(); err != nil {
 		return err
 	}
@@ -187,7 +183,6 @@ func (sb *backend) Stop() error {
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}
-	sb.blockFinalized.Unsubscribe()
 	sb.coreStarted = false
 	return nil
 }

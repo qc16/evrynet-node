@@ -71,7 +71,9 @@ type backend struct {
 	db                 ethdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
-	blockFinalized     *event.TypeMuxSubscription
+
+	//once voting finish, the block will be send for commit here
+	commitCh chan *types.Block
 
 	coreStarted bool
 	coreMu      sync.RWMutex
@@ -188,6 +190,12 @@ func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 		return true
 	}
 	return false
+}
+
+func (sb *backend) Commit(block *types.Block) {
+	if sb.commitCh != nil {
+		sb.commitCh <- block
+	}
 }
 
 func (sb *backend) CurrentHeadBlock() *types.Block {

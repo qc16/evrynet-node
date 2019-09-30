@@ -59,12 +59,7 @@ type core struct {
 	mu *sync.RWMutex
 }
 
-func (c *core) EventMux() *event.TypeMux {
-	return c.blockFinalize
-}
-
 // Start implements core.Engine.Start
-
 func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
