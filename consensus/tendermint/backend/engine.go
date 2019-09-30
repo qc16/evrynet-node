@@ -122,6 +122,9 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		})
 	}(block)
 
+	// miner won't be able to interrupt a sealing task
+	// a sealing task can only exist when core consensus agreed upon a block
+
 	go func() {
 		//TODO: DO we need timeout for consensus?
 		select {
@@ -130,6 +133,9 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 				log.Info("committing... Channel closed, exit seal...")
 				return
 			}
+			//this step is to stop other go routine wait for a block
+			close(sb.commitCh)
+			sb.commitCh = make(chan *types.Block, 1)
 			//we only posted the block back to the miner if and only if the block is ours
 			if block.Coinbase() == sb.address {
 				log.Info("committing... returned block to miner", "block_hash", block.Hash(), "number", block.Number())
@@ -139,8 +145,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 			}
 			return
 		case <-stop:
-			results <- nil
-			return
+			log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block")
 		}
 	}()
 	return nil
