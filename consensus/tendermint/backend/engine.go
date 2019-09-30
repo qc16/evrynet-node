@@ -127,25 +127,27 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 
 	go func() {
 		//TODO: DO we need timeout for consensus?
-		select {
-		case block, ok := <-sb.commitCh:
-			if !ok {
-				log.Info("committing... Channel closed, exit seal...")
+		for {
+			select {
+			case block, ok := <-sb.commitCh:
+				if !ok {
+					log.Info("committing... Channel closed, exit seal...")
+					return
+				}
+				//this step is to stop other go routine wait for a block
+				close(sb.commitCh)
+				sb.commitCh = make(chan *types.Block, 1)
+				//we only posted the block back to the miner if and only if the block is ours
+				if block.Coinbase() == sb.address {
+					log.Info("committing... returned block to miner", "block_hash", block.Hash(), "number", block.Number())
+					results <- block
+				} else {
+					log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...")
+				}
 				return
+			case <-stop:
+				log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block")
 			}
-			//this step is to stop other go routine wait for a block
-			close(sb.commitCh)
-			sb.commitCh = make(chan *types.Block, 1)
-			//we only posted the block back to the miner if and only if the block is ours
-			if block.Coinbase() == sb.address {
-				log.Info("committing... returned block to miner", "block_hash", block.Hash(), "number", block.Number())
-				results <- block
-			} else {
-				log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...")
-			}
-			return
-		case <-stop:
-			log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block")
 		}
 	}()
 	return nil
