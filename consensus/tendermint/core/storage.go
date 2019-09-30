@@ -29,12 +29,11 @@ func (c *core) getStoredState() *roundState {
 		step             = RoundStepNewHeight
 	)
 
-	//get currenHeadBlock
-	currenHeadBlock := c.backend.CurrentHeadBlock()
-	lastHeight := currenHeadBlock.Height()
+	//to continue from a stored State, get the last known block height
+	lastKnownHeight := c.backend.CurrentHeadBlock().Number()
 
 	// Increase block number to 1 block
-	view.BlockNumber = new(big.Int).Add(lastHeight, big.NewInt(1))
+	view.BlockNumber = new(big.Int).Add(lastKnownHeight, big.NewInt(1))
 
 	rs = newRoundState(&view, prevotesReceived, precommitReceived, block,
 		lockedRound, lockedBlock,

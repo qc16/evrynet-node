@@ -190,9 +190,6 @@ func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 	return false
 }
 
-func (sb *backend) CurrentHeadBlock() tendermint.Proposal {
-	block := sb.currentBlock()
-	return tendermint.Proposal{
-		Block: block,
-	}
+func (sb *backend) CurrentHeadBlock() *types.Block {
+	return sb.currentBlock()
 }

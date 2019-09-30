@@ -18,10 +18,6 @@ type Proposal struct {
 	POLRound int64
 }
 
-func (p *Proposal) Height() *big.Int {
-	return p.Block.Number()
-}
-
 func (p *Proposal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		p.Block,
