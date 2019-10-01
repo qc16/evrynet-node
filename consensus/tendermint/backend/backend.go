@@ -46,6 +46,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         privateKey,
 		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
+		commitChs:          make(map[string]chan *types.Block),
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {
@@ -73,7 +74,8 @@ type backend struct {
 	address            common.Address
 
 	//once voting finish, the block will be send for commit here
-	commitCh chan *types.Block
+	//it is a map of
+	commitChs map[string]chan *types.Block
 
 	coreStarted bool
 	coreMu      sync.RWMutex
@@ -193,9 +195,12 @@ func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 }
 
 func (sb *backend) Commit(block *types.Block) {
-	if sb.commitCh != nil {
-		sb.commitCh <- block
+	ch, ok := sb.commitChs[block.Number().String()]
+	if !ok {
+		log.Error("no commit channel available", "block_number", block.Number().String())
+		return
 	}
+	ch <- block
 }
 
 func (sb *backend) CurrentHeadBlock() *types.Block {

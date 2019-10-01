@@ -113,6 +113,10 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return
 	}
 
+	if _, ok := sb.commitChs[block.Number().String()]; !ok {
+		sb.commitChs[block.Number().String()] = make(chan *types.Block, 1)
+	}
+
 	//block = sb.Prepare()
 	//TODO: clear previous data of proposal
 	// post block into tendermint engine
@@ -124,19 +128,18 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 
 	// miner won't be able to interrupt a sealing task
 	// a sealing task can only exist when core consensus agreed upon a block
-
-	go func() {
+	go func(ch chan *types.Block) {
 		//TODO: DO we need timeout for consensus?
 		for {
 			select {
-			case block, ok := <-sb.commitCh:
+			case block, ok := <-ch:
 				if !ok {
-					log.Info("committing... Channel closed, exit seal...")
+					log.Info("committing... Channel closed, exit seal...", "block_number", block.Number())
 					return
 				}
 				//this step is to stop other go routine wait for a block
-				close(sb.commitCh)
-				sb.commitCh = make(chan *types.Block, 1)
+				close(ch)
+				delete(sb.commitChs, block.Number().String())
 				//we only posted the block back to the miner if and only if the block is ours
 				if block.Coinbase() == sb.address {
 					log.Info("committing... returned block to miner", "block_hash", block.Hash(), "number", block.Number())
@@ -149,7 +152,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 				log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block")
 			}
 		}
-	}()
+	}(sb.commitChs[block.Number().String()])
 	return nil
 }
 
@@ -165,10 +168,12 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.chain = chain
 	sb.currentBlock = currentBlock
 
-	if sb.commitCh != nil {
-		close(sb.commitCh)
+	if sb.commitChs != nil {
+		for blockNo, chn := range sb.commitChs {
+			close(chn)
+			delete(sb.commitChs, blockNo)
+		}
 	}
-	sb.commitCh = make(chan *types.Block, 1)
 
 	//TODO: clear previous data of proposal
 
