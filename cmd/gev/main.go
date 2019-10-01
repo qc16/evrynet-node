@@ -27,6 +27,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/urfave/cli"
+	"go.uber.org/zap"
+
 	"github.com/elastic/gosigar"
 	"github.com/evrynet-official/evrynet-client/accounts"
 	"github.com/evrynet-official/evrynet-client/accounts/keystore"
@@ -38,9 +41,9 @@ import (
 	"github.com/evrynet-official/evrynet-client/ethclient"
 	"github.com/evrynet-official/evrynet-client/internal/debug"
 	"github.com/evrynet-official/evrynet-client/log"
+	zapLog "github.com/evrynet-official/evrynet-client/log/zap"
 	"github.com/evrynet-official/evrynet-client/metrics"
 	"github.com/evrynet-official/evrynet-client/node"
-	cli "github.com/urfave/cli"
 )
 
 const (
@@ -233,7 +236,14 @@ func init() {
 	app.Flags = append(app.Flags, whisperFlags...)
 	app.Flags = append(app.Flags, metricsFlags...)
 
+	var closeZapFn func()
+
 	app.Before = func(ctx *cli.Context) error {
+		var (
+			err       error
+			zapLogger *zap.SugaredLogger
+		)
+
 		logdir := ""
 		if ctx.GlobalBool(utils.DashboardEnabledFlag.Name) {
 			logdir = (&node.Config{DataDir: utils.MakeDataDir(ctx)}).ResolvePath("logs")
@@ -274,6 +284,11 @@ func init() {
 		// Start metrics export if enabled
 		utils.SetupMetrics(ctx)
 
+		if zapLogger, closeZapFn, err = zapLog.NewSugaredLogger(ctx); err != nil {
+			return err
+		}
+		zap.ReplaceGlobals(zapLogger.Desugar())
+
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(3 * time.Second)
 
@@ -283,6 +298,7 @@ func init() {
 	app.After = func(ctx *cli.Context) error {
 		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.
+		closeZapFn()
 		return nil
 	}
 }

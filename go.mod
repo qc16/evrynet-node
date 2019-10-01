@@ -10,6 +10,7 @@ require (
 	github.com/cespare/cp v1.1.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
+	github.com/dgryski/go-sip13 v0.0.0-20190329191031-25c5027a8c7b // indirect
 	github.com/docker/docker v1.13.1
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/elastic/gosigar v0.10.4
@@ -59,6 +60,9 @@ require (
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli v1.21.0
 	github.com/wsddn/go-ecdh v0.0.0-20161211032359-48726bab9208
+	go.uber.org/atomic v1.4.0 // indirect
+	go.uber.org/multierr v1.2.0 // indirect
+	go.uber.org/zap v1.11.0
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58

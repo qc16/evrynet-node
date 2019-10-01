@@ -5,11 +5,12 @@ import (
 	"math/big"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/metrics"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -36,19 +37,14 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 		sBlockNunmber = state.BlockNumber()
 		sRound        = state.Round()
 		sStep         = state.Step()
+		logger        = c.getLogger().With("input_round", round, "input_block_number", blockNumber, "input_step", RoundStepNewRound)
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep != RoundStepNewHeight) {
-		log.Debug("enterNewRound ignore: we are in a state that is ahead of the input state",
-			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound, "input_round", round,
-			"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
+		logger.Debugw("enterNewRound ignore: we are in a state that is ahead of the input state")
 		return
 	}
 
-	log.Info("enterNewRound",
-		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-		"current_round", sRound, "input_round", round,
-		"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
+	logger.Infow("enterNewRound")
 	if metrics.Enabled && round-sRound > 0 {
 		tendermintRoundMeter.Mark(round - sRound)
 	}
@@ -71,13 +67,13 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 
 //defaultDecideProposal is the default proposal selector
 //it will prioritize validBlock, else will get its own block from tx_pool
-func (c *core) defaultDecideProposal(round int64) *tendermint.Proposal {
+func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *tendermint.Proposal {
 	var (
 		state = c.CurrentState()
 	)
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
-		log.Info("core has ValidBlock, propose it", "valid_round", state.ValidRound())
+		logger.Infow("core has ValidBlock, propose it", "valid_round", state.ValidRound())
 		return &tendermint.Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
@@ -111,19 +107,14 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		sBlockNunmber = state.BlockNumber()
 		sRound        = state.Round()
 		sStep         = state.Step()
+		logger        = c.getLogger().With("input_round", round, "input_step", RoundStepPropose, "input_block_number", blockNumber)
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || sRound > round || (sRound == round && sStep >= RoundStepPropose) {
-		log.Debug("enterPropose ignore: we are in a state that is ahead of the input state",
-			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound, "input_round", round,
-			"current_step", sStep.String(), "input_step", RoundStepPropose.String())
+		logger.Debugw("enterPropose ignore: we are in a state that is ahead of the input state")
 		return
 	}
 
-	log.Info("enterPropose",
-		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-		"current_round", sRound, "input_round", round,
-		"current_step", sStep.String(), "input_step", RoundStepPropose.String())
+	logger.Infow("enterPropose")
 	c.proposeStart = time.Now()
 	defer func() {
 		// Done enterPropose:
@@ -150,12 +141,12 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	})
 
 	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		log.Info("this node is not a validator of this round", "address", c.backend.Address().String(), "block_number", blockNumber.String(), "round", round)
+		logger.Infow("this node is not a validator of this round", "address", c.backend.Address())
 		return
 	}
 	//if we are proposer, find the latest block we're having to propose
 	if c.valSet.IsProposer(c.backend.Address()) {
-		log.Info("this node is proposer of this round", "node_address", c.backend.Address(), "round", round, "state_round", sRound)
+		logger.Infow("this node is proposer of this round", "node_address", c.backend.Address())
 		//TODO : find out if this is better than current Tendermint implementation
 		//var (
 		//	lockedRound = state.LockedRound()
@@ -167,7 +158,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		//	state.SetValidRoundAndBlock(lockedRound, lockedBlock)
 		//
 		//}
-		proposal := c.defaultDecideProposal(round)
+		proposal := c.defaultDecideProposal(logger, round)
 		if proposal != nil {
 			c.SendPropose(proposal)
 		}
@@ -184,14 +175,14 @@ func (c *core) defaultDoPrevote(round int64) {
 	)
 	// If a block is locked, prevote that.
 	if state.LockedRound() != -1 {
-		log.Info("prevote for locked Block")
+		c.getLogger().Info("prevote for locked Block")
 		c.SendVote(msgPrevote, state.LockedBlock(), round)
 		return
 	}
 
 	// If ProposalBlock is nil, prevote nil.
 	if state.ProposalReceived() == nil {
-		log.Info("prevote nil")
+		c.getLogger().Infow("prevote nil")
 		c.SendVote(msgPrevote, nil, round)
 		return
 	}
@@ -201,7 +192,7 @@ func (c *core) defaultDoPrevote(round int64) {
 
 	// PrevoteTimeout cs.ProposalBlock
 	// NOTE: the proposal signature is validated when it is received,
-	log.Info("prevote for proposal block", "block_hash", state.ProposalReceived().Block.Hash())
+	c.getLogger().Infow("prevote for proposal block", "block_hash", state.ProposalReceived().Block.Hash().Hex())
 	c.SendVote(msgPrevote, state.ProposalReceived().Block, round)
 	//core.signAddVote(types.PrevoteType, cs.ProposalBlock.Hash(), cs.ProposalBlockParts.Header())
 }
@@ -222,19 +213,15 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 		sBlockNunmber = state.BlockNumber()
 		sRound        = state.Round()
 		sStep         = state.Step()
+		logger        = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
 	)
+
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
-		log.Debug("enterPrevote ignore: we are in a state that is ahead of the input state",
-			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound, "input_round", round,
-			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
+		logger.Debugw("enterPrevote ignore: we are in a state that is ahead of the input state")
 		return
 	}
 
-	log.Info("enterPrevote",
-		"current_block_number", sBlockNunmber.String(),
-		"current_round", sRound, "input_round", round,
-		"current_step", sStep.String())
+	logger.Infow("enterPrevote")
 	tendermintProposalWaitTimer.UpdateSince(c.proposeStart)
 	//eventually we'll enterPrevote
 	defer func() {
@@ -251,26 +238,21 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 		sBlockNumber = state.BlockNumber()
 		sRound       = state.Round()
 		sStep        = state.Step()
+		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && RoundStepPrevoteWait <= sStep) {
-		log.Debug("enterPrevoteWait ignore: we are in a state that is ahead of the input state",
-			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound, "input_round", round,
-			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
+		logger.Debugw("enterPrevoteWait ignore: we are in a state that is ahead of the input state")
 		return
 	}
 	prevotes, ok := state.GetPrevotesByRound(round)
 	if !ok {
-		log.Debug("enterPrevoteWait ignore: there is no prevotes", "round", round)
+		logger.Debugw("enterPrevoteWait ignore: there is no prevotes", "round", round)
 	}
 	if !prevotes.HasTwoThirdAny() {
-		log.Debug("enterPrevoteWait ignore: there is no two third votes received", "round", round)
+		logger.Debugw("enterPrevoteWait ignore: there is no two third votes received", "round", round)
 	}
-	log.Info("enterPrevoteWait",
-		"current_block_number", sBlockNumber.String(),
-		"current_round", sRound, "input_round", round,
-		"current_step", sStep.String())
+	logger.Infow("enterPrevoteWait")
 
 	defer func() {
 		// Done enterPrevoteWait:
@@ -294,28 +276,23 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 		state        = c.CurrentState()
 		sBlockNumber = state.BlockNumber()
 		sRound       = state.Round()
-		sStep        = state.Step()
+		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrecommitWait)
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && state.getPrecommitWaited()) {
-		log.Debug("enterPrecommitWait ignore: we are in a state that is not suitable to enter precommit with input state",
-			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound, "input_round", round, "precommitWaited", state.getPrecommitWaited())
+		logger.Debugw("enterPrecommitWait ignore: we are in a state that is not suitable to enter precommit with input state",
+			"precommitWaited", state.getPrecommitWaited())
 		return
 	}
 
 	precommits, ok := state.GetPrecommitsByRound(round)
 	if !ok {
-		log.Error("enterPrecommitWait with no precommit votes", "block_number", sBlockNumber, "round", sRound)
-		panic("enterPrecommitWait with no precommit votes")
+		logger.Panicw("enterPrecommitWait with no precommit votes")
 	}
 	if !precommits.HasTwoThirdAny() {
-		panic("enterPrecommitWait without precommits has 2/3 of votes")
+		logger.Panicw("enterPrecommitWait without precommits has 2/3 of votes")
 	}
-	log.Info("enterPrecommitWait",
-		"current_block_number", sBlockNumber.String(),
-		"current_round", sRound, "input_round", round,
-		"current_step", sStep.String())
+	logger.Infow("enterPrecommitWait")
 
 	//after this we setPrecommitWaited to true to make sure that the wait happens only once each round
 	defer func() {
@@ -344,20 +321,15 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 		sBlockNunmber = state.BlockNumber()
 		sRound        = state.Round()
 		sStep         = state.Step()
+		logger        = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrecommit)
 	)
 
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrecommit) {
-		log.Debug("enterPrecommit ignore: we are in a state that is ahead of the input state",
-			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
-			"current_round", sRound, "input_round", round,
-			"current_step", sStep.String(), "input_step", RoundStepPrecommit.String())
+		logger.Debugw("enterPrecommit ignore: we are in a state that is ahead of the input state")
 		return
 	}
 
-	log.Info("enterPrecommit",
-		"current_block_number", sBlockNunmber.String(),
-		"current_round", sRound, "input_round", round,
-		"current_step", sStep.String())
+	logger.Infow("enterPrecommit")
 
 	defer func() {
 		// Done enterPrecommit:
@@ -373,9 +345,9 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	// if we don't have polka, must precommit nil
 	if !ok {
 		if state.LockedBlock() != nil {
-			log.Info("enterPrecommit: No +2/3 prevotes during enterPrecommit while we're locked. Precommitting nil")
+			logger.Infow("enterPrecommit: No +2/3 prevotes during enterPrecommit while we're locked. Precommitting nil")
 		} else {
-			log.Info("enterPrecommit: No +2/3 prevotes during enterPrecommit. Precommitting nil.")
+			logger.Infow("enterPrecommit: No +2/3 prevotes during enterPrecommit. Precommitting nil.")
 		}
 		c.SendVote(msgPrecommit, nil, round)
 		return
@@ -384,15 +356,15 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	// The last PoLR should be this round
 	polRound, _ := state.POLInfo()
 	if polRound < round {
-		panic(fmt.Sprintf("This POLRound should be %v but got %v", round, polRound))
+		logger.Panicw("wrong POLRound", "expected_pol", round, "received_pol", polRound)
 	}
 
 	// +2/3 prevoted nil. Unlock and precommit nil.
 	if blockHash.Hex() == emptyBlockHash.Hex() {
 		if state.LockedBlock() == nil {
-			log.Info("enterPrecommit: +2/3 prevoted for nil.")
+			logger.Infow("enterPrecommit: +2/3 prevoted for nil.")
 		} else {
-			log.Info("enterPrecommit: +2/3 prevoted for nil. Unlocking")
+			logger.Infow("enterPrecommit: +2/3 prevoted for nil. Unlocking")
 			state.Unlock()
 		}
 		c.SendVote(msgPrecommit, nil, round)
@@ -402,7 +374,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	// At this point, +2/3 prevoted for a particular block.
 	// If we're already locked on that block, precommit it, and update the LockedRound
 	if state.LockedBlock() != nil && state.LockedBlock().Hash().Hex() == blockHash.Hex() {
-		log.Info("enterPrecommit: +2/3 prevoted locked block. Relocking")
+		logger.Infow("enterPrecommit: +2/3 prevoted locked block. Relocking")
 		state.SetLockedRoundAndBlock(round, state.LockedBlock())
 		c.SendVote(msgPrecommit, state.LockedBlock(), round)
 		return
@@ -410,7 +382,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 
 	// If +2/3 prevoted for proposal block, stage and precommit it
 	if state.ProposalReceived() != nil && state.ProposalReceived().Block.Hash().Hex() == blockHash.Hex() {
-		log.Info("enterPrecommit: +2/3 prevoted proposal block. Locking", "hash", blockHash)
+		logger.Infow("enterPrecommit: +2/3 prevoted proposal block. Locking", "hash", blockHash)
 		// TODO: Validate the block before locking and precommit
 		state.SetLockedRoundAndBlock(round, state.ProposalReceived().Block)
 		c.SendVote(msgPrecommit, state.ProposalReceived().Block, round)
@@ -420,17 +392,18 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	// There was a polka in this round for a block we don't have.
 	// TODO: Fetch that block, unlock, and precommit nil.
 	// The +2/3 prevotes for this round is the POL for our unlock.
-	log.Info("enterPrecommit: +2/3 prevoted a block we don't have. Fetch. Unlock and Precommit nil", "hash", blockHash.Hex())
+	logger.Infow("enterPrecommit: +2/3 prevoted a block we don't have. Fetch. Unlock and Precommit nil", "hash", blockHash.Hex())
 	state.Unlock()
 	c.SendVote(msgPrecommit, nil, round)
 }
 
 func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
-	var state = c.currentState
+	var (
+		state  = c.currentState
+		logger = c.getLogger().With("input_block_number", blockNumber, "input_round", commitRound, "input_step", RoundStepCommit)
+	)
 	if state.BlockNumber().Cmp(blockNumber) != 0 || state.Step() >= RoundStepCommit {
-		log.Debug("enterCommit ignore: we are in a state that is ahead of the input state",
-			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
-			"current_step", state.Step().String(), "input_step", RoundStepCommit.String())
+		logger.Debugw("enterCommit ignore: we are in a state that is ahead of the input state")
 		return
 	}
 
@@ -447,13 +420,13 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	precommits, ok := state.GetPrecommitsByRound(commitRound)
 
 	if !ok {
-		panic("commit round must have a set of precommits")
+		logger.Panicw("commit round must have a set of precommits")
 	}
 
 	blockHash, ok := precommits.TwoThirdMajority()
 
 	if !ok {
-		panic("commit round must has a majority block")
+		logger.Panicw("commit round must has a majority block")
 	}
 	var (
 		lockedBlock = state.LockedBlock()
@@ -461,7 +434,7 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	//if lockBlock is the same as the hash, move it to Proposal
 	//it will be cleared upon entering newHeight
 	if lockedBlock != nil && lockedBlock.Hash().Hex() == blockHash.Hex() {
-		log.Info("Commit is for locked block. Set ProposalBlock=LockedBlock", "blockHash", blockHash.Hex())
+		logger.Infow("Commit is for locked block. Set ProposalBlock=LockedBlock", "blockHash", blockHash.Hex())
 		state.SetProposalReceived(&tendermint.Proposal{
 			Block:    lockedBlock,
 			Round:    commitRound,
@@ -479,48 +452,48 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 }
 
 func (c *core) finalizeCommit(blockNumber *big.Int) {
-	var state = c.CurrentState()
+	var (
+		state  = c.CurrentState()
+		logger = c.getLogger().With("input_block_number", blockNumber, "input_step", RoundStepPrecommitWait)
+	)
 	if state.BlockNumber().Cmp(blockNumber) != 0 {
-		log.Error("finalize a commit at different state block number", "current_block_number", state.BlockNumber(), "commit_block_number", blockNumber)
-		panic("finalize a commit at different block number")
+		logger.Panicw("finalize a commit at different state block number")
 	}
 	if state.Step() != RoundStepCommit {
-		log.Error("finalizeCommit invalid: we are in a state that is invalid for commit",
-			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
-			"current_step", state.Step().String(), "input_step", RoundStepCommit.String())
+		logger.Errorw("finalizeCommit invalid: we are in a state that is invalid for commit")
 		return
 	}
 	precommits, ok := state.GetPrecommitsByRound(state.commitRound)
 	if !ok {
-		log.Error("no precommits at commitRound")
+		logger.Errorw("no precommits at commitRound")
 		return
 	}
 	blockHash, ok := precommits.TwoThirdMajority()
 	if !ok {
-		log.Error("no 2/3 majority for a block at commitRound")
+		logger.Errorw("no 2/3 majority for a block at commitRound")
 		return
 	}
 	if blockHash.Hex() == emptyBlockHash.Hex() {
-		log.Error("nil majority at commitRound")
+		logger.Errorw("nil majority at commitRound")
 		return
 	}
 	proposal := state.ProposalReceived()
 	if proposal == nil {
-		log.Info("empty proposal at finalizeCommit: no proposal has been received")
+		logger.Infow("empty proposal at finalizeCommit: no proposal has been received")
 		return
 	}
 	if proposal.Block != nil && proposal.Block.Hash().Hex() != blockHash.Hex() {
-		log.Info("the proposal received was not the commit hash. Finalize failed")
+		logger.Infow("the proposal received was not the commit hash. Finalize failed")
 		return
 	}
 
 	//TODO: do we need revalidating block at this step?
 
-	log.Info("committing: write seals onto Block", "block_hash", blockHash.Hex())
+	logger.Infow("committing: write seals onto Block", "block_hash", blockHash.Hex())
 
 	block, err := c.FinalizeBlock(state.ProposalReceived())
 	if err != nil {
-		log.Error("block committing failed", "error", err)
+		logger.Errorw("block committing failed", "error", err)
 	}
 
 	c.backend.Commit(block)
@@ -538,7 +511,7 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	)
 	precommits, ok := state.GetPrecommitsByRound(round)
 	if !ok {
-		panic("no precommits at commitRound")
+		c.getLogger().Panicw("no precommits at commitRound")
 	}
 	//commitVotes := precommits.VoteByAddress()
 	for _, vote := range precommits.VotesByAddress() {
@@ -562,10 +535,10 @@ func (c *core) startRoundZero() {
 
 	lastBlockNumber := c.backend.CurrentHeadBlock().Number()
 	if state.BlockNumber().Int64() == lastBlockNumber.Int64()+1 {
-		log.Info("Catch up with the latest block")
+		c.getLogger().Infow("Catch up with the latest block")
 	} else {
 		// update new round with lastKnownHeight
-		log.Info("New height is not catch up with the latest block, update height to lastest block + 1")
+		c.getLogger().Infow("New height is not catch up with the latest block, update height to lastest block + 1")
 		newHeight := lastBlockNumber.Add(lastBlockNumber, big.NewInt(1))
 		state.SetView(&tendermint.View{
 			Round:       0,
@@ -587,14 +560,17 @@ func (c *core) startRoundZero() {
 }
 
 func (c *core) updateStateForNewblock() {
-	var state = c.CurrentState()
+	var (
+		state  = c.CurrentState()
+		logger = c.getLogger()
+	)
 
 	if state.commitRound > -1 {
 		// having commit round, should have seen +2/3 precommits
 		precommits, ok := state.GetPrecommitsByRound(state.commitRound)
 		_, ok = precommits.TwoThirdMajority()
 		if !ok {
-			log.Error("updateStateForNewblock(): Having commitRound with no +2/3 precommits")
+			logger.Errorw("updateStateForNewblock(): Having commitRound with no +2/3 precommits")
 			return
 		}
 	}
@@ -628,12 +604,12 @@ func (c *core) updateStateForNewblock() {
 	state.PrecommitWaited = false
 
 	c.currentState = state
-	log.Info("updated to new block", "new_block_number", state.BlockNumber())
+	c.getLogger().Infow("updated to new block", "new_block_number", state.BlockNumber())
 
-	c.processFutureMessages()
+	c.processFutureMessages(logger)
 }
 
-func (c *core) processFutureMessages() (done bool, err error) {
+func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err error) {
 	var (
 		vote  tendermint.Vote
 		state = c.CurrentState()
@@ -645,20 +621,20 @@ func (c *core) processFutureMessages() (done bool, err error) {
 		// get at position 0, check if it is current block number
 		data, err := c.futureMessages.Get(0)
 		if err != nil {
-			log.Error("Failed to get message from future message queue", "error", err)
+			logger.Errorw("Failed to get message from future message queue", "error", err)
 			return false, err
 		}
 		msg, ok := data.(message)
 		if !ok {
-			log.Error("Failed to decode data to message")
+			logger.Errorw("Failed to decode data to message")
 			return false, err
 		}
 		if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
-			log.Error("Failed to decode vote from message", "error", err)
+			logger.Errorw("Failed to decode vote from message", "error", err)
 			return false, err
 		}
 		if vote.BlockNumber.Cmp(state.BlockNumber()) < 0 {
-			log.Info("vote from older block number, ignore")
+			logger.Infow("vote from older block number, ignore")
 			// Ignore vote from older block, remove element at position 0 and continue
 			c.futureMessages.Remove(0)
 			continue
@@ -669,7 +645,7 @@ func (c *core) processFutureMessages() (done bool, err error) {
 		}
 		// at here vote block number should be equal state block number
 		// remove message and handle it
-		log.Info("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
+		logger.Infow("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
 		c.futureMessages.Remove(0)
 		c.handleMsg(msg)
 	}
