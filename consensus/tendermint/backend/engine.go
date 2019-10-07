@@ -112,7 +112,12 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		results <- nil
 		return
 	}
+	blockNumberStr := block.Number().String()
 
+	if _, ok := sb.commitChs[blockNumberStr]; !ok {
+		sb.commitChs[blockNumberStr] = make(chan *types.Block, 1)
+	}
+	log.Info("sealing...", "total number of channels", len(sb.commitChs))
 	//block = sb.Prepare()
 	//TODO: clear previous data of proposal
 	// post block into tendermint engine
@@ -121,35 +126,42 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 			Block: block,
 		})
 	}(block)
-
-	go func() {
+	// miner won't be able to interrupt a sealing task
+	// a sealing task can only exist when core consensus agreed upon a block
+	go func(blockNumberStr string) {
+		ch := sb.commitChs[blockNumberStr]
 		//TODO: DO we need timeout for consensus?
-		select {
-		case event, ok := <-sb.blockFinalized.Chan():
-			if !ok {
-				log.Info("finalized Channel closed, exit seal...")
-				return
-			}
-			switch ev := event.Data.(type) {
-			//TODO: maybe make a separated channel for this
-			case tendermint.BlockFinalizedEvent:
-				//we only posted the block back to the miner if and only if the block is ours
-				if ev.Block.Coinbase() == sb.address {
-					log.Info("returned block to miner", "block_hash", ev.Block.Hash(), "number", ev.Block.Number())
-					results <- ev.Block
+		for {
+			select {
+			case bl, ok := <-ch:
+				if !ok {
+					log.Info("committing... Channel closed, exit seal...", "number", blockNumberStr)
+					return
+				}
+				if bl.Number().String() != blockNumberStr {
+					log.Warn("committing.. Received a different block number than the sealing block number", "received", bl.Number().String(), "expected", blockNumberStr)
+				}
+				//this step is to stop other go routine wait for a block
+				close(ch)
+				delete(sb.commitChs, bl.Number().String())
+				if bl == nil {
+					log.Error("committing... Received nil ")
+					return
+				}
 
+				//we only posted the block back to the miner if and only if the block is ours
+				if bl.Coinbase() == sb.address {
+					log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
+					results <- bl
 				} else {
-					log.Info("not this node's block, exit and let downloader sync the block from proposer...")
+					log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...", "block_hash", block.Hash(), "number", block.Number())
 				}
 				return
-			default:
-				log.Error("unknown event", "event", ev)
+			case <-stop:
+				log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block", "number", block.Number())
 			}
-		case <-stop:
-			results <- nil
-			return
 		}
-	}()
+	}(blockNumberStr)
 	return nil
 }
 
@@ -165,10 +177,15 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.chain = chain
 	sb.currentBlock = currentBlock
 
+	if sb.commitChs != nil {
+		for blockNo, chn := range sb.commitChs {
+			close(chn)
+			delete(sb.commitChs, blockNo)
+		}
+	}
+
 	//TODO: clear previous data of proposal
-	sb.blockFinalized = sb.core.EventMux().Subscribe(
-		tendermint.BlockFinalizedEvent{},
-	)
+
 	if err := sb.core.Start(); err != nil {
 		return err
 	}
@@ -187,7 +204,6 @@ func (sb *backend) Stop() error {
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}
-	sb.blockFinalized.Unsubscribe()
 	sb.coreStarted = false
 	return nil
 }

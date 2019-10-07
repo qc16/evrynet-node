@@ -3,9 +3,8 @@ package tendermint
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
-
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 )
 
@@ -37,4 +36,7 @@ type Backend interface {
 
 	// FindPeers check peer exist or not by address
 	FindPeers(targets ValidatorSet) bool
+
+	//Commit send the consensus block back to miner, it should also handle the logic after a block get enough vote to be the next block in chain
+	Commit(block *types.Block)
 }
