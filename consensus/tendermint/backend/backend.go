@@ -194,6 +194,7 @@ func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 	return false
 }
 
+//Commit implement tendermint.Backend.Commit()
 func (sb *backend) Commit(block *types.Block) {
 	ch, ok := sb.commitChs[block.Number().String()]
 	if !ok {
