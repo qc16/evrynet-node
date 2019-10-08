@@ -150,7 +150,17 @@ func (c *core) handlePropose(msg message) error {
 	log.Info("setProposal receive...", "block_hash", proposal.Block.Hash(), "block", proposal.Block.Number(), "round", proposal.Round)
 
 	state.SetProposalReceived(&proposal)
-	//// TODO: We can check if Proposal is for a different block as this is a sign of misbehavior!
+	//WARNING: THIS piece of code is experimental
+	if state.Step() <= RoundStepPropose && state.IsProposalComplete() {
+		log.Info("handle proposal: received proposal, proposal completed. before enterPrevote Jump to enterPrevote")
+		// Move onto the next step
+		c.enterPrevote(state.BlockNumber(), state.Round())
+	} else if state.Step() == RoundStepCommit {
+		log.Info("handle proposal: received proposal, proposal completed. at commit waiting for proposal block. Jump to finalizeCommit")
+
+		// If we're waiting on the proposal block...
+		c.finalizeCommit(proposal.Block.Number())
+	} //// TODO: We can check if Proposal is for a different block as this is a sign of misbehavior!
 	return nil
 }
 

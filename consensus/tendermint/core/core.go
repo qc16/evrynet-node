@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"sync"
+	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -57,6 +58,9 @@ type core struct {
 	config *tendermint.Config
 	//mutex mark critical section of core which should not be accessed parralel
 	mu *sync.RWMutex
+
+	//proposeStart mark the time core enter propose. This is purely use for metrics
+	proposeStart time.Time
 }
 
 // Start implements core.Engine.Start
