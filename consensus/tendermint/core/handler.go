@@ -64,7 +64,7 @@ func (c *core) handleEvents() {
 				c.handleNewBlock(ev.Block)
 			case tendermint.MessageEvent:
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
-				var msg message
+				var msg Message
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
 					logger.Errorw("failed to decode msg", "error", err)
 				} else {
@@ -118,7 +118,8 @@ func (c *core) handleNewBlock(block *types.Block) {
 	state.SetBlock(block)
 }
 
-func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
+//VerifyProposal validate msg & proposal when get from other nodes
+func (c *core) VerifyProposal(proposal tendermint.Proposal, msg Message) error {
 
 	// Verify POLRound, which must be -1 or in range [0, proposal.Round).
 	if proposal.POLRound < -1 ||
@@ -149,7 +150,7 @@ func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 	return nil
 }
 
-func (c *core) handlePropose(msg message) error {
+func (c *core) handlePropose(msg Message) error {
 	var (
 		state    = c.CurrentState()
 		proposal tendermint.Proposal
@@ -173,7 +174,7 @@ func (c *core) handlePropose(msg message) error {
 		logger.Warnw("received proposal with different height/round. Skip processing it")
 		return nil
 	}
-	if err := c.verifyProposal(proposal, msg); err != nil {
+	if err := c.VerifyProposal(proposal, msg); err != nil {
 		return err
 	}
 	logger.Infow("setProposal receive...")
@@ -193,7 +194,7 @@ func (c *core) handlePropose(msg message) error {
 	return nil
 }
 
-func (c *core) handlePrevote(msg message) error {
+func (c *core) handlePrevote(msg Message) error {
 	var (
 		vote  tendermint.Vote
 		state = c.CurrentState()
@@ -294,7 +295,7 @@ func (c *core) handlePrevote(msg message) error {
 	return nil
 }
 
-func (c *core) handlePrecommit(msg message) error {
+func (c *core) handlePrecommit(msg Message) error {
 	var (
 		vote  tendermint.Vote
 		state = c.CurrentState()
@@ -381,7 +382,7 @@ func (c *core) handlePrecommit(msg message) error {
 	return nil
 }
 
-func (c *core) handleMsg(msg message) error {
+func (c *core) handleMsg(msg Message) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	switch msg.Code {

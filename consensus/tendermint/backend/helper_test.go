@@ -130,7 +130,7 @@ func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types
 		panic("failed to get snapshot")
 	}
 
-	if err := b.Start(blockchain, nil); err != nil {
+	if err := b.Start(blockchain, blockchain.CurrentBlock); err != nil {
 		log.Panicf("cannot start backend, error:%v", err)
 	}
 	return blockchain, b
