@@ -28,6 +28,8 @@ type Engine interface {
 	Stop() error
 	//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
 	SetBlockForProposal(block *types.Block)
+	//VerifyProposal validate msg & proposal when get from other nodes
+	VerifyProposal(proposal tendermint.Proposal, msg Message) error
 }
 
 // TODO: More msg codes here if needed
