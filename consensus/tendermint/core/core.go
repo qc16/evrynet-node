@@ -98,7 +98,8 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
-func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
+//FinalizeMsg set address, signature and encode msg to bytes
+func (c *core) FinalizeMsg(msg *Message) ([]byte, error) {
 	msg.Address = c.backend.Address()
 	msgPayLoadWithoutSignature, err := msg.PayLoadWithoutSignature()
 	if err != nil {
@@ -121,7 +122,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		log.Error("Failed to encode Proposal to bytes", "error", err)
 		return
 	}
-	payload, err := c.FinalizeMsg(&message{
+	payload, err := c.FinalizeMsg(&Message{
 		Code: msgPropose,
 		Msg:  msgData,
 	})
@@ -179,7 +180,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		log.Error("Failed to encode Vote to bytes", "error", err)
 		return
 	}
-	payload, err := c.FinalizeMsg(&message{
+	payload, err := c.FinalizeMsg(&Message{
 		Code: voteType,
 		Msg:  msgData,
 	})
