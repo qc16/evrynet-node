@@ -8,11 +8,13 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,9 +74,10 @@ func TestValidators(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	var (
-		nodePrivateKey = makeNodeKey()
-		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
-		validators     = []common.Address{
+		nodePrivateKey     = makeNodeKey()
+		nodeFakePrivateKey = makeNodeKey()
+		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators         = []common.Address{
 			nodeAddr,
 		}
 		genesisHeader = makeGenesisHeader(validators)
@@ -95,7 +98,7 @@ func TestVerify(t *testing.T) {
 		POLRound: 0,
 	}
 	// Should get error if transactions in block is 0
-	assert.Error(t, engine.Verify(proposal), errMismatchTxhashes)
+	assert.EqualError(t, engine.Verify(proposal), errMismatchTxhashes.Error())
 
 	// --------CASE 2--------
 	// Pass all validation
@@ -126,25 +129,48 @@ func TestVerify(t *testing.T) {
 		Block: block3,
 	}
 	// Should get error ErrInsufficientFunds
-	assert.Error(t, engine.Verify(proposal), core.ErrInsufficientFunds)
+	assert.EqualError(t, engine.Verify(proposal), core.ErrInsufficientFunds.Error())
 
 	// --------CASE 4--------
-	// Header Difficulty is nil
+	// Node propose fake block (fake signature)
 	// backend.VerifyHeader() will return error
-	tx3 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), params.GasPriceConfig, big.NewInt(params.GasPriceConfig), nil)
+	tx3 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
 	tx3, err = types.SignTx(tx3, types.HomesteadSigner{}, nodePrivateKey)
 	assert.NoError(t, err)
 
-	editedHeader := *genesisHeader
-	editedHeader.Difficulty = nil
-	block4 := types.NewBlock(&editedHeader, []*types.Transaction{tx3}, []*types.Header{}, []*types.Receipt{})
+	block4 := types.NewBlock(genesisHeader, []*types.Transaction{tx3}, []*types.Header{}, []*types.Receipt{})
 	assert.Len(t, block4.Transactions(), 1)
 	assert.Equal(t, tx3.Hash(), block4.Transactions()[0].Hash())
 	proposal = tendermint.Proposal{
 		Block: block4,
+		Round: 1,
 	}
-	// Should get error when header Header Difficulty is nil
-	assert.Error(t, engine.Verify(proposal), errInvalidDifficulty)
+
+	msgData, err := rlp.EncodeToBytes(&proposal)
+	assert.NoError(t, err)
+
+	// Create fake message from another node address
+	msg := tendermintCore.Message{
+		Code:    0,
+		Msg:     msgData,
+		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
+	}
+
+	msgPayLoadWithoutSignature, _ := rlp.EncodeToBytes(&tendermintCore.Message{
+		Code:          msg.Code,
+		Address:       msg.Address,
+		Msg:           msg.Msg,
+		Signature:     []byte{},
+		CommittedSeal: msg.CommittedSeal,
+	})
+
+	signature, err := crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), nodeFakePrivateKey)
+	assert.NoError(t, err)
+	msg.Signature = signature
+
+	err = engine.core.VerifyProposal(proposal, msg)
+	// Should get error when node send signed msg by fake private key
+	assert.EqualError(t, err, tendermintCore.ErrInvalidProposalSignature.Error())
 }
 
 /**
@@ -158,8 +184,7 @@ func getAddress() common.Address {
 }
 
 func generatePrivateKey() (*ecdsa.PrivateKey, error) {
-	key := "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
-	return crypto.HexToECDSA(key)
+	return crypto.GenerateKey()
 }
 
 func newTestValidatorSet(n int) tendermint.ValidatorSet {
