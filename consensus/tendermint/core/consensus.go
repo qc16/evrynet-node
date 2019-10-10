@@ -518,7 +518,7 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
 
 	c.updateStateForNewblock()
-	c.startRoundZero()
+	c.startNewRound(0)
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
@@ -552,14 +552,62 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	return proposal.Block.WithSeal(header), nil
 }
 
-func (c *core) startRoundZero() {
-	var state = c.CurrentState()
-	sleepDuration := state.startTime.Sub(time.Now())
-	if c.valSet == nil {
+func (c *core) startNewRound(round int64) {
+	var (
+		prevotesReceived        = make(map[int64]*messageSet)
+		precommitReceived       = make(map[int64]*messageSet)
+		block                   = types.NewBlockWithHeader(&types.Header{})
+		lockedRound       int64 = -1
+		lockedBlock       *types.Block
+		validRound        int64 = -1
+		validBlock        *types.Block
+		proposalReceived  *tendermint.Proposal
+		step              = RoundStepNewHeight
+	)
+
+	//to continue from a stored State, get the last known block height
+	lastBlock := c.backend.CurrentHeadBlock()
+	var newView *tendermint.View
+	if c.CurrentState() == nil || c.CurrentState().BlockNumber() == new(big.Int).Add(lastBlock.Number(), common.Big1) {
+		newView = &tendermint.View{
+			Round:       0,
+			BlockNumber: new(big.Int).Add(lastBlock.Number(), common.Big1), // Increase block number to 1 block
+		}
+
+		c.currentState = newRoundState(newView, prevotesReceived, precommitReceived, block,
+			lockedRound, lockedBlock,
+			validRound, validBlock,
+			proposalReceived, step,
+		)
 		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+		log.Warn("--- Init current state", "lastBlock.number", lastBlock.Number())
+	} else {
+		newView = &tendermint.View{
+			Round:       round,
+			BlockNumber: c.CurrentState().BlockNumber(),
+		}
+
+		state := c.currentState
+		if state.IsRoundLocked() && state.IsBlockLocked() {
+			c.currentState = newRoundState(newView, state.PrevotesReceived, state.PrecommitsReceived, state.block,
+				state.lockedRound, state.lockedBlock,
+				state.validRound, state.validBlock,
+				state.proposalReceived, state.step,
+			)
+			log.Warn("--- Update current state when round locked & block locked", "currentblock.number", state.block.Number(), "view.round", newView.Round, "view.Blocknumber", newView.BlockNumber)
+		} else {
+			c.currentState = newRoundState(newView, prevotesReceived, precommitReceived, lastBlock,
+				lockedRound, lockedBlock,
+				validRound, validBlock,
+				proposalReceived, step,
+			)
+			log.Warn("--- Update current state", "currentblock.number", state.block.Number(), "view.round", newView.Round, "view.Blocknumber", newView.BlockNumber)
+		}
 	}
+
+	sleepDuration := c.CurrentState().startTime.Sub(time.Now())
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
-	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
+	timeOutBlock := big.NewInt(0).Set(c.CurrentState().BlockNumber())
 	c.timeout.ScheduleTimeout(timeoutInfo{
 		Duration:    sleepDuration,
 		BlockNumber: timeOutBlock,

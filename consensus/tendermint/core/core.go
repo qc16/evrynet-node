@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"math/big"
 	"sync"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -64,9 +65,7 @@ func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	log.Info("starting Tendermint's core...")
-	if c.currentState == nil {
-		c.currentState = c.getStoredState()
-	}
+
 	c.subscribeEvents()
 
 	// Tests will handle events itself, so we have to make subscribeEvents()
@@ -76,7 +75,7 @@ func (c *core) Start() error {
 	}
 	go c.handleEvents()
 
-	c.startRoundZero()
+	c.startNewRound(0)
 
 	return nil
 }
@@ -196,4 +195,44 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 
 func (c *core) CurrentState() *roundState {
 	return c.currentState
+}
+
+// updateRoundState updates round state by checking if locking block is necessary
+func (c *core) updateRoundState(view *tendermint.View, validatorSet tendermint.ValidatorSet) {
+	var (
+		prevotesReceived        = make(map[int64]*messageSet)
+		precommitReceived       = make(map[int64]*messageSet)
+		block                   = types.NewBlockWithHeader(&types.Header{})
+		lockedRound       int64 = -1
+		lockedBlock       *types.Block
+		validRound        int64 = -1
+		validBlock        *types.Block
+		proposalReceived  *tendermint.Proposal
+		step              = RoundStepNewHeight
+	)
+	// Lock only if both roundChange is true and it is locked
+	if c.CurrentState() != nil {
+		c.currentState = newRoundState(view, prevotesReceived, precommitReceived, block,
+			lockedRound, lockedBlock,
+			validRound, validBlock,
+			proposalReceived,
+			step,
+		)
+	} else {
+		//to continue from a stored State, get the last known block height
+		lastKnownHeight := c.backend.CurrentHeadBlock().Number()
+
+		newView := tendermint.View{
+			Round:       0,
+			BlockNumber: new(big.Int).Add(lastKnownHeight, common.Big1), // Increase block number to 1 block
+		}
+
+		c.currentState = newRoundState(&newView, prevotesReceived, precommitReceived, block,
+			lockedRound, lockedBlock,
+			validRound, validBlock,
+			proposalReceived,
+			step,
+		)
+		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+	}
 }

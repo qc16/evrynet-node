@@ -274,3 +274,19 @@ func (s *roundState) getPrecommitWaited() bool {
 func (s *roundState) setPrecommitWaited(waited bool) {
 	s.PrecommitWaited = waited
 }
+
+//IsRoundLocked return true if lockedRound exists
+func (s *roundState) IsRoundLocked() bool {
+	if s.lockedRound >= 0 {
+		return true
+	}
+	return false
+}
+
+//IsBlockLocked return true if lockedRound exists
+func (s *roundState) IsBlockLocked() bool {
+	if s.lockedBlock != nil {
+		return true
+	}
+	return false
+}
