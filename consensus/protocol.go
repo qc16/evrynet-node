@@ -19,6 +19,7 @@ package consensus
 
 import (
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
 const (
@@ -31,6 +32,8 @@ const (
 type Broadcaster interface {
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
+	// Enqueue add a block into fetcher queue
+	Enqueue(id string, block *types.Block)
 }
 
 // Peer defines the interface to communicate with peer

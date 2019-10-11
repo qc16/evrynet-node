@@ -39,4 +39,7 @@ type Backend interface {
 
 	//Commit send the consensus block back to miner, it should also handle the logic after a block get enough vote to be the next block in chain
 	Commit(block *types.Block)
+
+	//EnqueueBlock adds blocks returned from conseneus
+	EnqueueBlock(block *types.Block)
 }

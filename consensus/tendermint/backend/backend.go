@@ -18,6 +18,11 @@ import (
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
+const (
+	tendermintMsg = 0x11
+	fetcherID     = "evrynet"
+)
+
 var (
 	//ErrNoBroadcaster is return when trying to access backend.Broadcaster without SetBroadcaster first
 	ErrNoBroadcaster = errors.New("no broadcaster is set")
@@ -198,6 +203,13 @@ func (sb *backend) Commit(block *types.Block) {
 		return
 	}
 	ch <- block
+}
+
+// EnqueueBlock adds a block returned from consensus into fetcher queue
+func (sb *backend) EnqueueBlock(block *types.Block) {
+	if sb.broadcaster != nil {
+		sb.broadcaster.Enqueue(fetcherID, block)
+	}
 }
 
 func (sb *backend) CurrentHeadBlock() *types.Block {
