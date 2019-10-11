@@ -40,6 +40,9 @@ type core struct {
 	//- MessageEvent: when there is a new message from other validators/ peers
 	events *event.TypeMuxSubscription
 
+	// finalCommitted events is the chanel to raise when committed and run to new round
+	finalCommitted *event.TypeMuxSubscription
+
 	//BlockFinalizeEvent
 	blockFinalize *event.TypeMux
 	//handleWg will help core stop gracefully, i.e, core will wait till handlingEvents done before reutrning.
