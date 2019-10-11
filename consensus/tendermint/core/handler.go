@@ -375,7 +375,7 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 	)
 	// timeouts must be for current height, round, step
 	if ti.BlockNumber.Cmp(blockNumber) != 0 || ti.Round < round || (ti.Round == round && ti.Step < step) {
-		log.Info("Ignoring timeout because we're ahead", "block_number", blockNumber, "round", round, "step", step, "timeoutblock", ti.BlockNumber, "timeout round", ti.Round, "timeout step", ti.Step)
+		log.Info("Ignoring timeout because we're ahead", "block_number", blockNumber, "round", round, "step", step)
 		return
 	}
 

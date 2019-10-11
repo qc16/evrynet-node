@@ -10,7 +10,7 @@ do
   ./gev --datadir ./tests/test_nodes/node"$i"/data init ./tests/test_nodes/genesis.json
 
   echo "--- Start test node $i ..."
-  ./gev --datadir ./tests/test_nodes/node"$i"/data --nodiscover --tendermint.blockperiod 1 --gasprice 1000000000 --syncmode fast --mine --minerthreads 1 --networkid 15 \
+  ./gev --datadir ./tests/test_nodes/node"$i"/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode full --mine --minerthreads 1 --networkid 15 \
     --rpc --rpcaddr 0.0.0.0 --rpcport 2200"$i" --port 3030"$i" \
     --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock &
 done

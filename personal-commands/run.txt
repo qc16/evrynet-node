@@ -1,1 +1,38 @@
 ./gev --datadir ./tests/test_nodes/node1/data --rpc --rpcaddr "127.0.0.1" --rpcport "8545" --rpc --rpccorsdomain "*" console --allow-insecure-unlock  --tendermint.blockperiod 10
+
+
+./gev --datadir ./tests/test_nodes/node2/data --rpc --rpcaddr "127.0.0.1" --rpcport "8545" --rpc --rpccorsdomain "*" console --allow-insecure-unlock  --tendermint.blockperiod 10
+
+./gev --datadir ./tests/test_nodes/node3/data --rpc --rpcaddr "127.0.0.1" --rpcport "8545" --rpc --rpccorsdomain "*" console --allow-insecure-unlock  --tendermint.blockperiod 10
+
+./gev --datadir ./tests/test_nodes/node4/data --rpc --rpcaddr "127.0.0.1" --rpcport "8545" --rpc --rpccorsdomain "*" console --allow-insecure-unlock  --tendermint.blockperiod 10
+
+
+./gev --datadir ./tests/test_nodes/node1/data init ./tests/test_nodes/genesis.json
+
+./gev --datadir ./tests/test_nodes/node2/data init ./tests/test_nodes/genesis.json
+
+./gev --datadir ./tests/test_nodes/node3/data init ./tests/test_nodes/genesis.json
+
+./gev --datadir ./tests/test_nodes/node4/data init ./tests/test_nodes/genesis.json
+
+
+
+./gev --datadir ./tests/test_nodes/node1/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode fast --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --port 30301 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 
+
+./gev --datadir ./tests/test_nodes/node2/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode fast --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22002 --port 30302 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 
+
+./gev --datadir ./tests/test_nodes/node3/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode fast --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22003 --port 30303 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 
+
+./gev --datadir ./tests/test_nodes/node4/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode fast --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22004 --port 30304 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 
+
+
+
+
+./gev --datadir ./tests/test_nodes/node1/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode full --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --port 30301 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 
+
+./gev --datadir ./tests/test_nodes/node2/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode full --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22002 --port 30302 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 
+
+./gev --datadir ./tests/test_nodes/node3/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode full --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22003 --port 30303 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 
+
+./gev --datadir ./tests/test_nodes/node4/data --nodiscover --tendermint.blockperiod 5 --gasprice 1000000000 --syncmode full  --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22004 --port 30304 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --allow-insecure-unlock console 

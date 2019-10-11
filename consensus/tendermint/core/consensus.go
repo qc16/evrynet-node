@@ -532,6 +532,7 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 
 	c.backend.Commit(block)
 	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
+	c.backend.EnqueueBlock(block)
 
 	// c.updateStateForNewblock()
 	// c.startRoundZero()
@@ -599,19 +600,22 @@ func (c *core) startRoundZero() {
 
 	if state.BlockNumber().Int64() == lastKnownHeight.Int64()+1 {
 		log.Info("Catch up with the latest proposal")
-		if c.valSet == nil {
-			c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
-		}
+		// if c.valSet == nil {
+		// c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+		// }
 	} else {
 		// update new round with lastKnownHeight
 		log.Info("New height is not catch up with the latest proposal, update height to lastest height + 1")
+		newHeight := lastKnownHeight.Add(lastKnownHeight, big.NewInt(1))
 		state.SetView(&tendermint.View{
 			Round:       0,
-			BlockNumber: lastKnownHeight.Add(lastKnownHeight, big.NewInt(1)),
+			BlockNumber: newHeight,
 		})
-		c.valSet = c.backend.Validators(state.BlockNumber())
+		// c.valSet = c.backend.Validators(newHeight)
 		// c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 0)
 	}
+
+	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 
 	// if c.valSet == nil {
 	// 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
@@ -678,10 +682,12 @@ func (c *core) updateStateForNewblock() {
 
 	c.currentState = state
 
-	if c.valSet == nil {
-		c.valSet = c.backend.Validators(state.BlockNumber())
-	}
+	// c.valSet = c.backend.Validators(state.BlockNumber())
+
+	// if c.valSet == nil {
+	// 	c.valSet = c.backend.Validators(state.BlockNumber())
+	// }
 	//TODO: fix this logic
-	c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 0)
+	// c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 0)
 	log.Info("updated to new block", "new_block_number", state.BlockNumber())
 }

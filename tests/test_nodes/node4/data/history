@@ -1,3 +1,4 @@
+
 eth.blockNumber
 miner.start()
 eth.blockNumber
@@ -6,18 +7,15 @@ eth.blockNumber
 miner.start()
 eth.blockNumber
 miner.stop()
-eth.blockNumber
 miner.start()
 eth.blockNumber
 miner.start()
 eth.blockNumber
 miner.start()
+miner.stop
 miner.stop()
 miner.start()
 eth.blockNumber
-miner.start()
-eth.blockNumber
-miner.stop()
 miner.start()
 eth.blockNumber
 miner.start()
