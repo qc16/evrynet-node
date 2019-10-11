@@ -43,15 +43,17 @@ type CallOpts struct {
 }
 
 // TransactOpts is the collection of authorization data required to create a
-// valid Ethereum transaction.
+// valid Evrynet transaction.
 type TransactOpts struct {
-	From   common.Address // Ethereum account to send the transaction from
+	From   common.Address // Evrynet account to send the transaction from
 	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 	Signer SignerFn       // Method to use for signing the transaction (mandatory)
 
 	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
 	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
 	GasLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
+
+	Enterprise *types.CreateAccountOption // Evrynet account option for enterprise contract feature (optional)
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
@@ -73,11 +75,11 @@ type WatchOpts struct {
 }
 
 // BoundContract is the base wrapper object that reflects a contract on the
-// Ethereum network. It contains a collection of methods that are used by the
+// Evrynet network. It contains a collection of methods that are used by the
 // higher level contract bindings to operate.
 type BoundContract struct {
-	address    common.Address     // Deployment address of the contract on the Ethereum blockchain
-	abi        abi.ABI            // Reflect based ABI to access the correct Ethereum methods
+	address    common.Address     // Deployment address of the contract on the Evrynet blockchain
+	abi        abi.ABI            // Reflect based ABI to access the correct Evrynet methods
 	caller     ContractCaller     // Read interface to interact with the blockchain
 	transactor ContractTransactor // Write interface to interact with the blockchain
 	filterer   ContractFilterer   // Event filtering to interact with the blockchain
@@ -95,7 +97,7 @@ func NewBoundContract(address common.Address, abi abi.ABI, caller ContractCaller
 	}
 }
 
-// DeployContract deploys a contract onto the Ethereum blockchain and binds the
+// DeployContract deploys a contract onto the Evrynet blockchain and binds the
 // deployment address with a Go wrapper.
 func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend ContractBackend, params ...interface{}) (common.Address, *types.Transaction, *BoundContract, error) {
 	// Otherwise try to deploy the contract
@@ -227,7 +229,12 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	// Create the transaction, sign it and schedule it for execution
 	var rawTx *types.Transaction
 	if contract == nil {
-		rawTx = types.NewContractCreation(nonce, value, gasLimit, gasPrice, input)
+		// Check whether the contract creation is a normal contract type or enterprise contract type
+		if opts.Enterprise == nil {
+			rawTx = types.NewContractCreation(nonce, value, gasLimit, gasPrice, input)
+		} else {
+			rawTx = types.NewContractCreation(nonce, value, gasLimit, gasPrice, input, *opts.Enterprise)
+		}
 	} else {
 		rawTx = types.NewTransaction(nonce, c.address, value, gasLimit, gasPrice, input)
 	}
