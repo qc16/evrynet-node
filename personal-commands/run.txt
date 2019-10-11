@@ -1,0 +1,1 @@
+./gev --datadir ./tests/test_nodes/node1/data --rpc --rpcaddr "127.0.0.1" --rpcport "8545" --rpc --rpccorsdomain "*" console --allow-insecure-unlock  --tendermint.blockperiod 10

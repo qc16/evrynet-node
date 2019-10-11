@@ -562,10 +562,37 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 
 func (c *core) startRoundZero() {
 	var state = c.CurrentState()
-	sleepDuration := state.startTime.Sub(time.Now())
-	if c.valSet == nil {
-		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+
+	fmt.Println("-------------time sleep----------------")
+	//TODO: Adter rework FinalCommit, please remove this sleep
+	time.Sleep(5 * time.Second)
+
+	lastKnownHeight := c.backend.CurrentHeadBlock().Number()
+
+	fmt.Println("-----------------------------")
+	fmt.Println(state.BlockNumber().Int64())
+	fmt.Println("-----------------------------")
+	fmt.Println(lastKnownHeight.Int64())
+	fmt.Println("-----------------------------")
+
+	if state.BlockNumber().Int64() == lastKnownHeight.Int64()+1 {
+		log.Info("Catch up with the latest proposal")
+		if c.valSet == nil {
+			c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+		}
+	} else {
+		// update new round with lastKnownHeight
+		log.Info("New height is not catch up with the latest proposal, update height to lastest height + 1")
+		state.SetView(&tendermint.View{
+			Round:       0,
+			BlockNumber: lastKnownHeight.Add(lastKnownHeight, big.NewInt(1)),
+		})
+		c.valSet = c.backend.Validators(state.BlockNumber())
+		c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 1)
 	}
+
+	sleepDuration := state.startTime.Sub(time.Now())
+
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
 	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
 	c.timeout.ScheduleTimeout(timeoutInfo{
