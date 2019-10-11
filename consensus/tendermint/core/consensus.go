@@ -37,7 +37,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 		sStep         = state.Step()
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep != RoundStepNewHeight) {
-		log.Info("enterNewRound ignore: we are in a state that is ahead of the input state",
+		log.Debug("enterNewRound ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
@@ -112,7 +112,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		sStep         = state.Step()
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || sRound > round || (sRound == round && sStep >= RoundStepPropose) {
-		log.Info("enterPropose ignore: we are in a state that is ahead of the input state",
+		log.Debug("enterPropose ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPropose.String())
@@ -223,7 +223,7 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 		sStep         = state.Step()
 	)
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
-		log.Info("enterPrevote ignore: we are in a state that is ahead of the input state",
+		log.Debug("enterPrevote ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
@@ -253,7 +253,7 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && RoundStepPrevoteWait <= sStep) {
-		log.Info("enterPrevoteWait ignore: we are in a state that is ahead of the input state",
+		log.Debug("enterPrevoteWait ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPrevote.String())
@@ -261,10 +261,10 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	}
 	prevotes, ok := state.GetPrevotesByRound(round)
 	if !ok {
-		log.Info("enterPrevoteWait ignore: there is no prevotes", "round", round)
+		log.Debug("enterPrevoteWait ignore: there is no prevotes", "round", round)
 	}
 	if !prevotes.HasTwoThirdAny() {
-		log.Info("enterPrevoteWait ignore: there is no two third votes received", "round", round)
+		log.Debug("enterPrevoteWait ignore: there is no two third votes received", "round", round)
 	}
 	log.Info("enterPrevoteWait",
 		"current_block_number", sBlockNumber.String(),
@@ -297,7 +297,7 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && state.getPrecommitWaited()) {
-		log.Info("enterPrecommitWait ignore: we are in a state that is not suitable to enter precommit with input state",
+		log.Debug("enterPrecommitWait ignore: we are in a state that is not suitable to enter precommit with input state",
 			"current_block_number", sBlockNumber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round, "precommitWaited", state.getPrecommitWaited())
 		return
@@ -346,7 +346,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	)
 
 	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrecommit) {
-		log.Info("enterPrecommit ignore: we are in a state that is ahead of the input state",
+		log.Debug("enterPrecommit ignore: we are in a state that is ahead of the input state",
 			"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 			"current_round", sRound, "input_round", round,
 			"current_step", sStep.String(), "input_step", RoundStepPrecommit.String())
@@ -427,7 +427,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	var state = c.currentState
 	if state.BlockNumber().Cmp(blockNumber) != 0 || state.Step() >= RoundStepCommit {
-		log.Info("enterCommit ignore: we are in a state that is ahead of the input state",
+		log.Debug("enterCommit ignore: we are in a state that is ahead of the input state",
 			"current_block_number", state.BlockNumber().String(), "input_block_number", blockNumber.String(),
 			"current_step", state.Step().String(), "input_step", RoundStepCommit.String())
 		return
