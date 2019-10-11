@@ -64,6 +64,17 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
+// NewChainHead implements consensus.Handler.NewChainHead
+func (sb *backend) NewChainHead() error {
+	sb.coreMu.RLock()
+	defer sb.coreMu.RUnlock()
+	if !sb.coreStarted {
+		return tendermint.ErrStoppedEngine
+	}
+	go sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{})
+	return nil
+}
+
 // ----------------------------------------------------------------------------
 type backend struct {
 	config             *tendermint.Config

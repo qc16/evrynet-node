@@ -525,10 +525,6 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	c.backend.Commit(block)
 	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
 	c.backend.EnqueueBlock(block)
-
-	// TODO: Should be called once final commit is handled
-	c.updateStateForNewblock()
-	c.startRoundZero()
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
