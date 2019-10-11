@@ -20,6 +20,7 @@ import (
 
 const (
 	tendermintMsg = 0x11
+	fetcherID     = "evrynet"
 )
 
 var (
@@ -202,6 +203,13 @@ func (sb *backend) Commit(block *types.Block) {
 		return
 	}
 	ch <- block
+}
+
+// EnqueueBlock adds a block returned from consensus into fetcher queue
+func (sb *backend) EnqueueBlock(block *types.Block) {
+	if sb.broadcaster != nil {
+		sb.broadcaster.Enqueue(fetcherID, block)
+	}
 }
 
 func (sb *backend) CurrentHeadBlock() *types.Block {
