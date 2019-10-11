@@ -66,6 +66,10 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	// TendermintMsg is the new message belong to eth/64.
+	// However due to packages importability it is kept at ./consensus/
+
 )
 
 type errCode int

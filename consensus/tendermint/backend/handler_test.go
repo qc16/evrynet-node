@@ -15,7 +15,7 @@ func TestHandleMsg(t *testing.T) {
 	b := newTestBackend()
 	// generate one msg
 	data := []byte("data1")
-	msg := makeMsg(tendermintMsg, data)
+	msg := makeMsg(consensus.TendermintMsg, data)
 	addr := getAddress()
 
 	// 2. this message should be in cache after we handle it

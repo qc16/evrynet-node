@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/p2p"
@@ -47,7 +48,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 	switch msg.Code {
-	case tendermintMsg:
+	case consensus.TendermintMsg:
 		if !sb.coreStarted {
 			return true, tendermint.ErrStoppedEngine
 		}

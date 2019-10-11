@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/metrics"
 	"github.com/evrynet-official/evrynet-client/p2p"
 )
@@ -54,6 +55,11 @@ var (
 	miscInTrafficMeter        = metrics.NewRegisteredMeter("eth/misc/in/traffic", nil)
 	miscOutPacketsMeter       = metrics.NewRegisteredMeter("eth/misc/out/packets", nil)
 	miscOutTrafficMeter       = metrics.NewRegisteredMeter("eth/misc/out/traffic", nil)
+
+	tendermintInTrafficMeter  = metrics.NewRegisteredMeter("eth/consensus/tendermint/in/traffic", nil)
+	tendermintInPacketsMeter  = metrics.NewRegisteredMeter("eth/consensus/tendermint/in/packets", nil)
+	tendermintOutTrafficMeter = metrics.NewRegisteredMeter("eth/consensus/tendermint/out/traffic", nil)
+	tendermintOutPacketsMeter = metrics.NewRegisteredMeter("eth/consensus/tendermint/out/packets", nil)
 )
 
 // meteredMsgReadWriter is a wrapper around a p2p.MsgReadWriter, capable of
@@ -72,7 +78,7 @@ func newMeteredMsgWriter(rw p2p.MsgReadWriter) p2p.MsgReadWriter {
 	return &meteredMsgReadWriter{MsgReadWriter: rw}
 }
 
-// Init sets the protocol version used by the stream to know which meters to
+// Init sets the protoc version used by the stream to know which meters to
 // increment in case of overlapping message ids between protocol versions.
 func (rw *meteredMsgReadWriter) Init(version int) {
 	rw.version = version
@@ -97,12 +103,16 @@ func (rw *meteredMsgReadWriter) ReadMsg() (p2p.Msg, error) {
 	case rw.version >= eth63 && msg.Code == ReceiptsMsg:
 		packets, traffic = reqReceiptInPacketsMeter, reqReceiptInTrafficMeter
 
+	case msg.Code == consensus.TendermintMsg:
+		packets, traffic = tendermintInPacketsMeter, tendermintInTrafficMeter
+
 	case msg.Code == NewBlockHashesMsg:
 		packets, traffic = propHashInPacketsMeter, propHashInTrafficMeter
 	case msg.Code == NewBlockMsg:
 		packets, traffic = propBlockInPacketsMeter, propBlockInTrafficMeter
 	case msg.Code == TxMsg:
 		packets, traffic = propTxnInPacketsMeter, propTxnInTrafficMeter
+
 	}
 	packets.Mark(1)
 	traffic.Mark(int64(msg.Size))
@@ -130,6 +140,8 @@ func (rw *meteredMsgReadWriter) WriteMsg(msg p2p.Msg) error {
 		packets, traffic = propBlockOutPacketsMeter, propBlockOutTrafficMeter
 	case msg.Code == TxMsg:
 		packets, traffic = propTxnOutPacketsMeter, propTxnOutTrafficMeter
+	case msg.Code == consensus.TendermintMsg:
+		packets, traffic = tendermintOutPacketsMeter, tendermintOutTrafficMeter
 	}
 	packets.Mark(1)
 	traffic.Mark(int64(msg.Size))

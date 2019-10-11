@@ -10,6 +10,12 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/metrics"
+)
+
+var (
+	tendermintRoundMeter        = metrics.NewRegisteredMeter("eth/consensus/tendermint/rounds", nil)
+	tendermintProposalWaitTimer = metrics.NewRegisteredTimer("eth/consensus/tendermint/proposalwait", nil)
 )
 
 //enterNewRound switch the core state to new round,
@@ -42,7 +48,9 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepNewRound.String())
-
+	if metrics.Enabled && round-sRound > 0 {
+		tendermintRoundMeter.Mark(round - sRound)
+	}
 	//if the round we enter is higher than current round, we'll have to adjust the proposer.
 	if sRound < round {
 		currentProposer := c.valSet.GetProposer()
@@ -115,7 +123,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepPropose.String())
-
+	c.proposeStart= time.Now()
 	defer func() {
 		// Done enterPropose:
 		state.UpdateRoundStep(round, RoundStepPropose)
@@ -226,7 +234,7 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 		"current_block_number", sBlockNunmber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String())
-
+	tendermintProposalWaitTimer.UpdateSince(c.proposeStart)
 	//eventually we'll enterPrevote
 	defer func() {
 		state.UpdateRoundStep(round, RoundStepPrevote)

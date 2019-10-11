@@ -21,29 +21,11 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 )
 
-// Constants to match up protocol versions and messages
 const (
-	Eth62 = 62
-	Eth63 = 63
+	// TendermintMsg is the new message belong to eth/64.
+	// it notify the protocol handler that this is a message for tendermint consensus purpose
+	TendermintMsg = 0x11
 )
-
-var (
-	EthProtocol = Protocol{
-		Name:     "eth",
-		Versions: []uint{Eth62, Eth63},
-		Lengths:  []uint64{17, 8},
-	}
-)
-
-// Protocol defines the protocol of the consensus
-type Protocol struct {
-	// Name is official short name of the protocol used during capability negotiation.
-	Name string
-	// Versions are supported versions of the eth protocol (first is primary).
-	Versions []uint
-	// Lengths is number of implemented message corresponding to different protocol versions.
-	Lengths []uint64
-}
 
 // Broadcaster defines the interface to enqueue blocks to fetcher and find peer
 type Broadcaster interface {

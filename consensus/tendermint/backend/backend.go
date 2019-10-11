@@ -18,10 +18,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
-const (
-	tendermintMsg = 0x11
-)
-
 var (
 	//ErrNoBroadcaster is return when trying to access backend.Broadcaster without SetBroadcaster first
 	ErrNoBroadcaster = errors.New("no broadcaster is set")
@@ -141,7 +137,7 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		for _, p := range ps {
 			//TODO: check for recent messsages using lru.ARCCache
 			go func(p consensus.Peer) {
-				if err := p.Send(tendermintMsg, payload); err != nil {
+				if err := p.Send(consensus.TendermintMsg, payload); err != nil {
 					log.Error("failed to send message to peer", "error", err)
 				}
 			}(p)
