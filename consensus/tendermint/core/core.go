@@ -11,6 +11,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 const (
@@ -20,12 +21,14 @@ const (
 // New creates an Tendermint consensus core
 func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 	c := &core{
-		handlerWg:     new(sync.WaitGroup),
-		backend:       backend,
-		timeout:       NewTimeoutTicker(),
-		config:        config,
-		mu:            &sync.RWMutex{},
-		blockFinalize: new(event.TypeMux),
+		handlerWg:         new(sync.WaitGroup),
+		backend:           backend,
+		timeout:           NewTimeoutTicker(),
+		config:            config,
+		mu:                &sync.RWMutex{},
+		blockFinalize:     new(event.TypeMux),
+		pendingRequests:   prque.New(),
+		pendingRequestsMu: new(sync.Mutex),
 	}
 	return c
 }
@@ -64,6 +67,10 @@ type core struct {
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
 	proposeStart time.Time
+
+	// pendingRequests stores new requests, which is not processed immediately in the current view
+	pendingRequests   *prque.Prque
+	pendingRequestsMu *sync.Mutex
 }
 
 // Start implements core.Engine.Start

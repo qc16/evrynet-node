@@ -157,7 +157,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 					log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...", "block_hash", block.Hash(), "number", block.Number())
 				}
 				return
-			//case <-stop:
+				//case <-stop:
 				//log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block", "number", block.Number())
 			}
 		}
