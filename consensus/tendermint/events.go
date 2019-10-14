@@ -19,3 +19,7 @@ type MessageEvent struct {
 type BlockFinalizedEvent struct {
 	Block *types.Block
 }
+
+// FinalCommittedEvent is posted from backend to core when a proposal is committed
+type FinalCommittedEvent struct {
+}

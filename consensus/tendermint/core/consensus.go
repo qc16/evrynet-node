@@ -56,6 +56,14 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 		currentProposer := c.valSet.GetProposer()
 		c.valSet.CalcProposer(currentProposer.Address(), round-sRound)
 	}
+
+	fmt.Println("-----------------------------")
+	fmt.Println("round diff: ")
+	fmt.Println(round - sRound)
+	fmt.Println("Validator in new round: ")
+	fmt.Println(c.valSet.GetProposer().Address().Hex())
+	fmt.Println("-----------------------------")
+
 	if round > 0 {
 		//reset proposal upon new round
 		state.SetProposalReceived(nil)
@@ -123,7 +131,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepPropose.String())
-	c.proposeStart= time.Now()
+	c.proposeStart = time.Now()
 	defer func() {
 		// Done enterPropose:
 		state.UpdateRoundStep(round, RoundStepPropose)
@@ -525,6 +533,20 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	c.backend.Commit(block)
 	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
 
+	// c.updateStateForNewblock()
+	// c.startRoundZero()
+}
+
+func (c *core) HandleFinalCommitted() {
+	// fmt.Println("-------------------------------------------HandleFinalCommitted---------------------------")
+	// fmt.Println("-------------------------------------------")
+
+	// lastKnownHeight := c.backend.CurrentHeadBlock().Number()
+	// fmt.Print(lastKnownHeight)
+	// fmt.Println("-------------------------------------------")
+	// fmt.Println(c.backend.Address().Hex())
+	// fmt.Println("-------------------------------------------")
+
 	c.updateStateForNewblock()
 	c.startRoundZero()
 }
@@ -563,17 +585,17 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 func (c *core) startRoundZero() {
 	var state = c.CurrentState()
 
-	fmt.Println("-------------time sleep----------------")
-	//TODO: Adter rework FinalCommit, please remove this sleep
-	time.Sleep(5 * time.Second)
+	// fmt.Println("-------------time sleep----------------")
+	// //TODO: Adter rework FinalCommit, please remove this sleep
+	// time.Sleep(5 * time.Second)
 
 	lastKnownHeight := c.backend.CurrentHeadBlock().Number()
 
-	fmt.Println("-----------------------------")
-	fmt.Println(state.BlockNumber().Int64())
-	fmt.Println("-----------------------------")
-	fmt.Println(lastKnownHeight.Int64())
-	fmt.Println("-----------------------------")
+	// fmt.Println("-----------------------------")
+	// fmt.Println(state.BlockNumber().Int64())
+	// fmt.Println("-----------------------------")
+	// fmt.Println(lastKnownHeight.Int64())
+	// fmt.Println("-----------------------------")
 
 	if state.BlockNumber().Int64() == lastKnownHeight.Int64()+1 {
 		log.Info("Catch up with the latest proposal")
@@ -588,8 +610,18 @@ func (c *core) startRoundZero() {
 			BlockNumber: lastKnownHeight.Add(lastKnownHeight, big.NewInt(1)),
 		})
 		c.valSet = c.backend.Validators(state.BlockNumber())
-		c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 1)
+		// c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 0)
 	}
+
+	// if c.valSet == nil {
+	// 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+	// }
+	fmt.Println("-----------------------------")
+	fmt.Println("Validator: ")
+	fmt.Println(c.valSet.GetProposer().Address().Hex())
+	fmt.Println("-----------------------------")
+
+	c.processPendingRequests()
 
 	sleepDuration := state.startTime.Sub(time.Now())
 
@@ -650,6 +682,6 @@ func (c *core) updateStateForNewblock() {
 		c.valSet = c.backend.Validators(state.BlockNumber())
 	}
 	//TODO: fix this logic
-	c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 1)
+	c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 0)
 	log.Info("updated to new block", "new_block_number", state.BlockNumber())
 }

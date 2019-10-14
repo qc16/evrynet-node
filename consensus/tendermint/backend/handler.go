@@ -69,3 +69,13 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		//More cases to be added...
 	}
 }
+
+func (sb *backend) NewChainHead() error {
+	sb.coreMu.RLock()
+	defer sb.coreMu.RUnlock()
+	if !sb.coreStarted {
+		return tendermint.ErrStoppedEngine
+	}
+	go sb.EventMux().Post(tendermint.FinalCommittedEvent{})
+	return nil
+}

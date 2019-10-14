@@ -11,6 +11,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 const (
@@ -26,6 +27,9 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		config:        config,
 		mu:            &sync.RWMutex{},
 		blockFinalize: new(event.TypeMux),
+
+		pendingRequests:   prque.New(),
+		pendingRequestsMu: new(sync.Mutex),
 	}
 	return c
 }
@@ -40,6 +44,8 @@ type core struct {
 	//- NewBlockEvent: when there is a new composed block from Tx_pool
 	//- MessageEvent: when there is a new message from other validators/ peers
 	events *event.TypeMuxSubscription
+
+	finalCommittedSub *event.TypeMuxSubscription
 
 	//BlockFinalizeEvent
 	blockFinalize *event.TypeMux
@@ -61,6 +67,9 @@ type core struct {
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
 	proposeStart time.Time
+
+	pendingRequests   *prque.Prque
+	pendingRequestsMu *sync.Mutex
 }
 
 // Start implements core.Engine.Start

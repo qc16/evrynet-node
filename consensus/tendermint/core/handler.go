@@ -30,11 +30,16 @@ func (c *core) subscribeEvents() {
 		tendermint.MessageEvent{},
 		tendermint.Proposal{},
 	)
+
+	c.finalCommittedSub = c.backend.EventMux().Subscribe(
+		tendermint.FinalCommittedEvent{},
+	)
 }
 
 // Unsubscribe all events
 func (c *core) unsubscribeEvents() {
 	c.events.Unsubscribe()
+	c.finalCommittedSub.Unsubscribe()
 }
 
 // handleEvents will receive messages as well as timeout and is solely responsible for state change.
@@ -75,6 +80,14 @@ func (c *core) handleEvents() {
 				return
 			}
 			c.handleTimeout(ti)
+		case event, ok := <-c.finalCommittedSub.Chan():
+			if !ok {
+				return
+			}
+			switch event.Data.(type) {
+			case tendermint.FinalCommittedEvent:
+				c.HandleFinalCommitted()
+			}
 		}
 	}
 }
@@ -176,8 +189,14 @@ func (c *core) handlePrevote(msg message) error {
 		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
 	}
 
-	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		log.Warn("vote's block is different with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
+	if vote.BlockNumber.Cmp(state.BlockNumber()) == -1 {
+		log.Warn("vote's block is lower with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address, "backend address", c.backend.Address().Hex())
+		return nil
+	}
+	if vote.BlockNumber.Cmp(state.BlockNumber()) == 1 {
+		log.Warn("vote's block is higher with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address, "my address", c.backend.Address().Hex())
+		// save future msg
+		c.storeRequestMsg(msg, vote.BlockNumber)
 		return nil
 	}
 	//log.Info("received prevote", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
@@ -356,7 +375,7 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 	)
 	// timeouts must be for current height, round, step
 	if ti.BlockNumber.Cmp(blockNumber) != 0 || ti.Round < round || (ti.Round == round && ti.Step < step) {
-		log.Info("Ignoring timeout because we're ahead", "block_number", blockNumber, "round", round, "step", step)
+		log.Info("Ignoring timeout because we're ahead", "block_number", blockNumber, "round", round, "step", step, "timeoutblock", ti.BlockNumber, "timeout round", ti.Round, "timeout step", ti.Step)
 		return
 	}
 
