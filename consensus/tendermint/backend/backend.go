@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/golang-collections/go-datastructures/queue"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -48,6 +50,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
 		commitChs:          newCommitChannels(),
 		mutex:              &sync.RWMutex{},
+		storingMsgs:        queue.New(100),
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {
@@ -81,6 +84,9 @@ type backend struct {
 	coreStarted bool
 	mutex       *sync.RWMutex
 	chain       consensus.ChainReader
+
+	//storingMsgs is used to store msg to handler when core stopped
+	storingMsgs *queue.Queue
 
 	currentBlock func() *types.Block
 }

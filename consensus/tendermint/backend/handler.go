@@ -43,6 +43,29 @@ func (sb *backend) sendDataToCore(data []byte) {
 	}
 }
 
+func (sb *backend) replayTendermintMsg() (done bool, err error) {
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
+	if !sb.coreStarted {
+		log.Info("core stopped. Exit replaying tenderming msg to core.")
+		return true, nil
+	}
+	if sb.storingMsgs.Empty() {
+		return true, nil
+	}
+	stored, err := sb.storingMsgs.Get(1)
+	if err != nil {
+		log.Error("failed to get data from queue", "error", err)
+		return false, err
+	}
+	data, _, err := sb.decode(stored[0].(p2p.Msg))
+	if err != nil {
+		log.Error("failed to decoded message", "err", err)
+	}
+	go sb.sendDataToCore(data)
+	return false, nil
+}
+
 // HandleMsg implements consensus.Handler.HandleMsg
 // return false if the message cannot be handle by Tendermint Backend
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
@@ -50,19 +73,20 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	defer sb.mutex.Unlock()
 	switch msg.Code {
 	case consensus.TendermintMsg:
-		if !sb.coreStarted {
-			return true, tendermint.ErrStoppedEngine
-		}
-		data, _, err := sb.decode(msg)
-		if err != nil {
-			return true, errDecodeFailed
-		}
+		sb.storingMsgs.Put(msg)
 		//log.Debug("Received Message from peer", "address", addr.Hex(), "code", msg.Code, "hash", hash.String())
 		//TODO: mark peer's message and self known message with the hash get from message
 
-		go sb.sendDataToCore(data)
-
-		return true, nil
+		//replay message one by one to core until there is no more message
+		for {
+			done, err := sb.replayTendermintMsg()
+			if err != nil {
+				return true, err
+			}
+			if done {
+				return true, nil
+			}
+		}
 	default:
 		return false, fmt.Errorf("unknown message code %d for Tendermint's protocol", msg.Code)
 		//TODO:Handler other cases
