@@ -1,0 +1,22 @@
+version: "3"
+services:
+  geth-explorer:
+    hostname: geth-explorer
+    ports:
+      - 8080:8080
+    build:
+      context: ./explorer
+      args:
+        gevRPCPort: $gevRPCPort
+    image: img_explorer
+    container_name: geth-explorer
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.125
+
+networks:
+  chainnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
