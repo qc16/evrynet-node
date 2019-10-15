@@ -1,18 +1,44 @@
 version: "3"
 services:
-  geth-explorer:
-    hostname: geth-explorer
-    ports:
-      - 8080:8080
+  evrynet-builder:
+    hostname: evrynet-builder
     build:
-      context: ./explorer
-      args:
-        gevRPCPort: $gevRPCPort
-    image: img_explorer
-    container_name: geth-explorer
+      context: ../
+      dockerfile: ./testnet/builder/Dockerfile
+    image: img_builder
+    container_name: evrynet-builder
+
+  gev-bootnode:
+    hostname: gev-bootnode
+    build:
+      context: ../
+      dockerfile: ./testnet/bootnode/Dockerfile
+    image: img_bootnode
+    container_name: gev-bootnode
+    environment:
+      NODE_HEX_KEY: 9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09
+    ports:
+      - 30301:30301/udp
     networks:
       chainnet:
-        ipv4_address: 172.25.0.125
+        ipv4_address: 172.25.0.101 # The miners need to know the IP address later on
+
+#
+#  gev-explorer:
+#    hostname: gev-explorer
+#    depends_on:
+#      - gev-bootnode
+#    ports:
+#      - 8080:8080
+#    build:
+#      context: ./explorer
+#      args:
+#        gevRPCPort: $gevRPCPort
+#    image: img_explorer
+#    container_name: gev-explorer
+#    networks:
+#      chainnet:
+#        ipv4_address: 172.25.0.125
 
 networks:
   chainnet:

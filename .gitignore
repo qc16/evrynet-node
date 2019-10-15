@@ -53,8 +53,8 @@ profile.cov
 *.log
 .idea/
 
-bootnode
-gev
+/bootnode
+/gev
 
 # Ignore data of test node
 /tests/test_nodes/*/geth.ipc
@@ -63,3 +63,7 @@ gev
 /tests/test_nodes/*/data/geth/chaindata/
 /tests/test_nodes/*/data/geth/lightchaindata/
 /tests/test_nodes/*/data/geth/nodes/
+
+/testnet/bootnode/bin/*
+/testnet/builder/bin/*
+/testnet/explorer/web/*
