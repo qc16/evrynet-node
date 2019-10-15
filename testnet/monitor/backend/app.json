@@ -1,0 +1,97 @@
+[
+  {
+    "name": "Evrynet Node 1",
+    "cwd": ".",
+    "script": "app.js",
+    "log_date_format": "YYYY-MM-DD HH:mm Z",
+    "merge_logs": false,
+    "watch": false,
+    "exec_interpreter": "node",
+    "exec_mode": "fork_mode",
+    "env": {
+      "NODE_ENV": "production",
+      "RPC_HOST": "172.25.0.102",
+      "RPC_PORT": "8201",
+      "INSTANCE_NAME": "evrynet-node-1",
+      "WS_SERVER": "ws://gev-monitor-frontend:3000",
+      "WS_SECRET": "testnet",
+      "VERBOSITY": 2
+    }
+  },
+  {
+    "name": "Evrynet Node 2",
+    "cwd": ".",
+    "script": "app.js",
+    "log_date_format": "YYYY-MM-DD HH:mm Z",
+    "merge_logs": false,
+    "watch": false,
+    "exec_interpreter": "node",
+    "exec_mode": "fork_mode",
+    "env": {
+      "NODE_ENV": "production",
+      "RPC_HOST": "172.25.0.102",
+      "RPC_PORT": "8202",
+      "INSTANCE_NAME": "evrynet-node-2",
+      "WS_SERVER": "ws://gev-monitor-frontend:3000",
+      "WS_SECRET": "testnet",
+      "VERBOSITY": 2
+    }
+  },
+  {
+    "name": "Evrynet Node 3",
+    "cwd": ".",
+    "script": "app.js",
+    "log_date_format": "YYYY-MM-DD HH:mm Z",
+    "merge_logs": false,
+    "watch": false,
+    "exec_interpreter": "node",
+    "exec_mode": "fork_mode",
+    "env": {
+      "NODE_ENV": "production",
+      "RPC_HOST": "172.25.0.102",
+      "RPC_PORT": "8203",
+      "INSTANCE_NAME": "evrynet-node-3",
+      "WS_SERVER": "ws://gev-monitor-frontend:3000",
+      "WS_SECRET": "testnet",
+      "VERBOSITY": 2
+    }
+  },
+  {
+    "name": "Evrynet Node 4",
+    "cwd": ".",
+    "script": "app.js",
+    "log_date_format": "YYYY-MM-DD HH:mm Z",
+    "merge_logs": false,
+    "watch": false,
+    "exec_interpreter": "node",
+    "exec_mode": "fork_mode",
+    "env": {
+      "NODE_ENV": "production",
+      "RPC_HOST": "172.25.0.102",
+      "RPC_PORT": "8204",
+      "INSTANCE_NAME": "evrynet-node-4",
+      "WS_SERVER": "ws://gev-monitor-frontend:3000",
+      "WS_SECRET": "testnet",
+      "VERBOSITY": 2
+    }
+  },
+  {
+    "name": "Evrynet Node 5",
+    "cwd": ".",
+    "script": "app.js",
+    "log_date_format": "YYYY-MM-DD HH:mm Z",
+    "merge_logs": false,
+    "watch": false,
+    "exec_interpreter": "node",
+    "exec_mode": "fork_mode",
+    "env": {
+      "NODE_ENV": "production",
+      "RPC_HOST": "172.25.0.102",
+      "RPC_PORT": "8205",
+      "INSTANCE_NAME": "evrynet-node-5",
+      "WS_SERVER": "ws://gev-monitor-frontend:3000",
+      "WS_SECRET": "testnet",
+      "VERBOSITY": 2
+    }
+  }
+]

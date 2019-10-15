@@ -1,18 +1,92 @@
 version: "3"
 services:
-  geth-explorer:
-    hostname: geth-explorer
-    ports:
-      - 8080:8080
+  evrynet-builder:
+    hostname: evrynet-builder
     build:
-      context: ./explorer
-      args:
-        gevRPCPort: $gevRPCPort
-    image: img_explorer
-    container_name: geth-explorer
+      context: ../
+      dockerfile: ./testnet/builder/Dockerfile
+    image: img_builder
+    container_name: evrynet-builder
+
+  gev-bootnode:
+    hostname: gev-bootnode
+    build:
+      context: ./bootnode
+    image: img_bootnode
+    container_name: gev-bootnode
+    environment:
+      NODE_HEX_KEY: 9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09
+    ports:
+      - 30301:30301/udp
+      - 30303:30303/udp
     networks:
       chainnet:
-        ipv4_address: 172.25.0.125
+        ipv4_address: 172.25.0.101
+
+  gev-miners:
+    hostname: gev-miners
+    depends_on:
+      - gev-bootnode
+    environment:
+      BOOTNODE_ID: aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f
+      BOOTNODE_IP: 172.25.0.101
+    build:
+      context: ../
+      dockerfile: ./testnet/miner/Dockerfile
+    image: img_miners
+    container_name: gev-miners
+    ports:
+      - 8201-8299:8201-8299
+    volumes:
+      - /Volumes/Work/Projects/KyberNetwork/lab/testnet/Docker_logs:/node/testnet/15/log
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.102 # The monitor needs to know this address
+
+
+  gev-monitor-backend:
+    hostname: gev-monitor-backend
+    depends_on:
+      - gev-miners
+    build:
+      context: ./monitor/backend
+    image: img_monitor_backend
+    container_name: monitor-backend
+    networks:
+      chainnet:
+
+  gev-monitor-frontend:
+    hostname: gev-monitor-frontend
+    depends_on:
+      - gev-monitor-backend
+    build:
+      context: ./monitor/frontend
+    image: img_monitor_frontend
+    container_name: monitor-frontend
+    environment:
+      - WS_SECRET=testnet
+    ports:
+      - 3000:3000
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.109
+
+#
+#  gev-explorer:
+#    hostname: gev-explorer
+#    depends_on:
+#      - gev-bootnode
+#    ports:
+#      - 8080:8080
+#    build:
+#      context: ./explorer
+#      args:
+#        gevRPCPort: $gevRPCPort
+#    image: img_explorer
+#    container_name: gev-explorer
+#    networks:
+#      chainnet:
+#        ipv4_address: 172.25.0.125
 
 networks:
   chainnet:
