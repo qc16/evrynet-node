@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/golang-collections/go-datastructures/queue"
+	queue "github.com/enriquebris/goconcurrentqueue"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
@@ -50,7 +50,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
 		commitChs:          newCommitChannels(),
 		mutex:              &sync.RWMutex{},
-		storingMsgs:        queue.New(100),
+		storingMsgs:        queue.NewFIFO(),
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {
@@ -86,7 +86,7 @@ type backend struct {
 	chain       consensus.ChainReader
 
 	//storingMsgs is used to store msg to handler when core stopped
-	storingMsgs *queue.Queue
+	storingMsgs *queue.FIFO
 
 	currentBlock func() *types.Block
 }
@@ -225,4 +225,10 @@ func (sb *backend) EnqueueBlock(block *types.Block) {
 
 func (sb *backend) CurrentHeadBlock() *types.Block {
 	return sb.currentBlock()
+}
+
+//ClearStoringMsg will delete all item in queue
+func (sb *backend) ClearStoringMsg() {
+	log.Info("Clear storing msg queue")
+	sb.storingMsgs = queue.NewFIFO()
 }

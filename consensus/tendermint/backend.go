@@ -42,4 +42,7 @@ type Backend interface {
 
 	//EnqueueBlock adds the block returned from consensus into fetcher queue to update the chain to that specific block.
 	EnqueueBlock(block *types.Block)
+
+	//ClearStoringMsg will delete all item in queue
+	ClearStoringMsg()
 }
