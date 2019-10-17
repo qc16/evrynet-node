@@ -19,8 +19,7 @@ import (
 )
 
 const (
-	tendermintMsg = 0x11
-	fetcherID     = "evrynet"
+	fetcherID = "tendermint"
 )
 
 var (
