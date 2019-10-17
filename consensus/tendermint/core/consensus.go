@@ -523,8 +523,6 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	}
 
 	c.backend.Commit(block)
-
-	c.backend.EnqueueBlock(block)
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
@@ -561,13 +559,13 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 func (c *core) startRoundZero() {
 	var state = c.CurrentState()
 
-	lastKnownHeight := c.backend.CurrentHeadBlock().Number()
-	if state.BlockNumber().Int64() == lastKnownHeight.Int64()+1 {
-		log.Info("Catch up with the latest proposal")
+	lastBlockNumber := c.backend.CurrentHeadBlock().Number()
+	if state.BlockNumber().Int64() == lastBlockNumber.Int64()+1 {
+		log.Info("Catch up with the latest block")
 	} else {
 		// update new round with lastKnownHeight
-		log.Info("New height is not catch up with the latest proposal, update height to lastest height + 1")
-		newHeight := lastKnownHeight.Add(lastKnownHeight, big.NewInt(1))
+		log.Info("New height is not catch up with the latest block, update height to lastest block + 1")
+		newHeight := lastBlockNumber.Add(lastBlockNumber, big.NewInt(1))
 		state.SetView(&tendermint.View{
 			Round:       0,
 			BlockNumber: newHeight,

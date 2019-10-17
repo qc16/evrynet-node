@@ -213,6 +213,11 @@ func (sb *backend) Commit(block *types.Block) {
 		return
 	}
 	ch <- block
+
+	// if node is not proposer, EnqueueBlock for downloading
+	if block.Coinbase() != sb.address {
+		sb.EnqueueBlock(block)
+	}
 }
 
 // EnqueueBlock adds a block returned from consensus into fetcher queue
