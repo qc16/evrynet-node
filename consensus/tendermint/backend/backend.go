@@ -64,8 +64,8 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
-// NewChainHead implements consensus.Handler.NewChainHead
-func (sb *backend) NewChainHead() error {
+// HandleNewChainHead implements consensus.Handler.HandleNewChainHead
+func (sb *backend) HandleNewChainHead() error {
 	sb.coreMu.RLock()
 	defer sb.coreMu.RUnlock()
 	if !sb.coreStarted {

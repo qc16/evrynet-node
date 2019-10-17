@@ -123,7 +123,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepPropose.String())
-	c.proposeStart= time.Now()
+	c.proposeStart = time.Now()
 	defer func() {
 		// Done enterPropose:
 		state.UpdateRoundStep(round, RoundStepPropose)
@@ -523,7 +523,7 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	}
 
 	c.backend.Commit(block)
-	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
+
 	c.backend.EnqueueBlock(block)
 }
 
@@ -574,9 +574,6 @@ func (c *core) startRoundZero() {
 		})
 	}
 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
-
-	log.Info("Process pending requests if having")
-	c.processPendingRequests()
 
 	sleepDuration := state.startTime.Sub(time.Now())
 

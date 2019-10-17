@@ -197,14 +197,8 @@ func (c *core) handlePrevote(msg message) error {
 		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
 	}
 
-	if vote.BlockNumber.Cmp(state.BlockNumber()) == -1 {
-		log.Warn("vote's block is lower with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
-		return nil
-	}
-	if vote.BlockNumber.Cmp(state.BlockNumber()) == 1 {
-		log.Warn("vote's block is higher with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
-		// save future msg
-		c.storeRequestMsg(msg, vote.BlockNumber)
+	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
+		log.Warn("vote's block is different with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
 		return nil
 	}
 	//log.Info("received prevote", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
