@@ -868,3 +868,8 @@ func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common
 	}
 	return m
 }
+
+// Enqueue adds a block into fetcher queue
+func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
+	pm.fetcher.Enqueue(id, block)
+}

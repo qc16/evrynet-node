@@ -123,7 +123,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		"current_block_number", sBlockNunmber.String(), "input_block_number", blockNumber.String(),
 		"current_round", sRound, "input_round", round,
 		"current_step", sStep.String(), "input_step", RoundStepPropose.String())
-	c.proposeStart= time.Now()
+	c.proposeStart = time.Now()
 	defer func() {
 		// Done enterPropose:
 		state.UpdateRoundStep(round, RoundStepPropose)
@@ -523,10 +523,6 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 	}
 
 	c.backend.Commit(block)
-	//TODO: after block is finalized, is there any event that backend should fire to update core's status?
-
-	c.updateStateForNewblock()
-	c.startRoundZero()
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
@@ -562,10 +558,23 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 
 func (c *core) startRoundZero() {
 	var state = c.CurrentState()
-	sleepDuration := state.startTime.Sub(time.Now())
-	if c.valSet == nil {
-		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+
+	lastBlockNumber := c.backend.CurrentHeadBlock().Number()
+	if state.BlockNumber().Int64() == lastBlockNumber.Int64()+1 {
+		log.Info("Catch up with the latest block")
+	} else {
+		// update new round with lastKnownHeight
+		log.Info("New height is not catch up with the latest block, update height to lastest block + 1")
+		newHeight := lastBlockNumber.Add(lastBlockNumber, big.NewInt(1))
+		state.SetView(&tendermint.View{
+			Round:       0,
+			BlockNumber: newHeight,
+		})
 	}
+	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+
+	sleepDuration := state.startTime.Sub(time.Now())
+
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
 	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
 	c.timeout.ScheduleTimeout(timeoutInfo{
@@ -618,11 +627,5 @@ func (c *core) updateStateForNewblock() {
 	state.PrecommitWaited = false
 
 	c.currentState = state
-
-	if c.valSet == nil {
-		c.valSet = c.backend.Validators(state.BlockNumber())
-	}
-	//TODO: fix this logic
-	c.valSet.CalcProposer(c.valSet.GetProposer().Address(), 1)
 	log.Info("updated to new block", "new_block_number", state.BlockNumber())
 }

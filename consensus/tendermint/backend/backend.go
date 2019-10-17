@@ -18,6 +18,10 @@ import (
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
+const (
+	fetcherID = "tendermint"
+)
+
 var (
 	//ErrNoBroadcaster is return when trying to access backend.Broadcaster without SetBroadcaster first
 	ErrNoBroadcaster = errors.New("no broadcaster is set")
@@ -57,6 +61,17 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
 func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
+}
+
+// HandleNewChainHead implements consensus.Handler.HandleNewChainHead
+func (sb *backend) HandleNewChainHead() error {
+	sb.coreMu.RLock()
+	defer sb.coreMu.RUnlock()
+	if !sb.coreStarted {
+		return tendermint.ErrStoppedEngine
+	}
+	go sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{})
+	return nil
 }
 
 // ----------------------------------------------------------------------------
@@ -198,6 +213,18 @@ func (sb *backend) Commit(block *types.Block) {
 		return
 	}
 	ch <- block
+
+	// if node is not proposer, EnqueueBlock for downloading
+	if block.Coinbase() != sb.address {
+		sb.EnqueueBlock(block)
+	}
+}
+
+// EnqueueBlock adds a block returned from consensus into fetcher queue
+func (sb *backend) EnqueueBlock(block *types.Block) {
+	if sb.broadcaster != nil {
+		sb.broadcaster.Enqueue(fetcherID, block)
+	}
 }
 
 func (sb *backend) CurrentHeadBlock() *types.Block {

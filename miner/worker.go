@@ -357,6 +357,9 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			commit(false, commitInterruptNewHead)
 
 		case head := <-w.chainHeadCh:
+			if h, ok := w.engine.(consensus.Handler); ok {
+				h.HandleNewChainHead()
+			}
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)

@@ -30,11 +30,16 @@ func (c *core) subscribeEvents() {
 		tendermint.MessageEvent{},
 		tendermint.Proposal{},
 	)
+
+	c.finalCommitted = c.backend.EventMux().Subscribe(
+		tendermint.FinalCommittedEvent{},
+	)
 }
 
 // Unsubscribe all events
 func (c *core) unsubscribeEvents() {
 	c.events.Unsubscribe()
+	c.finalCommitted.Unsubscribe()
 }
 
 // handleEvents will receive messages as well as timeout and is solely responsible for state change.
@@ -75,8 +80,24 @@ func (c *core) handleEvents() {
 				return
 			}
 			c.handleTimeout(ti)
+		case event, ok := <-c.finalCommitted.Chan():
+			if !ok {
+				return
+			}
+			switch event.Data.(type) {
+			case tendermint.FinalCommittedEvent:
+				c.handleFinalCommitted()
+			}
 		}
 	}
+}
+
+// handleFinalCommitted is calling when received a final committed proposal
+func (c *core) handleFinalCommitted() error {
+	log.Info("Received a final committed proposal", "handleFinalCommitted", "called")
+	c.updateStateForNewblock()
+	c.startRoundZero()
+	return nil
 }
 
 func (c *core) handleNewBlock(block *types.Block) {
