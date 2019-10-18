@@ -268,3 +268,13 @@ func (sb *backend) Verify(proposal tendermint.Proposal) error {
 	}
 	return err
 }
+
+//TxPool return transaction pool
+func (sb *backend) TxPool() *transaction.TxPoolOpts {
+	return sb.txPool
+}
+
+//Chain return chain reader
+func (sb *backend) Chain() consensus.ChainReader {
+	return sb.chain
+}
