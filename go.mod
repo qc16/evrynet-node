@@ -9,9 +9,12 @@ require (
 	github.com/allegro/bigcache v1.2.1
 	github.com/apilayer/freegeoip v3.5.0+incompatible
 	github.com/aristanetworks/goarista v0.0.0-20190712234253-ed1100a1c015
+	github.com/btcsuite/btcd v0.20.0-beta
+	github.com/cespare/cp v1.1.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
 	github.com/dgryski/go-sip13 v0.0.0-20190329191031-25c5027a8c7b // indirect
+	github.com/docker/docker v1.13.1
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/elastic/gosigar v0.10.4
 	github.com/fatih/color v1.7.0
@@ -30,10 +33,12 @@ require (
 	github.com/huin/goupnp v1.0.0
 	github.com/influxdata/influxdb v1.7.7
 	github.com/jackpal/go-nat-pmp v1.0.1
+	github.com/julienschmidt/httprouter v1.2.0
 	github.com/karalabe/usb v0.0.0-20190819132248-550797b1cad8
 	github.com/kisielk/errcheck v1.2.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mattn/go-isatty v0.0.9
 	github.com/mattn/go-runewidth v0.0.4 // indirect
@@ -72,6 +77,7 @@ require (
 	golang.org/x/text v0.3.2
 	golang.org/x/tools v0.0.0-20190822000311-fc82fb2afd64 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
+	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 )
