@@ -143,7 +143,6 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	}
 
 	leth.txPool = light.NewTxPool(leth.chainConfig, leth.blockchain, leth.relay)
-	txPoolOpts.LightTxPool = leth.txPool
 
 	if leth.protocolManager, err = NewProtocolManager(
 		leth.chainConfig,

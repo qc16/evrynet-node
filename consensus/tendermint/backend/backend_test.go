@@ -94,16 +94,34 @@ func TestVerify(t *testing.T) {
 	block := makeBlockWithoutSeal(genesisHeader)
 	proposal := tendermint.Proposal{
 		Block:    block,
-		Round:    0,
+		Round:    1,
 		POLRound: 0,
 	}
+	msgData, err := rlp.EncodeToBytes(&proposal)
+	assert.NoError(t, err)
+	// Create fake message from another node address
+	msg := tendermintCore.Message{
+		Code:    0,
+		Msg:     msgData,
+		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
+	}
+	msgPayLoadWithoutSignature, _ := rlp.EncodeToBytes(&tendermintCore.Message{
+		Code:          msg.Code,
+		Address:       msg.Address,
+		Msg:           msg.Msg,
+		Signature:     []byte{},
+		CommittedSeal: msg.CommittedSeal,
+	})
+	signature, err := crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), nodePrivateKey)
+	assert.NoError(t, err)
+	msg.Signature = signature
 	// Should get error if transactions in block is 0
-	assert.EqualError(t, engine.Verify(proposal), errMismatchTxhashes.Error())
+	assert.EqualError(t, engine.core.VerifyProposal(proposal, msg), errMismatchTxhashes.Error())
 
 	// --------CASE 2--------
 	// Pass all validation
 	tx1 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
-	tx1, err := types.SignTx(tx1, types.HomesteadSigner{}, nodePrivateKey)
+	tx1, err = types.SignTx(tx1, types.HomesteadSigner{}, nodePrivateKey)
 	assert.NoError(t, err)
 
 	block2 := types.NewBlock(genesisHeader, []*types.Transaction{tx1}, []*types.Header{}, []*types.Receipt{})
@@ -111,10 +129,28 @@ func TestVerify(t *testing.T) {
 	assert.Equal(t, tx1.Hash(), block2.Transactions()[0].Hash())
 	proposal = tendermint.Proposal{
 		Block: block2,
+		Round: 1,
 	}
-	err = engine.Verify(proposal)
+	msgData, err = rlp.EncodeToBytes(&proposal)
+	assert.NoError(t, err)
+	// Create fake message from another node address
+	msg = tendermintCore.Message{
+		Code:    0,
+		Msg:     msgData,
+		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
+	}
+	msgPayLoadWithoutSignature, _ = rlp.EncodeToBytes(&tendermintCore.Message{
+		Code:          msg.Code,
+		Address:       msg.Address,
+		Msg:           msg.Msg,
+		Signature:     []byte{},
+		CommittedSeal: msg.CommittedSeal,
+	})
+	signature, err = crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), nodePrivateKey)
+	assert.NoError(t, err)
+	msg.Signature = signature
 	// Should get no error if block has transactions
-	assert.NoError(t, engine.Verify(proposal))
+	assert.NoError(t, engine.core.VerifyProposal(proposal, msg))
 
 	// --------CASE 3--------
 	// Will get ErrInsufficientFunds
@@ -127,9 +163,28 @@ func TestVerify(t *testing.T) {
 	assert.Equal(t, tx2.Hash(), block3.Transactions()[0].Hash())
 	proposal = tendermint.Proposal{
 		Block: block3,
+		Round: 1,
 	}
+	msgData, err = rlp.EncodeToBytes(&proposal)
+	assert.NoError(t, err)
+	// Create fake message from another node address
+	msg = tendermintCore.Message{
+		Code:    0,
+		Msg:     msgData,
+		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
+	}
+	msgPayLoadWithoutSignature, _ = rlp.EncodeToBytes(&tendermintCore.Message{
+		Code:          msg.Code,
+		Address:       msg.Address,
+		Msg:           msg.Msg,
+		Signature:     []byte{},
+		CommittedSeal: msg.CommittedSeal,
+	})
+	signature, err = crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), nodePrivateKey)
+	assert.NoError(t, err)
+	msg.Signature = signature
 	// Should get error ErrInsufficientFunds
-	assert.EqualError(t, engine.Verify(proposal), core.ErrInsufficientFunds.Error())
+	assert.EqualError(t, engine.core.VerifyProposal(proposal, msg), core.ErrInsufficientFunds.Error())
 
 	// --------CASE 4--------
 	// Node propose fake block (fake signature)
@@ -146,17 +201,17 @@ func TestVerify(t *testing.T) {
 		Round: 1,
 	}
 
-	msgData, err := rlp.EncodeToBytes(&proposal)
+	msgData, err = rlp.EncodeToBytes(&proposal)
 	assert.NoError(t, err)
 
 	// Create fake message from another node address
-	msg := tendermintCore.Message{
+	msg = tendermintCore.Message{
 		Code:    0,
 		Msg:     msgData,
 		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
 	}
 
-	msgPayLoadWithoutSignature, _ := rlp.EncodeToBytes(&tendermintCore.Message{
+	msgPayLoadWithoutSignature, _ = rlp.EncodeToBytes(&tendermintCore.Message{
 		Code:          msg.Code,
 		Address:       msg.Address,
 		Msg:           msg.Msg,
@@ -164,7 +219,7 @@ func TestVerify(t *testing.T) {
 		CommittedSeal: msg.CommittedSeal,
 	})
 
-	signature, err := crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), nodeFakePrivateKey)
+	signature, err = crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), nodeFakePrivateKey)
 	assert.NoError(t, err)
 	msg.Signature = signature
 
