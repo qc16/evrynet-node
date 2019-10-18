@@ -113,10 +113,11 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return
 	}
 	blockNumberStr := block.Number().String()
-
+	sb.mutex.Lock()
 	if _, ok := sb.commitChs[blockNumberStr]; !ok {
 		sb.commitChs[blockNumberStr] = make(chan *types.Block, 1)
 	}
+	sb.mutex.Unlock()
 	log.Info("sealing...", "total number of channels", len(sb.commitChs))
 	//block = sb.Prepare()
 	//TODO: clear previous data of proposal
@@ -143,7 +144,9 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 				}
 				//this step is to stop other go routine wait for a block
 				close(ch)
+				sb.mutex.Lock()
 				delete(sb.commitChs, bl.Number().String())
+				sb.mutex.Unlock()
 				if bl == nil {
 					log.Error("committing... Received nil ")
 					return
@@ -167,8 +170,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 
 // Start implements consensus.Tendermint.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block) error {
-	sb.coreMu.Lock()
-	defer sb.coreMu.Unlock()
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
 	if sb.coreStarted {
 		return tendermint.ErrStartedEngine
 	}
@@ -196,8 +199,8 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 
 // Stop implements consensus.Tendermint.Stop
 func (sb *backend) Stop() error {
-	sb.coreMu.Lock()
-	defer sb.coreMu.Unlock()
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
 	if !sb.coreStarted {
 		return tendermint.ErrStoppedEngine
 	}

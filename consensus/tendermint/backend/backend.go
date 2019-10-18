@@ -65,8 +65,8 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 
 // HandleNewChainHead implements consensus.Handler.HandleNewChainHead
 func (sb *backend) HandleNewChainHead() error {
-	sb.coreMu.RLock()
-	defer sb.coreMu.RUnlock()
+	sb.mutex.RLock()
+	defer sb.mutex.RUnlock()
 	if !sb.coreStarted {
 		return tendermint.ErrStoppedEngine
 	}
@@ -89,7 +89,7 @@ type backend struct {
 	commitChs map[string]chan *types.Block
 
 	coreStarted bool
-	coreMu      sync.RWMutex
+	mutex       sync.RWMutex
 	chain       consensus.ChainReader
 
 	currentBlock func() *types.Block

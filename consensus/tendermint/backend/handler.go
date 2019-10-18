@@ -45,8 +45,8 @@ func (sb *backend) sendDataToCore(data []byte) {
 // HandleMsg implements consensus.Handler.HandleMsg
 // return false if the message cannot be handle by Tendermint Backend
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
-	sb.coreMu.Lock()
-	defer sb.coreMu.Unlock()
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
 	switch msg.Code {
 	case consensus.TendermintMsg:
 		if !sb.coreStarted {
