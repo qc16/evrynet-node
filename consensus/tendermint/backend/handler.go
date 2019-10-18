@@ -78,12 +78,7 @@ func (sb *backend) HandleNewChainHead(blockNumber *big.Int) error {
 	if !sb.coreStarted {
 		return tendermint.ErrStoppedEngine
 	}
-	ch, ok := sb.commitChs[blockNumber.String()]
-	if ok {
-		close(ch)
-		delete(sb.commitChs, blockNumber.String())
-	}
-
+	sb.commitChs.closeAndRemoveCommitChannel(blockNumber.String())
 	go sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{})
 	return nil
 }
