@@ -17,6 +17,11 @@ import (
 var (
 	ErrConflictingVotes = errors.New("vote received from the same validator for different block in the same round")
 	ErrDifferentMsgType = errors.New("message set is not of the same type of the received message")
+
+	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
+	errMismatchTxhashes = errors.New("mismatch transcations hashes")
+	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
+	errEmptyCommittedSeals = errors.New("zero committed seals")
 )
 
 //Engine abstract the core's functionalities
