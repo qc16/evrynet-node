@@ -575,6 +575,11 @@ func (c *core) startRoundZero() {
 
 	sleepDuration := state.startTime.Sub(time.Now())
 
+	// When stop & start again, sleepDuration will be a negative number
+	if sleepDuration.Milliseconds() < 0 {
+		sleepDuration = time.Second
+	}
+
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
 	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
 	c.timeout.ScheduleTimeout(timeoutInfo{

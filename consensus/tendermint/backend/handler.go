@@ -54,14 +54,21 @@ func (sb *backend) replayTendermintMsg() (done bool, err error) {
 		return true, nil
 	}
 
-	stored, err := sb.storingMsgs.Dequeue()
-	if err != nil {
-		log.Error("failed to get data from queue", "error", err)
-		return false, err
+	// Check enough 2f+1 peers
+	valSet := sb.core.ValSet()
+	if len(sb.FindExistingPeers(valSet))+1 > 2*valSet.F() {
+		stored, err := sb.storingMsgs.Dequeue()
+		if err != nil {
+			log.Error("failed to get data from queue", "error", err)
+			return false, err
+		}
+
+		go sb.sendDataToCore(stored.([]byte))
+		return false, nil
 	}
 
-	go sb.sendDataToCore(stored.([]byte))
-	return false, nil
+	log.Info("Not enough 2f+1 peers to replay message", "valSet", len(valSet.List()), "existing_peer", len(sb.FindExistingPeers(valSet)), "F", valSet.F())
+	return true, nil
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
@@ -75,6 +82,16 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		if err != nil {
 			log.Error("failed to decode message from p2p.Msg", "err", err)
 			return true, err
+		}
+
+		//Dequeue if storingMsg reached max
+		if sb.storingMsgs.GetLen() == maxNumberMessages {
+			//Free a slot for new message
+			_, err := sb.replayTendermintMsg()
+			if err != nil {
+				log.Error("failed to free a message from queue", "err", err)
+				return true, err
+			}
 		}
 
 		if err := sb.storingMsgs.Enqueue(decodedMsg); err != nil {

@@ -28,6 +28,8 @@ type Engine interface {
 	Stop() error
 	//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
 	SetBlockForProposal(block *types.Block)
+	//ValSet return validator set
+	ValSet() tendermint.ValidatorSet
 }
 
 // TODO: More msg codes here if needed

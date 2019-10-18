@@ -25,6 +25,8 @@ const (
 )
 
 var (
+	//maxNumberMessages is max number of messages can enqueue
+	maxNumberMessages = 0
 	//ErrNoBroadcaster is return when trying to access backend.Broadcaster without SetBroadcaster first
 	ErrNoBroadcaster = errors.New("no broadcaster is set")
 )
@@ -43,6 +45,7 @@ func WithDB(db ethdb.Database) Option {
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
+	maxNumberMessages = config.MaxPeers * 10 * 3
 	be := &backend{
 		config:             config,
 		tendermintEventMux: new(event.TypeMux),
@@ -144,7 +147,7 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 	}
 	if len(targets) > 0 {
 		ps := sb.broadcaster.FindPeers(targets)
-		log.Info("prepare to send message to peers", "total_peers", len(ps))
+		log.Info("prepare to send message to peers", "total_peers", len(ps), "valSet", len(valSet.List()))
 		for _, p := range ps {
 			//TODO: check for recent messsages using lru.ARCCache
 			go func(p consensus.Peer) {
@@ -186,19 +189,15 @@ func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
 }
 
-func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
+// FindExistingPeers check validator peers exist or not by address
+func (sb *backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.Address]consensus.Peer {
 	targets := make(map[common.Address]bool)
 	for _, val := range valSet.List() {
 		if val.Address() != sb.Address() {
 			targets[val.Address()] = true
 		}
 	}
-
-	rs := sb.broadcaster.FindPeers(targets)
-	if len(rs) > valSet.F() {
-		return true
-	}
-	return false
+	return sb.broadcaster.FindPeers(targets)
 }
 
 //Commit implement tendermint.Backend.Commit()
