@@ -429,7 +429,7 @@ type callmsg struct {
 	ethereum.CallMsg
 }
 
-func (m callmsg) GasPayer() common.Address  { return m.From() }
+func (m callmsg) GasPayer() common.Address  { return m.CallMsg.From }
 func (m callmsg) Owner() *common.Address    { return nil }
 func (m callmsg) Provider() *common.Address { return nil }
 func (m callmsg) From() common.Address      { return m.CallMsg.From }
