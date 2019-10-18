@@ -33,11 +33,11 @@ func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
 	return p2p.Msg{Code: msgcode, Size: uint32(size), Payload: r}
 }
 
-func newTestBackend() *backend {
+func newTestBackend() *Backend {
 	var (
 		engine consensus.Engine = newEngine()
 		config                  = params.TendermintTestChainConfig
-		b                       = engine.(*backend)
+		b                       = engine.(*Backend)
 	)
 
 	blockchain, _ := core.NewBlockChain(b.db, nil, config, engine, vm.Config{}, nil)

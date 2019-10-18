@@ -4,7 +4,10 @@ import (
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
+	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/event"
 )
 
@@ -40,6 +43,17 @@ type Backend interface {
 	//Commit send the consensus block back to miner, it should also handle the logic after a block get enough vote to be the next block in chain
 	Commit(block *types.Block)
 
-	// Verify verifies the proposal
-	Verify(Proposal) error
+	// VerifyHeader checks whether a header conforms to the consensus rules of a
+	// given engine. Verifying the seal may be done optionally here, or explicitly
+	// via the VerifySeal method.
+	VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error
+
+	//TxPool return transaction pool
+	TxPool() *transaction.TxPoolOpts
+
+	//Chain return chain
+	Chain() consensus.ChainReader
+
+	//Core return core
+	Core() tendermintCore.Engine
 }

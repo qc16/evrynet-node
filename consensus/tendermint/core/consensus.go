@@ -22,7 +22,7 @@ import (
 // - +2/3 precommits for nil at (height,round-1)
 // - +2/3 prevotes any or +2/3 precommits for block or any from (height, round)
 // NOTE: cs.StartTime was already set for height.
-func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
+func (c *Core) enterNewRound(blockNumber *big.Int, round int64) {
 	//This is strictly use with pointer for state update.
 	var (
 		state         = c.CurrentState()
@@ -62,7 +62,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 
 //defaultDecideProposal is the default proposal selector
 //it will prioritize validBlock, else will get its own block from tx_pool
-func (c *core) defaultDecideProposal(round int64) *tendermint.Proposal {
+func (c *Core) defaultDecideProposal(round int64) *tendermint.Proposal {
 	var (
 		state = c.CurrentState()
 	)
@@ -95,7 +95,7 @@ func (c *core) defaultDecideProposal(round int64) *tendermint.Proposal {
 //otherwise it will set timeout and eventually call enterPrevote
 //enterPropose is called after:
 // enterNewRound(blockNumber,round)
-func (c *core) enterPropose(blockNumber *big.Int, round int64) {
+func (c *Core) enterPropose(blockNumber *big.Int, round int64) {
 	//This is strictly use with pointer for state update.
 	var (
 		state         = c.CurrentState()
@@ -169,7 +169,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 //it will: - prevote lockedBlock if lockedBlock !=nil
 //		   - prevote for proposalReceived if valid
 //		   - prevote nil otherwise
-func (c *core) defaultDoPrevote(round int64) {
+func (c *Core) defaultDoPrevote(round int64) {
 	var (
 		state = c.CurrentState()
 	)
@@ -205,7 +205,7 @@ func (c *core) defaultDoPrevote(round int64) {
 // enterPrevote is called
 // - when `timeoutPropose` after entering Propose.
 // - when proposal block and POL is ready.
-func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
+func (c *Core) enterPrevote(blockNumber *big.Int, round int64) {
 	//TODO: write a function for this at all enter step
 	//This is strictly use with pointer for state update.
 	var (
@@ -236,7 +236,7 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 
 // Enter: if received +2/3 precommits for next round.
 // Enter: any +2/3 prevotes at next round.
-func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
+func (c *Core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	var (
 		state        = c.CurrentState()
 		sBlockNumber = state.BlockNumber()
@@ -280,7 +280,7 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 	})
 }
 
-func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
+func (c *Core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 	var (
 		state        = c.CurrentState()
 		sBlockNumber = state.BlockNumber()
@@ -329,7 +329,7 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 // Lock & precommit the ProposalBlock if we have enough prevotes for it (a POL in this round)
 // else, unlock an existing lock and precommit nil if +2/3 of prevotes were nil,
 // else, precommit nil otherwise.
-func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
+func (c *Core) enterPrecommit(blockNumber *big.Int, round int64) {
 	var (
 		state         = c.currentState
 		sBlockNunmber = state.BlockNumber()
@@ -416,7 +416,7 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	c.SendVote(msgPrecommit, nil, round)
 }
 
-func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
+func (c *Core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	var state = c.currentState
 	if state.BlockNumber().Cmp(blockNumber) != 0 || state.Step() >= RoundStepCommit {
 		log.Info("enterCommit ignore: we are in a state that is ahead of the input state",
@@ -469,7 +469,7 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 
 }
 
-func (c *core) finalizeCommit(blockNumber *big.Int) {
+func (c *Core) finalizeCommit(blockNumber *big.Int) {
 	var state = c.CurrentState()
 	if state.BlockNumber().Cmp(blockNumber) != 0 {
 		log.Error("finalize a commit at different state block number", "current_block_number", state.BlockNumber(), "commit_block_number", blockNumber)
@@ -522,7 +522,7 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
-func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error) {
+func (c *Core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error) {
 	var (
 		state           = c.currentState
 		round           = state.commitRound
@@ -552,7 +552,7 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	return proposal.Block.WithSeal(header), nil
 }
 
-func (c *core) startRoundZero() {
+func (c *Core) startRoundZero() {
 	var state = c.CurrentState()
 	sleepDuration := state.startTime.Sub(time.Now())
 	if c.valSet == nil {
@@ -568,7 +568,7 @@ func (c *core) startRoundZero() {
 	})
 }
 
-func (c *core) updateStateForNewblock() {
+func (c *Core) updateStateForNewblock() {
 	var state = c.CurrentState()
 
 	if state.commitRound > -1 {

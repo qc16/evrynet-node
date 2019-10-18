@@ -25,7 +25,7 @@ func rLPHash(v interface{}) (h common.Hash) {
 	return h
 }
 
-func (sb *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
+func (sb *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	var data []byte
 	if err := msg.Decode(&data); err != nil {
 		return nil, common.Hash{}, errDecodeFailed
@@ -33,7 +33,7 @@ func (sb *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	return data, rLPHash(data), nil
 }
 
-func (sb *backend) sendDataToCore(data []byte) {
+func (sb *Backend) sendDataToCore(data []byte) {
 	if err := sb.EventMux().Post(tendermint.MessageEvent{
 		Payload: data,
 	}); err != nil {
@@ -43,7 +43,7 @@ func (sb *backend) sendDataToCore(data []byte) {
 
 // HandleMsg implements consensus.Handler.HandleMsg
 // return false if the message cannot be handle by Tendermint Backend
-func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
+func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 	switch msg.Code {

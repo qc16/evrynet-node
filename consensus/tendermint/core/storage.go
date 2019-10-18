@@ -9,7 +9,7 @@ import (
 
 //getStoredState init core with the last known roundState
 //if there is no state in storage, init a new state.
-func (c *core) getStoredState() *roundState {
+func (c *Core) getStoredState() *roundState {
 	var (
 		//these are default config at block 1 round 0
 		rs *roundState

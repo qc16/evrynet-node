@@ -18,12 +18,16 @@ var (
 	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
 	ErrEmptyBlockProposal          = errors.New("empty block proposal")
 	emptyBlockHash                 = common.Hash{}
+	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
+	errMismatchTxhashes = errors.New("mismatch transcations hashes")
+	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
+	errEmptyCommittedSeals = errors.New("zero committed seals")
 )
 
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events
-func (c *core) subscribeEvents() {
+func (c *Core) subscribeEvents() {
 	c.events = c.backend.EventMux().Subscribe(
 		// external events
 		tendermint.NewBlockEvent{},
@@ -33,12 +37,12 @@ func (c *core) subscribeEvents() {
 }
 
 // Unsubscribe all events
-func (c *core) unsubscribeEvents() {
+func (c *Core) unsubscribeEvents() {
 	c.events.Unsubscribe()
 }
 
 // handleEvents will receive messages as well as timeout and is solely responsible for state change.
-func (c *core) handleEvents() {
+func (c *Core) handleEvents() {
 	// Clear state
 	defer func() {
 		c.handlerWg.Done()
@@ -58,7 +62,7 @@ func (c *core) handleEvents() {
 				c.handleNewBlock(ev.Block)
 			case tendermint.MessageEvent:
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
-				var msg Message
+				var msg message
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
 					log.Error("failed to decode msg", "error", err)
 				} else {
@@ -79,7 +83,7 @@ func (c *core) handleEvents() {
 	}
 }
 
-func (c *core) handleNewBlock(block *types.Block) {
+func (c *Core) handleNewBlock(block *types.Block) {
 	var state = c.CurrentState()
 	log.Info("received New Block event", "block_number", block.Number(), "block_hash", block.Hash())
 
@@ -96,7 +100,7 @@ func (c *core) handleNewBlock(block *types.Block) {
 }
 
 //VerifyProposal validate msg & proposal when get from other nodes
-func (c *core) VerifyProposal(proposal tendermint.Proposal, msg Message) error {
+func (c *Core) VerifyProposal(proposal tendermint.Proposal, msg message) error {
 
 	// Verify POLRound, which must be -1 or in range [0, proposal.Round).
 	if proposal.POLRound < -1 ||
@@ -120,14 +124,14 @@ func (c *core) VerifyProposal(proposal tendermint.Proposal, msg Message) error {
 	}
 
 	// check transaction hash & header
-	if err := c.backend.Verify(proposal); err != nil {
+	if err := c.Verify(proposal); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *core) handlePropose(msg Message) error {
+func (c *Core) handlePropose(msg message) error {
 	var (
 		state    = c.CurrentState()
 		proposal tendermint.Proposal
@@ -161,7 +165,7 @@ func (c *core) handlePropose(msg Message) error {
 	return nil
 }
 
-func (c *core) handlePrevote(msg Message) error {
+func (c *Core) handlePrevote(msg message) error {
 	var (
 		vote  tendermint.Vote
 		state = c.CurrentState()
@@ -253,7 +257,7 @@ func (c *core) handlePrevote(msg Message) error {
 	return nil
 }
 
-func (c *core) handlePrecommit(msg Message) error {
+func (c *Core) handlePrecommit(msg message) error {
 	var (
 		vote  tendermint.Vote
 		state = c.CurrentState()
@@ -329,7 +333,7 @@ func (c *core) handlePrecommit(msg Message) error {
 	return nil
 }
 
-func (c *core) handleMsg(msg Message) error {
+func (c *Core) handleMsg(msg message) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	switch msg.Code {
@@ -344,7 +348,7 @@ func (c *core) handleMsg(msg Message) error {
 	}
 }
 
-func (c *core) handleTimeout(ti timeoutInfo) {
+func (c *Core) handleTimeout(ti timeoutInfo) {
 	log.Info("Received timeout signal from core.timeout", "timeout", ti.Duration, "block_number", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
 	var (
 		round       = c.CurrentState().Round()

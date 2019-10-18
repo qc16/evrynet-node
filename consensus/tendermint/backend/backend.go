@@ -29,11 +29,11 @@ var (
 )
 
 //Option return an optional function for backend's initial behaviour
-type Option func(b *backend) error
+type Option func(b *Backend) error
 
 //WithDB return an option to set backend's db
 func WithDB(db ethdb.Database) Option {
-	return func(b *backend) error {
+	return func(b *Backend) error {
 		b.db = db
 		return nil
 	}
@@ -41,7 +41,7 @@ func WithDB(db ethdb.Database) Option {
 
 //WithTxPoolOpts return an option to set backend's txpool
 func WithTxPoolOpts(txPoolOpts *transaction.TxPoolOpts) Option {
-	return func(b *backend) error {
+	return func(b *Backend) error {
 		b.txPool = txPoolOpts
 		return nil
 	}
@@ -50,7 +50,7 @@ func WithTxPoolOpts(txPoolOpts *transaction.TxPoolOpts) Option {
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
-	be := &backend{
+	be := &Backend{
 		config:             config,
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         privateKey,
@@ -68,12 +68,12 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
-func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
+func (sb *Backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
 // ----------------------------------------------------------------------------
-type backend struct {
+type Backend struct {
 	config             *tendermint.Config
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
@@ -95,24 +95,24 @@ type backend struct {
 }
 
 // EventMux implements tendermint.Backend.EventMux
-func (sb *backend) EventMux() *event.TypeMux {
+func (sb *Backend) EventMux() *event.TypeMux {
 	return sb.tendermintEventMux
 }
 
 // Sign implements tendermint.Backend.Sign
-func (sb *backend) Sign(data []byte) ([]byte, error) {
+func (sb *Backend) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256(data)
 	return crypto.Sign(hashData, sb.privateKey)
 }
 
 // Address implements tendermint.Backend.Address
-func (sb *backend) Address() common.Address {
+func (sb *Backend) Address() common.Address {
 	return sb.address
 }
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
 	// send to others
 	if err := sb.Gossip(valSet, payload); err != nil {
 		return err
@@ -132,7 +132,7 @@ func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return backend.ErrNoBroadcaster if no broadcaster is set for backend
-func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 
 	targets := make(map[common.Address]bool)
@@ -162,7 +162,7 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 
 // Validators return validator set for a block number
 // TODO: revise this function once auth vote is implemented
-func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
+func (sb *Backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	var (
 		previousBlock uint64
 		header        *types.Header
@@ -179,7 +179,7 @@ func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	if header == nil {
 		log.Error("cannot get valSet since previousBlock is not available", "block_number", blockNumber)
 	}
-	snap, err = sb.snapshot(sb.chain, previousBlock, header.Hash(), nil)
+	snap, err = sb.Snapshot(sb.chain, previousBlock, header.Hash(), nil)
 	if err != nil {
 		log.Error("cannot load snapshot", "error", err)
 	}
@@ -189,7 +189,7 @@ func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
 }
 
-func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
+func (sb *Backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 	targets := make(map[common.Address]bool)
 	for _, val := range valSet.List() {
 		if val.Address() != sb.Address() {
@@ -205,7 +205,7 @@ func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 }
 
 //Commit implement tendermint.Backend.Commit()
-func (sb *backend) Commit(block *types.Block) {
+func (sb *Backend) Commit(block *types.Block) {
 	ch, ok := sb.commitChs[block.Number().String()]
 	if !ok {
 		log.Error("no commit channel available", "block_number", block.Number().String())
@@ -214,35 +214,53 @@ func (sb *backend) Commit(block *types.Block) {
 	ch <- block
 }
 
-func (sb *backend) CurrentHeadBlock() *types.Block {
+func (sb *Backend) CurrentHeadBlock() *types.Block {
 	return sb.currentBlock()
 }
 
-// Verify implements tendermint.Backend.Verify
-func (sb *backend) Verify(proposal tendermint.Proposal) error {
-	block := proposal.Block
-
-	// check block body
-	txs := block.Transactions()
-	txnHash := types.DeriveSha(txs)
-	if txnHash != block.Header().TxHash {
-		return errMismatchTxhashes
-	}
-
-	// Verify transaction for CoreTxPool
-	if sb.txPool.CoreTxPool != nil {
-		for _, t := range txs {
-			if err := sb.txPool.CoreTxPool.ValidateTx(t, false); err != nil {
-				return err
-			}
-		}
-	}
-
-	// verify the header of proposed block
-	err := sb.VerifyHeader(sb.chain, block.Header(), false)
-	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == errEmptyCommittedSeals {
-		return nil
-	}
-	return err
+//TxPool return transaction pool
+func (sb *Backend) TxPool() *transaction.TxPoolOpts {
+	return sb.txPool
 }
+
+//Chain return chain
+func (sb *Backend) Chain() consensus.ChainReader {
+	return sb.chain
+}
+
+//Core return Core
+func (sb *Backend) Core() *tendermintCore.Core {
+	return sb.core.Core()
+}
+
+//
+// // Verify implements tendermint.Backend.Verify
+// func (sb *backend) Verify(proposal tendermint.Proposal) error {
+// 	var (
+// 		block   = proposal.Block
+// 		txs     = block.Transactions()
+// 		txnHash = types.DeriveSha(txs)
+// 	)
+//
+// 	// check block body
+// 	if txnHash != block.Header().TxHash {
+// 		return errMismatchTxhashes
+// 	}
+//
+// 	// Verify transaction for CoreTxPool
+// 	if sb.txPool != nil && sb.txPool.CoreTxPool != nil {
+// 		for _, t := range txs {
+// 			if err := sb.txPool.CoreTxPool.ValidateTx(t, false); err != nil {
+// 				return err
+// 			}
+// 		}
+// 	}
+//
+// 	// verify the header of proposed block
+// 	err := sb.VerifyHeader(sb.chain, block.Header(), false)
+// 	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
+// 	if err == nil || err == errEmptyCommittedSeals {
+// 		return nil
+// 	}
+// 	return err
+// }

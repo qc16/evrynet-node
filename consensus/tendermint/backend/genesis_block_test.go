@@ -30,7 +30,7 @@ func TestBackend_Genesis_block(t *testing.T) {
 	assert.NoError(t, err)
 
 	//take snapshop at the genesis block
-	genesisSnapshot, err := backend.snapshot(blockchain, 0, common.Hash{}, nil)
+	genesisSnapshot, err := backend.Snapshot(blockchain, 0, common.Hash{}, nil)
 	assert.NoError(t, err)
 
 	valSet := genesisSnapshot.ValSet
@@ -80,7 +80,7 @@ func getGenesisConf() (*core.Genesis, error) {
 	return config, nil
 }
 
-func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.BlockChain, error) {
+func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.BlockChain, error) {
 	config, err := makeNodeConfig()
 	if err != nil {
 		return nil, nil, nil, err
@@ -103,7 +103,7 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 	}
 
 	//init tendermint backend
-	backend := &backend{
+	backend := &Backend{
 		config:             config.Tendermint,
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         nodePK,

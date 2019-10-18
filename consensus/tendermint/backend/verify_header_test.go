@@ -3,6 +3,7 @@ package backend
 import (
 	"testing"
 
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -17,38 +18,38 @@ func TestBackend_VerifyHeader(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
+	chain, engine := tests.MustStartTestChainAndBackend(nodePK, genesisHeader)
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 	assert.Equal(t, true, engine.coreStarted)
 
 	// without seal
-	block := makeBlockWithoutSeal(genesisHeader)
+	block := tests.MakeBlockWithoutSeal(genesisHeader)
 	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with seal but incorrect coinbase
-	block = makeBlockWithSeal(engine, genesisHeader)
+	block = tests.MakeBlockWithSeal(engine, genesisHeader)
 	header := block.Header()
 	header.Coinbase = common.Address{}
-	appendSeal(header, engine)
+	tests.AppendSeal(header, engine)
 	assert.Equal(t, errCoinBaseInvalid, engine.VerifyHeader(chain, header, false))
 
 	// without committed seal
-	block = makeBlockWithSeal(engine, genesisHeader)
+	block = tests.MakeBlockWithSeal(engine, genesisHeader)
 	assert.Equal(t, errEmptyCommittedSeals, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with committed seal but is invalid
-	block = mustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
+	block = tests.MustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
 	assert.Equal(t, errInvalidSignature, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with committed seal
-	block = mustMakeBlockWithCommittedSeal(engine, genesisHeader, validators)
+	block = tests.MustMakeBlockWithCommittedSeal(engine, genesisHeader, validators)
 	assert.NotNil(t, chain)
 	err = engine.VerifyHeader(chain, block.Header(), false)
 	assert.NoError(t, err)

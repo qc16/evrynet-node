@@ -18,7 +18,7 @@ const (
 
 // New creates an Tendermint consensus core
 func New(backend tendermint.Backend, config *tendermint.Config) Engine {
-	c := &core{
+	c := &Core{
 		handlerWg:     new(sync.WaitGroup),
 		backend:       backend,
 		timeout:       NewTimeoutTicker(),
@@ -31,7 +31,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 
 // ----------------------------------------------------------------------------
 
-type core struct {
+type Core struct {
 	//backend implement tendermint.Backend
 	//this component will send/receive data to other nodes and other components
 	backend tendermint.Backend
@@ -60,7 +60,7 @@ type core struct {
 }
 
 // Start implements core.Engine.Start
-func (c *core) Start() error {
+func (c *Core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	log.Info("starting Tendermint's core...")
@@ -82,7 +82,7 @@ func (c *core) Start() error {
 }
 
 // Stop implements core.Engine.Stop
-func (c *core) Stop() error {
+func (c *Core) Stop() error {
 	log.Info("stopping Tendermint's timeout core...")
 	c.timeout.Stop()
 	c.unsubscribeEvents()
@@ -99,7 +99,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 }
 
 //FinalizeMsg set address, signature and encode msg to bytes
-func (c *core) FinalizeMsg(msg *Message) ([]byte, error) {
+func (c *Core) FinalizeMsg(msg *message) ([]byte, error) {
 	msg.Address = c.backend.Address()
 	msgPayLoadWithoutSignature, err := msg.PayLoadWithoutSignature()
 	if err != nil {
@@ -115,14 +115,14 @@ func (c *core) FinalizeMsg(msg *Message) ([]byte, error) {
 
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
-func (c *core) SendPropose(propose *tendermint.Proposal) {
+func (c *Core) SendPropose(propose *tendermint.Proposal) {
 
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
 		log.Error("Failed to encode Proposal to bytes", "error", err)
 		return
 	}
-	payload, err := c.FinalizeMsg(&Message{
+	payload, err := c.FinalizeMsg(&message{
 		Code: msgPropose,
 		Msg:  msgData,
 	})
@@ -139,13 +139,17 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	log.Info("sent proposal", "round", propose.Round, "block_number", propose.Block.Number(), "block_hash", propose.Block.Hash())
 }
 
-func (c *core) SetBlockForProposal(b *types.Block) {
+func (c *Core) SetBlockForProposal(b *types.Block) {
 	c.CurrentState().SetBlock(b)
+}
+
+func (c *Core) Core() *Core {
+	return c
 }
 
 //SendVote send broadcast its vote to the network
 //it only accept 2 voteType: msgPrevote and msgcommit
-func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
+func (c *Core) SendVote(voteType uint64, block *types.Block, round int64) {
 	//This should never happen, but it is a safe guard
 	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
 		log.Warn("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
@@ -180,7 +184,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		log.Error("Failed to encode Vote to bytes", "error", err)
 		return
 	}
-	payload, err := c.FinalizeMsg(&Message{
+	payload, err := c.FinalizeMsg(&message{
 		Code: voteType,
 		Msg:  msgData,
 	})
@@ -195,6 +199,6 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	log.Info("sent vote", "round", vote.Round, "block_number", vote.BlockNumber, "block_hash", vote.BlockHash.Hex())
 }
 
-func (c *core) CurrentState() *roundState {
+func (c *Core) CurrentState() *roundState {
 	return c.currentState
 }
