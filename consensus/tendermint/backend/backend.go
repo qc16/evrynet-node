@@ -46,7 +46,8 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         privateKey,
 		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
-		commitChs:          make(map[string]chan *types.Block),
+		commitChs:          newCommitChannels(),
+		mutex:              &sync.RWMutex{},
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {
@@ -63,17 +64,6 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
-// HandleNewChainHead implements consensus.Handler.HandleNewChainHead
-func (sb *backend) HandleNewChainHead() error {
-	sb.coreMu.RLock()
-	defer sb.coreMu.RUnlock()
-	if !sb.coreStarted {
-		return tendermint.ErrStoppedEngine
-	}
-	go sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{})
-	return nil
-}
-
 // ----------------------------------------------------------------------------
 type backend struct {
 	config             *tendermint.Config
@@ -85,11 +75,11 @@ type backend struct {
 	address            common.Address
 
 	//once voting finish, the block will be send for commit here
-	//it is a map of
-	commitChs map[string]chan *types.Block
+	//it is a map of blocknumber- channels with mutex
+	commitChs *commitChannels
 
 	coreStarted bool
-	coreMu      sync.RWMutex
+	mutex       *sync.RWMutex
 	chain       consensus.ChainReader
 
 	currentBlock func() *types.Block
@@ -207,7 +197,7 @@ func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
 
 //Commit implement tendermint.Backend.Commit()
 func (sb *backend) Commit(block *types.Block) {
-	ch, ok := sb.commitChs[block.Number().String()]
+	ch, ok := sb.commitChs.getCommitChannel(block.Number().String())
 	if !ok {
 		log.Error("no commit channel available", "block_number", block.Number().String())
 		return

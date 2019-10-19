@@ -3,6 +3,7 @@ package backend
 import (
 	"errors"
 	"fmt"
+	"math/big"
 
 	"golang.org/x/crypto/sha3"
 
@@ -45,8 +46,8 @@ func (sb *backend) sendDataToCore(data []byte) {
 // HandleMsg implements consensus.Handler.HandleMsg
 // return false if the message cannot be handle by Tendermint Backend
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
-	sb.coreMu.Lock()
-	defer sb.coreMu.Unlock()
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
 	switch msg.Code {
 	case consensus.TendermintMsg:
 		if !sb.coreStarted {
@@ -68,4 +69,16 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		//Case 1: NewBlock when this node is the propose.
 		//More cases to be added...
 	}
+}
+
+// HandleNewChainHead implements consensus.Handler.HandleNewChainHead
+func (sb *backend) HandleNewChainHead(blockNumber *big.Int) error {
+	sb.mutex.RLock()
+	defer sb.mutex.RUnlock()
+	if !sb.coreStarted {
+		return tendermint.ErrStoppedEngine
+	}
+	sb.commitChs.closeAndRemoveCommitChannel(blockNumber.String())
+	go sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{})
+	return nil
 }

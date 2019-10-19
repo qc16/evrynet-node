@@ -114,11 +114,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	}
 	blockNumberStr := block.Number().String()
 
-	if _, ok := sb.commitChs[blockNumberStr]; !ok {
-		sb.commitChs[blockNumberStr] = make(chan *types.Block, 1)
-	}
-	log.Info("sealing...", "total number of channels", len(sb.commitChs))
-	//block = sb.Prepare()
+	ch := sb.commitChs.getOrCreateCommitChannel(blockNumberStr)
 	//TODO: clear previous data of proposal
 	// post block into tendermint engine
 	go func(block *types.Block) {
@@ -129,7 +125,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	// miner won't be able to interrupt a sealing task
 	// a sealing task can only exist when core consensus agreed upon a block
 	go func(blockNumberStr string) {
-		ch := sb.commitChs[blockNumberStr]
 		//TODO: DO we need timeout for consensus?
 		for {
 			select {
@@ -142,8 +137,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 					log.Warn("committing.. Received a different block number than the sealing block number", "received", bl.Number().String(), "expected", blockNumberStr)
 				}
 				//this step is to stop other go routine wait for a block
-				close(ch)
-				delete(sb.commitChs, bl.Number().String())
+				sb.commitChs.closeAndRemoveCommitChannel(bl.Number().String())
+
 				if bl == nil {
 					log.Error("committing... Received nil ")
 					return
@@ -167,8 +162,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 
 // Start implements consensus.Tendermint.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block) error {
-	sb.coreMu.Lock()
-	defer sb.coreMu.Unlock()
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
 	if sb.coreStarted {
 		return tendermint.ErrStartedEngine
 	}
@@ -178,10 +173,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.currentBlock = currentBlock
 
 	if sb.commitChs != nil {
-		for blockNo, chn := range sb.commitChs {
-			close(chn)
-			delete(sb.commitChs, blockNo)
-		}
+		sb.commitChs.closeAndRemoveAllChannels()
 	}
 
 	//TODO: clear previous data of proposal
@@ -196,8 +188,8 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 
 // Stop implements consensus.Tendermint.Stop
 func (sb *backend) Stop() error {
-	sb.coreMu.Lock()
-	defer sb.coreMu.Unlock()
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
 	if !sb.coreStarted {
 		return tendermint.ErrStoppedEngine
 	}
