@@ -113,8 +113,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return
 	}
 	blockNumberStr := block.Number().String()
-	sb.mutex.Lock()
-	sb.mutex.Unlock()
 
 	ch := sb.commitChs.getOrCreateCommitChannel(blockNumberStr)
 	//TODO: clear previous data of proposal

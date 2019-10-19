@@ -18,7 +18,7 @@ func newCommitChannels() *commitChannels {
 	}
 }
 
-//get commitChannel return the channel and true if available.
+//getCommitChannel return the channel and true if available.
 func (cc *commitChannels) getCommitChannel(blockNumberStr string) (ch chan *types.Block, avail bool) {
 	cc.mutex.RLock()
 	defer cc.mutex.RUnlock()
@@ -30,8 +30,8 @@ func (cc *commitChannels) getCommitChannel(blockNumberStr string) (ch chan *type
 func (cc *commitChannels) getOrCreateCommitChannel(blockNumberStr string) chan *types.Block {
 	cc.mutex.Lock()
 	defer cc.mutex.Unlock()
-	ch, ok := cc.chs[blockNumberStr]
-	if ok {
+	ch, avail := cc.chs[blockNumberStr]
+	if avail {
 		return ch
 	}
 	cc.chs[blockNumberStr] = make(chan *types.Block, 1)
