@@ -116,7 +116,7 @@ func TestVerify(t *testing.T) {
 	assert.NoError(t, err)
 	msg.Signature = signature
 	// Should get error if transactions in block is 0
-	assert.EqualError(t, engine.core.VerifyProposal(proposal, msg), errMismatchTxhashes.Error())
+	assert.EqualError(t, engine.core.VerifyProposal(proposal, msg), tendermint.ErrMismatchTxhashes.Error())
 
 	// --------CASE 2--------
 	// Pass all validation

@@ -171,7 +171,7 @@ func (c *core) Verify(proposal tendermint.Proposal) error {
 	// check block body
 
 	if txnHash != block.Header().TxHash {
-		return errMismatchTxhashes
+		return tendermint.ErrMismatchTxhashes
 	}
 
 	// Verify transaction for CoreTxPool
@@ -185,8 +185,8 @@ func (c *core) Verify(proposal tendermint.Proposal) error {
 
 	// verify the header of proposed block
 	err := c.backend.VerifyHeader(c.backend.Chain(), block.Header(), false)
-	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == errEmptyCommittedSeals {
+	// ignore ErrEmptyCommittedSeals error because we don't have the committed seals yet
+	if err == nil || err == tendermint.ErrEmptyCommittedSeals {
 		return nil
 	}
 	return err
