@@ -52,8 +52,6 @@ var (
 	errInvalidTimestamp = errors.New("invalid timestamp")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
-	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
-	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	errInvalidVotingChain = errors.New("invalid voting chain")
@@ -63,8 +61,6 @@ var (
 	errInvalidUncleHash = errors.New("non empty uncle hash")
 	// errMalformedChannelData is returned if data return from blockFinalization does not conform to its struct definition
 	errMalformedChannelData = errors.New("data received is not an event type")
-	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
-	errMismatchTxhashes = errors.New("mismatch transcations hashes")
 )
 
 func (sb *backend) addProposalSeal(h *types.Header) error {
@@ -548,7 +544,7 @@ func (sb *backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) er
 	}
 	// The length of Committed seals should be larger than 0
 	if len(extra.CommittedSeal) == 0 {
-		return errEmptyCommittedSeals
+		return tendermint.ErrEmptyCommittedSeals
 	}
 
 	vals := snap.ValSet.Copy()
