@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
 )
@@ -41,7 +42,7 @@ func TestBackend_VerifyHeader(t *testing.T) {
 
 	// without committed seal
 	block = makeBlockWithSeal(engine, genesisHeader)
-	assert.Equal(t, errEmptyCommittedSeals, engine.VerifyHeader(chain, block.Header(), false))
+	assert.Equal(t, tendermint.ErrEmptyCommittedSeals, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with committed seal but is invalid
 	block = mustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
