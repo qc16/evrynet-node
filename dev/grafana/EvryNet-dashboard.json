@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 5,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -161,7 +161,7 @@
         "total": false,
         "values": false
       },
-      "lines": false,
+      "lines": true,
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
@@ -179,7 +179,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "block time (seconds)",
+          "alias": "Seconds per block",
           "groupBy": [
             {
               "params": [
@@ -397,7 +397,7 @@
       "dashes": false,
       "datasource": "InfluxDB",
       "fill": 2,
-      "fillGradient": 0,
+      "fillGradient": 1,
       "gridPos": {
         "h": 6,
         "w": 5,
@@ -432,7 +432,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Packet in",
+          "alias": "Messages in",
           "groupBy": [
             {
               "params": [
@@ -450,8 +450,8 @@
           "measurement": "geth.eth/consensus/tendermint/in/packets.meter",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT count(\"m1\") FROM \"geth.eth/consensus/tendermint/in/packets.meter\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": false,
+          "query": "SELECT mean(\"m1\") FROM \"geth.eth/consensus/tendermint/in/packets.meter\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -475,7 +475,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Number of messages in",
+      "title": "Messages per second",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -528,6 +528,7 @@
         "y": 0
       },
       "id": 20,
+      "interval": "",
       "legend": {
         "avg": false,
         "current": false,
@@ -553,7 +554,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Packet out",
+          "alias": "Messages out",
           "groupBy": [
             {
               "params": [
@@ -594,7 +595,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Number of messages out",
+      "title": "Messages per second",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -648,6 +649,7 @@
         "y": 6
       },
       "id": 6,
+      "interval": "",
       "legend": {
         "avg": false,
         "current": false,
@@ -695,15 +697,15 @@
           "measurement": "geth.eth/consensus/tendermint/proposalwait.timer",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"count\") FROM \"geth.eth/consensus/tendermint/proposalwait.timer\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": false,
+          "query": "SELECT 10 /non_negative_difference(mean(\"count\")) FROM \"geth.eth/consensus/tendermint/proposalwait.timer\" WHERE $timeFilter GROUP BY time(10s) fill(null)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "m1"
+                  "p99"
                 ],
                 "type": "field"
               },
@@ -798,7 +800,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Round number",
+          "alias": "Round number / second",
           "groupBy": [
             {
               "params": [
@@ -816,8 +818,8 @@
           "measurement": "geth.eth/consensus/tendermint/rounds.meter",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT count(\"count\") FROM \"geth.eth/consensus/tendermint/rounds.meter\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": false,
+          "query": "SELECT non_negative_difference(mean(\"count\"))/10 FROM \"geth.eth/consensus/tendermint/rounds.meter\" WHERE $timeFilter GROUP BY time(10s) fill(none)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -881,7 +883,7 @@
     },
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
       "datasource": "InfluxDB",
@@ -919,7 +921,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Avg size of messages",
+          "alias": "Avg message (Kb/s)",
           "groupBy": [
             {
               "params": [
@@ -937,6 +939,8 @@
           "measurement": "geth.eth/consensus/tendermint/in/traffic.meter",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT mean(\"mean\")/1000 FROM \"geth.eth/consensus/tendermint/in/traffic.meter\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1000,12 +1004,12 @@
     },
     {
       "aliasColors": {},
-      "bars": false,
+      "bars": true,
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "fill": 1,
-      "fillGradient": 0,
+      "fill": 3,
+      "fillGradient": 1,
       "gridPos": {
         "h": 8,
         "w": 5,
@@ -1038,7 +1042,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Avg size of messages",
+          "alias": "Avg message (Kb/s)",
           "groupBy": [
             {
               "params": [
@@ -1056,6 +1060,8 @@
           "measurement": "geth.eth/consensus/tendermint/out/traffic.meter",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT mean(\"mean\")/ 1000 FROM \"geth.eth/consensus/tendermint/out/traffic.meter\" WHERE $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1147,5 +1153,5 @@
   "timezone": "",
   "title": "EvryNet",
   "uid": "ekSNyUhWk",
-  "version": 5
+  "version": 12
 }
