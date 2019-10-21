@@ -28,6 +28,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
@@ -383,6 +384,9 @@ func (pm *ProtocolManager) HandleMsg(p *Peer) error {
 		addr := crypto.PubkeyToAddress(*pubKey)
 		handled, err := handler.HandleMsg(addr, msg)
 		if handled {
+			if err == tendermint.ErrStoppedEngine {
+				return nil
+			}
 			return err
 		}
 	}
