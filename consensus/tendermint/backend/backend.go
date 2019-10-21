@@ -21,12 +21,11 @@ import (
 )
 
 const (
-	fetcherID = "tendermint"
+	fetcherID         = "tendermint"
+	maxNumberMessages = 64 * 10 * 3 // 64 node * 10 round * 3 messages per round
 )
 
 var (
-	//maxNumberMessages is max number of messages can enqueue
-	maxNumberMessages = 0
 	//ErrNoBroadcaster is return when trying to access backend.Broadcaster without SetBroadcaster first
 	ErrNoBroadcaster = errors.New("no broadcaster is set")
 )
@@ -45,7 +44,6 @@ func WithDB(db ethdb.Database) Option {
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
-	maxNumberMessages = config.MaxPeers * 10 * 3
 	be := &backend{
 		config:             config,
 		tendermintEventMux: new(event.TypeMux),
@@ -147,7 +145,7 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 	}
 	if len(targets) > 0 {
 		ps := sb.broadcaster.FindPeers(targets)
-		log.Info("prepare to send message to peers", "total_peers", len(ps), "valSet", len(valSet.List()))
+		log.Info("prepare to send message to peers", "total_peers", len(ps))
 		for _, p := range ps {
 			//TODO: check for recent messsages using lru.ARCCache
 			go func(p consensus.Peer) {

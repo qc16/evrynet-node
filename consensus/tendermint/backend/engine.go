@@ -182,6 +182,12 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 		return err
 	}
 
+	// Check enough 2f+1 peers
+	valSet := sb.core.ValSet()
+	if len(sb.FindExistingPeers(valSet)) < 2*valSet.F() {
+		return errors.New("not enough 2f+1 peers to start backend")
+	}
+
 	sb.coreStarted = true
 	return nil
 }

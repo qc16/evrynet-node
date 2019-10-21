@@ -242,7 +242,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 	if chainConfig.Tendermint != nil {
 		config.Tendermint.ProposerPolicy = tendermint.ProposerPolicy(chainConfig.Tendermint.ProposerPolicy)
 		config.Tendermint.Epoch = chainConfig.Tendermint.Epoch
-		config.Tendermint.MaxPeers = ctx.GetConfig().P2P.MaxPeers
 		log.Info("Create Tendermint consensus engine")
 		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey(), tendermintBackend.WithDB(db))
 	}

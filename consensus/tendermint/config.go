@@ -23,8 +23,6 @@ type Config struct {
 	TimeoutPrecommit      time.Duration  //Duration waiting for more precommit after 2/3 received
 	TimeoutPrecommitDelta time.Duration  //Duration waiting to increase if precommit wait expired to reach eventually synchronous
 	TimeoutCommit         time.Duration  //Duration waiting to start round with new height
-
-	MaxPeers int // The max number of peers
 }
 
 var DefaultConfig = &Config{
