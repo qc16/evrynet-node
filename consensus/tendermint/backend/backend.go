@@ -22,7 +22,7 @@ import (
 
 const (
 	fetcherID         = "tendermint"
-	maxNumberMessages = 64 * 10 * 3 // 64 node * 10 round * 3 messages per round
+	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 )
 
 var (

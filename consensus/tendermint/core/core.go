@@ -204,8 +204,3 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 func (c *core) CurrentState() *roundState {
 	return c.currentState
 }
-
-//ValSet return validator set
-func (c *core) ValSet() tendermint.ValidatorSet {
-	return c.valSet
-}

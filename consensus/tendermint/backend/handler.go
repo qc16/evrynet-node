@@ -44,6 +44,8 @@ func (sb *backend) sendDataToCore(data []byte) {
 }
 
 func (sb *backend) replayTendermintMsg() (done bool, err error) {
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
 	if !sb.coreStarted {
 		log.Info("core stopped. Exit replaying tenderming msg to core.")
 		return true, nil
@@ -65,8 +67,6 @@ func (sb *backend) replayTendermintMsg() (done bool, err error) {
 // HandleMsg implements consensus.Handler.HandleMsg
 // return false if the message cannot be handle by Tendermint Backend
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
-	sb.mutex.Lock()
-	defer sb.mutex.Unlock()
 	switch msg.Code {
 	case consensus.TendermintMsg:
 		decodedMsg, _, err := sb.decode(msg)
