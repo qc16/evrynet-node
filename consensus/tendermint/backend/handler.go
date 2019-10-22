@@ -76,12 +76,14 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		}
 
 		//Dequeue if storingMsg reached max
-		if sb.storingMsgs.GetLen() == maxNumberMessages {
-			//Free a slot for new message
-			_, err := sb.storingMsgs.Dequeue()
-			if err != nil {
-				log.Error("failed to free a message from queue", "err", err)
-				return true, err
+		if sb.storingMsgs.GetLen() >= maxNumberMessages {
+			for n := sb.storingMsgs.GetLen() - maxNumberMessages; n > 0; n-- {
+				//Free a slot for new message
+				_, err := sb.storingMsgs.Dequeue()
+				if err != nil {
+					log.Error("failed to free a message from queue", "err", err)
+					return true, err
+				}
 			}
 		}
 

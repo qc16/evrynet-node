@@ -4,7 +4,7 @@ echo "------------Create Genesis Block------------"
 sh ./stop_test_nodes.sh
 
 # Init genesis block & Run test node
-for i in 1 2 3
+for i in 1 2 3 4
 do
   echo "--- Create genesis block for node $i ..."
   ./gev --datadir ./tests/test_nodes/node"$i"/data init ./tests/test_nodes/genesis.json
