@@ -37,6 +37,7 @@ const (
 	msgPrecommit
 )
 
+//Message is used to store consensus information between steps
 type message struct {
 	Code      uint64
 	Msg       []byte

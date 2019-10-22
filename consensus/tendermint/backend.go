@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 )
@@ -34,12 +35,15 @@ type Backend interface {
 	// CurrentHeadBlock get the current block of from the canonical chain.
 	CurrentHeadBlock() *types.Block
 
-	// FindPeers check peer exist or not by address
-	FindPeers(targets ValidatorSet) bool
+	// FindExistingPeers check validator peers exist or not by address
+	FindExistingPeers(targets ValidatorSet) map[common.Address]consensus.Peer
 
 	//Commit send the consensus block back to miner, it should also handle the logic after a block get enough vote to be the next block in chain
 	Commit(block *types.Block)
 
 	//EnqueueBlock adds the block returned from consensus into fetcher queue to update the chain to that specific block.
 	EnqueueBlock(block *types.Block)
+
+	//ClearStoringMsg will delete all item in queue
+	ClearStoringMsg()
 }

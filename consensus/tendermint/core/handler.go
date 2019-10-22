@@ -400,5 +400,4 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 	default:
 		panic(fmt.Sprintf("Invalid timeout step: %v", ti.Step))
 	}
-
 }

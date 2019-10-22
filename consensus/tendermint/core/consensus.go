@@ -628,4 +628,7 @@ func (c *core) updateStateForNewblock() {
 
 	c.currentState = state
 	log.Info("updated to new block", "new_block_number", state.BlockNumber())
+
+	// Clear storingMsg queue
+	c.backend.ClearStoringMsg()
 }

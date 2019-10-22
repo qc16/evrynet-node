@@ -176,8 +176,13 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 		sb.commitChs.closeAndRemoveAllChannels()
 	}
 
-	//TODO: clear previous data of proposal
+	// Check enough 2f+1 peers
+	valSet := sb.Validators(sb.currentBlock().Number())
+	if len(sb.FindExistingPeers(valSet)) < 2*valSet.F() {
+		return errors.New("not enough 2f+1 peers to start backend")
+	}
 
+	//TODO: clear previous data of proposal
 	if err := sb.core.Start(); err != nil {
 		return err
 	}
