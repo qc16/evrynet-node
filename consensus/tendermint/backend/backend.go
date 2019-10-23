@@ -69,6 +69,16 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
+// IsCoreStarted return true if core was started
+func (sb *backend) IsCoreStarted() bool {
+	return sb.coreStarted
+}
+
+// Core return core.Engine
+func (sb *backend) Core() tendermintCore.Engine {
+	return sb.core
+}
+
 // ----------------------------------------------------------------------------
 type backend struct {
 	config             *tendermint.Config
