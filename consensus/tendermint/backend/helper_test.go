@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
@@ -99,6 +100,19 @@ func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent)
 }
 
 // ------------------------------------
+type testProtocolManager struct{}
+
+// FindPeers retrives peers by addresses
+func (pm *testProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	return make(map[common.Address]consensus.Peer)
+}
+
+// Enqueue adds a block into fetcher queue
+func (pm *testProtocolManager) Enqueue(id string, block *types.Block) {
+	return
+}
+
+// ------------------------------------
 func makeNodeKey() *ecdsa.PrivateKey {
 	key, _ := generatePrivateKey()
 	return key
@@ -130,6 +144,7 @@ func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types
 		panic("failed to get snapshot")
 	}
 
+	b.broadcaster = &testProtocolManager{}
 	if err := b.Start(blockchain, blockchain.CurrentBlock); err != nil {
 		log.Panicf("cannot start backend, error:%v", err)
 	}
