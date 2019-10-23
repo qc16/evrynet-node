@@ -673,7 +673,7 @@ func (c *core) processFutureMessages() (done bool, err error) {
 		// remove message and handle it
 		log.Info("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
 		c.futureMessages.Remove(0)
-		go c.handleMsg(msg)
+		c.handleMsg(msg)
 	}
 	return true, nil
 }
