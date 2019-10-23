@@ -30,11 +30,13 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
 	"github.com/evrynet-official/evrynet-client/trie"
@@ -152,6 +154,29 @@ func (api *PrivateMinerAPI) SetRecommitInterval(interval int) {
 // GetHashrate returns the current hashrate of the miner.
 func (api *PrivateMinerAPI) GetHashrate() uint64 {
 	return api.e.miner.HashRate()
+}
+
+// ProposeCandidate returns true/false if a candidate is proposed or not.
+func (api *PrivateMinerAPI) ProposeCandidate(ecPropose hexutil.Bytes) bool {
+	log.Info("miner will propose a candidate")
+	if be, ok := api.e.engine.(tendermint.Backend); ok {
+		if err := be.ProposeCandidate(ecPropose); err != nil {
+			log.Error("error when discard a candidate", "error", err)
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// DiscardCandidate returns true/false if a candidate is removed or not.
+func (api *PrivateMinerAPI) DiscardCandidate(address common.Address) bool {
+	log.Info("miner will discard a candidate")
+	if be, ok := api.e.engine.(tendermint.Backend); ok {
+		be.DiscardCandidate(address)
+		return true
+	}
+	return false
 }
 
 // PrivateAdminAPI is the collection of Ethereum full node-related APIs

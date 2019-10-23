@@ -30,9 +30,9 @@ var (
 	now               = time.Now
 
 	// Magic nonce number to vote on adding a new validator
-	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff")
+	nonceAuthVote = hexutil.Bytes("0xf")
 	// Magic nonce number to vote on removing a validator.
-	nonceDropVote = hexutil.MustDecode("0x0000000000000000")
+	nonceDropVote = hexutil.Bytes("0x0")
 )
 
 const (
@@ -75,6 +75,8 @@ var (
 	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
 	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
 	errInvalidCandidate = errors.New("candidate for validator is invalid")
+	// errProposeCandidate is return error when the miner propose a candidate
+	errProposeCandidate = errors.New("error when propose candidate")
 )
 
 func (sb *backend) addProposalSeal(h *types.Header) error {
@@ -466,9 +468,9 @@ func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, pare
 	return defaultDifficulty
 }
 
+// APIs this function allows expose some api functions via rpc
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	log.Warn("APIs: implement me")
-	//TODO: Research & Implement
 	return nil
 }
 

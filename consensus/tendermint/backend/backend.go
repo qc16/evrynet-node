@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
@@ -16,6 +17,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 const (
@@ -223,4 +225,30 @@ func (sb *backend) EnqueueBlock(block *types.Block) {
 
 func (sb *backend) CurrentHeadBlock() *types.Block {
 	return sb.currentBlock()
+}
+
+// ProposeCandidate injects a new authorization candidate that the validator will attempt to
+// push through.
+func (sb *backend) ProposeCandidate(ecPropose hexutil.Bytes) error {
+	candidate := new(types.Candidate)
+	if err := rlp.DecodeBytes(ecPropose, candidate); err != nil {
+		log.Error("error when decode data", "error", err)
+		return errProposeCandidate
+	}
+
+	sb.candidatesLock.Lock()
+	defer sb.candidatesLock.Unlock()
+
+	sb.candidates[candidate.Address] = candidate.Auth
+
+	return nil
+}
+
+// DiscardCandidate drops a currently running candidate, stopping the validator from casting
+// further votes (either for or against).
+func (sb *backend) DiscardCandidate(address common.Address) {
+	sb.candidatesLock.Lock()
+	defer sb.candidatesLock.Unlock()
+
+	delete(sb.candidates, address)
 }

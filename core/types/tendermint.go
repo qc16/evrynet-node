@@ -40,6 +40,13 @@ var (
 	ErrInvalidTendermintHeaderExtra = errors.New("invalid tendermint header extra-data")
 )
 
+
+// Candidate is type of message to propose a candidate
+type Candidate struct {
+	Address common.Address `json:"address"`
+	Auth    bool           `json:"auth"`
+}
+
 // TendermintExtra extra data for Tendermint consensus
 type TendermintExtra struct {
 	// Validators is list of current validators

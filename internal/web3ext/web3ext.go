@@ -577,6 +577,16 @@ web3._extend({
 			name: 'getHashrate',
 			call: 'miner_getHashrate'
 		}),
+		new web3._extend.Method({
+			name: 'proposeCandidate',
+			call: 'miner_proposeCandidate',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'discardCandidate',
+			call: 'miner_discardCandidate',
+			params: 1
+		})
 	],
 	properties: []
 });

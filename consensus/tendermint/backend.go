@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 )
@@ -42,4 +43,12 @@ type Backend interface {
 
 	//EnqueueBlock adds the block returned from consensus into fetcher queue to update the chain to that specific block.
 	EnqueueBlock(block *types.Block)
+
+	// ProposeCandidate injects a new authorization candidate that the validator will attempt to
+	// push through.
+	ProposeCandidate(ecPropose hexutil.Bytes) error
+
+	// DiscardCandidate drops a currently running candidate, stopping the validator from casting
+	// further votes (either for or against).
+	DiscardCandidate(address common.Address)
 }
