@@ -248,7 +248,7 @@ func (sb *backend) Verify(proposal tendermint.Proposal) error {
 	txs := block.Transactions()
 	txnHash := types.DeriveSha(txs)
 	if txnHash != block.Header().TxHash {
-		return errMismatchTxhashes
+		return tendermint.ErrMismatchTxhashes
 	}
 
 	// Verify transaction for CoreTxPool
@@ -263,7 +263,7 @@ func (sb *backend) Verify(proposal tendermint.Proposal) error {
 	// verify the header of proposed block
 	err := sb.VerifyHeader(sb.chain, block.Header(), false)
 	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == errEmptyCommittedSeals {
+	if err == nil || err == tendermint.ErrEmptyCommittedSeals {
 		return nil
 	}
 	return err
