@@ -11,6 +11,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 var (
@@ -631,4 +632,48 @@ func (c *core) updateStateForNewblock() {
 
 	// Clear storingMsg queue
 	c.backend.ClearStoringMsg()
+	c.processFutureMessages()
+}
+
+func (c *core) processFutureMessages() (done bool, err error) {
+	var (
+		vote  tendermint.Vote
+		state = c.CurrentState()
+	)
+	for {
+		if c.futureMessages.GetLen() == 0 {
+			return true, nil
+		}
+		// get at position 0, check if it is current block number
+		data, err := c.futureMessages.Get(0)
+		if err != nil {
+			log.Error("Failed to get message from future message queue", "error", err)
+			return false, err
+		}
+		msg, ok := data.(message)
+		if !ok {
+			log.Error("Failed to decode data to message")
+			return false, err
+		}
+		if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
+			log.Error("Failed to decode vote from message", "error", err)
+			return false, err
+		}
+		if vote.BlockNumber.Cmp(state.BlockNumber()) < 0 {
+			log.Info("vote from older block number, ignore")
+			// Ignore vote from older block, remove element at position 0 and continue
+			c.futureMessages.Remove(0)
+			continue
+		}
+		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
+			// It is future block, stop processing
+			break
+		}
+		// at here vote block number should be equal state block number
+		// remove message and handle it
+		log.Info("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
+		c.futureMessages.Remove(0)
+		go c.handleMsg(msg)
+	}
+	return true, nil
 }
