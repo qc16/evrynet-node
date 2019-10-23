@@ -3,6 +3,7 @@ package backend
 import (
 	"testing"
 
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -18,40 +19,38 @@ func TestBackend_VerifyHeader(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
+	assert.True(t, ok)
+	assert.Equal(t, true, be.IsCoreStarted())
 
 	// without seal
-	block := makeBlockWithoutSeal(genesisHeader)
-	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
+	block := tests.MakeBlockWithoutSeal(genesisHeader)
+	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, be.VerifyHeader(be.Chain(), block.Header(), false))
 
 	// with seal but incorrect coinbase
-	block = makeBlockWithSeal(engine, genesisHeader)
+	block = tests.MakeBlockWithSeal(be, genesisHeader)
 	header := block.Header()
 	header.Coinbase = common.Address{}
-	appendSeal(header, engine)
-	assert.Equal(t, errCoinBaseInvalid, engine.VerifyHeader(chain, header, false))
+	tests.AppendSeal(header, be)
+	assert.Equal(t, errCoinBaseInvalid, be.VerifyHeader(be.Chain(), header, false))
 
 	// without committed seal
-	block = makeBlockWithSeal(engine, genesisHeader)
-	assert.Equal(t, tendermint.ErrEmptyCommittedSeals, engine.VerifyHeader(chain, block.Header(), false))
+	block = tests.MakeBlockWithSeal(be, genesisHeader)
+	assert.Equal(t, tendermint.ErrEmptyCommittedSeals, be.VerifyHeader(be.Chain(), block.Header(), false))
 
 	// with committed seal but is invalid
-	block = mustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
-	assert.Equal(t, errInvalidSignature, engine.VerifyHeader(chain, block.Header(), false))
+	block = tests.MustMakeBlockWithCommittedSealInvalid(be, genesisHeader)
+	assert.Equal(t, errInvalidSignature, be.VerifyHeader(be.Chain(), block.Header(), false))
 
 	// with committed seal
-	block = mustMakeBlockWithCommittedSeal(engine, genesisHeader, validators)
-	assert.NotNil(t, chain)
-	err = engine.VerifyHeader(chain, block.Header(), false)
+	block = tests.MustMakeBlockWithCommittedSeal(be, genesisHeader, validators)
+	assert.NotNil(t, be.Chain())
+	err = be.VerifyHeader(be.Chain(), block.Header(), false)
 	assert.NoError(t, err)
-
 }

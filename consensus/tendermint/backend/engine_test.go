@@ -7,11 +7,10 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,22 +23,21 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
+	assert.True(t, ok)
+	assert.Equal(t, true, be.IsCoreStarted())
 
 	// without seal
-	block := makeBlockWithoutSeal(genesisHeader)
-	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
+	block := tests.MakeBlockWithoutSeal(genesisHeader)
+	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, be.VerifyHeader(be.Chain(), block.Header(), false))
 
-	err = engine.Seal(chain, block, nil, nil)
+	err = be.Seal(be.Chain(), block, nil, nil)
 
 	// Sleep to make sure that the block can be received from
 	time.Sleep(2 * time.Second)
@@ -58,22 +56,21 @@ func TestAuthor(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
+	assert.True(t, ok)
+	assert.Equal(t, true, be.IsCoreStarted())
 
-	block := makeBlockWithSeal(engine, genesisHeader)
+	block := tests.MakeBlockWithSeal(be, genesisHeader)
 	header := block.Header()
-	signer, err := engine.Author(header)
+	signer, err := be.Author(header)
 	assert.NoError(t, err)
-	assert.Equal(t, engine.Address(), signer)
+	assert.Equal(t, be.Address(), signer)
 }
 
 // TestPrepare
@@ -84,25 +81,24 @@ func TestPrepare(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
+	assert.True(t, ok)
+	assert.Equal(t, true, be.IsCoreStarted())
 
-	block := makeBlockWithoutSeal(genesisHeader)
+	block := tests.MakeBlockWithoutSeal(genesisHeader)
 	header := block.Header()
 
-	err = engine.Prepare(chain, header)
+	err = be.Prepare(be.Chain(), header)
 	assert.NoError(t, err)
 
 	header.ParentHash = common.HexToHash("1234567890")
-	err = engine.Prepare(chain, header)
+	err = be.Prepare(be.Chain(), header)
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 }
 
@@ -114,23 +110,22 @@ func TestVerifySeal(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
+	assert.True(t, ok)
+	assert.Equal(t, true, be.IsCoreStarted())
 
 	// cannot verify genesis
-	err = engine.VerifySeal(chain, genesisHeader)
+	err = be.VerifySeal(be.Chain(), genesisHeader)
 	assert.Equal(t, errUnknownBlock, err)
 
-	block := makeBlockWithSeal(engine, genesisHeader)
-	err = engine.VerifySeal(chain, block.Header())
+	block := tests.MakeBlockWithSeal(be, genesisHeader)
+	err = be.VerifySeal(be.Chain(), block.Header())
 	assert.NoError(t, err)
 }
 
@@ -155,12 +150,4 @@ func TestPrepareExtra(t *testing.T) {
 	payload, err = prepareExtra(header)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, payload)
-}
-
-func newEngine() *backend {
-	nodeKey, _ := crypto.GenerateKey()
-	be, _ := New(tendermint.DefaultConfig, nodeKey).(*backend)
-	be.address = crypto.PubkeyToAddress(nodeKey.PublicKey)
-	be.db = ethdb.NewMemDatabase()
-	return be
 }
