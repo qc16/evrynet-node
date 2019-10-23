@@ -9,17 +9,22 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
-	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
+	evrynetCode "github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/rawdb"
+	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/eth/transaction"
+	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
-	privateKey, _ := generatePrivateKey()
+	privateKey, _ := crypto.HexToECDSA("bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1")
 	b := &backend{
 		privateKey: privateKey,
 	}
@@ -35,18 +40,27 @@ func TestSign(t *testing.T) {
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
-	if signer != getAddress() {
-		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
+	if signer != tests.GetAddress() {
+		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), tests.GetAddress().Hex())
 	}
 }
 
 func TestValidators(t *testing.T) {
-	backend, _, blockchain, err := createBlockchainAndBackendFromGenesis()
-	assert.NoError(t, err)
+	var (
+		nodePrivateKey = tests.MakeNodeKey()
+		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators     = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = tests.MakeGenesisHeader(validators)
+	)
 
-	backend.Start(blockchain, nil)
+	//create New test backend and newMockChain
+	be, ok := mustCreateAndStartNewBackend(nodePrivateKey, genesisHeader)
+	assert.True(t, ok)
+	assert.NotNil(t, be.TxPool())
 
-	valSet0 := backend.Validators(big.NewInt(0))
+	valSet0 := be.Validators(big.NewInt(0))
 	if valSet0.Size() != 1 {
 		t.Errorf("Valset size of zero block should be 1, get: %d", valSet0.Size())
 	}
@@ -56,7 +70,7 @@ func TestValidators(t *testing.T) {
 	for _, val := range list {
 		log.Println(val.String())
 	}
-	valSet1 := backend.Validators(big.NewInt(1))
+	valSet1 := be.Validators(big.NewInt(1))
 	if valSet1.Size() != 1 {
 		t.Errorf("Valset size of block 1st should be 1, get: %d", valSet1.Size())
 	}
@@ -66,32 +80,34 @@ func TestValidators(t *testing.T) {
 	for _, val := range list {
 		log.Println(val.String())
 	}
-	valSet2 := backend.Validators(big.NewInt(2))
+	valSet2 := be.Validators(big.NewInt(2))
 	if valSet2.Size() != 0 {
 		t.Errorf("Valset size of block 2th should be 0, get: %d", valSet2.Size())
 	}
 }
 
-func TestVerify(t *testing.T) {
+func TestVerifyProposal(t *testing.T) {
 	var (
-		nodePrivateKey     = makeNodeKey()
-		nodeFakePrivateKey = makeNodeKey()
+		nodePrivateKey     = tests.MakeNodeKey()
+		nodeFakePrivateKey = tests.MakeNodeKey()
 		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators         = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests.MakeGenesisHeader(validators)
 	)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePrivateKey, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be, ok := mustCreateAndStartNewBackend(nodePrivateKey, genesisHeader)
+	assert.True(t, ok)
+
+	core := be.Core().(tests.TestEngine)
+	err := core.Start()
+	assert.Nil(t, err)
 
 	// --------CASE 1--------
 	// Will get errMismatchTxhashes
-	block := makeBlockWithoutSeal(genesisHeader)
+	block := tests.MakeBlockWithoutSeal(genesisHeader)
 	proposal := tendermint.Proposal{
 		Block:    block,
 		Round:    1,
@@ -116,7 +132,7 @@ func TestVerify(t *testing.T) {
 	assert.NoError(t, err)
 	msg.Signature = signature
 	// Should get error if transactions in block is 0
-	assert.EqualError(t, engine.core.VerifyProposal(proposal, msg), tendermint.ErrMismatchTxhashes.Error())
+	assert.EqualError(t, core.VerifyProposal(proposal, msg), tendermint.ErrMismatchTxhashes.Error())
 
 	// --------CASE 2--------
 	// Pass all validation
@@ -150,7 +166,7 @@ func TestVerify(t *testing.T) {
 	assert.NoError(t, err)
 	msg.Signature = signature
 	// Should get no error if block has transactions
-	assert.NoError(t, engine.core.VerifyProposal(proposal, msg))
+	assert.NoError(t, core.VerifyProposal(proposal, msg))
 
 	// --------CASE 3--------
 	// Will get ErrInsufficientFunds
@@ -184,7 +200,7 @@ func TestVerify(t *testing.T) {
 	assert.NoError(t, err)
 	msg.Signature = signature
 	// Should get error ErrInsufficientFunds
-	assert.EqualError(t, engine.core.VerifyProposal(proposal, msg), core.ErrInsufficientFunds.Error())
+	assert.EqualError(t, core.VerifyProposal(proposal, msg), evrynetCode.ErrInsufficientFunds.Error())
 
 	// --------CASE 4--------
 	// Node propose fake block (fake signature)
@@ -223,32 +239,32 @@ func TestVerify(t *testing.T) {
 	assert.NoError(t, err)
 	msg.Signature = signature
 
-	err = engine.core.VerifyProposal(proposal, msg)
+	err = core.VerifyProposal(proposal, msg)
 	// Should get error when node send signed msg by fake private key
 	assert.EqualError(t, err, tendermintCore.ErrInvalidProposalSignature.Error())
 }
 
-/**
- * SimpleBackend
- * Private key: bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1
- * Public key: 04a2bfb0f7da9e1b9c0c64e14f87e8fb82eb0144e97c25fe3a977a921041a50976984d18257d2495e7bfd3d4b280220217f429287d25ecdf2b0d7c0f7aae9aa624
- * Address: 0x70524d664ffe731100208a0154e556f9bb679ae6
- */
-func getAddress() common.Address {
-	return common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
-}
-
-func generatePrivateKey() (*ecdsa.PrivateKey, error) {
-	return crypto.GenerateKey()
-}
-
-func newTestValidatorSet(n int) tendermint.ValidatorSet {
-	// generate validators
-	addrs := make([]common.Address, n)
-	for i := 0; i < n; i++ {
-		privateKey, _ := crypto.GenerateKey()
-		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
+func mustCreateAndStartNewBackend(nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) (tests.TestBackend, bool) {
+	address := crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+	trigger := false
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
+	var testTxPoolConfig evrynetCode.TxPoolConfig
+	blockchain := &tests.TestChain{
+		GenesisHeader: genesisHeader,
+		TestBlockChain: &tests.TestBlockChain{
+			Statedb:       statedb,
+			GasLimit:      1000000000,
+			ChainHeadFeed: new(event.Feed),
+		},
+		Address: address,
+		Trigger: &trigger,
 	}
-	vset := validator.NewSet(addrs, tendermint.RoundRobin, int64(0))
-	return vset
+	pool := evrynetCode.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
+	defer pool.Stop()
+	memDB := ethdb.NewMemDatabase()
+	config := tendermint.DefaultConfig
+	be := New(config, nodePrivateKey, WithTxPoolOpts(&transaction.TxPoolOpts{CoreTxPool: pool}), WithDB(memDB)).(tests.TestBackend)
+	ok := tests.MustStartTestChainAndBackend(be, blockchain)
+	return be, ok
 }

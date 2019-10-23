@@ -14,6 +14,7 @@ import (
 var (
 	ErrInvalidProposalPOLRound     = errors.New("invalid proposal POL round")
 	ErrInvalidProposalSignature    = errors.New("invalid proposal signature")
+	ErrInvalidTransactionSignature = errors.New("invalid transaction signature")
 	ErrVoteHeightMismatch          = errors.New("vote height mismatch")
 	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
 	ErrEmptyBlockProposal          = errors.New("empty block proposal")
@@ -163,8 +164,8 @@ func (c *core) Verify(proposal tendermint.Proposal) error {
 
 	// Verify transaction for CoreTxPool
 	if c.backend.TxPool() != nil && c.backend.TxPool().CoreTxPool != nil {
-		for _, t := range txs {
-			if err := c.backend.TxPool().CoreTxPool.ValidateTx(t, false); err != nil {
+		for _, tx := range txs {
+			if err := c.backend.TxPool().CoreTxPool.ValidateTx(tx, false); err != nil {
 				return err
 			}
 		}

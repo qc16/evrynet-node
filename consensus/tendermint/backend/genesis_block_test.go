@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -109,11 +110,13 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 		privateKey:         nodePK,
 		address:            crypto.PubkeyToAddress(nodePK.PublicKey),
 		db:                 db,
+		commitChs:          newCommitChannels(),
+		mutex:              &sync.RWMutex{},
 	}
 	backend.core = tendermintCore.New(backend, config.Tendermint)
 
 	//init tendermint engine
-	engine := New(config.Tendermint, nodePK, nil, WithDB(db))
+	engine := New(config.Tendermint, nodePK, WithDB(db))
 
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)

@@ -648,7 +648,7 @@ func (c *core) processFutureMessages() (done bool, err error) {
 			log.Error("Failed to get message from future message queue", "error", err)
 			return false, err
 		}
-		msg, ok := data.(message)
+		msg, ok := data.(Message)
 		if !ok {
 			log.Error("Failed to decode data to message")
 			return false, err
