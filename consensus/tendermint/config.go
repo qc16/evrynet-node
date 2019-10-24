@@ -11,6 +11,20 @@ const (
 	Sticky
 )
 
+//FaultyMode is the config mode to enable fauty node
+type FaultyMode uint64
+
+const (
+	// Disabled disables the faulty mode
+	Disabled FaultyMode = iota
+	// SendFakeProposal sends the proposal with the fake info
+	SendFakeProposal
+)
+
+func (f FaultyMode) Uint64() uint64 {
+	return uint64(f)
+}
+
 //Config store all the configuration required for a Tendermint consensus
 type Config struct {
 	ProposerPolicy        ProposerPolicy `toml:",omitempty"` // The policy for proposer selection
@@ -23,6 +37,8 @@ type Config struct {
 	TimeoutPrecommit      time.Duration  //Duration waiting for more precommit after 2/3 received
 	TimeoutPrecommitDelta time.Duration  //Duration waiting to increase if precommit wait expired to reach eventually synchronous
 	TimeoutCommit         time.Duration  //Duration waiting to start round with new height
+
+	FaultyMode uint64 `toml:",omitempty"` // The faulty node indicates the faulty node's behavior
 }
 
 var DefaultConfig = &Config{
@@ -36,6 +52,7 @@ var DefaultConfig = &Config{
 	TimeoutPrecommit:      1000 * time.Millisecond,
 	TimeoutPrecommitDelta: 500 * time.Millisecond,
 	TimeoutCommit:         1000 * time.Millisecond,
+	FaultyMode:            Disabled.Uint64(),
 }
 
 //ProposeTimeout return the timeout for a specific round
@@ -53,7 +70,7 @@ func (cfg *Config) PrevoteTimeout(round int64) time.Duration {
 	) * time.Nanosecond
 }
 
-// Precommit returns the amount of time to wait for straggler votes after receiving any +2/3 precommits
+// PrecommitTimeout returns the amount of time to wait for straggler votes after receiving any +2/3 precommits
 func (cfg *Config) PrecommitTimeout(round int64) time.Duration {
 	return time.Duration(
 		cfg.TimeoutPrecommit.Nanoseconds()+cfg.TimeoutPrecommitDelta.Nanoseconds()*int64(round),
