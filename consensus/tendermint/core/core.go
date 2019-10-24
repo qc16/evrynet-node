@@ -12,6 +12,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -137,6 +138,35 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	if err != nil {
 		logger.Errorw("Failed to Finalize Proposal", "error", err)
 		return
+	}
+
+	// Check faulty mode to inject fake block
+	if c.config.FaultyMode == tendermint.SendFakeProposal.Uint64() {
+		logger.Warnw("send fake proposal")
+		var fakePrivateKey, _ = crypto.GenerateKey()
+
+		// Faking FinalizeMsg
+		msgData, err = rlp.EncodeToBytes(&propose)
+		msg := Message{
+			Code:    msgPropose,
+			Msg:     msgData,
+			Address: crypto.PubkeyToAddress(fakePrivateKey.PublicKey),
+		}
+
+		msgPayLoadWithoutSignature, err := msg.PayLoadWithoutSignature()
+		if err != nil {
+			logger.Errorw("Failed to get payload without sugnature when faking proposal", "error", err)
+			return
+		}
+
+		signature, err := crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), fakePrivateKey)
+		msg.Signature = signature
+
+		payload, err = rlp.EncodeToBytes(&msg)
+		if err != nil {
+			logger.Errorw("Failed to encode to bytes when faking proposal", "error", err)
+			return
+		}
 	}
 
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
