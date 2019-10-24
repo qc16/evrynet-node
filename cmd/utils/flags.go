@@ -674,6 +674,12 @@ var (
 		Value: eth.DefaultConfig.Tendermint.BlockPeriod,
 	}
 
+	TendermintFaultyModeFlag = cli.Uint64Flag{
+		Name:  "tendermint.faultymode",
+		Usage: "0: not faulty, 1: send fake proposal",
+		Value: eth.DefaultConfig.Tendermint.FaultyMode,
+	}
+
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -1329,6 +1335,9 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 func setTendermint(ctx *cli.Context, cfg *eth.Config) {
 	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
 		cfg.Tendermint.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintFaultyModeFlag.Name) {
+		cfg.Tendermint.FaultyMode = ctx.GlobalUint64(TendermintFaultyModeFlag.Name)
 	}
 }
 

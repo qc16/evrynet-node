@@ -242,47 +242,6 @@ func TestVerifyProposal(t *testing.T) {
 	err = core.VerifyProposal(proposal, msg)
 	// Should get error when node send signed msg by fake private key
 	assert.EqualError(t, err, tendermintCore.ErrInvalidProposalSignature.Error())
-
-	// --------CASE 5--------
-	// Node propose fake block have fake transaction
-	// backend.VerifyHeader() will return error
-	tx4 := types.NewTransaction(0, common.HexToAddress("A8A620a156121f6Ef0Bb0bF0FFe1B6A0e02834a1"), big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
-	tx4, err = types.SignTx(tx4, types.HomesteadSigner{}, nodeFakePrivateKey)
-	assert.NoError(t, err)
-
-	block5 := types.NewBlock(genesisHeader, []*types.Transaction{tx4}, []*types.Header{}, []*types.Receipt{})
-	assert.Len(t, block5.Transactions(), 1)
-	assert.Equal(t, tx4.Hash(), block5.Transactions()[0].Hash())
-	proposal = tendermint.Proposal{
-		Block: block5,
-		Round: 1,
-	}
-
-	msgData, err = rlp.EncodeToBytes(&proposal)
-	assert.NoError(t, err)
-
-	// Create fake message from another node address
-	msg = tendermintCore.Message{
-		Code:    0,
-		Msg:     msgData,
-		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
-	}
-
-	msgPayLoadWithoutSignature, _ = rlp.EncodeToBytes(&tendermintCore.Message{
-		Code:          msg.Code,
-		Address:       msg.Address,
-		Msg:           msg.Msg,
-		Signature:     []byte{},
-		CommittedSeal: msg.CommittedSeal,
-	})
-
-	signature, err = crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), nodePrivateKey)
-	assert.NoError(t, err)
-	msg.Signature = signature
-
-	err = core.VerifyProposal(proposal, msg)
-	// Should get error when node send signed msg by fake private key
-	assert.EqualError(t, err, tendermintCore.ErrInvalidTransactionSignature.Error())
 }
 
 func mustCreateAndStartNewBackend(nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) (tests.TestBackend, bool) {

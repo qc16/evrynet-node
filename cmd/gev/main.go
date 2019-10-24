@@ -147,6 +147,7 @@ var (
 		utils.EVMInterpreterFlag,
 		configFileFlag,
 		utils.TendermintBlockPeriodFlag,
+		utils.TendermintFaultyModeFlag,
 	}
 
 	rpcFlags = []cli.Flag{

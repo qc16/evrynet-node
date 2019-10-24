@@ -62,7 +62,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		mutex:              &sync.RWMutex{},
 		storingMsgs:        queue.NewFIFO(),
 	}
-	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
+	be.core = tendermintCore.New(be, config)
 
 	for _, opt := range opts {
 		if err := opt(be); err != nil {

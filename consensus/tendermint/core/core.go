@@ -9,6 +9,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -129,7 +130,6 @@ func (c *core) FinalizeMsg(msg *Message) ([]byte, error) {
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
 func (c *core) SendPropose(propose *tendermint.Proposal) {
-
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
 		log.Error("Failed to encode Proposal to bytes", "error", err)
@@ -144,11 +144,40 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		return
 	}
 
+	// Check faulty mode to inject fake block
+	if c.config.FaultyMode == tendermint.SendFakeProposal.Uint64() {
+		log.Warn("send fake proposal")
+		var fakePrivateKey, _ = crypto.GenerateKey()
+
+		// Faking FinalizeMsg
+		msgData, err = rlp.EncodeToBytes(&propose)
+		msg := Message{
+			Code:    msgPropose,
+			Msg:     msgData,
+			Address: crypto.PubkeyToAddress(fakePrivateKey.PublicKey),
+		}
+
+		msgPayLoadWithoutSignature, err := msg.PayLoadWithoutSignature()
+		if err != nil {
+			log.Error("Failed to get payload without sugnature when faking proposal", "error", err)
+			return
+		}
+
+		signature, err := crypto.Sign(crypto.Keccak256(msgPayLoadWithoutSignature), fakePrivateKey)
+		msg.Signature = signature
+
+		payload, err = rlp.EncodeToBytes(&msg)
+		if err != nil {
+			log.Error("Failed to encode to bytes when faking proposal", "error", err)
+			return
+		}
+	}
+
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 		log.Error("Failed to Broadcast proposal", "error", err)
 		return
 	}
-	//TODO: remove this log in production
+	// TODO: remove this log in production
 	log.Info("sent proposal", "round", propose.Round, "block_number", propose.Block.Number(), "block_hash", propose.Block.Hash())
 }
 
