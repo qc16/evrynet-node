@@ -30,6 +30,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/state"
@@ -175,6 +176,26 @@ func (api *PrivateMinerAPI) SetRecommitInterval(interval int) {
 // GetHashrate returns the current hashrate of the miner.
 func (api *PrivateMinerAPI) GetHashrate() uint64 {
 	return api.e.miner.HashRate()
+}
+
+// GetValidators returns the list of validators by block's number
+func (api *PrivateMinerAPI) GetValidators(number *rpc.BlockNumber) []common.Address {
+	var blockNumber *big.Int
+	if number == nil {
+		blockNumber =  new(big.Int).SetInt64(rpc.LatestBlockNumber.Int64())
+	} else {
+		blockNumber = new(big.Int).SetInt64(number.Int64())
+	}
+
+	if be, ok := api.e.engine.(tendermint.Backend); ok {
+		valSet := be.Validators(blockNumber)
+		validators := make([]common.Address, 0, valSet.Size())
+		for _, validator := range valSet.List() {
+			validators = append(validators, validator.Address())
+		}
+		return validators
+	}
+	return nil
 }
 
 // PrivateAdminAPI is the collection of Ethereum full node-related APIs

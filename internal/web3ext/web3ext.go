@@ -590,6 +590,12 @@ web3._extend({
 			name: 'getPendingProposedValidator',
 			call: 'miner_getPendingProposedValidator'						
 		}),
+		new web3._extend.Method({
+			name: 'getValidators',
+			call: 'miner_getValidators',
+			params: 1,
+			inputFormatter:[null]
+		}),
 	],
 	properties: []
 });
