@@ -661,7 +661,7 @@ func (w *worker) resultLoop() {
 				"elapsed", common.PrettyDuration(time.Since(task.createdAt)))
 
 			// clear pending proposed validator if sealing Successfully
-			if task.block.Number().Int64() == w.proposedValidator.getLockBlock() {
+			if block.Number().Int64() == w.proposedValidator.getLockBlock() {
 				w.proposedValidator.clearPendingProposedValidator()
 			}
 
