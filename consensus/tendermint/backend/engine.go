@@ -600,3 +600,31 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 
 	state.AddBalance(header.Coinbase, reward)
 }
+
+func (sb *backend) getValSet(chainReader consensus.ChainReader, blockNumber *big.Int) tendermint.ValidatorSet {
+	var (
+		previousBlock uint64
+		header        *types.Header
+		err           error
+		snap          *Snapshot
+	)
+
+	// check if blockNumber is zero
+	if blockNumber.Cmp(big.NewInt(0)) == 0 {
+		previousBlock = 0
+	} else {
+		previousBlock = uint64(blockNumber.Int64() - 1)
+	}
+	header = chainReader.GetHeaderByNumber(previousBlock)
+	if header == nil {
+		log.Error("cannot get valSet since previousBlock is not available", "block_number", blockNumber)
+	}
+	snap, err = sb.snapshot(chainReader, previousBlock, header.Hash(), nil)
+	if err != nil {
+		log.Error("cannot load snapshot", "error", err)
+	}
+	if err == nil {
+		return snap.ValSet
+	}
+	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
+}

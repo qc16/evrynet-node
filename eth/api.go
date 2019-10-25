@@ -179,16 +179,18 @@ func (api *PrivateMinerAPI) GetHashrate() uint64 {
 }
 
 // GetValidators returns the list of validators by block's number
-func (api *PrivateMinerAPI) GetValidators(number *rpc.BlockNumber) []common.Address {
-	var blockNumber *big.Int
+func (api *PrivateMinerAPI) GetValidators(number *uint64) []common.Address {
+	var (
+		blockNumber *big.Int
+	)
 	if number == nil {
-		blockNumber =  new(big.Int).SetInt64(rpc.LatestBlockNumber.Int64())
+		blockNumber = api.e.BlockChain().CurrentHeader().Number
 	} else {
-		blockNumber = new(big.Int).SetInt64(number.Int64())
+		blockNumber = new(big.Int).SetUint64(*number)
 	}
 
-	if be, ok := api.e.engine.(tendermint.Backend); ok {
-		valSet := be.Validators(blockNumber)
+	if be, ok := api.e.Engine().(tendermint.Backend); ok {
+		valSet := be.GetValidators(blockNumber, api.e.BlockChain())
 		validators := make([]common.Address, 0, valSet.Size())
 		for _, validator := range valSet.List() {
 			validators = append(validators, validator.Address())

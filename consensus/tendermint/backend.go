@@ -51,4 +51,7 @@ type Backend interface {
 
 	//EnqueueBlock adds the block returned from consensus into fetcher queue to update the chain to that specific block.
 	EnqueueBlock(block *types.Block)
+
+	// GetValidators returns val-set from snapshot
+	GetValidators(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
 }
