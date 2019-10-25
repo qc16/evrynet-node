@@ -122,12 +122,6 @@ type intervalAdjust struct {
 	inc   bool
 }
 
-type validator struct {
-	address common.Address
-	vote    bool
-	mu      *sync.RWMutex
-}
-
 // worker is the main object which takes care of submitting new work to consensus engine
 // and gathering the sealing result.
 type worker struct {
@@ -210,9 +204,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		resubmitIntervalCh: make(chan time.Duration),
 		resubmitAdjustCh:   make(chan *intervalAdjust, resubmitAdjustChanSize),
 
-		proposedValidator: &validator{
-			mu: &sync.RWMutex{},
-		},
+		proposedValidator: newProposedValidator(),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -254,30 +246,17 @@ func (w *worker) setExtra(extra []byte) {
 
 // setProposedValidator sets proposed validator in the block extra field
 func (w *worker) setProposedValidator(address common.Address, vote bool) error {
-	w.proposedValidator.mu.Lock()
-	defer w.proposedValidator.mu.Unlock()
-
-	w.proposedValidator.address = address
-	w.proposedValidator.vote = vote
-	return nil
+	return w.proposedValidator.setProposedValidator(address, vote)
 }
 
 // clearPendingProposedValidator remove the pending validator
 func (w *worker) clearPendingProposedValidator() {
-	w.proposedValidator.mu.Lock()
-	defer w.proposedValidator.mu.Unlock()
-
-	w.proposedValidator.address = common.Address{}
-	w.proposedValidator.vote = false
+	w.proposedValidator.clearPendingProposedValidator()
 }
 
 // getPendingProposedValidator returns pending validator
 func (w *worker) getPendingProposedValidator() (validator common.Address, vote bool) {
-	w.proposedValidator.mu.RLock()
-	defer w.proposedValidator.mu.RUnlock()
-
-	proposedValidator := w.proposedValidator
-	return proposedValidator.address, proposedValidator.vote
+	return w.proposedValidator.getPendingProposedValidator()
 }
 
 func (w *worker) prepareExtraHeader(header *types.Header) {
@@ -287,7 +266,8 @@ func (w *worker) prepareExtraHeader(header *types.Header) {
 	)
 	// Add validator voting to header
 	valAddr, vote := w.getPendingProposedValidator()
-	if !reflect.DeepEqual(valAddr, common.Address{}) {
+	isLock := w.proposedValidator.isValidatorLocked()
+	if !reflect.DeepEqual(valAddr, common.Address{}) && !isLock {
 		if vote {
 			copy(header.Nonce[:], tendermint.NonceAuthVote)
 		} else {
@@ -298,6 +278,9 @@ func (w *worker) prepareExtraHeader(header *types.Header) {
 			ModifiedValidator: valAddr,
 		}
 		payload, _ = rlp.EncodeToBytes(&tdm)
+
+		//lock validator
+		w.proposedValidator.lockValidator(header.Number.Int64())
 	} else {
 		tdm = &types.TendermintExtra{}
 		payload, _ = rlp.EncodeToBytes(&tdm)
@@ -612,6 +595,10 @@ func (w *worker) taskLoop() {
 			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
 				log.Warn("Block sealing failed", "err", err)
 			}
+
+			// remove lock whether Seal is success or not
+			w.proposedValidator.removeLock()
+
 		case <-w.exitCh:
 			interrupt()
 			return
@@ -672,6 +659,11 @@ func (w *worker) resultLoop() {
 			}
 			log.Info("Successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash,
 				"elapsed", common.PrettyDuration(time.Since(task.createdAt)))
+
+			// clear pending proposed validator if sealing Successfully
+			if task.block.Number().Int64() == w.proposedValidator.getLockBlock() {
+				w.proposedValidator.clearPendingProposedValidator()
+			}
 
 			// Broadcast the block and announce chain insertion event
 			w.mux.Post(core.NewMinedBlockEvent{Block: block})
