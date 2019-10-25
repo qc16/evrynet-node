@@ -4,9 +4,17 @@ import (
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
+)
+
+var (
+	// Magic nonce number to vote on adding a new validator
+	NonceAuthVote = hexutil.MustDecode("0xffffffffffffffff")
+	// Magic nonce number to vote on removing a validator.
+	NonceDropVote = hexutil.MustDecode("0x0000000000000000")
 )
 
 // Backend provides application specific functions for Tendermint core

@@ -1,13 +1,11 @@
 package backend
 
 import (
-	"bytes"
 	"errors"
 	"math/big"
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
@@ -17,7 +15,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
-	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
@@ -28,11 +25,6 @@ var (
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
-
-	// Magic nonce number to vote on adding a new validator
-	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff")
-	// Magic nonce number to vote on removing a validator.
-	nonceDropVote = hexutil.MustDecode("0x0000000000000000")
 )
 
 const (
@@ -369,13 +361,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		return consensus.ErrUnknownAncestor
 	}
 
-	// prepare extra data without validators
-	extra, err := prepareExtra(header)
-	if err != nil {
-		return err
-	}
-	header.Extra = extra
-
 	// set header's timestamp from parent's timestamp and blockperiod
 	var (
 		parentTime  = new(big.Int).SetUint64(parent.Time)
@@ -605,25 +590,6 @@ func blockProposer(header *types.Header) (common.Address, error) {
 	}
 	//TODO: will be caching address
 	return addr, nil
-}
-
-// prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.Header) ([]byte, error) {
-	var buf bytes.Buffer
-
-	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
-	if len(header.Extra) < types.TendermintExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity-len(header.Extra))...)
-	}
-	buf.Write(header.Extra[:types.TendermintExtraVanity])
-
-	tdm := &types.TendermintExtra{}
-	payload, err := rlp.EncodeToBytes(&tdm)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(buf.Bytes(), payload...), nil
 }
 
 // AccumulateRewards credits the coinbase of the given block with the proposing

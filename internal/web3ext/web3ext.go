@@ -577,6 +577,19 @@ web3._extend({
 			name: 'getHashrate',
 			call: 'miner_getHashrate'
 		}),
+		new web3._extend.Method({
+			name: 'proposeValidator',
+			call: 'miner_proposeValidator',
+			params: 2 
+		}),
+		new web3._extend.Method({
+			name: 'clearPendingProposedValidator',
+			call: 'miner_clearPendingProposedValidator'		
+		}),
+		new web3._extend.Method({
+			name: 'getPendingProposedValidator',
+			call: 'miner_getPendingProposedValidator'						
+		}),
 	],
 	properties: []
 });

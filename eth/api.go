@@ -128,6 +128,29 @@ func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 	return true, nil
 }
 
+// ProposeCandidate proposes a validator
+// vote is 0 represents for kicking the validator out of network, vote is 1 represents for adding the validator to the network
+func (api *PrivateMinerAPI) ProposeValidator(address common.Address, vote bool) (bool, error) {
+	if err := api.e.Miner().ProposeValidator(address, vote); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (api *PrivateMinerAPI) ClearPendingProposedValidator() bool {
+	api.e.Miner().ClearPendingProposedValidator()
+	return true
+}
+
+// GetPendingProposedValidator returns the pending proposed validator
+func (api *PrivateMinerAPI) GetPendingProposedValidator() map[string]interface{} {
+	validator, vote := api.e.Miner().GetPendingProposedValidator()
+	return map[string]interface{}{
+		"validator": validator,
+		"vote":      vote,
+	}
+}
+
 // SetGasPrice sets the minimum accepted gas price for the miner.
 func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	api.e.lock.Lock()

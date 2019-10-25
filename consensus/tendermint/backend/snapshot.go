@@ -136,9 +136,9 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		// Tally up the new vote from the validator
 		var authorize bool
 		switch {
-		case bytes.Compare(header.Nonce[:], nonceAuthVote) == 0:
+		case bytes.Compare(header.Nonce[:], tendermint.NonceAuthVote) == 0:
 			authorize = true
-		case bytes.Compare(header.Nonce[:], nonceDropVote) == 0:
+		case bytes.Compare(header.Nonce[:], tendermint.NonceDropVote) == 0:
 			authorize = false
 		default:
 			return nil, errInvalidVote

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,12 +29,14 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/misc"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 const (
@@ -119,6 +122,12 @@ type intervalAdjust struct {
 	inc   bool
 }
 
+type validator struct {
+	address common.Address
+	vote    bool
+	mu      *sync.RWMutex
+}
+
 // worker is the main object which takes care of submitting new work to consensus engine
 // and gathering the sealing result.
 type worker struct {
@@ -151,9 +160,10 @@ type worker struct {
 	remoteUncles map[common.Hash]*types.Block // A set of side blocks as the possible uncle blocks.
 	unconfirmed  *unconfirmedBlocks           // A set of locally mined blocks pending canonicalness confirmations.
 
-	mu       sync.RWMutex // The lock used to protect the coinbase and extra fields
-	coinbase common.Address
-	extra    []byte
+	mu                sync.RWMutex // The lock used to protect the coinbase and extra fields
+	coinbase          common.Address
+	extra             []byte
+	proposedValidator *validator
 
 	pendingMu    sync.RWMutex
 	pendingTasks map[common.Hash]*task
@@ -199,6 +209,10 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		startCh:            make(chan struct{}, 1),
 		resubmitIntervalCh: make(chan time.Duration),
 		resubmitAdjustCh:   make(chan *intervalAdjust, resubmitAdjustChanSize),
+
+		proposedValidator: &validator{
+			mu: &sync.RWMutex{},
+		},
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -236,6 +250,61 @@ func (w *worker) setExtra(extra []byte) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.extra = extra
+}
+
+// setProposedValidator sets proposed validator in the block extra field
+func (w *worker) setProposedValidator(address common.Address, vote bool) error {
+	w.proposedValidator.mu.Lock()
+	defer w.proposedValidator.mu.Unlock()
+
+	w.proposedValidator.address = address
+	w.proposedValidator.vote = vote
+	return nil
+}
+
+// clearPendingProposedValidator remove the pending validator
+func (w *worker) clearPendingProposedValidator() {
+	w.proposedValidator.mu.Lock()
+	defer w.proposedValidator.mu.Unlock()
+
+	w.proposedValidator.address = common.Address{}
+	w.proposedValidator.vote = false
+}
+
+// getPendingProposedValidator returns pending validator
+func (w *worker) getPendingProposedValidator() (validator common.Address, vote bool) {
+	w.proposedValidator.mu.RLock()
+	defer w.proposedValidator.mu.RUnlock()
+
+	proposedValidator := w.proposedValidator
+	return proposedValidator.address, proposedValidator.vote
+}
+
+func (w *worker) prepareExtraHeader(header *types.Header) {
+	var (
+		tdm     *types.TendermintExtra
+		payload []byte
+	)
+	// Add validator voting to header
+	valAddr, vote := w.getPendingProposedValidator()
+	if !reflect.DeepEqual(valAddr, common.Address{}) {
+		if vote {
+			copy(header.Nonce[:], tendermint.NonceAuthVote)
+		} else {
+			copy(header.Nonce[:], tendermint.NonceDropVote)
+		}
+
+		tdm = &types.TendermintExtra{
+			ModifiedValidator: valAddr,
+		}
+		payload, _ = rlp.EncodeToBytes(&tdm)
+	} else {
+		tdm = &types.TendermintExtra{}
+		payload, _ = rlp.EncodeToBytes(&tdm)
+	}
+
+	tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
+	header.Extra = append(tendermintExtraVanity, payload...)
 }
 
 // setRecommitInterval updates the interval for miner sealing work recommitting.
@@ -869,6 +938,9 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		}
 		header.Coinbase = w.coinbase
 	}
+
+	w.prepareExtraHeader(header)
+
 	if err := w.engine.Prepare(w.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
