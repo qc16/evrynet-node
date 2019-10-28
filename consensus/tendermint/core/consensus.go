@@ -168,10 +168,11 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 				var (
 					fakePrivateKey, _ = crypto.GenerateKey()
 					nodeAddr          = crypto.PubkeyToAddress(fakePrivateKey.PublicKey)
+					fakeHeader        = proposal.Block.Header()
+					fakeTx            = types.NewTransaction(0, nodeAddr, big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
 				)
-				fakeTx := types.NewTransaction(0, nodeAddr, big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
+
 				fakeTx, _ = types.SignTx(fakeTx, types.HomesteadSigner{}, fakePrivateKey)
-				fakeHeader := proposal.Block.Header()
 				fakeHeader.TxHash = types.DeriveSha(types.Transactions([]*types.Transaction{fakeTx}))
 				fakeBlock := types.NewBlock(fakeHeader, []*types.Transaction{fakeTx}, []*types.Header{}, []*types.Receipt{})
 				proposal.Block = fakeBlock
