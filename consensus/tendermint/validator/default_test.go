@@ -39,7 +39,6 @@ func testNewValidatorSet(t *testing.T) {
 		b = append(b, val.Address().Bytes()...)
 	}
 
-
 	// Create ValidatorSet
 	valSet := NewSet(ExtractValidators(b), tendermint.RoundRobin, int64(0))
 	if valSet == nil {

@@ -165,7 +165,7 @@ type Tendermint interface {
 // Handler should be implemented is the consensus needs to handle and send peer's message
 type Handler interface {
 	// HandleNewChainHead handles a new head block comes
-	HandleNewChainHead() error
+	HandleNewChainHead(blockNumber *big.Int) error
 
 	// HandleMsg handles a message from peer
 	HandleMsg(address common.Address, data p2p.Msg) (bool, error)

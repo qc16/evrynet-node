@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"sync"
 
+	queue "github.com/enriquebris/goconcurrentqueue"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -19,7 +21,8 @@ import (
 )
 
 const (
-	fetcherID = "tendermint"
+	fetcherID         = "tendermint"
+	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 )
 
 var (
@@ -46,7 +49,9 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         privateKey,
 		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
-		commitChs:          make(map[string]chan *types.Block),
+		commitChs:          newCommitChannels(),
+		mutex:              &sync.RWMutex{},
+		storingMsgs:        queue.NewFIFO(),
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {
@@ -63,17 +68,6 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
-// HandleNewChainHead implements consensus.Handler.HandleNewChainHead
-func (sb *backend) HandleNewChainHead() error {
-	sb.coreMu.RLock()
-	defer sb.coreMu.RUnlock()
-	if !sb.coreStarted {
-		return tendermint.ErrStoppedEngine
-	}
-	go sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{})
-	return nil
-}
-
 // ----------------------------------------------------------------------------
 type backend struct {
 	config             *tendermint.Config
@@ -85,12 +79,15 @@ type backend struct {
 	address            common.Address
 
 	//once voting finish, the block will be send for commit here
-	//it is a map of
-	commitChs map[string]chan *types.Block
+	//it is a map of blocknumber- channels with mutex
+	commitChs *commitChannels
 
 	coreStarted bool
-	coreMu      sync.RWMutex
+	mutex       *sync.RWMutex
 	chain       consensus.ChainReader
+
+	//storingMsgs is used to store msg to handler when core stopped
+	storingMsgs *queue.FIFO
 
 	currentBlock func() *types.Block
 }
@@ -190,24 +187,20 @@ func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
 }
 
-func (sb *backend) FindPeers(valSet tendermint.ValidatorSet) bool {
+// FindExistingPeers check validator peers exist or not by address
+func (sb *backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.Address]consensus.Peer {
 	targets := make(map[common.Address]bool)
 	for _, val := range valSet.List() {
 		if val.Address() != sb.Address() {
 			targets[val.Address()] = true
 		}
 	}
-
-	rs := sb.broadcaster.FindPeers(targets)
-	if len(rs) > valSet.F() {
-		return true
-	}
-	return false
+	return sb.broadcaster.FindPeers(targets)
 }
 
 //Commit implement tendermint.Backend.Commit()
 func (sb *backend) Commit(block *types.Block) {
-	ch, ok := sb.commitChs[block.Number().String()]
+	ch, ok := sb.commitChs.getCommitChannel(block.Number().String())
 	if !ok {
 		log.Error("no commit channel available", "block_number", block.Number().String())
 		return
@@ -229,4 +222,10 @@ func (sb *backend) EnqueueBlock(block *types.Block) {
 
 func (sb *backend) CurrentHeadBlock() *types.Block {
 	return sb.currentBlock()
+}
+
+//ClearStoringMsg will delete all item in queue
+func (sb *backend) ClearStoringMsg() {
+	log.Info("Clear storing msg queue")
+	sb.storingMsgs = queue.NewFIFO()
 }

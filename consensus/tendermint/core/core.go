@@ -11,6 +11,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
+	queue "github.com/enriquebris/goconcurrentqueue"
 )
 
 const (
@@ -26,6 +27,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		config:        config,
 		mu:            &sync.RWMutex{},
 		blockFinalize: new(event.TypeMux),
+		futureMessages: queue.NewFIFO(),
 	}
 	return c
 }
@@ -64,6 +66,10 @@ type core struct {
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
 	proposeStart time.Time
+
+	// futureMessages stores future messages (prevote and precommit) fromo other peers
+	// and handle them later when we jump to that block number
+	futureMessages *queue.FIFO
 }
 
 // Start implements core.Engine.Start

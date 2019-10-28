@@ -198,7 +198,14 @@ func (c *core) handlePrevote(msg message) error {
 	}
 
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		log.Warn("vote's block is different with current block, maybe some older message come after new block is reached", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
+		log.Warn("vote's block is different with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
+		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
+			// vote from future block, save to future message queue
+			log.Info("store prevote vote from future block", "current_blockNumber", state.BlockNumber(), "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address);
+			if err := c.futureMessages.Enqueue(msg); err != nil {
+				log.Error("failed to store future prevote message to queue", "err", err, "blockNumber", vote.BlockNumber, "from", msg.Address)
+			}
+		}
 		return nil
 	}
 	//log.Info("received prevote", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
@@ -290,6 +297,13 @@ func (c *core) handlePrecommit(msg message) error {
 	}
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
 		log.Warn("vote's block is different with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
+		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
+			// vote from future block, save to future message queue
+			log.Info("store precommit vote from future block", "current_blockNumber", state.BlockNumber(), "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address);
+			if err := c.futureMessages.Enqueue(msg); err != nil {
+				log.Error("failed to store future prevote message to queue", "err", err, "blockNumber", vote.BlockNumber, "from", msg.Address)
+			}
+		}
 		return nil
 	}
 	//log.Info("received precommit", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
@@ -400,5 +414,4 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 	default:
 		panic(fmt.Sprintf("Invalid timeout step: %v", ti.Step))
 	}
-
 }

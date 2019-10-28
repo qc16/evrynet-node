@@ -264,14 +264,15 @@ func (w *worker) pendingBlock() *types.Block {
 
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) start() {
-	atomic.StoreInt32(&w.running, 1)
 	if tendermint, ok := w.engine.(consensus.Tendermint); ok {
 		log.Info("Start Tendermint worker")
 		err := tendermint.Start(w.chain, w.chain.CurrentBlock)
 		if err != nil {
 			log.Error("Failed to start Tendermint engine", "err", err)
+			return
 		}
 	}
+	atomic.StoreInt32(&w.running, 1)
 	w.startCh <- struct{}{}
 }
 
@@ -358,7 +359,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 		case head := <-w.chainHeadCh:
 			if h, ok := w.engine.(consensus.Handler); ok {
-				h.HandleNewChainHead()
+				h.HandleNewChainHead(head.Block.Number())
 			}
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
