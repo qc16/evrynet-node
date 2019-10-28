@@ -129,8 +129,9 @@ func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 	return true, nil
 }
 
-// ProposeCandidate proposes a validator
-// vote is 0 represents for kicking the validator out of network, vote is 1 represents for adding the validator to the network
+// ProposeValidator proposes a validator
+// vote is false represents for kicking the validator out of network,
+// vote is true represents for adding the validator to the network
 func (api *PrivateMinerAPI) ProposeValidator(address common.Address, vote bool) (bool, error) {
 	if err := api.e.Miner().ProposeValidator(address, vote); err != nil {
 		return false, err
@@ -138,6 +139,8 @@ func (api *PrivateMinerAPI) ProposeValidator(address common.Address, vote bool) 
 	return true, nil
 }
 
+// ClearPendingProposedValidator this func will be removed a candidate that in the pending status
+// returns true when done
 func (api *PrivateMinerAPI) ClearPendingProposedValidator() bool {
 	api.e.Miner().ClearPendingProposedValidator()
 	return true

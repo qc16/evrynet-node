@@ -97,7 +97,11 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	snap := s.copy()
 
 	for _, header := range headers {
-		blockNumber := header.Number.Uint64()
+		var (
+			blockNumber = header.Number.Uint64()
+			validator   = header.Coinbase
+		)
+
 		if blockNumber%s.Epoch == 0 {
 			// Remove any votes on checkpoint blocks
 			snap.Votes = nil
@@ -105,10 +109,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 
 		// Resolve the authorization key and check against validators
-		validator, err := blockProposer(header)
-		if err != nil {
-			return nil, err
-		}
 		if _, v := snap.ValSet.GetByAddress(validator); v == nil {
 			return nil, errUnauthorized
 		}
@@ -161,6 +161,14 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			if tally.Authorize {
 				// if the authorize is ok add modified validator to valset collectors
 				snap.ValSet.AddValidator(modifiedValidator)
+
+				// Discard any previous votes around the just changed account
+				for i := 0; i < len(snap.Votes); i++ {
+					if snap.Votes[i].ModifiedValidator == modifiedValidator {
+						snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
+						i--
+					}
+				}
 			} else {
 				snap.ValSet.RemoveValidator(modifiedValidator)
 
@@ -175,13 +183,6 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 						i--
 					}
-				}
-			}
-			// Discard any previous votes around the just changed account
-			for i := 0; i < len(snap.Votes); i++ {
-				if snap.Votes[i].ModifiedValidator == modifiedValidator {
-					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-					i--
 				}
 			}
 			// remove tally for new/old validator

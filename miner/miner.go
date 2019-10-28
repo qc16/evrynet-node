@@ -159,14 +159,22 @@ func (self *Miner) SetExtra(extra []byte) error {
 	return nil
 }
 
-func (self *Miner) ProposeValidator(address common.Address, vote bool) error {
-	return self.worker.setProposedValidator(address, vote)
+// ProposeValidator proposes a validator
+// vote is false represents for kicking the validator out of network,
+// vote is true represents for adding the validator to the network
+func (m *Miner) ProposeValidator(address common.Address, vote bool) error {
+	return m.worker.setProposedValidator(address, vote)
 }
-func (self *Miner) ClearPendingProposedValidator() {
-	self.worker.clearPendingProposedValidator()
+
+// ClearPendingProposedValidator this func will be removed a candidate that in the pending status
+// returns true when done
+func (m *Miner) ClearPendingProposedValidator() {
+	m.worker.clearPendingProposedValidator()
 }
-func (self *Miner) GetPendingProposedValidator() (address common.Address, vote bool) {
-	return self.worker.getPendingProposedValidator()
+
+// GetPendingProposedValidator returns a validator that in pending proposed
+func (m *Miner) GetPendingProposedValidator() (address common.Address, vote bool) {
+	return m.worker.getPendingProposedValidator()
 }
 
 // SetRecommitInterval sets the interval for sealing work resubmitting.

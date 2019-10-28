@@ -38,6 +38,7 @@ type Backend interface {
 	Broadcast(valSet ValidatorSet, payload []byte) error
 
 	// Validators returns the validator set
+	// we should only use this method when core is started.
 	Validators(blockNumber *big.Int) ValidatorSet
 
 	// CurrentHeadBlock get the current block of from the canonical chain.
@@ -53,5 +54,7 @@ type Backend interface {
 	EnqueueBlock(block *types.Block)
 
 	// GetValidators returns val-set from snapshot
+	// this function supports to get validator's addresses in case a miner not run yet.
+	// for reason because when the miner not run then chaỉn-reader in core not initialized.
 	GetValidators(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
 }

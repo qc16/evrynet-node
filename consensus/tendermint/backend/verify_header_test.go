@@ -191,6 +191,24 @@ func makeHeaderFromParent(parent *types.Block) *types.Header {
 	return header
 }
 
+func prepareExtra(header *types.Header) ([]byte, error) {
+	var buf bytes.Buffer
+
+	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
+	if len(header.Extra) < types.TendermintExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:types.TendermintExtraVanity])
+
+	tdm := &types.TendermintExtra{}
+	payload, err := rlp.EncodeToBytes(&tdm)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(buf.Bytes(), payload...), nil
+}
+
 //mockChain implement consensus.ChainReader interface. It will return pseudo data for testing purposes.
 type mockChain struct {
 	genesisHeader *types.Header
