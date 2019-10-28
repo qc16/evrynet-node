@@ -17,7 +17,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/params"
@@ -136,10 +135,9 @@ type TestBackend interface {
 	FindExistingPeers(targets tendermint.ValidatorSet) map[common.Address]consensus.Peer
 	Commit(block *types.Block)
 	EnqueueBlock(block *types.Block)
-	ClearStoringMsg()
-	Verify(tendermint.Proposal) error
 	VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error
-	TxPool() *transaction.TxPoolOpts
+	VerifyProposalHeader(header *types.Header, seal bool) error
+	TxPool() *core.TxPool
 	Chain() consensus.ChainReader
 	Start(chain consensus.ChainReader, currentBlock func() *types.Block) error
 	SetBroadcaster(broadcaster consensus.Broadcaster)
