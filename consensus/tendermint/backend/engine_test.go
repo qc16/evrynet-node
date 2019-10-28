@@ -5,10 +5,8 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
 	"github.com/evrynet-official/evrynet-client/ethdb"
@@ -132,29 +130,6 @@ func TestVerifySeal(t *testing.T) {
 	block := makeBlockWithSeal(engine, genesisHeader)
 	err = engine.VerifySeal(chain, block.Header())
 	assert.NoError(t, err)
-}
-
-// TestPrepareExtra
-// 0xd8c094000000000000000000000000000000000000000080c0
-func TestPrepareExtra(t *testing.T) {
-	vanity := make([]byte, types.TendermintExtraVanity)
-	data := hexutil.MustDecode("0xd8c094000000000000000000000000000000000000000080c0")
-	expectedResult := append(vanity, data...)
-
-	header := &types.Header{
-		Extra: vanity,
-	}
-
-	payload, err := prepareExtra(header)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, payload)
-
-	// append useless information to extra-data
-	header.Extra = append(vanity, make([]byte, 15)...)
-
-	payload, err = prepareExtra(header)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, payload)
 }
 
 func newEngine() *backend {

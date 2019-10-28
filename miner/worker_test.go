@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/clique"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
@@ -33,13 +34,15 @@ import (
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
 	// Test chain configurations
-	testTxPoolConfig  core.TxPoolConfig
-	ethashChainConfig *params.ChainConfig
-	cliqueChainConfig *params.ChainConfig
+	testTxPoolConfig      core.TxPoolConfig
+	ethashChainConfig     *params.ChainConfig
+	cliqueChainConfig     *params.ChainConfig
+	tendermintChainConfig *params.ChainConfig
 
 	// Test accounts
 	testBankKey, _  = crypto.GenerateKey()
@@ -68,6 +71,11 @@ func init() {
 	cliqueChainConfig.Clique = &params.CliqueConfig{
 		Period: 10,
 		Epoch:  30000,
+	}
+	tendermintChainConfig = params.TendermintTestChainConfig
+	cliqueChainConfig.Tendermint = &params.TendermintConfig{
+		Epoch:          30000,
+		ProposerPolicy: common.Big0.Uint64(),
 	}
 	tx1, _ := types.SignTx(types.NewTransaction(0, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
 	pendingTxs = append(pendingTxs, tx1)
@@ -458,4 +466,31 @@ func testAdjustInterval(t *testing.T, chainConfig *params.ChainConfig, engine co
 	case <-time.NewTimer(time.Second).C:
 		t.Error("interval reset timeout")
 	}
+}
+
+// TestPrepareExtra
+// 0xd8c094000000000000000000000000000000000000000080c0
+func TestPrepareExtra(t *testing.T) {
+	ethash := ethash.NewFaker()
+	defer ethash.Close()
+
+	w, _ := newTestWorker(t, tendermintChainConfig, ethash, 1)
+	defer w.close()
+
+	vanity := make([]byte, types.TendermintExtraVanity)
+	data := hexutil.MustDecode("0xd8c094000000000000000000000000000000000000000080c0")
+	expectedResult := append(vanity, data...)
+
+	header := &types.Header{
+		Extra: vanity,
+	}
+
+	w.prepareExtraHeader(header)
+	assert.Equal(t, expectedResult, header.Extra)
+
+	// append useless information to extra-data
+	header.Extra = append(vanity, make([]byte, 15)...)
+
+	w.prepareExtraHeader(header)
+	assert.Equal(t, expectedResult, header.Extra)
 }
