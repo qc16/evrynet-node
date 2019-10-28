@@ -54,7 +54,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, txPool *core.T
 		storingMsgs:        queue.NewFIFO(),
 		proposedValidator:  newProposedValidator(),
 	}
-	be.core = tendermintCore.New(be, tendermint.DefaultConfig, txPool)
+	be.core = tendermintCore.New(be, config, txPool)
 
 	for _, opt := range opts {
 		if err := opt(be); err != nil {
@@ -67,16 +67,6 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, txPool *core.T
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
 func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
-}
-
-// IsCoreStarted return true if core was started
-func (sb *backend) IsCoreStarted() bool {
-	return sb.coreStarted
-}
-
-// Core return core.Engine
-func (sb *backend) Core() tendermintCore.Engine {
-	return sb.core
 }
 
 // ----------------------------------------------------------------------------
