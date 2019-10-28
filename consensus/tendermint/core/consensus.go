@@ -11,7 +11,9 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
@@ -160,6 +162,21 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		//}
 		proposal := c.defaultDecideProposal(logger, round)
 		if proposal != nil {
+			// Check faulty mode to inject fake block
+			if c.config.FaultyMode == tendermint.SendFakeProposal.Uint64() {
+				logger.Warnw("send fake proposal")
+				var (
+					fakePrivateKey, _ = crypto.GenerateKey()
+					nodeAddr          = crypto.PubkeyToAddress(fakePrivateKey.PublicKey)
+				)
+				fakeTx := types.NewTransaction(0, nodeAddr, big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
+				fakeTx, _ = types.SignTx(fakeTx, types.HomesteadSigner{}, fakePrivateKey)
+				fakeHeader := proposal.Block.Header()
+				fakeHeader.TxHash = types.DeriveSha(types.Transactions([]*types.Transaction{fakeTx}))
+				fakeBlock := types.NewBlock(fakeHeader, []*types.Transaction{fakeTx}, []*types.Header{}, []*types.Receipt{})
+				proposal.Block = fakeBlock
+			}
+
 			c.SendPropose(proposal)
 		}
 	}
