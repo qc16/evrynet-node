@@ -132,7 +132,6 @@ func (c *core) handleNewBlock(block *types.Block) {
 
 //VerifyProposal validate msg & proposal when get from other nodes
 func (c *core) VerifyProposal(proposal tendermint.Proposal, msg Message) error {
-
 	// Verify POLRound, which must be -1 or in range [0, proposal.Round).
 	if proposal.POLRound < -1 ||
 		((proposal.POLRound >= 0) && proposal.POLRound >= proposal.Round) {
@@ -169,28 +168,27 @@ func (c *core) Verify(proposal tendermint.Proposal) error {
 		txs     = block.Transactions()
 		txnHash = types.DeriveSha(txs)
 	)
-	// check block body
 
+	// check block body
 	if txnHash != block.Header().TxHash {
 		return tendermint.ErrMismatchTxhashes
 	}
 
 	// Verify transaction for CoreTxPool
-	if c.backend.TxPool() != nil && c.backend.TxPool().CoreTxPool != nil {
+	if c.backend.TxPool() != nil {
 		for _, tx := range txs {
-			if err := c.backend.TxPool().CoreTxPool.ValidateTx(tx, false); err != nil {
+			if err := c.backend.TxPool().ValidateTx(tx, false); err != nil {
 				return err
 			}
 		}
 	}
 
 	// verify the header of proposed block
-	err := c.backend.VerifyHeader(c.backend.Chain(), block.Header(), false)
 	// ignore ErrEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == tendermint.ErrEmptyCommittedSeals {
-		return nil
+	if err := c.backend.VerifyProposalHeader(block.Header(), false); err != nil && err != tendermint.ErrEmptyCommittedSeals {
+		return err
 	}
-	return err
+	return nil
 }
 
 func (c *core) handlePropose(msg Message) error {

@@ -248,6 +248,11 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 	return sb.verifyHeader(chain, header, nil)
 }
 
+// VerifyProposalHeader will call be.verifyHeader for checking
+func (sb *backend) VerifyProposalHeader(header *types.Header, seal bool) error {
+	return sb.verifyHeader(sb.chain, header, nil)
+}
+
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying

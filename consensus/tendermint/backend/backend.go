@@ -12,9 +12,9 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -41,10 +41,10 @@ func WithDB(db ethdb.Database) Option {
 	}
 }
 
-//WithTxPoolOpts return an option to set backend's txpool
-func WithTxPoolOpts(txPoolOpts *transaction.TxPoolOpts) Option {
+//WithTxPool return an option to set backend's txpool
+func WithTxPool(txPool *core.TxPool) Option {
 	return func(b *backend) error {
-		b.txPool = txPoolOpts
+		b.txPool = txPool
 		return nil
 	}
 }
@@ -96,7 +96,7 @@ type backend struct {
 	db                 ethdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
-	txPool             *transaction.TxPoolOpts
+	txPool             *core.TxPool
 
 	//once voting finish, the block will be send for commit here
 	//it is a map of blocknumber- channels with mutex
@@ -233,37 +233,8 @@ func (sb *backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus
 	return sb.getValSet(chain, blockNumber)
 }
 
-// Verify implements tendermint.Backend.Verify
-func (sb *backend) Verify(proposal tendermint.Proposal) error {
-	block := proposal.Block
-
-	// check block body
-	txs := block.Transactions()
-	txnHash := types.DeriveSha(txs)
-	if txnHash != block.Header().TxHash {
-		return tendermint.ErrMismatchTxhashes
-	}
-
-	// Verify transaction for CoreTxPool
-	if sb.txPool.CoreTxPool != nil {
-		for _, t := range txs {
-			if err := sb.txPool.CoreTxPool.ValidateTx(t, false); err != nil {
-				return err
-			}
-		}
-	}
-
-	// verify the header of proposed block
-	err := sb.VerifyHeader(sb.chain, block.Header(), false)
-	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == tendermint.ErrEmptyCommittedSeals {
-		return nil
-	}
-	return err
-}
-
 //TxPool return transaction pool
-func (sb *backend) TxPool() *transaction.TxPoolOpts {
+func (sb *backend) TxPool() *core.TxPool {
 	return sb.txPool
 }
 

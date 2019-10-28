@@ -10,12 +10,11 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
-	evrynetCode "github.com/evrynet-official/evrynet-client/core"
+	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
@@ -58,7 +57,6 @@ func TestValidators(t *testing.T) {
 	//create New test backend and newMockChain
 	be, ok := mustCreateAndStartNewBackend(nodePrivateKey, genesisHeader)
 	assert.True(t, ok)
-	assert.NotNil(t, be.TxPool())
 
 	valSet0 := be.Validators(big.NewInt(0))
 	if valSet0.Size() != 1 {
@@ -200,7 +198,7 @@ func TestVerifyProposal(t *testing.T) {
 	assert.NoError(t, err)
 	msg.Signature = signature
 	// Should get error ErrInsufficientFunds
-	assert.EqualError(t, core.VerifyProposal(proposal, msg), evrynetCode.ErrInsufficientFunds.Error())
+	assert.EqualError(t, core.VerifyProposal(proposal, msg), evrynetCore.ErrInsufficientFunds.Error())
 
 	// --------CASE 4--------
 	// Node propose fake block (fake signature)
@@ -249,7 +247,7 @@ func mustCreateAndStartNewBackend(nodePrivateKey *ecdsa.PrivateKey, genesisHeade
 	trigger := false
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
-	var testTxPoolConfig evrynetCode.TxPoolConfig
+	var testTxPoolConfig evrynetCore.TxPoolConfig
 	blockchain := &tests.TestChain{
 		GenesisHeader: genesisHeader,
 		TestBlockChain: &tests.TestBlockChain{
@@ -260,11 +258,11 @@ func mustCreateAndStartNewBackend(nodePrivateKey *ecdsa.PrivateKey, genesisHeade
 		Address: address,
 		Trigger: &trigger,
 	}
-	pool := evrynetCode.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
+	pool := evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
 	defer pool.Stop()
 	memDB := ethdb.NewMemDatabase()
 	config := tendermint.DefaultConfig
-	be := New(config, nodePrivateKey, WithTxPoolOpts(&transaction.TxPoolOpts{CoreTxPool: pool}), WithDB(memDB)).(tests.TestBackend)
+	be := New(config, nodePrivateKey, WithTxPool(pool), WithDB(memDB)).(tests.TestBackend)
 	ok := tests.MustStartTestChainAndBackend(be, blockchain)
 	return be, ok
 }

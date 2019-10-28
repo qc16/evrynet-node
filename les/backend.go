@@ -35,7 +35,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/eth/downloader"
 	"github.com/evrynet-official/evrynet-client/eth/filters"
 	"github.com/evrynet-official/evrynet-client/eth/gasprice"
-	"github.com/evrynet-official/evrynet-client/eth/transaction"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/internal/ethapi"
 	"github.com/evrynet-official/evrynet-client/light"
@@ -93,7 +92,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	peers := newPeerSet()
 	quitSync := make(chan struct{})
 
-	txPoolOpts := &transaction.TxPoolOpts{}
+	txPoolOpts := &core.TxPool{}
 	leth := &LightEthereum{
 		lesCommons: lesCommons{
 			chainDb: chainDb,
