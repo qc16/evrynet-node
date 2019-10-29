@@ -89,6 +89,8 @@ type backend struct {
 	storingMsgs *queue.FIFO
 
 	currentBlock func() *types.Block
+
+	proposedValidator *ProposalValidator
 }
 
 // EventMux implements tendermint.Backend.EventMux

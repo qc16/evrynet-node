@@ -421,10 +421,14 @@ func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, pare
 	return defaultDifficulty
 }
 
+// APIs will expose some RPC API methods
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
-	log.Warn("APIs: implement me")
-	//TODO: Research & Implement
-	return nil
+	return []rpc.API{{
+		Namespace: "tendermint",
+		Version:   "1.0",
+		Service:   &TendermintAPI{chain: chain, be: sb},
+		Public:    true,
+	}}
 }
 
 func (sb *backend) Close() error {
