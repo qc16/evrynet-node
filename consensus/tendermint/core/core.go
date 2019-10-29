@@ -5,13 +5,14 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
+	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
-	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
-	queue "github.com/enriquebris/goconcurrentqueue"
 )
 
 const (
@@ -21,12 +22,12 @@ const (
 // New creates an Tendermint consensus core
 func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 	c := &core{
-		handlerWg:     new(sync.WaitGroup),
-		backend:       backend,
-		timeout:       NewTimeoutTicker(),
-		config:        config,
-		mu:            &sync.RWMutex{},
-		blockFinalize: new(event.TypeMux),
+		handlerWg:      new(sync.WaitGroup),
+		backend:        backend,
+		timeout:        NewTimeoutTicker(),
+		config:         config,
+		mu:             &sync.RWMutex{},
+		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewFIFO(),
 	}
 	return c
@@ -76,7 +77,7 @@ type core struct {
 func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
-	log.Info("starting Tendermint's core...")
+	c.getLogger().Infow("starting Tendermint's core...")
 	if c.currentState == nil {
 		c.currentState = c.getStoredState()
 	}
@@ -96,7 +97,7 @@ func (c *core) Start() error {
 
 // Stop implements core.Engine.Stop
 func (c *core) Stop() error {
-	log.Info("stopping Tendermint's timeout core...")
+	c.getLogger().Infow("stopping Tendermint's timeout core...")
 	c.timeout.Stop()
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
@@ -128,10 +129,12 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
 func (c *core) SendPropose(propose *tendermint.Proposal) {
+	logger := c.getLogger().With("propose_round", propose.Round,
+		"propose_block_number", propose.Block.Number(), "propose_block_hash", propose.Block.Hash())
 
 	msgData, err := rlp.EncodeToBytes(propose)
 	if err != nil {
-		log.Error("Failed to encode Proposal to bytes", "error", err)
+		logger.Errorw("Failed to encode Proposal to bytes", "error", err)
 		return
 	}
 	payload, err := c.FinalizeMsg(&message{
@@ -139,16 +142,16 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		Msg:  msgData,
 	})
 	if err != nil {
-		log.Error("Failed to Finalize Proposal", "error", err)
+		logger.Errorw("Failed to Finalize Proposal", "error", err)
 		return
 	}
 
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
-		log.Error("Failed to Broadcast proposal", "error", err)
+		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
 		return
 	}
 	//TODO: remove this log in production
-	log.Info("sent proposal", "round", propose.Round, "block_number", propose.Block.Number(), "block_hash", propose.Block.Hash())
+	logger.Infow("sent proposal")
 }
 
 func (c *core) SetBlockForProposal(b *types.Block) {
@@ -158,13 +161,14 @@ func (c *core) SetBlockForProposal(b *types.Block) {
 //SendVote send broadcast its vote to the network
 //it only accept 2 voteType: msgPrevote and msgcommit
 func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
+	logger := c.getLogger().With("send_vote_type", voteType, "send_vote_round", round)
 	//This should never happen, but it is a safe guard
 	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		log.Warn("this node is not a validator of this round, skipping vote", "address", c.backend.Address().String(), "round", round)
+		logger.Warnw("this node is not a validator of this round, skipping vote", "address", c.backend.Address())
 		return
 	}
 	if voteType != msgPrevote && voteType != msgPrecommit {
-		log.Error("vote type is invalid")
+		logger.Errorw("vote type is invalid")
 		return
 	}
 	var (
@@ -176,7 +180,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		commitHash := PrepareCommittedSeal(block.Header().Hash())
 		seal, err = c.backend.Sign(commitHash)
 		if err != nil {
-			log.Error("failed to sign seal", seal)
+			logger.Errorw("failed to sign seal", err, "err")
 			return
 		}
 		blockHash = block.Hash()
@@ -189,7 +193,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	}
 	msgData, err := rlp.EncodeToBytes(vote)
 	if err != nil {
-		log.Error("Failed to encode Vote to bytes", "error", err)
+		logger.Errorw("Failed to encode Vote to bytes", "error", err)
 		return
 	}
 	payload, err := c.FinalizeMsg(&message{
@@ -197,16 +201,27 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		Msg:  msgData,
 	})
 	if err != nil {
-		log.Error("Failed to Finalize Vote", "error", err)
+		logger.Errorw("Failed to Finalize Vote", "error", err)
 		return
 	}
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
-		log.Error("Failed to Broadcast vote", "error", err)
+		logger.Errorw("Failed to Broadcast vote", "error", err)
 		return
 	}
-	log.Info("sent vote", "round", vote.Round, "block_number", vote.BlockNumber, "block_hash", vote.BlockHash.Hex())
+	logger.Infow("sent vote", "vote_round", vote.Round, "vote_block_number", vote.BlockNumber, "vote_block_hash", vote.BlockHash.Hex())
 }
 
 func (c *core) CurrentState() *roundState {
 	return c.currentState
+}
+
+// getLogger returns a zap logger with state info
+func (c *core) getLogger() *zap.SugaredLogger {
+	if c.currentState == nil {
+		return zap.S()
+	}
+	return zap.L().With(
+		zap.Stringer("block", c.currentState.BlockNumber()),
+		zap.Int64("round", c.currentState.Round()),
+		zap.Stringer("step", c.currentState.Step())).Sugar()
 }

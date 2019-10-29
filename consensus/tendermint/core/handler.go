@@ -44,6 +44,7 @@ func (c *core) unsubscribeEvents() {
 
 // handleEvents will receive messages as well as timeout and is solely responsible for state change.
 func (c *core) handleEvents() {
+	var logger = c.getLogger()
 	// Clear state
 	defer func() {
 		c.handlerWg.Done()
@@ -65,15 +66,15 @@ func (c *core) handleEvents() {
 				//TODO: Handle ev.Payload, if got error then call c.backend.Gossip()
 				var msg message
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
-					log.Error("failed to decode msg", "error", err)
+					logger.Errorw("failed to decode msg", "error", err)
 				} else {
 					//log.Info("received Message event", "from", msg.Address, "msg_Code", msg.Code)
 					if err := c.handleMsg(msg); err != nil {
-						log.Error("failed to handle msg", "error", err)
+						logger.Errorw("failed to handle msg", "error", err)
 					}
 				}
 			default:
-				log.Info("Unknown event ", "event", ev)
+				c.getLogger().Infow("Unknown event ", "event", ev)
 			}
 		case ti, ok := <-c.timeout.Chan(): //something from timeout...
 			if !ok {
@@ -102,14 +103,15 @@ func (c *core) handleFinalCommitted() error {
 
 func (c *core) handleNewBlock(block *types.Block) {
 	var state = c.CurrentState()
-	log.Info("received New Block event", "block_number", block.Number(), "block_hash", block.Hash())
+	c.getLogger().Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
 
 	if state.BlockNumber().Cmp(block.Number()) > 0 {
 		//This is temporary to let miner come up with a newer block
-		log.Error("new block is older than current consensus state", "block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
+		c.getLogger().Errorw("new block is older than current consensus state",
+			"new_block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
 		//return a nil block to allow miner to send over a new one
 		if err := c.blockFinalize.Post(tendermint.BlockFinalizedEvent{Block: types.NewBlockWithHeader(&types.Header{})}); err != nil {
-			log.Error("cannot post block Finalization to backend", "error", err)
+			c.getLogger().Errorw("cannot post block Finalization to backend", "error", err)
 		}
 		return
 	}
@@ -150,7 +152,9 @@ func (c *core) handlePropose(msg message) error {
 	if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
 		return err
 	}
-	log.Info("received a proposal", "from", msg.Address, "round", proposal.Round, "block_hash", proposal.Block.Hash())
+	logger := c.getLogger().With("proposal_round", proposal.Round, "proposal_block_hash", proposal.Block.Hash().Hex(),
+		"proposal_block_number", proposal.Block.Number().String())
+	logger.Infow("received a proposal", "from", msg.Address)
 
 	// Already have one
 	// TODO: possibly catch double proposals
@@ -160,15 +164,13 @@ func (c *core) handlePropose(msg message) error {
 
 	// Does not apply, this is not an error but may happen due to network lattency
 	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		log.Warn("received proposal with different height/round. Skip processing it",
-			"current block number", state.BlockNumber().String(), "received block number", proposal.Block.Number().String(),
-			"current round", state.Round(), "received round", proposal.Round)
+		logger.Warnw("received proposal with different height/round. Skip processing it")
 		return nil
 	}
 	if err := c.verifyProposal(proposal, msg); err != nil {
 		return err
 	}
-	log.Info("setProposal receive...", "block_hash", proposal.Block.Hash(), "block", proposal.Block.Number(), "round", proposal.Round)
+	logger.Infow("setProposal receive...")
 
 	state.SetProposalReceived(&proposal)
 	//WARNING: THIS piece of code is experimental
@@ -193,17 +195,19 @@ func (c *core) handlePrevote(msg message) error {
 	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
 		return err
 	}
-	if vote.BlockHash == nil {
-		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
+
+	if vote.BlockHash == nil || vote.BlockNumber == nil {
+		c.getLogger().Panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
 	}
+	logger := c.getLogger().With("vote_block_number", vote.BlockNumber, "from", msg.Address, "vote_round", vote.Round, "block_hash", vote.BlockHash.Hex())
 
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		log.Warn("vote's block is different with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
+		logger.Warnw("vote's block is different with current block", "vote_block", vote.BlockNumber, "from", msg.Address)
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
-			log.Info("store prevote vote from future block", "current_blockNumber", state.BlockNumber(), "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address);
+			logger.Infow("store prevote vote from future block", "vote_block", vote.BlockNumber, "vote_round", vote.Round, "from", msg.Address)
 			if err := c.futureMessages.Enqueue(msg); err != nil {
-				log.Error("failed to store future prevote message to queue", "err", err, "blockNumber", vote.BlockNumber, "from", msg.Address)
+				log.Error("failed to store future prevote message to queue", "err", err, "vote_block", vote.BlockNumber, "from", msg.Address)
 			}
 		}
 		return nil
@@ -217,14 +221,14 @@ func (c *core) handlePrevote(msg message) error {
 		return nil
 	}
 
-	log.Info("added prevote vote into roundState", "from", msg.Address, "vote_block_number", vote.BlockNumber, "vote_round", vote.Round, "block_hash", vote.BlockHash.Hex())
+	logger.Infow("added prevote vote into roundState")
 	prevotes, ok := state.GetPrevotesByRound(vote.Round)
 	if !ok {
-		panic("expect prevotes to exist now")
+		logger.Panic("expect prevotes to exist now")
 	}
 	//at this stage, state.PrevoteReceived[vote.Round] is guaranted to exist.
 	if blockHash, ok := prevotes.TwoThirdMajority(); ok {
-		log.Info("got 2/3 majority on a block", "block", blockHash.Hex())
+		logger.Infow("got 2/3 majority on a block", "prevote_block", blockHash.Hex())
 		var (
 			lockedRound = state.LockedRound()
 			lockedBlock = state.LockedBlock()
@@ -232,17 +236,17 @@ func (c *core) handlePrevote(msg message) error {
 		//if there is a lockedRound<vote.Round <= state.Round
 		//and lockedBlock != nil
 		if lockedRound != -1 && lockedRound < vote.Round && vote.Round <= state.Round() && lockedBlock.Hash().Hex() != blockHash.Hex() {
-			log.Info("unlocking because of POL", "lockedRound", lockedRound, "POLRound", vote.Round)
+			logger.Infow("unlocking because of POL", "locked_round", lockedRound, "POL_round", vote.Round)
 			state.Unlock()
 		}
 
 		//set valid Block if the polka is not emptyBlock
 		if blockHash.Hex() != emptyBlockHash.Hex() && state.ValidRound() < vote.Round && vote.Round == state.Round() {
 			if state.ProposalReceived() != nil && state.ProposalReceived().Block.Hash().Hex() == blockHash.Hex() {
-				log.Info("updating validblock because of POL", "validRound", state.ValidRound(), "POLRound", vote.Round)
+				logger.Infow("updating validblock because of POL", "valid_round", state.ValidRound(), "POL_round", vote.Round)
 				state.SetValidRoundAndBlock(vote.Round, state.ProposalReceived().Block)
 			} else {
-				log.Info("updating proposalBlock to nil since we received a valid block we don't know about")
+				logger.Infow("updating proposalBlock to nil since we received a valid block we don't know about")
 				state.SetProposalReceived(nil)
 			}
 		}
@@ -292,18 +296,22 @@ func (c *core) handlePrecommit(msg message) error {
 	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
 		return err
 	}
-	if vote.BlockHash == nil {
-		panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
+	if vote.BlockHash == nil || vote.BlockNumber == nil {
+		c.getLogger().Panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
 	}
+
+	logger := c.getLogger().With("vote_block", vote.BlockNumber, "vote_round", vote.Round,
+		"from", msg.Address.Hex(), "block_hash", vote.BlockHash.Hex())
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		log.Warn("vote's block is different with current block", "current_block", state.BlockNumber(), "vote_block", vote.BlockNumber, "from", msg.Address)
+		logger.Warnw("vote's block is different with current block", "vote_block", vote.BlockNumber, "from", msg.Address)
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
-			log.Info("store precommit vote from future block", "current_blockNumber", state.BlockNumber(), "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address);
+			logger.Infow("store precommit vote from future block", "vote_block", vote.BlockNumber, "vote_round", vote.Round, "from", msg.Address)
 			if err := c.futureMessages.Enqueue(msg); err != nil {
-				log.Error("failed to store future prevote message to queue", "err", err, "blockNumber", vote.BlockNumber, "from", msg.Address)
+				logger.Errorw("failed to store future prevote message to queue", "err", err, "vote_block", vote.BlockNumber, "from", msg.Address)
 			}
 		}
+		logger.Warnw("vote's block is different with current block")
 		return nil
 	}
 	//log.Info("received precommit", "from", msg.Address, "round", vote.Round, "block_hash", vote.BlockHash.Hex())
@@ -314,7 +322,7 @@ func (c *core) handlePrecommit(msg message) error {
 	if !added {
 		return nil
 	}
-	log.Info("added precommit vote into roundState", "round", vote.Round, "block_hash", vote.BlockHash.Hex(), "from", msg.Address.Hex())
+	logger.Infow("added precommit vote into roundState")
 
 	//TODO: revise if we need rebroadcast
 	//rebroadcast
@@ -383,15 +391,16 @@ func (c *core) handleMsg(msg message) error {
 }
 
 func (c *core) handleTimeout(ti timeoutInfo) {
-	log.Info("Received timeout signal from core.timeout", "timeout", ti.Duration, "block_number", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
 	var (
 		round       = c.CurrentState().Round()
 		blockNumber = c.CurrentState().BlockNumber()
 		step        = c.CurrentState().Step()
+		logger      = c.getLogger().With("ti_block_number", ti.BlockNumber, "ti_round", ti.Round, "ti_step", ti.Step)
 	)
+	logger.Infow("Received timeout signal from core.timeout", "timeout", ti.Duration)
 	// timeouts must be for current height, round, step
 	if ti.BlockNumber.Cmp(blockNumber) != 0 || ti.Round < round || (ti.Round == round && ti.Step < step) {
-		log.Info("Ignoring timeout because we're ahead", "block_number", blockNumber, "round", round, "step", step)
+		logger.Infow("Ignoring timeout because we're ahead")
 		return
 	}
 
@@ -412,6 +421,6 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 		c.enterPrecommit(ti.BlockNumber, ti.Round)
 		c.enterNewRound(ti.BlockNumber, ti.Round+1)
 	default:
-		panic(fmt.Sprintf("Invalid timeout step: %v", ti.Step))
+		logger.Panicw("Invalid timeout step")
 	}
 }
