@@ -82,11 +82,6 @@ func (sb *backend) IsCoreStarted() bool {
 	return sb.coreStarted
 }
 
-// Core return core.Engine
-func (sb *backend) Core() tendermintCore.Engine {
-	return sb.core
-}
-
 // ----------------------------------------------------------------------------
 type backend struct {
 	config             *tendermint.Config

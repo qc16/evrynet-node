@@ -147,7 +147,6 @@ type TestBackend interface {
 	Prepare(chain consensus.ChainReader, header *types.Header) error
 	VerifySeal(chain consensus.ChainReader, header *types.Header) error
 	HandleMsg(addr common.Address, msg p2p.Msg) (bool, error)
-	Core() tendermintCore.Engine
 }
 
 // ------------------------------------
