@@ -121,6 +121,11 @@ func (sb *backend) HandleNewChainHead(blockNumber *big.Int) error {
 		return tendermint.ErrStoppedEngine
 	}
 	sb.commitChs.closeAndRemoveCommitChannel(blockNumber.String())
-	go sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{})
+	go func(){
+		if err := sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{
+		BlockNumber:blockNumber}); err!=nil {
+			log.Error("failed to post FinalCommittedEvent to core", "error", err)
+		}
+	}()
 	return nil
 }

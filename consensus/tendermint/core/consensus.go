@@ -558,18 +558,20 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 }
 
 func (c *core) startRoundZero() {
-	var state = c.CurrentState()
+	var (
+		state           = c.CurrentState()
+		lastBlockNumber = c.backend.CurrentHeadBlock().Number()
+		expectedBlock   = big.NewInt(0).Add(lastBlockNumber, big.NewInt(1))
+	)
 
-	lastBlockNumber := c.backend.CurrentHeadBlock().Number()
-	if state.BlockNumber().Int64() == lastBlockNumber.Int64()+1 {
+	if state.BlockNumber().Cmp(expectedBlock) == 0 {
 		log.Info("Catch up with the latest block")
 	} else {
 		// update new round with lastKnownHeight
-		log.Info("New height is not catch up with the latest block, update height to lastest block + 1")
-		newHeight := lastBlockNumber.Add(lastBlockNumber, big.NewInt(1))
+		log.Info("Current state is not at expected block number which is last Head +1. Set state.BlockNumber = lastHead +1")
 		state.SetView(&tendermint.View{
 			Round:       0,
-			BlockNumber: newHeight,
+			BlockNumber: expectedBlock,
 		})
 	}
 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
@@ -598,7 +600,6 @@ func (c *core) updateStateForNewblock() {
 			return
 		}
 	}
-
 	// Update all roundState's fields
 	height := state.BlockNumber()
 	state.SetView(&tendermint.View{
