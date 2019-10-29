@@ -205,7 +205,7 @@ func (c *core) handlePrevote(msg message) error {
 		logger.Warnw("vote's block is different with current block", "vote_block", vote.BlockNumber, "from", msg.Address)
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
-			logger.Infow("store prevote vote from future block", "vote_block", vote.BlockNumber, "vote_round", vote.Round, "from", msg.Address);
+			logger.Infow("store prevote vote from future block", "vote_block", vote.BlockNumber, "vote_round", vote.Round, "from", msg.Address)
 			if err := c.futureMessages.Enqueue(msg); err != nil {
 				log.Error("failed to store future prevote message to queue", "err", err, "vote_block", vote.BlockNumber, "from", msg.Address)
 			}
@@ -391,15 +391,16 @@ func (c *core) handleMsg(msg message) error {
 }
 
 func (c *core) handleTimeout(ti timeoutInfo) {
-	log.Info("Received timeout signal from core.timeout", "timeout", ti.Duration, "block_number", ti.BlockNumber, "round", ti.Round, "step", ti.Step)
 	var (
 		round       = c.CurrentState().Round()
 		blockNumber = c.CurrentState().BlockNumber()
 		step        = c.CurrentState().Step()
+		logger      = c.getLogger().With("ti_block_number", ti.BlockNumber, "ti_round", ti.Round, "ti_step", ti.Step)
 	)
+	logger.Infow("Received timeout signal from core.timeout", "timeout", ti.Duration)
 	// timeouts must be for current height, round, step
 	if ti.BlockNumber.Cmp(blockNumber) != 0 || ti.Round < round || (ti.Round == round && ti.Step < step) {
-		log.Info("Ignoring timeout because we're ahead", "block_number", blockNumber, "round", round, "step", step)
+		logger.Infow("Ignoring timeout because we're ahead")
 		return
 	}
 
@@ -420,6 +421,6 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 		c.enterPrecommit(ti.BlockNumber, ti.Round)
 		c.enterNewRound(ti.BlockNumber, ti.Round+1)
 	default:
-		panic(fmt.Sprintf("Invalid timeout step: %v", ti.Step))
+		logger.Panicw("Invalid timeout step")
 	}
 }

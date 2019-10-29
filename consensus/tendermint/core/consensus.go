@@ -604,7 +604,7 @@ func (c *core) updateStateForNewblock() {
 	state.PrecommitWaited = false
 
 	c.currentState = state
-	c.getLogger().Infow("updated to new block", "new_block_number", state.BlockNumber())
+	logger.Infow("updated to new block", "new_block_number", state.BlockNumber())
 
 	c.processFutureMessages(logger)
 }
