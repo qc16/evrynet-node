@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
@@ -39,10 +40,13 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
 
 	// without seal
 	block := makeBlockWithoutSeal(genesisHeader)
+	engine.Start(chain, func() *types.Block {
+		return block
+	})
+	assert.Equal(t, true, engine.coreStarted)
 	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
 
 	// with seal but incorrect coinbase
@@ -102,6 +106,7 @@ func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types
 	memDB := ethdb.NewMemDatabase()
 	config := tendermint.DefaultConfig
 	b, ok := New(config, nodePK, WithDB(memDB)).(*backend)
+	b.SetBroadcaster(&mockBroadcaster{})
 	if !ok {
 		panic("New() cannot be asserted back to backend")
 	}
@@ -116,8 +121,11 @@ func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types
 	if snap == nil {
 		panic("failed to get snapshot")
 	}
-
-	if err := b.Start(&chain, nil); err != nil {
+	currentBlock := func() *types.Block {
+		appendSeal(genesisHeader, b)
+		return types.NewBlockWithHeader(genesisHeader)
+	}
+	if err := b.Start(&chain, currentBlock); err != nil {
 		log.Panicf("cannot start backend, error:%v", err)
 	}
 	return &chain, b
@@ -212,6 +220,18 @@ func prepareExtra(header *types.Header) ([]byte, error) {
 //mockChain implement consensus.ChainReader interface. It will return pseudo data for testing purposes.
 type mockChain struct {
 	genesisHeader *types.Header
+}
+
+type mockBroadcaster struct {
+}
+
+func (broadcaster *mockBroadcaster) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+	return m
+}
+
+func (broadcaster *mockBroadcaster) Enqueue(id string, block *types.Block) {
+	panic("implement me")
 }
 
 //GetHeader implement a mock version of chainReader.GetHeader
