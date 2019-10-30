@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
@@ -28,6 +29,11 @@ var (
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
+
+	// Magic nonce number to vote on adding a new validator
+	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff")
+	// Magic nonce number to vote on removing a validator.
+	nonceDropVote = hexutil.MustDecode("0x0000000000000000")
 )
 
 const (
@@ -67,7 +73,7 @@ var (
 	errMalformedChannelData = errors.New("data received is not an event type")
 	// errInvalidVote is returned if a nonce value is something else that the two
 	// allowed constants of 0x00..0 or 0xff..f.
-	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
+	errInvalidVote = errors.New("vote nonce not 0x0000000000000000 or 0xffffffffffffffff")
 	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
 	errInvalidCandidate = errors.New("candidate for validator is invalid")
 )
@@ -657,9 +663,9 @@ func (sb *backend) prepareExtra(header *types.Header) []byte {
 	isLock := sb.proposedValidator.isValidatorLocked()
 	if !reflect.DeepEqual(valAddr, common.Address{}) && !isLock {
 		if vote {
-			copy(header.Nonce[:], tendermint.NonceAuthVote)
+			copy(header.Nonce[:], nonceAuthVote)
 		} else {
-			copy(header.Nonce[:], tendermint.NonceDropVote)
+			copy(header.Nonce[:], nonceDropVote)
 		}
 
 		tdm = &types.TendermintExtra{

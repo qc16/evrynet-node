@@ -121,9 +121,9 @@ func applyVotes(headers []*types.Header, addr common.Address, vote bool) {
 		extra, _ := prepareExtraWithModified(header, addr)
 		header.Extra = extra
 		if vote {
-			copy(header.Nonce[:], tendermint.NonceAuthVote)
+			copy(header.Nonce[:], nonceAuthVote)
 		} else {
-			copy(header.Nonce[:], tendermint.NonceDropVote)
+			copy(header.Nonce[:], nonceDropVote)
 		}
 	}
 }
