@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -83,7 +84,7 @@ func TestVerifyProposal(t *testing.T) {
 			block:      block1,
 			privateKey: nodePrivateKey,
 			assertFn: func(err error) {
-				assert.EqualError(t, err, tendermint.ErrMismatchTxhashes.Error())
+				assert.EqualError(t, err, secp256k1.ErrInvalidSignatureLen.Error())
 			},
 		},
 		{
