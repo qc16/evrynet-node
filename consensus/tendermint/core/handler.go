@@ -14,7 +14,6 @@ import (
 var (
 	ErrInvalidProposalPOLRound     = errors.New("invalid proposal POL round")
 	ErrInvalidProposalSignature    = errors.New("invalid proposal signature")
-	ErrInvalidTransactionSignature = errors.New("invalid transaction signature")
 	ErrVoteHeightMismatch          = errors.New("vote height mismatch")
 	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
 	ErrEmptyBlockProposal          = errors.New("empty block proposal")
