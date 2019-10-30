@@ -6,7 +6,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 )
 
-// ProposalValidator
+// ProposalValidator store imformation (about address and vote true/false)
+// for a candidate that is proposed from a node via the rpc api
 type ProposalValidator struct {
 	address     common.Address
 	vote        bool
@@ -19,21 +20,6 @@ func newProposedValidator() *ProposalValidator {
 	return &ProposalValidator{
 		mu: &sync.RWMutex{},
 	}
-}
-
-func (v *ProposalValidator) Address() common.Address {
-	v.mu.RLock()
-	defer v.mu.RUnlock()
-	return v.address
-}
-
-func (v *ProposalValidator) Vote() string {
-	v.mu.RLock()
-	defer v.mu.RUnlock()
-	if v.vote {
-		return "in"
-	}
-	return "out"
 }
 
 // setProposedValidator sets proposed validator in the block extra field

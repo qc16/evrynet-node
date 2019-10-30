@@ -209,7 +209,7 @@ func (sb *backend) ClearStoringMsg() {
 	sb.storingMsgs = queue.NewFIFO()
 }
 
-// GetValidators returns val-set from snapshot
-func (sb *backend) GetValidators(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
+// ValidatorsByChainReader returns val-set from snapshot
+func (sb *backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
 	return sb.getValSet(chain, blockNumber)
 }

@@ -657,7 +657,14 @@ func (sb *backend) prepareExtra(header *types.Header) []byte {
 	var (
 		tdm     *types.TendermintExtra
 		payload []byte
+		buf     bytes.Buffer
 	)
+
+	if len(header.Extra) < types.TendermintExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:types.TendermintExtraVanity])
+
 	// Add validator voting to header
 	valAddr, vote := sb.proposedValidator.getPendingProposedValidator()
 	isLock := sb.proposedValidator.isValidatorLocked()
@@ -680,6 +687,5 @@ func (sb *backend) prepareExtra(header *types.Header) []byte {
 		payload, _ = rlp.EncodeToBytes(&tdm)
 	}
 
-	tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
-	return append(tendermintExtraVanity, payload...)
+	return append(buf.Bytes(), payload...)
 }

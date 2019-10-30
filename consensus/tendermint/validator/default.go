@@ -191,6 +191,9 @@ func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
 // F get the maximum number of faulty nodes
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
+// V get the minimum number of vote nodes
+func (valSet *defaultSet) V() int { return int(math.Ceil(float64(valSet.Size()) / 2)) }
+
 // Policy get proposal policy
 func (valSet *defaultSet) Policy() tendermint.ProposerPolicy { return valSet.policy }
 

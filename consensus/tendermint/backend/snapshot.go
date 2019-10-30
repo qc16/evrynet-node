@@ -120,7 +120,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		}
 
 		if snap.Votes != nil {
-			// Header authorized, discard any previous votes from the validator
+			// Header authorized, discard any previous votes from this validator
 			for i, vote := range snap.Votes {
 				if vote.Validator == validator && vote.ModifiedValidator == modifiedValidator {
 					// Un-cast the vote from the cached tally
@@ -157,7 +157,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 		// If the vote passed, update the list of validators
 		// if the number of votes > 50%
-		if tally := snap.Tally[modifiedValidator]; tally.Votes > snap.ValSet.Size()/2 {
+		if tally := snap.Tally[modifiedValidator]; tally.Votes > snap.ValSet.V() {
 			if tally.Authorize {
 				// if the authorize is ok add modified validator to valset collectors
 				snap.ValSet.AddValidator(modifiedValidator)

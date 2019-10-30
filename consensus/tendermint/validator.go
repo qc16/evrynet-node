@@ -57,6 +57,8 @@ type ValidatorSet interface {
 	Copy() ValidatorSet
 	// Get the maximum number of faulty nodes
 	F() int
+	// V get the minimum number of vote nodes
+	V() int
 	// Get proposer policy
 	Policy() ProposerPolicy
 	// Check whether the validator with given address is a proposer

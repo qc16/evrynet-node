@@ -45,8 +45,8 @@ type Backend interface {
 	//EnqueueBlock adds the block returned from consensus into fetcher queue to update the chain to that specific block.
 	EnqueueBlock(block *types.Block)
 
-	// GetValidators returns val-set from snapshot
+	// ValidatorsByChainReader returns val-set from snapshot
 	// this function supports to get validator's addresses in case a miner not run yet.
 	// for reason because when the miner not run then chaỉn-reader in core not initialized.
-	GetValidators(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
+	ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
 }
