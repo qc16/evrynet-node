@@ -33,9 +33,7 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
-	assert.True(t, ok)
-	assert.Equal(t, true, be.IsCoreStarted())
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
 	// without seal
 	block := tests.MakeBlockWithoutSeal(genesisHeader)
@@ -66,8 +64,7 @@ func TestAuthor(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
-	assert.True(t, ok)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 	assert.Equal(t, true, be.IsCoreStarted())
 
 	block := tests.MakeBlockWithSeal(be, genesisHeader)
@@ -91,9 +88,7 @@ func TestPrepare(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
-	assert.True(t, ok)
-	assert.Equal(t, true, be.IsCoreStarted())
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
 	block := tests.MakeBlockWithoutSeal(genesisHeader)
 	header := block.Header()
@@ -120,9 +115,7 @@ func TestVerifySeal(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be, ok := mustCreateAndStartNewBackend(nodePK, genesisHeader)
-	assert.True(t, ok)
-	assert.Equal(t, true, be.IsCoreStarted())
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
 	// cannot verify genesis
 	err = be.VerifySeal(be.Chain(), genesisHeader)

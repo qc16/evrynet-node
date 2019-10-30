@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"log"
 	"math/big"
+	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
@@ -166,13 +167,24 @@ func MakeNodeKey() *ecdsa.PrivateKey {
 	return key
 }
 
-func MustStartTestChainAndBackend(be TestBackend, blockchain *TestChain) bool {
+
+
+func MustCreateStateDB(t *testing.T) *state.StateDB {
+	var (
+		statedb, err = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+	)
+	if err != nil {
+		t.Fatalf("failed to create stateDB, error %s", err)
+
+	}
+	return statedb
+}
+
+func MustStartTestChainAndBackend(be TestBackend, blockchain *TestChain)  {
 	be.SetBroadcaster(&testProtocolManager{})
 	if err := be.Start(blockchain, blockchain.CurrentBlock); err != nil {
 		log.Panicf("cannot start backend, error:%v", err)
-		return false
 	}
-	return true
 }
 
 func MakeGenesisHeader(validators []common.Address) *types.Header {
