@@ -14,8 +14,6 @@ import (
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/core/rawdb"
-	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
@@ -37,10 +35,9 @@ func TestVerifyProposal(t *testing.T) {
 	)
 
 	//create New test backend and newMockChain
-	be, ok := mustCreateAndStartNewBackend(nodePrivateKey, genesisHeader)
-	assert.True(t, ok)
+	be, txPool := mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
 
-	core := tendermintCore.New(be, tendermint.DefaultConfig).(tests.TestEngine)
+	core := tendermintCore.New(be, tendermint.DefaultConfig, txPool).(tests.TestEngine)
 	require.NoError(t, core.Start())
 	// --------CASE 1--------
 	// Will get errMismatchTxhashes
@@ -142,27 +139,29 @@ func TestVerifyProposal(t *testing.T) {
 	}
 }
 
-func mustCreateAndStartNewBackend(nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) (tests.TestBackend, bool) {
-	address := crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
-	trigger := false
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) (tbe tests.TestBackend, txPool *evrynetCore.TxPool) {
+	var (
+		address = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		trigger = false
+		statedb = tests.MustCreateStateDB(t)
+
+		testTxPoolConfig evrynetCore.TxPoolConfig
+		blockchain       = &tests.TestChain{
+			GenesisHeader: genesisHeader,
+			TestBlockChain: &tests.TestBlockChain{
+				Statedb:       statedb,
+				GasLimit:      1000000000,
+				ChainHeadFeed: new(event.Feed),
+			},
+			Address: address,
+			Trigger: &trigger,
+		}
+		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
+		memDB  = ethdb.NewMemDatabase()
+		config = tendermint.DefaultConfig
+		be     = backend.New(config, nodePrivateKey, pool, backend.WithDB(memDB)).(tests.TestBackend)
+	)
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
-	var testTxPoolConfig evrynetCore.TxPoolConfig
-	blockchain := &tests.TestChain{
-		GenesisHeader: genesisHeader,
-		TestBlockChain: &tests.TestBlockChain{
-			Statedb:       statedb,
-			GasLimit:      1000000000,
-			ChainHeadFeed: new(event.Feed),
-		},
-		Address: address,
-		Trigger: &trigger,
-	}
-	pool := evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
-	defer pool.Stop()
-	memDB := ethdb.NewMemDatabase()
-	config := tendermint.DefaultConfig
-	be := backend.New(config, nodePrivateKey, backend.WithTxPool(pool), backend.WithDB(memDB)).(tests.TestBackend)
-	ok := tests.MustStartTestChainAndBackend(be, blockchain)
-	return be, ok
+	tests.MustStartTestChainAndBackend(be, blockchain)
+	return be, pool
 }

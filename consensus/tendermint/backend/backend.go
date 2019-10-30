@@ -7,13 +7,13 @@ import (
 	"sync"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
+	"github.com/evrynet-official/evrynet-client/core"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
-	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
@@ -42,17 +42,9 @@ func WithDB(db ethdb.Database) Option {
 	}
 }
 
-//WithTxPool return an option to set backend's txpool
-func WithTxPool(txPool *core.TxPool) Option {
-	return func(b *backend) error {
-		b.txPool = txPool
-		return nil
-	}
-}
-
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
-func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
+func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, txPool *core.TxPool, opts ...Option) consensus.Tendermint {
 	be := &backend{
 		config:             config,
 		tendermintEventMux: new(event.TypeMux),
@@ -62,7 +54,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		mutex:              &sync.RWMutex{},
 		storingMsgs:        queue.NewFIFO(),
 	}
-	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
+	be.core = tendermintCore.New(be, tendermint.DefaultConfig, txPool)
 
 	for _, opt := range opts {
 		if err := opt(be); err != nil {
@@ -77,11 +69,6 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
-// IsCoreStarted return true if core was started
-func (sb *backend) IsCoreStarted() bool {
-	return sb.coreStarted
-}
-
 // ----------------------------------------------------------------------------
 type backend struct {
 	config             *tendermint.Config
@@ -91,7 +78,6 @@ type backend struct {
 	db                 ethdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
-	txPool             *core.TxPool
 
 	//once voting finish, the block will be send for commit here
 	//it is a map of blocknumber- channels with mutex
@@ -237,14 +223,4 @@ func (sb *backend) EnqueueBlock(block *types.Block) {
 
 func (sb *backend) CurrentHeadBlock() *types.Block {
 	return sb.currentBlock()
-}
-
-//TxPool return transaction pool
-func (sb *backend) TxPool() *core.TxPool {
-	return sb.txPool
-}
-
-//Chain return chain reader
-func (sb *backend) Chain() consensus.ChainReader {
-	return sb.chain
 }

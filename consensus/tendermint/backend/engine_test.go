@@ -29,13 +29,13 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader).(*backend)
 
 	// without seal
 	block := tests.MakeBlockWithoutSeal(genesisHeader)
-	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, be.VerifyHeader(be.Chain(), block.Header(), false))
+	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, be.VerifyHeader(be.chain, block.Header(), false))
 
-	err = be.Seal(be.Chain(), block, nil, nil)
+	err = be.Seal(be.chain, block, nil, nil)
 
 	// Sleep to make sure that the block can be received from
 	time.Sleep(2 * time.Second)
@@ -61,7 +61,6 @@ func TestAuthor(t *testing.T) {
 
 	//create New test backend and newMockChain
 	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
-	assert.Equal(t, true, be.IsCoreStarted())
 
 	block := tests.MakeBlockWithSeal(be, genesisHeader)
 	header := block.Header()
@@ -84,16 +83,16 @@ func TestPrepare(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader).(*backend)
 
 	block := tests.MakeBlockWithoutSeal(genesisHeader)
 	header := block.Header()
 
-	err = be.Prepare(be.Chain(), header)
+	err = be.Prepare(be.chain, header)
 	assert.NoError(t, err)
 
 	header.ParentHash = common.HexToHash("1234567890")
-	err = be.Prepare(be.Chain(), header)
+	err = be.Prepare(be.chain, header)
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 }
 
@@ -111,14 +110,14 @@ func TestVerifySeal(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader).(*backend)
 
 	// cannot verify genesis
-	err = be.VerifySeal(be.Chain(), genesisHeader)
+	err = be.VerifySeal(be.chain, genesisHeader)
 	assert.Equal(t, errUnknownBlock, err)
 
 	block := tests.MakeBlockWithSeal(be, genesisHeader)
-	err = be.VerifySeal(be.Chain(), block.Header())
+	err = be.VerifySeal(be.chain, block.Header())
 	assert.NoError(t, err)
 }
 

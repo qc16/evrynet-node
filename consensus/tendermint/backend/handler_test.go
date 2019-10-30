@@ -9,7 +9,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/rlp"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestHandleMsg(t *testing.T) {
@@ -23,9 +22,7 @@ func TestHandleMsg(t *testing.T) {
 	)
 
 	//create New test backend and newMockChain
-	be, ok := mustCreateAndStartNewBackend(nodePrivateKey, genesisHeader)
-	assert.True(t, ok)
-	assert.NotNil(t, be.TxPool())
+	be := mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
 
 	// generate one msg
 	data := []byte("data1")

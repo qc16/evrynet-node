@@ -137,12 +137,9 @@ type TestBackend interface {
 	Commit(block *types.Block)
 	EnqueueBlock(block *types.Block)
 	VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error
-	VerifyProposalHeader(header *types.Header, seal bool) error
-	TxPool() *core.TxPool
-	Chain() consensus.ChainReader
+	VerifyProposalHeader(header *types.Header) error
 	Start(chain consensus.ChainReader, currentBlock func() *types.Block) error
 	SetBroadcaster(broadcaster consensus.Broadcaster)
-	IsCoreStarted() bool
 	Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error)
 	Author(header *types.Header) (common.Address, error)
 	Prepare(chain consensus.ChainReader, header *types.Header) error
@@ -167,8 +164,6 @@ func MakeNodeKey() *ecdsa.PrivateKey {
 	return key
 }
 
-
-
 func MustCreateStateDB(t *testing.T) *state.StateDB {
 	var (
 		statedb, err = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
@@ -180,7 +175,7 @@ func MustCreateStateDB(t *testing.T) *state.StateDB {
 	return statedb
 }
 
-func MustStartTestChainAndBackend(be TestBackend, blockchain *TestChain)  {
+func MustStartTestChainAndBackend(be TestBackend, blockchain *TestChain) {
 	be.SetBroadcaster(&testProtocolManager{})
 	if err := be.Start(blockchain, blockchain.CurrentBlock); err != nil {
 		log.Panicf("cannot start backend, error:%v", err)

@@ -218,7 +218,7 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 }
 
 // VerifyProposalHeader will call be.verifyHeader for checking
-func (sb *backend) VerifyProposalHeader(header *types.Header, seal bool) error {
+func (sb *backend) VerifyProposalHeader(header *types.Header) error {
 	return sb.verifyHeader(sb.chain, header, nil)
 }
 
