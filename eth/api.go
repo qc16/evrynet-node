@@ -30,7 +30,6 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/state"
@@ -129,32 +128,6 @@ func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
 	return true, nil
 }
 
-// ProposeValidator proposes a validator
-// vote is false represents for kicking the validator out of network,
-// vote is true represents for adding the validator to the network
-func (api *PrivateMinerAPI) ProposeValidator(address common.Address, vote bool) (bool, error) {
-	if err := api.e.Miner().ProposeValidator(address, vote); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// ClearPendingProposedValidator this func will be removed a candidate that in the pending status
-// returns true when done
-func (api *PrivateMinerAPI) ClearPendingProposedValidator() bool {
-	api.e.Miner().ClearPendingProposedValidator()
-	return true
-}
-
-// GetPendingProposedValidator returns the pending proposed validator
-func (api *PrivateMinerAPI) GetPendingProposedValidator() map[string]interface{} {
-	validator, vote := api.e.Miner().GetPendingProposedValidator()
-	return map[string]interface{}{
-		"validator": validator,
-		"vote":      vote,
-	}
-}
-
 // SetGasPrice sets the minimum accepted gas price for the miner.
 func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	api.e.lock.Lock()
@@ -179,28 +152,6 @@ func (api *PrivateMinerAPI) SetRecommitInterval(interval int) {
 // GetHashrate returns the current hashrate of the miner.
 func (api *PrivateMinerAPI) GetHashrate() uint64 {
 	return api.e.miner.HashRate()
-}
-
-// GetValidators returns the list of validators by block's number
-func (api *PrivateMinerAPI) GetValidators(number *uint64) []common.Address {
-	var (
-		blockNumber *big.Int
-	)
-	if number == nil {
-		blockNumber = api.e.BlockChain().CurrentHeader().Number
-	} else {
-		blockNumber = new(big.Int).SetUint64(*number)
-	}
-
-	if be, ok := api.e.Engine().(tendermint.Backend); ok {
-		valSet := be.GetValidators(blockNumber, api.e.BlockChain())
-		validators := make([]common.Address, 0, valSet.Size())
-		for _, validator := range valSet.List() {
-			validators = append(validators, validator.Address())
-		}
-		return validators
-	}
-	return nil
 }
 
 // PrivateAdminAPI is the collection of Ethereum full node-related APIs

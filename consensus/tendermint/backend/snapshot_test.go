@@ -136,8 +136,10 @@ func createHeaderArr(startNumber int, countHeader int, addrs []common.Address) [
 			Number:   big.NewInt(int64(i)),
 			Coinbase: addrs[index],
 		}
-		extra, _ := prepareExtra(header)
-		header.Extra = extra
+		tdm := &types.TendermintExtra{}
+		payload, _ := rlp.EncodeToBytes(&tdm)
+		tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
+		header.Extra = append(tendermintExtraVanity, payload...)
 
 		headers[i-startNumber] = header
 	}
