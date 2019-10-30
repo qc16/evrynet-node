@@ -49,7 +49,7 @@ func (api *TendermintAPI) GetValidators(number *uint64) []common.Address {
 	} else {
 		blockNumber = new(big.Int).SetUint64(*number)
 	}
-	valSet := api.be.Validators(blockNumber)
+	valSet := api.be.GetValidators(blockNumber, api.chain)
 	validators := make([]common.Address, 0, valSet.Size())
 	for _, validator := range valSet.List() {
 		validators = append(validators, validator.Address())

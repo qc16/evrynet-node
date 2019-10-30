@@ -51,6 +51,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		commitChs:          newCommitChannels(),
 		mutex:              &sync.RWMutex{},
 		storingMsgs:        queue.NewFIFO(),
+		proposedValidator:  newProposedValidator(),
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {

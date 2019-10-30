@@ -1,8 +1,10 @@
 package backend
 
 import (
+	"bytes"
 	"errors"
 	"math/big"
+	"reflect"
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -15,6 +17,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
@@ -116,6 +119,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		results <- nil
 		return
 	}
+
 	blockNumberStr := block.Number().String()
 
 	ch := sb.commitChs.getOrCreateCommitChannel(blockNumberStr)
@@ -133,6 +137,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		for {
 			select {
 			case bl, ok := <-ch:
+				// remove lock whether Seal is success or not
+				sb.proposedValidator.removeLock()
 				if !ok {
 					log.Info("committing... Channel closed, exit seal...", "number", blockNumberStr)
 					return
@@ -151,6 +157,11 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 				//we only posted the block back to the miner if and only if the block is ours
 				if bl.Coinbase() == sb.address {
 					log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
+
+					// clear pending proposed validator if sealing Successfully
+					if bl.Number().Int64() == sb.proposedValidator.getLockBlock() {
+						sb.proposedValidator.clearPendingProposedValidator()
+					}
 					results <- bl
 				} else {
 					log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...", "block_hash", block.Hash(), "number", block.Number())
@@ -360,6 +371,9 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
+	// prepare extra data without validators
+	header.Extra = sb.prepareExtra(header)
 
 	// set header's timestamp from parent's timestamp and blockperiod
 	var (
@@ -631,4 +645,35 @@ func (sb *backend) getValSet(chainReader consensus.ChainReader, blockNumber *big
 		return snap.ValSet
 	}
 	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
+}
+
+func (sb *backend) prepareExtra(header *types.Header) []byte {
+	var (
+		tdm     *types.TendermintExtra
+		payload []byte
+	)
+	// Add validator voting to header
+	valAddr, vote := sb.proposedValidator.getPendingProposedValidator()
+	isLock := sb.proposedValidator.isValidatorLocked()
+	if !reflect.DeepEqual(valAddr, common.Address{}) && !isLock {
+		if vote {
+			copy(header.Nonce[:], tendermint.NonceAuthVote)
+		} else {
+			copy(header.Nonce[:], tendermint.NonceDropVote)
+		}
+
+		tdm = &types.TendermintExtra{
+			ModifiedValidator: valAddr,
+		}
+		payload, _ = rlp.EncodeToBytes(&tdm)
+
+		//lock validator
+		sb.proposedValidator.lockValidator(header.Number.Int64())
+	} else {
+		tdm = &types.TendermintExtra{}
+		payload, _ = rlp.EncodeToBytes(&tdm)
+	}
+
+	tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
+	return append(tendermintExtraVanity, payload...)
 }

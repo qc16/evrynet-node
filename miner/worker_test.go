@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/clique"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
@@ -34,7 +33,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -466,66 +464,4 @@ func testAdjustInterval(t *testing.T, chainConfig *params.ChainConfig, engine co
 	case <-time.NewTimer(time.Second).C:
 		t.Error("interval reset timeout")
 	}
-}
-
-// TestPrepareExtra
-// 0xd8c094000000000000000000000000000000000000000080c0
-func TestPrepareExtra(t *testing.T) {
-	ethash := ethash.NewFaker()
-	defer ethash.Close()
-
-	w, _ := newTestWorker(t, tendermintChainConfig, ethash, 1)
-	defer w.close()
-
-	vanity := make([]byte, types.TendermintExtraVanity)
-	data := hexutil.MustDecode("0xd8c094000000000000000000000000000000000000000080c0")
-	expectedResult := append(vanity, data...)
-
-	header := &types.Header{
-		Extra:  vanity,
-		Number: big.NewInt(0),
-	}
-
-	w.prepareExtraHeader(header)
-	assert.Equal(t, expectedResult, header.Extra)
-
-	// append useless information to extra-data
-	header.Extra = append(vanity, make([]byte, 15)...)
-
-	w.prepareExtraHeader(header)
-	assert.Equal(t, expectedResult, header.Extra)
-
-	var (
-		candidate = validator{
-			address: common.HexToAddress("123456"),
-			vote:    true,
-		}
-		newCandidate = validator{
-			address: common.HexToAddress("654321"),
-			vote:    true,
-		}
-	)
-
-	// will attach a candidate to voting
-	w.setProposedValidator(candidate.address, candidate.vote)
-	w.prepareExtraHeader(header)
-	candidateAddr, _ := getModifiedValidator(*header)
-	assert.Equal(t, candidate.address, candidateAddr)
-
-	// the candidate will be repplaced by new candidate when call setProposedValidator and old candidate have not processed yet
-	w.setProposedValidator(newCandidate.address, newCandidate.vote)
-	w.prepareExtraHeader(header)
-	newCandidateAddr, _ := getModifiedValidator(*header)
-	assert.NotEqual(t, candidate.address, newCandidateAddr)
-	assert.Equal(t, newCandidate.address, newCandidateAddr)
-}
-
-// getModifiedValidator get modified validator in the extra data for cals votes
-func getModifiedValidator(header types.Header) (common.Address, error) {
-	// Retrieve the signature from the header extra-data
-	extra, err := types.ExtractTendermintExtra(&header)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return extra.ModifiedValidator, nil
 }

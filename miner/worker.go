@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
-	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,14 +28,12 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/misc"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
-	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 const (
@@ -154,10 +151,9 @@ type worker struct {
 	remoteUncles map[common.Hash]*types.Block // A set of side blocks as the possible uncle blocks.
 	unconfirmed  *unconfirmedBlocks           // A set of locally mined blocks pending canonicalness confirmations.
 
-	mu                sync.RWMutex // The lock used to protect the coinbase and extra fields
-	coinbase          common.Address
-	extra             []byte
-	proposedValidator *validator
+	mu       sync.RWMutex // The lock used to protect the coinbase and extra fields
+	coinbase common.Address
+	extra    []byte
 
 	pendingMu    sync.RWMutex
 	pendingTasks map[common.Hash]*task
@@ -203,8 +199,6 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		startCh:            make(chan struct{}, 1),
 		resubmitIntervalCh: make(chan time.Duration),
 		resubmitAdjustCh:   make(chan *intervalAdjust, resubmitAdjustChanSize),
-
-		proposedValidator: newProposedValidator(),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -242,52 +236,6 @@ func (w *worker) setExtra(extra []byte) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.extra = extra
-}
-
-// setProposedValidator sets proposed validator in the block extra field
-func (w *worker) setProposedValidator(address common.Address, vote bool) error {
-	return w.proposedValidator.setProposedValidator(address, vote)
-}
-
-// clearPendingProposedValidator remove the pending validator
-func (w *worker) clearPendingProposedValidator() {
-	w.proposedValidator.clearPendingProposedValidator()
-}
-
-// getPendingProposedValidator returns pending validator
-func (w *worker) getPendingProposedValidator() (validator common.Address, vote bool) {
-	return w.proposedValidator.getPendingProposedValidator()
-}
-
-func (w *worker) prepareExtraHeader(header *types.Header) {
-	var (
-		tdm     *types.TendermintExtra
-		payload []byte
-	)
-	// Add validator voting to header
-	valAddr, vote := w.getPendingProposedValidator()
-	isLock := w.proposedValidator.isValidatorLocked()
-	if !reflect.DeepEqual(valAddr, common.Address{}) && !isLock {
-		if vote {
-			copy(header.Nonce[:], tendermint.NonceAuthVote)
-		} else {
-			copy(header.Nonce[:], tendermint.NonceDropVote)
-		}
-
-		tdm = &types.TendermintExtra{
-			ModifiedValidator: valAddr,
-		}
-		payload, _ = rlp.EncodeToBytes(&tdm)
-
-		//lock validator
-		w.proposedValidator.lockValidator(header.Number.Int64())
-	} else {
-		tdm = &types.TendermintExtra{}
-		payload, _ = rlp.EncodeToBytes(&tdm)
-	}
-
-	tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
-	header.Extra = append(tendermintExtraVanity, payload...)
 }
 
 // setRecommitInterval updates the interval for miner sealing work recommitting.
@@ -596,9 +544,6 @@ func (w *worker) taskLoop() {
 				log.Warn("Block sealing failed", "err", err)
 			}
 
-			// remove lock whether Seal is success or not
-			w.proposedValidator.removeLock()
-
 		case <-w.exitCh:
 			interrupt()
 			return
@@ -659,11 +604,6 @@ func (w *worker) resultLoop() {
 			}
 			log.Info("Successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash,
 				"elapsed", common.PrettyDuration(time.Since(task.createdAt)))
-
-			// clear pending proposed validator if sealing Successfully
-			if block.Number().Int64() == w.proposedValidator.getLockBlock() {
-				w.proposedValidator.clearPendingProposedValidator()
-			}
 
 			// Broadcast the block and announce chain insertion event
 			w.mux.Post(core.NewMinedBlockEvent{Block: block})
@@ -930,8 +870,6 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		}
 		header.Coinbase = w.coinbase
 	}
-
-	w.prepareExtraHeader(header)
 
 	if err := w.engine.Prepare(w.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
