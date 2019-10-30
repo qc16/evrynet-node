@@ -10,6 +10,7 @@ import (
 	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -20,7 +21,7 @@ const (
 )
 
 // New creates an Tendermint consensus core
-func New(backend tendermint.Backend, config *tendermint.Config) Engine {
+func New(backend tendermint.Backend, config *tendermint.Config, txPool *evrynetCore.TxPool) Engine {
 	c := &core{
 		handlerWg:      new(sync.WaitGroup),
 		backend:        backend,
@@ -29,6 +30,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewFIFO(),
+		txPool:         txPool,
 	}
 	return c
 }
@@ -71,6 +73,8 @@ type core struct {
 	// futureMessages stores future messages (prevote and precommit) fromo other peers
 	// and handle them later when we jump to that block number
 	futureMessages *queue.FIFO
+
+	txPool *evrynetCore.TxPool
 }
 
 // Start implements core.Engine.Start

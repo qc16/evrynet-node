@@ -133,7 +133,7 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 		mutex:              &sync.RWMutex{},
 		storingMsgs:        queue.NewFIFO(),
 	}
-	backend.core = tendermintCore.New(backend, config.Tendermint)
+	backend.core = tendermintCore.New(backend, config.Tendermint, nil)
 	backend.SetBroadcaster(&mockBroadcast{})
 
 	//init tendermint engine

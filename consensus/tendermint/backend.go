@@ -5,7 +5,6 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
-	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 )
@@ -60,8 +59,5 @@ type Backend interface {
 	// VerifyProposalHeader checks whether a header conforms to the consensus rules of a
 	// given engine. Verifying the seal may be done optionally here, or explicitly
 	// via the VerifySeal method.
-	VerifyProposalHeader(header *types.Header, seal bool) error
-
-	//TxPool return transaction pool
-	TxPool() *core.TxPool
+	VerifyProposalHeader(header *types.Header) error
 }

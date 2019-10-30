@@ -153,40 +153,39 @@ func (c *core) VerifyProposal(proposal tendermint.Proposal, msg Message) error {
 		return ErrEmptyBlockProposal
 	}
 
-	// check transaction hash & header
-	if err := c.Verify(proposal); err != nil {
+	// verify the header of proposed block
+	// ignore ErrEmptyCommittedSeals error because we don't have the committed seals yet
+	if err := c.backend.VerifyProposalHeader(proposal.Block.Header()); err != nil && err != tendermint.ErrEmptyCommittedSeals {
+		return err
+	}
+
+	// verify transaction hash & header
+	if err := c.verifyTxs(proposal); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Verify implements tendermint.Backend.Verify
-func (c *core) Verify(proposal tendermint.Proposal) error {
+func (c *core) verifyTxs(proposal tendermint.Proposal) error {
 	var (
 		block   = proposal.Block
 		txs     = block.Transactions()
-		txnHash = types.DeriveSha(txs)
+		txsHash = types.DeriveSha(txs)
 	)
 
-	// check block body
-	if txnHash != block.Header().TxHash {
+	// Verify txs hash
+	if txsHash != block.Header().TxHash {
 		return tendermint.ErrMismatchTxhashes
 	}
 
 	// Verify transaction for CoreTxPool
-	if c.backend.TxPool() != nil {
+	if c.txPool != nil {
 		for _, tx := range txs {
-			if err := c.backend.TxPool().ValidateTx(tx, false); err != nil {
+			if err := c.txPool.ValidateTx(tx, false); err != nil {
 				return err
 			}
 		}
-	}
-
-	// verify the header of proposed block
-	// ignore ErrEmptyCommittedSeals error because we don't have the committed seals yet
-	if err := c.backend.VerifyProposalHeader(block.Header(), false); err != nil && err != tendermint.ErrEmptyCommittedSeals {
-		return err
 	}
 	return nil
 }

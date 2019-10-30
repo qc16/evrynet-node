@@ -97,7 +97,7 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
 		memDB  = ethdb.NewMemDatabase()
 		config = tendermint.DefaultConfig
-		be     = New(config, nodePrivateKey, WithTxPool(pool), WithDB(memDB)).(tests.TestBackend)
+		be     = New(config, nodePrivateKey, pool, WithDB(memDB)).(tests.TestBackend)
 	)
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
 	defer pool.Stop()

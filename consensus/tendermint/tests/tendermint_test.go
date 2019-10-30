@@ -37,7 +37,7 @@ func TestStartingTendermint(t *testing.T) {
 	var (
 		nodePk1    = mustGeneratePrivateKey(pkey1)
 		nodePk2    = mustGeneratePrivateKey(pkey2)
-		tbe1       = backend.New(tendermint.DefaultConfig, nodePk1)
+		tbe1       = backend.New(tendermint.DefaultConfig, nodePk1, nil)
 		totalPeers = 2
 		n1         = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk1.PublicKey)[1:]) + "@33.4.2.1:30303")
 		n2         = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk2.PublicKey)[1:]) + "@33.4.2.1:30304")
