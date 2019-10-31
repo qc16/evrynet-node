@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -85,17 +86,26 @@ func (c *core) handleEvents() {
 			if !ok {
 				return
 			}
-			switch event.Data.(type) {
+			switch ev:= event.Data.(type) {
 			case tendermint.FinalCommittedEvent:
-				c.handleFinalCommitted()
+				c.handleFinalCommitted(ev.BlockNumber)
 			}
 		}
 	}
 }
 
 // handleFinalCommitted is calling when received a final committed proposal
-func (c *core) handleFinalCommitted() error {
-	log.Info("Received a final committed proposal", "handleFinalCommitted", "called")
+func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
+	var (
+		state = c.CurrentState()
+	)
+
+	if state.BlockNumber().Cmp(newHeadNumber) > 0 {
+		log.Warn("current state block number is ahead of new Head number. Ignore updating...",
+			"current_block_number", state.BlockNumber().String(),
+			"new_head_number", newHeadNumber.String())
+		return nil
+	}
 	c.updateStateForNewblock()
 	c.startRoundZero()
 	return nil
