@@ -594,8 +594,11 @@ func (c *core) updateStateForNewblock() {
 	} else {
 		state.startTime = c.config.Commit(state.commitTime)
 	}
-
-	state.SetBlock(nil)
+	//this is to safeguard the case where miner send a newer block, which should not be discarded.
+	//
+	if state.Block()!=nil && state.Block().Number().Cmp(state.BlockNumber()) < 0 {
+		state.SetBlock(nil)
+	}
 	state.SetLockedRoundAndBlock(-1, nil)
 	state.SetValidRoundAndBlock(-1, nil)
 	state.SetProposalReceived(nil)

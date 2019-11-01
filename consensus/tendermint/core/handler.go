@@ -115,9 +115,9 @@ func (c *core) handleNewBlock(block *types.Block) {
 	var state = c.CurrentState()
 	c.getLogger().Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
 
-	if state.BlockNumber().Cmp(block.Number()) > 0 {
+	if state.BlockNumber().Cmp(block.Number()) !=0 {
 		//This is temporary to let miner come up with a newer block
-		c.getLogger().Errorw("new block is older than current consensus state",
+		c.getLogger().Errorw("new block number mismatched",
 			"new_block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
 		//return a nil block to allow miner to send over a new one
 		if err := c.blockFinalize.Post(tendermint.BlockFinalizedEvent{Block: types.NewBlockWithHeader(&types.Header{})}); err != nil {
