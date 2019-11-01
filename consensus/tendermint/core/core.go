@@ -86,9 +86,8 @@ func (c *core) Start() error {
 	if err := c.timeout.Start(); err != nil {
 		return err
 	}
-	go c.handleEvents()
-
 	c.startRoundZero()
+	go c.handleEvents()
 
 	return nil
 }
