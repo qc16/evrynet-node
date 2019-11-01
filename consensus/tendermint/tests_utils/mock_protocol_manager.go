@@ -18,4 +18,3 @@ func (pm *mockProtocolManager) FindPeers(targets map[common.Address]bool) map[co
 func (pm *mockProtocolManager) Enqueue(id string, block *types.Block) {
 	return
 }
-

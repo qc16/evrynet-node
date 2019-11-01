@@ -5,15 +5,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/evrynet-official/evrynet-client/log"
 	"go.uber.org/zap"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/metrics"
-	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
@@ -164,18 +163,30 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		if proposal != nil {
 			// Check faulty mode to inject fake block
 			if c.config.FaultyMode == tendermint.SendFakeProposal.Uint64() {
-				logger.Warnw("send fake proposal")
-				var (
-					fakePrivateKey, _ = crypto.GenerateKey()
-					nodeAddr          = crypto.PubkeyToAddress(fakePrivateKey.PublicKey)
-					fakeHeader        = proposal.Block.Header()
-					fakeTx            = types.NewTransaction(0, nodeAddr, big.NewInt(10), 800000, big.NewInt(params.GasPriceConfig), nil)
-				)
+				log.Warn("send fake proposal", "ParentHash", proposal.Block.ParentHash().Hex())
 
-				fakeTx, _ = types.SignTx(fakeTx, types.HomesteadSigner{}, fakePrivateKey)
-				fakeHeader.TxHash = types.DeriveSha(types.Transactions([]*types.Transaction{fakeTx}))
-				fakeBlock := types.NewBlock(fakeHeader, []*types.Transaction{fakeTx}, []*types.Header{}, []*types.Receipt{})
-				proposal.Block = fakeBlock
+				fakeHeader := *proposal.Block.Header()
+				fakeHeader.ParentHash = common.HexToHash("0x77d14e10470b5850332524f8cd6f69ad21f070ce92dca33ab2858300242ef2f1")
+
+				// prepare extra data without validators
+				extra, err := utils.PrepareExtra(&fakeHeader)
+				if err != nil {
+					log.Error("fail to fake proposal", "err", err)
+				}
+				fakeHeader.Extra = extra
+
+				// addProposalSeal
+				seal, err := c.backend.Sign(utils.SigHash(&fakeHeader).Bytes())
+				if err != nil {
+					log.Error("fail to sign fake header", "err", err)
+				}
+				err = utils.WriteSeal(&fakeHeader, seal)
+				if err != nil {
+					log.Error("fail to write seal for fake header", "err", err)
+				}
+
+				proposal.Block = proposal.Block.FakeHeader(&fakeHeader)
+				log.Warn("after fake coinbase", "ParentHash", proposal.Block.ParentHash().Hex())
 			}
 
 			c.SendPropose(proposal)

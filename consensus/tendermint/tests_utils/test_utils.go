@@ -44,7 +44,6 @@ func MustCreateStateDB(t *testing.T) *state.StateDB {
 	return statedb
 }
 
-
 func MakeGenesisHeader(validators []common.Address) *types.Header {
 	var header = &types.Header{
 		Number:     big.NewInt(int64(0)),

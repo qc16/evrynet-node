@@ -32,4 +32,3 @@ func (bc *MockBlockChain) StateAt(common.Hash) (*state.StateDB, error) {
 func (bc *MockBlockChain) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription {
 	return bc.ChainHeadFeed.Subscribe(ch)
 }
-
