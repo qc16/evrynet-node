@@ -1,8 +1,9 @@
 package tendermint
 
 import (
-	"github.com/evrynet-official/evrynet-client/core/types"
 	"math/big"
+
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
 // NewBlockEvent is the event sent from Backend to Core after engine.Seal() is called.
@@ -14,11 +15,6 @@ type NewBlockEvent struct {
 // MessageEvent is posted for Tendermint engine communication
 type MessageEvent struct {
 	Payload []byte
-}
-
-// BlockFinalizedEvent is posted from core to backend when a block has enough votes to commit
-type BlockFinalizedEvent struct {
-	Block *types.Block
 }
 
 // FinalCommittedEvent is posted when a proposal is committed
