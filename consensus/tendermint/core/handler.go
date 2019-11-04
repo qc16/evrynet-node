@@ -86,7 +86,7 @@ func (c *core) handleEvents() {
 			if !ok {
 				return
 			}
-			switch ev:= event.Data.(type) {
+			switch ev := event.Data.(type) {
 			case tendermint.FinalCommittedEvent:
 				c.handleFinalCommitted(ev.BlockNumber)
 			}
@@ -115,14 +115,15 @@ func (c *core) handleNewBlock(block *types.Block) {
 	var state = c.CurrentState()
 	c.getLogger().Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
 
-	if state.BlockNumber().Cmp(block.Number()) !=0 {
+	if block.Number() == nil || state.BlockNumber().Cmp(block.Number()) > 0 {
 		//This is temporary to let miner come up with a newer block
-		c.getLogger().Errorw("new block number mismatched",
+		c.getLogger().Errorw("new block number is smaller than current block",
 			"new_block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
 		//return a nil block to allow miner to send over a new one
-		if err := c.blockFinalize.Post(tendermint.BlockFinalizedEvent{Block: types.NewBlockWithHeader(&types.Header{})}); err != nil {
-			c.getLogger().Errorw("cannot post block Finalization to backend", "error", err)
-		}
+		c.backend.Cancel(types.NewBlockWithHeader(&types.Header{
+			Number: block.Number(),
+		}))
+
 		return
 	}
 	state.SetBlock(block)

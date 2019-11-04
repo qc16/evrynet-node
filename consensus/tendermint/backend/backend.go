@@ -213,6 +213,15 @@ func (sb *backend) Commit(block *types.Block) {
 	}
 }
 
+func (sb *backend) Cancel(block *types.Block) {
+	ch, ok := sb.commitChs.getCommitChannel(block.Number().String())
+	if !ok {
+		log.Warn("no commit channel available", "block_number", block.Number().String())
+		return
+	}
+	ch <- block
+}
+
 // EnqueueBlock adds a block returned from consensus into fetcher queue
 func (sb *backend) EnqueueBlock(block *types.Block) {
 	if sb.broadcaster != nil {

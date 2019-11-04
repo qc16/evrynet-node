@@ -41,6 +41,9 @@ type Backend interface {
 	//Commit send the consensus block back to miner, it should also handle the logic after a block get enough vote to be the next block in chain
 	Commit(block *types.Block)
 
+	//Cancel send the consensus block back to miner if it is invalid for consensus.
+	Cancel(block *types.Block)
+
 	//EnqueueBlock adds the block returned from consensus into fetcher queue to update the chain to that specific block.
 	EnqueueBlock(block *types.Block)
 }
