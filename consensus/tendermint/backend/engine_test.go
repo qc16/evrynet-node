@@ -135,7 +135,7 @@ func TestVerifySeal(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func newEngine() *backend {
+func newTestEngine() *backend {
 	nodeKey, _ := crypto.GenerateKey()
 	be, _ := New(tendermint.DefaultConfig, nodeKey).(*backend)
 	be.address = crypto.PubkeyToAddress(nodeKey.PublicKey)

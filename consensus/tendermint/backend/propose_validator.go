@@ -43,6 +43,7 @@ func (v *ProposalValidator) clearPendingProposedValidator() {
 	v.address = common.Address{}
 	v.vote = false
 	v.isStick = false
+	v.stickBlock = 0
 }
 
 // getPendingProposedValidator returns pending validator and validator's status lock

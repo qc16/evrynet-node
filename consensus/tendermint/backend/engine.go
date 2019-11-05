@@ -166,7 +166,13 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 
 					// clear pending proposed validator if sealing Successfully
 					if bl.Number().Int64() == sb.proposedValidator.getStickBlock() {
-						sb.proposedValidator.clearPendingProposedValidator()
+						// get proposedValidator from the extra-data of block-header
+						proposedValidator, _ := getModifiedValidator(*bl.Header())
+						// compares if the current proposedValidator is not changed
+						if reflect.DeepEqual(proposedValidator, sb.proposedValidator.address) {
+							// removes pending ProposedValidator
+							sb.proposedValidator.clearPendingProposedValidator()
+						}
 					}
 					results <- bl
 				} else {
@@ -642,15 +648,14 @@ func (sb *backend) getValSet(chainReader consensus.ChainReader, blockNumber *big
 	header = chainReader.GetHeaderByNumber(previousBlock)
 	if header == nil {
 		log.Error("cannot get valSet since previousBlock is not available", "block_number", blockNumber)
+		return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
 	}
 	snap, err = sb.snapshot(chainReader, previousBlock, header.Hash(), nil)
 	if err != nil {
 		log.Error("cannot load snapshot", "error", err)
+		return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
 	}
-	if err == nil {
-		return snap.ValSet
-	}
-	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
+	return snap.ValSet
 }
 
 func (sb *backend) prepareExtra(header *types.Header) []byte {

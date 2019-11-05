@@ -3,12 +3,14 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/log"
 )
 
 const (
@@ -118,7 +120,11 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		if err != nil {
 			return nil, errInvalidCandidate
 		}
-
+		// if the modifiedValidator is "common.Address" value like is this node does not vote
+		// then ignore
+		if reflect.DeepEqual(modifiedValidator, common.Address{}) {
+			continue
+		}
 		if snap.Votes != nil {
 			// Header authorized, discard any previous votes from this validator
 			for i, vote := range snap.Votes {
@@ -160,7 +166,9 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		if tally := snap.Tally[modifiedValidator]; tally.Votes > snap.ValSet.V() {
 			if tally.Authorize {
 				// if the authorize is ok add modified validator to valset collectors
-				snap.ValSet.AddValidator(modifiedValidator)
+				if ok := snap.ValSet.AddValidator(modifiedValidator); !ok {
+					log.Warn("adds a validator failed, may be this validator existed", "validator", modifiedValidator.Hex())
+				}
 
 				// Discard any previous votes around the just changed account
 				for i := 0; i < len(snap.Votes); i++ {
@@ -170,7 +178,9 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 					}
 				}
 			} else {
-				snap.ValSet.RemoveValidator(modifiedValidator)
+				if ok := snap.ValSet.RemoveValidator(modifiedValidator); !ok {
+					log.Warn("removes a validator failed, may be this validator removed at before", "validator", modifiedValidator.Hex())
+				}
 
 				// Discard any previous votes the de-authorized validator cast
 				for i := 0; i < len(snap.Votes); i++ {
