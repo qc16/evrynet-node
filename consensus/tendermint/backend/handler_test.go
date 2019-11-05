@@ -5,7 +5,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -13,12 +13,12 @@ import (
 
 func TestHandleMsg(t *testing.T) {
 	var (
-		nodePrivateKey = tests.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 
 	//create New test backend and newMockChain
@@ -27,7 +27,7 @@ func TestHandleMsg(t *testing.T) {
 	// generate one msg
 	data := []byte("data1")
 	msg := makeMsg(consensus.TendermintMsg, data)
-	addr := tests.GetAddress()
+	addr := tests_utils.GetAddress()
 
 	// 2. this message should be in cache after we handle it
 	handled, err := be.HandleMsg(addr, msg)

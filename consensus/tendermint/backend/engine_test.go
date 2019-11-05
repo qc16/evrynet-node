@@ -7,7 +7,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
@@ -23,16 +23,16 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader).(*backend)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
 	// without seal
-	block := tests.MakeBlockWithoutSeal(genesisHeader)
+	block := tests_utils.MakeBlockWithoutSeal(genesisHeader)
 	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, be.VerifyHeader(be.chain, block.Header(), false))
 
 	err = be.Seal(be.chain, block, nil, nil)
@@ -54,7 +54,7 @@ func TestAuthor(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
@@ -62,7 +62,7 @@ func TestAuthor(t *testing.T) {
 	//create New test backend and newMockChain
 	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
-	block := tests.MakeBlockWithSeal(be, genesisHeader)
+	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
 	header := block.Header()
 	signer, err := be.Author(header)
 	assert.NoError(t, err)
@@ -77,15 +77,15 @@ func TestPrepare(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader).(*backend)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
-	block := tests.MakeBlockWithoutSeal(genesisHeader)
+	block := tests_utils.MakeBlockWithoutSeal(genesisHeader)
 	header := block.Header()
 
 	err = be.Prepare(be.chain, header)
@@ -104,19 +104,19 @@ func TestVerifySeal(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader).(*backend)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
 	// cannot verify genesis
 	err = be.VerifySeal(be.chain, genesisHeader)
 	assert.Equal(t, errUnknownBlock, err)
 
-	block := tests.MakeBlockWithSeal(be, genesisHeader)
+	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
 	err = be.VerifySeal(be.chain, block.Header())
 	assert.NoError(t, err)
 }

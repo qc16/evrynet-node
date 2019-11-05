@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
 
 	"github.com/evrynet-official/evrynet-client/crypto"
@@ -13,6 +14,10 @@ import (
 
 var (
 	ErrInvalidSealLength = errors.New("seal is expected to be multiplication of 65")
+)
+
+const (
+	msgCommit uint64 = iota
 )
 
 // sigHash returns the hash
@@ -89,4 +94,12 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+// PrepareCommittedSeal returns a committed seal for the given hash
+func PrepareCommittedSeal(hash common.Hash) []byte {
+	var buf bytes.Buffer
+	buf.Write(hash.Bytes())
+	buf.Write([]byte{byte(msgCommit)})
+	return buf.Bytes()
 }

@@ -229,7 +229,7 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 	})
 }
 
-func (s *roundState) addPrevote(msg Message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+func (s *roundState) addPrevote(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
 	view := tendermint.View{
 		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
 		Round:       vote.Round,
@@ -248,7 +248,7 @@ func (s *roundState) GetPrevotesByRound(round int64) (*messageSet, bool) {
 	return msgSet, ok
 }
 
-func (s *roundState) addPrecommit(msg Message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+func (s *roundState) addPrecommit(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
 	view := tendermint.View{
 		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
 		Round:       vote.Round,
