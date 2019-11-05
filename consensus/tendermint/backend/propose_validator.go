@@ -53,13 +53,6 @@ func (v *ProposalValidator) getPendingProposedValidator() (common.Address, bool,
 	return v.address, v.vote, v.isStick
 }
 
-// isValidatorStick returns whether validator is stick or not
-func (v *ProposalValidator) isValidatorStick() bool {
-	v.mu.RLock()
-	defer v.mu.RUnlock()
-	return v.isStick
-}
-
 // getStickBlock return block when the proposed validator is added to header
 func (v *ProposalValidator) getStickBlock() int64 {
 	v.mu.RLock()
