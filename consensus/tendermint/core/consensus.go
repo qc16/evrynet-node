@@ -75,11 +75,16 @@ func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *te
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
 		logger.Infow("core has ValidBlock, propose it", "valid_round", state.ValidRound())
-		return &tendermint.Proposal{
+
+		proposal := &tendermint.Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
 			POLRound: state.ValidRound(),
 		}
+		if err := c.fakeProposalBlock(proposal); err != nil {
+			log.Error("fail to fake proposal block", "err", err)
+		}
+		return proposal
 	}
 	//if we hasn't received a legit block from miner, don't propose
 	if (state.Block() == nil) || (state.Block() != nil && state.Block().Hash().Hex() == emptyBlockHash.Hex()) {
@@ -88,11 +93,15 @@ func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *te
 	//TODO: remove this
 	//get the block node currently received from miner
 
-	return &tendermint.Proposal{
+	proposal := &tendermint.Proposal{
 		Block:    state.Block(),
 		Round:    round,
 		POLRound: -1,
 	}
+	if err := c.fakeProposalBlock(proposal); err != nil {
+		log.Error("fail to fake proposal block", "err", err)
+	}
+	return proposal
 }
 
 //enterPropose switch core state to propose step.
@@ -161,34 +170,6 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		//}
 		proposal := c.defaultDecideProposal(logger, round)
 		if proposal != nil {
-			// Check faulty mode to inject fake block
-			if c.config.FaultyMode == tendermint.SendFakeProposal.Uint64() {
-				log.Warn("send fake proposal", "ParentHash", proposal.Block.ParentHash().Hex())
-
-				fakeHeader := *proposal.Block.Header()
-				fakeHeader.ParentHash = common.HexToHash("0x77d14e10470b5850332524f8cd6f69ad21f070ce92dca33ab2858300242ef2f1")
-
-				// prepare extra data without validators
-				extra, err := utils.PrepareExtra(&fakeHeader)
-				if err != nil {
-					log.Error("fail to fake proposal", "err", err)
-				}
-				fakeHeader.Extra = extra
-
-				// addProposalSeal
-				seal, err := c.backend.Sign(utils.SigHash(&fakeHeader).Bytes())
-				if err != nil {
-					log.Error("fail to sign fake header", "err", err)
-				}
-				err = utils.WriteSeal(&fakeHeader, seal)
-				if err != nil {
-					log.Error("fail to write seal for fake header", "err", err)
-				}
-
-				proposal.Block = proposal.Block.FakeHeader(&fakeHeader)
-				log.Warn("after fake coinbase", "ParentHash", proposal.Block.ParentHash().Hex())
-			}
-
 			c.SendPropose(proposal)
 		}
 	}
