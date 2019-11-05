@@ -7,7 +7,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+
+	queue "github.com/enriquebris/goconcurrentqueue"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
@@ -15,6 +18,7 @@ import (
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/event"
@@ -80,6 +84,23 @@ func getGenesisConf() (*core.Genesis, error) {
 	return config, nil
 }
 
+// mockBroadcast is a mock for passing check number of validator when backend.Start()
+type mockBroadcast struct {
+}
+
+func (m *mockBroadcast) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	out := make(map[common.Address]consensus.Peer)
+	for addr := range targets {
+		out[addr] = nil
+	}
+	return out
+}
+
+// Enqueue add a block into fetcher queue
+func (m *mockBroadcast) Enqueue(id string, block *types.Block) {
+	panic("unimplemented method")
+}
+
 func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.BlockChain, error) {
 	config, err := makeNodeConfig()
 	if err != nil {
@@ -109,8 +130,11 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 		privateKey:         nodePK,
 		address:            crypto.PubkeyToAddress(nodePK.PublicKey),
 		db:                 db,
+		mutex:              &sync.RWMutex{},
+		storingMsgs:        queue.NewFIFO(),
 	}
 	backend.core = tendermintCore.New(backend, config.Tendermint)
+	backend.SetBroadcaster(&mockBroadcast{})
 
 	//init tendermint engine
 	engine := New(config.Tendermint, nodePK, WithDB(db))
