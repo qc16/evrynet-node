@@ -629,7 +629,7 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 			logger.Errorw("Failed to get message from future message queue", "error", err)
 			return false, err
 		}
-		msg, ok := data.(Message)
+		msg, ok := data.(message)
 		if !ok {
 			logger.Errorw("Failed to decode data to message")
 			return false, err

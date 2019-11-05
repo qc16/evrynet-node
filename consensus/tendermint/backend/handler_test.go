@@ -12,7 +12,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/core/vm"
@@ -28,7 +28,7 @@ func TestHandleMsg(t *testing.T) {
 	// generate one msg
 	data := []byte("data1")
 	msg := makeMsg(consensus.TendermintMsg, data)
-	addr := tests.GetAddress()
+	addr := tests_utils.GetAddress()
 
 	// 2. this message should be in cache after we handle it
 	handled, err := b.HandleMsg(addr, msg)

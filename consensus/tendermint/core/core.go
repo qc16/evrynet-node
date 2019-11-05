@@ -1,23 +1,19 @@
 package core
 
 import (
-	"bytes"
 	"sync"
 	"time"
+
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 
 	"go.uber.org/zap"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
-	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/rlp"
-)
-
-const (
-	msgCommit uint64 = iota
 )
 
 // New creates an Tendermint consensus core
@@ -108,16 +104,8 @@ func (c *core) Stop() error {
 	return nil
 }
 
-// PrepareCommittedSeal returns a committed seal for the given hash
-func PrepareCommittedSeal(hash common.Hash) []byte {
-	var buf bytes.Buffer
-	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(msgCommit)})
-	return buf.Bytes()
-}
-
 //FinalizeMsg set address, signature and encode msg to bytes
-func (c *core) FinalizeMsg(msg *Message) ([]byte, error) {
+func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 	msg.Address = c.backend.Address()
 	msgPayLoadWithoutSignature, err := msg.PayLoadWithoutSignature()
 	if err != nil {
@@ -142,7 +130,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		logger.Errorw("Failed to encode Proposal to bytes", "error", err)
 		return
 	}
-	payload, err := c.FinalizeMsg(&Message{
+	payload, err := c.FinalizeMsg(&message{
 		Code: msgPropose,
 		Msg:  msgData,
 	})
@@ -182,7 +170,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	)
 	if block != nil {
 		var err error
-		commitHash := PrepareCommittedSeal(block.Header().Hash())
+		commitHash := utils.PrepareCommittedSeal(block.Header().Hash())
 		seal, err = c.backend.Sign(commitHash)
 		if err != nil {
 			logger.Errorw("failed to sign seal", err, "err")
@@ -201,7 +189,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		logger.Errorw("Failed to encode Vote to bytes", "error", err)
 		return
 	}
-	payload, err := c.FinalizeMsg(&Message{
+	payload, err := c.FinalizeMsg(&message{
 		Code: voteType,
 		Msg:  msgData,
 	})

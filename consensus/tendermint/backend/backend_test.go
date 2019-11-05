@@ -6,16 +6,17 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
@@ -35,19 +36,19 @@ func TestSign(t *testing.T) {
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
-	if signer != tests.GetAddress() {
-		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), tests.GetAddress().Hex())
+	if signer != tests_utils.GetAddress() {
+		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), tests_utils.GetAddress().Hex())
 	}
 }
 
 func TestValidators(t *testing.T) {
 	var (
-		nodePrivateKey = tests.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
 	)
 
@@ -77,16 +78,16 @@ func TestValidators(t *testing.T) {
 	assert.Equal(t, 0, valSet2.Size())
 }
 
-func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) tests.TestBackend {
+func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) *backend {
 	var (
 		address = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		trigger = false
-		statedb = tests.MustCreateStateDB(t)
+		statedb = tests_utils.MustCreateStateDB(t)
 
 		testTxPoolConfig evrynetCore.TxPoolConfig
-		blockchain       = &tests.TestChain{
+		blockchain       = &tests_utils.MockChainReader{
 			GenesisHeader: genesisHeader,
-			TestBlockChain: &tests.TestBlockChain{
+			MockBlockChain: &tests_utils.MockBlockChain{
 				Statedb:       statedb,
 				GasLimit:      1000000000,
 				ChainHeadFeed: new(event.Feed),
@@ -97,10 +98,12 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
 		memDB  = ethdb.NewMemDatabase()
 		config = tendermint.DefaultConfig
-		be     = New(config, nodePrivateKey, pool, WithDB(memDB)).(tests.TestBackend)
+		be     = New(config, nodePrivateKey, pool, WithDB(memDB)).(*backend)
 	)
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
 	defer pool.Stop()
-	tests.MustStartTestChainAndBackend(be, blockchain)
+	be.chain = blockchain
+	be.currentBlock = blockchain.CurrentBlock
+
 	return be
 }

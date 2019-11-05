@@ -37,8 +37,8 @@ const (
 	msgPrecommit
 )
 
-//Message is used to store consensus information between steps
-type Message struct {
+//message is used to store consensus information between steps
+type message struct {
 	Code      uint64
 	Msg       []byte
 	Address   common.Address
@@ -48,12 +48,12 @@ type Message struct {
 }
 
 // EncodeRLP serializes m into the Ethereum RLP format.
-func (m *Message) EncodeRLP(w io.Writer) error {
+func (m *message) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (m *Message) DecodeRLP(s *rlp.Stream) error {
+func (m *message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
 		Code          uint64
 		Msg           []byte
@@ -69,8 +69,8 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (m *Message) PayLoadWithoutSignature() ([]byte, error) {
-	return rlp.EncodeToBytes(&Message{
+func (m *message) PayLoadWithoutSignature() ([]byte, error) {
+	return rlp.EncodeToBytes(&message{
 		Code:          m.Code,
 		Address:       m.Address,
 		Msg:           m.Msg,
@@ -80,7 +80,7 @@ func (m *Message) PayLoadWithoutSignature() ([]byte, error) {
 }
 
 // GetAddressFromSignature gets the signer address from the signature
-func (m *Message) GetAddressFromSignature() (common.Address, error) {
+func (m *message) GetAddressFromSignature() (common.Address, error) {
 	payLoad, err := m.PayLoadWithoutSignature()
 	if err != nil {
 		return common.Address{}, err
@@ -106,7 +106,7 @@ type messageSet struct {
 	valSet        tendermint.ValidatorSet
 	msgCode       uint64
 	messagesMu    *sync.Mutex
-	messages      map[common.Address]*Message
+	messages      map[common.Address]*message
 	voteByAddress map[common.Address]*tendermint.Vote
 	voteByBlock   map[common.Hash]*blockVotes
 	maj23         *common.Hash
@@ -120,7 +120,7 @@ func newMessageSet(valSet tendermint.ValidatorSet, code uint64, view *tendermint
 		view:          view,
 		msgCode:       code,
 		messagesMu:    new(sync.Mutex),
-		messages:      make(map[common.Address]*Message),
+		messages:      make(map[common.Address]*message),
 		voteByBlock:   make(map[common.Hash]*blockVotes),
 		voteByAddress: make(map[common.Address]*tendermint.Vote),
 		valSet:        valSet,
@@ -139,7 +139,7 @@ func (ms *messageSet) VotesByAddress() map[common.Address]*tendermint.Vote {
 	return ret
 }
 
-func (ms *messageSet) AddVote(msg Message, vote *tendermint.Vote) (bool, error) {
+func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 	copyHash := common.HexToHash(vote.BlockHash.Hex())
