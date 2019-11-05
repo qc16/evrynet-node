@@ -35,7 +35,7 @@ func (api *TendermintAPI) ClearPendingProposedValidator() bool {
 // GetPendingProposedValidator returns the pending proposed validator
 // returns nil if there is not pending validator
 func (api *TendermintAPI) GetPendingProposedValidator() map[string]interface{} {
-	validator, vote := api.be.proposedValidator.getPendingProposedValidator()
+	validator, vote, _ := api.be.proposedValidator.getPendingProposedValidator()
 	if reflect.DeepEqual(validator, common.Address{}) {
 		return nil
 	}

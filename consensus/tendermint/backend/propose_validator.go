@@ -9,11 +9,11 @@ import (
 // ProposalValidator store imformation (about address and vote true/false)
 // for a candidate that is proposed from a node via the rpc api
 type ProposalValidator struct {
-	address     common.Address
-	vote        bool
-	isLock      bool
-	lockedBlock int64
-	mu          *sync.RWMutex
+	address    common.Address
+	vote       bool
+	isStick    bool
+	stickBlock int64
+	mu         *sync.RWMutex
 }
 
 func newProposedValidator() *ProposalValidator {
@@ -29,7 +29,9 @@ func (v *ProposalValidator) setProposedValidator(address common.Address, vote bo
 
 	v.address = address
 	v.vote = vote
-	v.isLock = false
+	v.isStick = false
+	// assign stickBlock equal zero to ensure that not clear when a previous proposed-validator when done at the engine.Seal
+	v.stickBlock = 0
 	return nil
 }
 
@@ -40,41 +42,41 @@ func (v *ProposalValidator) clearPendingProposedValidator() {
 
 	v.address = common.Address{}
 	v.vote = false
-	v.isLock = false
+	v.isStick = false
 }
 
-// getPendingProposedValidator returns pending validator
-func (v *ProposalValidator) getPendingProposedValidator() (validator common.Address, vote bool) {
+// getPendingProposedValidator returns pending validator and validator's status lock
+func (v *ProposalValidator) getPendingProposedValidator() (common.Address, bool, bool) {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	return v.address, v.vote
+	return v.address, v.vote, v.isStick
 }
 
-// isValidatorLocked returns whether validator is locked or not
-func (v *ProposalValidator) isValidatorLocked() bool {
+// isValidatorStick returns whether validator is stick or not
+func (v *ProposalValidator) isValidatorStick() bool {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	return v.isLock
+	return v.isStick
 }
 
-// getLockBlock return block when the proposed validator is added to header
-func (v *ProposalValidator) getLockBlock() int64 {
+// getStickBlock return block when the proposed validator is added to header
+func (v *ProposalValidator) getStickBlock() int64 {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	return v.lockedBlock
+	return v.stickBlock
 }
 
-// lockValidator lock proposed validator at a specific block
-func (v *ProposalValidator) lockValidator(blockNumber int64) {
+// stickValidator stick proposed validator at a specific block
+func (v *ProposalValidator) stickValidator(blockNumber int64) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	v.isLock = true
-	v.lockedBlock = blockNumber
+	v.isStick = true
+	v.stickBlock = blockNumber
 }
 
-// removeLock allow worker to propose validator
-func (v *ProposalValidator) removeLock() {
+// removeStick allow worker to propose validator
+func (v *ProposalValidator) removeStick() {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	v.isLock = false
+	v.isStick = false
 }

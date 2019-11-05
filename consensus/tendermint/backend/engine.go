@@ -144,7 +144,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 			select {
 			case bl, ok := <-ch:
 				// remove lock whether Seal is success or not
-				sb.proposedValidator.removeLock()
+				sb.proposedValidator.removeStick()
 				if !ok {
 					log.Info("committing... Channel closed, exit seal...", "number", blockNumberStr)
 					return
@@ -165,7 +165,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 					log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
 
 					// clear pending proposed validator if sealing Successfully
-					if bl.Number().Int64() == sb.proposedValidator.getLockBlock() {
+					if bl.Number().Int64() == sb.proposedValidator.getStickBlock() {
 						sb.proposedValidator.clearPendingProposedValidator()
 					}
 					results <- bl
@@ -666,9 +666,8 @@ func (sb *backend) prepareExtra(header *types.Header) []byte {
 	buf.Write(header.Extra[:types.TendermintExtraVanity])
 
 	// Add validator voting to header
-	valAddr, vote := sb.proposedValidator.getPendingProposedValidator()
-	isLock := sb.proposedValidator.isValidatorLocked()
-	if !reflect.DeepEqual(valAddr, common.Address{}) && !isLock {
+	valAddr, vote, isStick := sb.proposedValidator.getPendingProposedValidator()
+	if !reflect.DeepEqual(valAddr, common.Address{}) && !isStick {
 		if vote {
 			copy(header.Nonce[:], nonceAuthVote)
 		} else {
@@ -681,7 +680,7 @@ func (sb *backend) prepareExtra(header *types.Header) []byte {
 		payload, _ = rlp.EncodeToBytes(&tdm)
 
 		//lock validator
-		sb.proposedValidator.lockValidator(header.Number.Int64())
+		sb.proposedValidator.stickValidator(header.Number.Int64())
 	} else {
 		tdm = &types.TendermintExtra{}
 		payload, _ = rlp.EncodeToBytes(&tdm)
