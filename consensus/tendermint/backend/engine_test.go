@@ -141,7 +141,7 @@ func TestPrepareExtra(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
@@ -161,13 +161,15 @@ func TestPrepareExtra(t *testing.T) {
 		Number: big.NewInt(0),
 	}
 
-	header.Extra = engine.prepareExtra(header)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
 	assert.Equal(t, expectedResult, header.Extra)
 
 	// append useless information to extra-data
 	header.Extra = append(vanity, make([]byte, 15)...)
 
-	header.Extra = engine.prepareExtra(header)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
 	assert.Equal(t, expectedResult, header.Extra)
 
 	var (
@@ -182,15 +184,21 @@ func TestPrepareExtra(t *testing.T) {
 	)
 
 	// will attach a candidate to voting
-	engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote)
-	header.Extra = engine.prepareExtra(header)
-	candidateAddr, _ := getModifiedValidator(*header)
+	err = engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote)
+	assert.Nil(t, err)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
+	candidateAddr, err := getModifiedValidator(*header)
+	assert.Nil(t, err)
 	assert.Equal(t, candidate.address, candidateAddr)
 
 	// the candidate will be repplaced by new candidate when call setProposedValidator and old candidate have not processed yet
-	engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote)
-	header.Extra = engine.prepareExtra(header)
-	newCandidateAddr, _ := getModifiedValidator(*header)
+	err = engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote)
+	assert.Nil(t, err)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
+	newCandidateAddr, err := getModifiedValidator(*header)
+	assert.Nil(t, err)
 	assert.NotEqual(t, candidate.address, newCandidateAddr)
 	assert.Equal(t, newCandidate.address, newCandidateAddr)
 }

@@ -20,7 +20,7 @@ import (
 )
 
 func TestSign(t *testing.T) {
-	privateKey, _ := crypto.HexToECDSA("bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1")
+	privateKey, _ := tests_utils.GeneratePrivateKey()
 	b := &backend{
 		privateKey: privateKey,
 	}
@@ -53,7 +53,6 @@ func TestValidators(t *testing.T) {
 	)
 
 	valSet0 := be.Validators(big.NewInt(0))
-
 	assert.Equal(t, 1, valSet0.Size())
 
 	list := valSet0.List()
@@ -64,7 +63,6 @@ func TestValidators(t *testing.T) {
 	}
 
 	valSet1 := be.Validators(big.NewInt(1))
-
 	assert.Equal(t, 1, valSet1.Size())
 
 	list = valSet1.List()

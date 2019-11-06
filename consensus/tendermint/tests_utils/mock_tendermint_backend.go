@@ -22,8 +22,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
-// ----------------------------------------------------------------------------
-//
 type MockBackend struct {
 	config             *tendermint.Config
 	tendermintEventMux *event.TypeMux
@@ -124,11 +122,20 @@ func (mb *MockBackend) Commit(block *types.Block) {
 // EnqueueBlock adds a block returned from consensus into fetcher queue
 func (mb *MockBackend) EnqueueBlock(block *types.Block) {
 	log.Error("not implemented")
-
 }
 
 func (mb *MockBackend) CurrentHeadBlock() *types.Block {
 	return mb.currentBlock()
+}
+
+func (mb *MockBackend) Cancel(block *types.Block) {
+	log.Error("not implemented")
+}
+
+// ValidatorsByChainReader returns val-set from snapshot
+func (mb *MockBackend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
+	log.Error("not implemented")
+	return validator.NewSet(nil, 0, int64(0))
 }
 
 func MustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header, validators []common.Address) (tendermint.Backend, *core.TxPool) {

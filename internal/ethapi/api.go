@@ -34,7 +34,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/math"
 	"github.com/evrynet-official/evrynet-client/consensus/clique"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
-	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/types"
@@ -1058,7 +1058,7 @@ func RPCMarshalExtraData(b *types.Block) (map[string]interface{}, error) {
 
 	// get all committed's signer
 	var commitSigner []common.Address
-	proposalSeal := tendermintCore.PrepareCommittedSeal(blockHeader.Hash())
+	proposalSeal := utils.PrepareCommittedSeal(blockHeader.Hash())
 	log.Info("RPCMarshalExtraData", "committedSeal", extra.CommittedSeal)
 	for _, seal := range extra.CommittedSeal {
 		// Get the original address by seal and parent block hash

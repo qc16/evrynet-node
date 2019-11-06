@@ -53,9 +53,6 @@ type Backend interface {
 	// for reason because when the miner not run then chaỉn-reader in core not initialized.
 	ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
 
-	//ClearStoringMsg will delete all item in queue
-	ClearStoringMsg()
-
 	// VerifyProposalHeader checks whether a header conforms to the consensus rules of a
 	// given engine. Verifying the seal may be done optionally here, or explicitly
 	// via the VerifySeal method.

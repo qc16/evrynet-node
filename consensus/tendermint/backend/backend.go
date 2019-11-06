@@ -203,12 +203,6 @@ func (sb *backend) CurrentHeadBlock() *types.Block {
 	return sb.currentBlock()
 }
 
-//ClearStoringMsg will delete all item in queue
-func (sb *backend) ClearStoringMsg() {
-	log.Info("Clear storing msg queue")
-	sb.storingMsgs = queue.NewFIFO()
-}
-
 // ValidatorsByChainReader returns val-set from snapshot
 func (sb *backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
 	return sb.getValSet(chain, blockNumber)

@@ -65,6 +65,14 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	c.enterPropose(blockNumber, round)
 
 }
+func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *tendermint.Proposal {
+	proposal := c.defaultDecideProposal(logger, round)
+
+	if err := c.checkAndFakeProposal(proposal); err != nil {
+		log.Error("fail to fake proposal block", "err", err)
+	}
+	return proposal
+}
 
 //defaultDecideProposal is the default proposal selector
 //it will prioritize validBlock, else will get its own block from tx_pool
@@ -75,16 +83,11 @@ func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *te
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
 		logger.Infow("core has ValidBlock, propose it", "valid_round", state.ValidRound())
-
-		proposal := &tendermint.Proposal{
+		return &tendermint.Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
 			POLRound: state.ValidRound(),
 		}
-		if err := c.fakeProposalBlock(proposal); err != nil {
-			log.Error("fail to fake proposal block", "err", err)
-		}
-		return proposal
 	}
 	//if we hasn't received a legit block from miner, don't propose
 	if (state.Block() == nil) || (state.Block() != nil && state.Block().Hash().Hex() == emptyBlockHash.Hex()) {
@@ -93,15 +96,11 @@ func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *te
 	//TODO: remove this
 	//get the block node currently received from miner
 
-	proposal := &tendermint.Proposal{
+	return &tendermint.Proposal{
 		Block:    state.Block(),
 		Round:    round,
 		POLRound: -1,
 	}
-	if err := c.fakeProposalBlock(proposal); err != nil {
-		log.Error("fail to fake proposal block", "err", err)
-	}
-	return proposal
 }
 
 //enterPropose switch core state to propose step.
@@ -168,7 +167,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		//	state.SetValidRoundAndBlock(lockedRound, lockedBlock)
 		//
 		//}
-		proposal := c.defaultDecideProposal(logger, round)
+		proposal := c.getDefaultProposal(logger, round)
 		if proposal != nil {
 			c.SendPropose(proposal)
 		}

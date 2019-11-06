@@ -55,12 +55,8 @@ var (
 	errInvalidExtraDataFormat = errors.New("invalid extra data format")
 	// errInvalidMixDigest is returned if a block's mix digest is not Tendermint digest.
 	errInvalidMixDigest = errors.New("invalid Tendermint mix digest")
-	// errInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
-	errInvalidTimestamp = errors.New("invalid timestamp")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
-	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
-	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	errInvalidVotingChain = errors.New("invalid voting chain")
@@ -68,15 +64,11 @@ var (
 	errCoinBaseInvalid = errors.New("invalid coin base address")
 	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
 	errInvalidUncleHash = errors.New("non empty uncle hash")
-	// errMalformedChannelData is returned if data return from blockFinalization does not conform to its struct definition
-	errMalformedChannelData = errors.New("data received is not an event type")
 	// errInvalidVote is returned if a nonce value is something else that the two
 	// allowed constants of 0x00..0 or 0xff..f.
 	errInvalidVote = errors.New("vote nonce not 0x0000000000000000 or 0xffffffffffffffff")
 	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
 	errInvalidCandidate = errors.New("candidate for validator is invalid")
-	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
-	errMismatchTxhashes = errors.New("mismatch transcations hashes")
 )
 
 func (sb *backend) addProposalSeal(h *types.Header) error {
@@ -582,7 +574,7 @@ func (sb *backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) er
 	}
 	// The length of Committed seals should be larger than 0
 	if len(extra.CommittedSeal) == 0 {
-		return errEmptyCommittedSeals
+		return tendermint.ErrEmptyCommittedSeals
 	}
 
 	vals := snap.ValSet.Copy()
