@@ -53,7 +53,7 @@ func MakeGenesisHeader(validators []common.Address) *types.Header {
 		Difficulty: big.NewInt(1),
 		MixDigest:  types.TendermintDigest,
 	}
-	extra, _ := prepareExtra(header)
+	extra, _ := PrepareExtra(header)
 
 	var buf bytes.Buffer
 	buf.Write(extra[:types.TendermintExtraVanity])
@@ -131,7 +131,7 @@ func makeHeaderFromParent(parent *types.Block) *types.Header {
 		Difficulty: big.NewInt(1),
 		MixDigest:  types.TendermintDigest,
 	}
-	extra, _ := prepareExtra(header)
+	extra, _ := PrepareExtra(header)
 	header.Extra = extra
 	return header
 }
@@ -144,8 +144,8 @@ func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
 	return crypto.GenerateKey()
 }
 
-// prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.Header) ([]byte, error) {
+// PrepareExtra returns a extra-data of the given header and validators
+func PrepareExtra(header *types.Header) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
