@@ -33,12 +33,14 @@ services:
     build:
       context: ../
       dockerfile: ./testnet/miner/Dockerfile
+      args:
+        numberOfMiners: $numberOfMiners
     image: img_miners
     container_name: gev-miners
     ports:
       - 8201-8299:8201-8299
     volumes:
-      - /Volumes/Work/Projects/KyberNetwork/lab/testnet/Docker_logs:/node/testnet/15/log
+      - $shareVolumes:/node/testnet/15
     networks:
       chainnet:
         ipv4_address: 172.25.0.102 # The monitor needs to know this address
@@ -71,22 +73,22 @@ services:
       chainnet:
         ipv4_address: 172.25.0.109
 
-#
-#  gev-explorer:
-#    hostname: gev-explorer
-#    depends_on:
-#      - gev-bootnode
-#    ports:
-#      - 8080:8080
-#    build:
-#      context: ./explorer
-#      args:
-#        gevRPCPort: $gevRPCPort
-#    image: img_explorer
-#    container_name: gev-explorer
-#    networks:
-#      chainnet:
-#        ipv4_address: 172.25.0.125
+
+  gev-explorer:
+    hostname: gev-explorer
+    depends_on:
+      - gev-bootnode
+    ports:
+      - 8080:8080
+    build:
+      context: ./explorer
+      args:
+        gevRPCPort: $gevRPCPort
+    image: img_explorer
+    container_name: gev-explorer
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.125
 
 networks:
   chainnet:

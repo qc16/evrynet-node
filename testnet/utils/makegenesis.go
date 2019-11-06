@@ -24,25 +24,38 @@ type config struct {
 }
 
 func main() {
-	body, err := ioutil.ReadFile("validators")
+	bodyCoinbase, err := ioutil.ReadFile("coinbase")
 	if err != nil {
 		fmt.Print(err)
 		return
 	}
-	fmt.Println(string(body))
-	listValidator := strings.Split(string(body), "\n")
-	fmt.Printf("---- listValidator len: %d", len(listValidator))
+	listValidator := strings.Split(string(bodyCoinbase), "\n")
 	var valAddreses []common.Address
 	for _, addr := range listValidator {
 		if len(addr) > 0 {
+			fmt.Printf("Append validator address: %s", common.HexToAddress(addr).Hex())
 			valAddreses = append(valAddreses, common.HexToAddress(addr))
 		}
 	}
-	makeGenesis(valAddreses)
+
+	bodyAlloc, err := ioutil.ReadFile("alloc")
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	listAlloc := strings.Split(string(bodyAlloc), "\n")
+	var allocAddreses []common.Address
+	for _, addr := range listAlloc {
+		if len(addr) > 0 {
+			fmt.Printf("Append alloc address: %s", common.HexToAddress(addr).Hex())
+			allocAddreses = append(allocAddreses, common.HexToAddress(addr))
+		}
+	}
+	makeGenesis(valAddreses, allocAddreses)
 }
 
 // makeGenesis creates a new genesis struct based on some user input.
-func makeGenesis(valAddrs []common.Address) {
+func makeGenesis(valAddrs []common.Address, allocAddrs []common.Address) {
 	// Construct a default genesis block
 	genesis := &core.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -66,10 +79,6 @@ func makeGenesis(valAddrs []common.Address) {
 	// In the case of Tendermint, configure the consensus parameters
 	genesis.Difficulty = big.NewInt(1)
 
-	// We also need the initial list of validators
-	fmt.Println()
-	fmt.Println("Which accounts are validators? (mandatory at least one)")
-
 	tendermintExtra := types.TendermintExtra{
 		Validators: valAddrs,
 	}
@@ -82,9 +91,7 @@ func makeGenesis(valAddrs []common.Address) {
 	genesis.ExtraData = append(tendermintExtraVanity, extraData...)
 
 	// Consensus all set, just ask for initial funds and go
-	fmt.Println()
-	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
-	for _, addr := range valAddrs {
+	for _, addr := range allocAddrs {
 		// Read the address of the account to fund
 		genesis.Alloc[addr] = core.GenesisAccount{
 			Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
@@ -92,13 +99,9 @@ func makeGenesis(valAddrs []common.Address) {
 	}
 
 	// Query the user for some custom extras
-	fmt.Println()
-	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
 	genesis.Config.ChainID = new(big.Int).SetUint64(15)
 
 	// All done, store the genesis and flush to disk
-	fmt.Println("Configured new genesis block")
-
 	config := config{
 		path:    "./genesis.json",
 		Genesis: genesis}

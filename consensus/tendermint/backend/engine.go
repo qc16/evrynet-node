@@ -192,7 +192,13 @@ func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types
 
 	// Check enough 2f+1 peers
 	valSet := sb.Validators(sb.currentBlock().Number())
-	if len(sb.FindExistingPeers(valSet)) < 2*valSet.F() {
+	numberExisting := len(sb.FindExistingPeers(valSet))
+	if numberExisting < 2*valSet.F() {
+		var peersAddress []string
+		for _, pr := range valSet.List() {
+			peersAddress = append(peersAddress, pr.Address().Hex())
+		}
+		log.Warn("---- not enough 2f+1 peers", "numberExisting", numberExisting, "valSet.F", valSet.F(), "valSetOfBlock", peersAddress)
 		return errors.New("not enough 2f+1 peers to start backend")
 	}
 

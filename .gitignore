@@ -63,3 +63,8 @@ gev
 /tests/test_nodes/*/data/geth/chaindata/
 /tests/test_nodes/*/data/geth/lightchaindata/
 /tests/test_nodes/*/data/geth/nodes/
+
+/testnet/bootnode/bin/*
+/testnet/builder/bin/*
+/testnet/miner/bin/*
+/testnet/explorer/web/*
