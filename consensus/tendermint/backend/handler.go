@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	queue "github.com/enriquebris/goconcurrentqueue"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -56,11 +57,15 @@ func (sb *backend) replayTendermintMsg() (done bool, err error) {
 
 	stored, err := sb.storingMsgs.Dequeue()
 	if err != nil {
+		if queueErr, ok := err.(*queue.QueueError); ok {
+			if queueErr.Code() == queue.QueueErrorCodeEmptyQueue { // avoid get error when queue.length == 0
+				return true, nil
+			}
+		}
 		log.Error("failed to get data from queue", "error", err)
 		return false, err
 	}
-
-	go sb.sendDataToCore(stored.([]byte))
+	sb.sendDataToCore(stored.([]byte))
 	return false, nil
 }
 
@@ -96,15 +101,20 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		//TODO: mark peer's message and self known message with the hash get from message
 
 		//replay message one by one to core until there is no more message
-		for {
-			done, err := sb.replayTendermintMsg()
-			if err != nil {
-				return true, err
+		go func() {
+			for {
+				done, err := sb.replayTendermintMsg()
+				if err != nil {
+					log.Error("failed to replayTendermintMsg", "err", err)
+					return
+				}
+				if done {
+					return
+				}
 			}
-			if done {
-				return true, nil
-			}
-		}
+		}()
+
+		return true, nil
 	default:
 		return false, fmt.Errorf("unknown message code %d for Tendermint's protocol", msg.Code)
 		//TODO:Handler other cases
@@ -121,9 +131,9 @@ func (sb *backend) HandleNewChainHead(blockNumber *big.Int) error {
 		return tendermint.ErrStoppedEngine
 	}
 	sb.commitChs.closeAndRemoveCommitChannel(blockNumber.String())
-	go func(){
+	go func() {
 		if err := sb.tendermintEventMux.Post(tendermint.FinalCommittedEvent{
-		BlockNumber:blockNumber}); err!=nil {
+			BlockNumber: blockNumber}); err != nil {
 			log.Error("failed to post FinalCommittedEvent to core", "error", err)
 		}
 	}()
