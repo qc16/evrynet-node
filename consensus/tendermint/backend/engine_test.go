@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
@@ -36,7 +37,7 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 	assert.Equal(t, true, engine.coreStarted)
 
 	// without seal
-	block := makeBlockWithoutSeal(genesisHeader)
+	block := makeBlockWithoutSeal(engine, genesisHeader)
 	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
 
 	err = engine.Seal(chain, block, nil, nil)
@@ -95,7 +96,7 @@ func TestPrepare(t *testing.T) {
 	assert.NotNil(t, engine)
 	assert.Equal(t, true, engine.coreStarted)
 
-	block := makeBlockWithoutSeal(genesisHeader)
+	block := makeBlockWithoutSeal(engine, genesisHeader)
 	header := block.Header()
 
 	err = engine.Prepare(chain, header)
@@ -134,33 +135,73 @@ func TestVerifySeal(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestPrepareExtra
-// 0xd8c094000000000000000000000000000000000000000080c0
-func TestPrepareExtra(t *testing.T) {
-	vanity := make([]byte, types.TendermintExtraVanity)
-	data := hexutil.MustDecode("0xd8c094000000000000000000000000000000000000000080c0")
-	expectedResult := append(vanity, data...)
-
-	header := &types.Header{
-		Extra: vanity,
-	}
-
-	payload, err := prepareExtra(header)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, payload)
-
-	// append useless information to extra-data
-	header.Extra = append(vanity, make([]byte, 15)...)
-
-	payload, err = prepareExtra(header)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, payload)
-}
-
-func newEngine() *backend {
+func newTestEngine() *backend {
 	nodeKey, _ := crypto.GenerateKey()
 	be, _ := New(tendermint.DefaultConfig, nodeKey).(*backend)
 	be.address = crypto.PubkeyToAddress(nodeKey.PublicKey)
 	be.db = ethdb.NewMemDatabase()
 	return be
+}
+
+// TestPrepareExtra
+// 0xd8c094000000000000000000000000000000000000000080c0
+func TestPrepareExtra(t *testing.T) {
+	var (
+		nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
+		nodeAddr     = common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
+		validators   = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = makeGenesisHeader(validators)
+	)
+	nodePK, err := crypto.HexToECDSA(nodePKString)
+	assert.NoError(t, err)
+
+	//create New test backend and newMockChain
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
+	assert.NotNil(t, chain)
+	assert.NotNil(t, engine)
+	assert.Equal(t, true, engine.coreStarted)
+
+	vanity := make([]byte, types.TendermintExtraVanity)
+	data := hexutil.MustDecode("0xd8c094000000000000000000000000000000000000000080c0")
+	expectedResult := append(vanity, data...)
+
+	header := &types.Header{
+		Extra:  vanity,
+		Number: big.NewInt(0),
+	}
+
+	header.Extra = engine.prepareExtra(header)
+	assert.Equal(t, expectedResult, header.Extra)
+
+	// append useless information to extra-data
+	header.Extra = append(vanity, make([]byte, 15)...)
+
+	header.Extra = engine.prepareExtra(header)
+	assert.Equal(t, expectedResult, header.Extra)
+
+	var (
+		candidate = ProposalValidator{
+			address: common.HexToAddress("123456"),
+			vote:    true,
+		}
+		newCandidate = ProposalValidator{
+			address: common.HexToAddress("654321"),
+			vote:    true,
+		}
+	)
+
+	// will attach a candidate to voting
+	engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote)
+	header.Extra = engine.prepareExtra(header)
+	candidateAddr, _ := getModifiedValidator(*header)
+	assert.Equal(t, candidate.address, candidateAddr)
+
+	// the candidate will be repplaced by new candidate when call setProposedValidator and old candidate have not processed yet
+	engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote)
+	header.Extra = engine.prepareExtra(header)
+	newCandidateAddr, _ := getModifiedValidator(*header)
+	assert.NotEqual(t, candidate.address, newCandidateAddr)
+	assert.Equal(t, newCandidate.address, newCandidateAddr)
 }

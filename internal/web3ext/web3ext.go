@@ -32,6 +32,7 @@ var Modules = map[string]string{
 	"shh":        ShhJs,
 	"swarmfs":    SwarmfsJs,
 	"txpool":     TxpoolJs,
+	"tendermint": TendermintJs,
 }
 
 const ChequebookJs = `
@@ -782,5 +783,33 @@ web3._extend({
 			inputFormatter: [null, web3._extend.utils.toHex]
 		}),
 	]
+});
+`
+
+const TendermintJs = `
+web3._extend({
+	property: 'tendermint',
+	methods: [
+		new web3._extend.Method({
+			name: 'proposeValidator',
+			call: 'tendermint_proposeValidator',
+			params: 2 
+		}),
+		new web3._extend.Method({
+			name: 'clearPendingProposedValidator',
+			call: 'tendermint_clearPendingProposedValidator'		
+		}),
+		new web3._extend.Method({
+			name: 'getPendingProposedValidator',
+			call: 'tendermint_getPendingProposedValidator'						
+		}),
+		new web3._extend.Method({
+			name: 'getValidators',
+			call: 'tendermint_getValidators',
+			params: 1,
+			inputFormatter:[null]
+		}),
+	],
+	properties: []
 });
 `

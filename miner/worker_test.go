@@ -37,9 +37,10 @@ import (
 
 var (
 	// Test chain configurations
-	testTxPoolConfig  core.TxPoolConfig
-	ethashChainConfig *params.ChainConfig
-	cliqueChainConfig *params.ChainConfig
+	testTxPoolConfig      core.TxPoolConfig
+	ethashChainConfig     *params.ChainConfig
+	cliqueChainConfig     *params.ChainConfig
+	tendermintChainConfig *params.ChainConfig
 
 	// Test accounts
 	testBankKey, _  = crypto.GenerateKey()
@@ -68,6 +69,11 @@ func init() {
 	cliqueChainConfig.Clique = &params.CliqueConfig{
 		Period: 10,
 		Epoch:  30000,
+	}
+	tendermintChainConfig = params.TendermintTestChainConfig
+	cliqueChainConfig.Tendermint = &params.TendermintConfig{
+		Epoch:          30000,
+		ProposerPolicy: common.Big0.Uint64(),
 	}
 	tx1, _ := types.SignTx(types.NewTransaction(0, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
 	pendingTxs = append(pendingTxs, tx1)

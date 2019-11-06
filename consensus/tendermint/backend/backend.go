@@ -12,7 +12,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
@@ -52,6 +51,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		commitChs:          newCommitChannels(),
 		mutex:              &sync.RWMutex{},
 		storingMsgs:        queue.NewFIFO(),
+		proposedValidator:  newProposedValidator(),
 	}
 	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
 	for _, opt := range opts {
@@ -90,6 +90,8 @@ type backend struct {
 	storingMsgs *queue.FIFO
 
 	currentBlock func() *types.Block
+
+	proposedValidator *ProposalValidator
 }
 
 // EventMux implements tendermint.Backend.EventMux
@@ -161,30 +163,7 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 // Validators return validator set for a block number
 // TODO: revise this function once auth vote is implemented
 func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
-	var (
-		previousBlock uint64
-		header        *types.Header
-		err           error
-		snap          *Snapshot
-	)
-	// check if blockNumber is zero
-	if blockNumber.Cmp(big.NewInt(0)) == 0 {
-		previousBlock = 0
-	} else {
-		previousBlock = uint64(blockNumber.Int64() - 1)
-	}
-	header = sb.chain.GetHeaderByNumber(previousBlock)
-	if header == nil {
-		log.Error("cannot get valSet since previousBlock is not available", "block_number", blockNumber)
-	}
-	snap, err = sb.snapshot(sb.chain, previousBlock, header.Hash(), nil)
-	if err != nil {
-		log.Error("cannot load snapshot", "error", err)
-	}
-	if err == nil {
-		return snap.ValSet
-	}
-	return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
+	return sb.getValSet(sb.chain, blockNumber)
 }
 
 // FindExistingPeers check validator peers exist or not by address
@@ -237,4 +216,9 @@ func (sb *backend) CurrentHeadBlock() *types.Block {
 func (sb *backend) ClearStoringMsg() {
 	log.Info("Clear storing msg queue")
 	sb.storingMsgs = queue.NewFIFO()
+}
+
+// ValidatorsByChainReader returns val-set from snapshot
+func (sb *backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
+	return sb.getValSet(chain, blockNumber)
 }

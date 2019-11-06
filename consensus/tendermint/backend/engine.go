@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
+	"reflect"
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
@@ -27,10 +29,16 @@ var (
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
+
+	// Magic nonce number to vote on adding a new validator
+	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff")
+	// Magic nonce number to vote on removing a validator.
+	nonceDropVote = hexutil.MustDecode("0x0000000000000000")
 )
 
 const (
-	checkpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
+	// Number of blocks after which to save the vote snapshot to the database
+	checkpointInterval = 1024
 )
 
 var (
@@ -63,6 +71,11 @@ var (
 	errInvalidUncleHash = errors.New("non empty uncle hash")
 	// errMalformedChannelData is returned if data return from blockFinalization does not conform to its struct definition
 	errMalformedChannelData = errors.New("data received is not an event type")
+	// errInvalidVote is returned if a nonce value is something else that the two
+	// allowed constants of 0x00..0 or 0xff..f.
+	errInvalidVote = errors.New("vote nonce not 0x0000000000000000 or 0xffffffffffffffff")
+	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
+	errInvalidCandidate = errors.New("candidate for validator is invalid")
 )
 
 func (sb *backend) addProposalSeal(h *types.Header) error {
@@ -112,6 +125,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		results <- nil
 		return
 	}
+
 	blockNumberStr := block.Number().String()
 
 	ch := sb.commitChs.getOrCreateCommitChannel(blockNumberStr)
@@ -129,6 +143,8 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		for {
 			select {
 			case bl, ok := <-ch:
+				// remove lock whether Seal is success or not
+				sb.proposedValidator.removeStick()
 				if !ok {
 					log.Info("committing... Channel closed, exit seal...", "number", blockNumberStr)
 					return
@@ -147,6 +163,17 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 				//we only posted the block back to the miner if and only if the block is ours
 				if bl.Coinbase() == sb.address {
 					log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
+
+					// clear pending proposed validator if sealing Successfully
+					if bl.Number().Int64() == sb.proposedValidator.getStickBlock() {
+						// get proposedValidator from the extra-data of block-header
+						proposedValidator, _ := getModifiedValidator(*bl.Header())
+						// compares if the current proposedValidator is not changed
+						if reflect.DeepEqual(proposedValidator, sb.proposedValidator.address) {
+							// removes pending ProposedValidator
+							sb.proposedValidator.clearPendingProposedValidator()
+						}
+					}
 					results <- bl
 				} else {
 					log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...", "block_hash", block.Hash(), "number", block.Number())
@@ -358,11 +385,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// prepare extra data without validators
-	extra, err := prepareExtra(header)
-	if err != nil {
-		return err
-	}
-	header.Extra = extra
+	header.Extra = sb.prepareExtra(header)
 
 	// set header's timestamp from parent's timestamp and blockperiod
 	var (
@@ -424,10 +447,14 @@ func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, pare
 	return defaultDifficulty
 }
 
+// APIs will expose some RPC API methods
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
-	log.Warn("APIs: implement me")
-	//TODO: Research & Implement
-	return nil
+	return []rpc.API{{
+		Namespace: "tendermint",
+		Version:   "1.0",
+		Service:   &TendermintAPI{chain: chain, be: sb},
+		Public:    true,
+	}}
 }
 
 func (sb *backend) Close() error {
@@ -595,25 +622,6 @@ func blockProposer(header *types.Header) (common.Address, error) {
 	return addr, nil
 }
 
-// prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.Header) ([]byte, error) {
-	var buf bytes.Buffer
-
-	// compensate the lack bytes if header.Extra is not enough TendermintExtraVanity bytes.
-	if len(header.Extra) < types.TendermintExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity-len(header.Extra))...)
-	}
-	buf.Write(header.Extra[:types.TendermintExtraVanity])
-
-	tdm := &types.TendermintExtra{}
-	payload, err := rlp.EncodeToBytes(&tdm)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(buf.Bytes(), payload...), nil
-}
-
 // AccumulateRewards credits the coinbase of the given block with the proposing
 // reward.
 func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
@@ -621,4 +629,67 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	reward := new(big.Int).Set(TendermintBlockReward)
 
 	state.AddBalance(header.Coinbase, reward)
+}
+
+func (sb *backend) getValSet(chainReader consensus.ChainReader, blockNumber *big.Int) tendermint.ValidatorSet {
+	var (
+		previousBlock uint64
+		header        *types.Header
+		err           error
+		snap          *Snapshot
+	)
+
+	// check if blockNumber is zero
+	if blockNumber.Cmp(big.NewInt(0)) == 0 {
+		previousBlock = 0
+	} else {
+		previousBlock = uint64(blockNumber.Int64() - 1)
+	}
+	header = chainReader.GetHeaderByNumber(previousBlock)
+	if header == nil {
+		log.Error("cannot get valSet since previousBlock is not available", "block_number", blockNumber)
+		return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
+	}
+	snap, err = sb.snapshot(chainReader, previousBlock, header.Hash(), nil)
+	if err != nil {
+		log.Error("cannot load snapshot", "error", err)
+		return validator.NewSet(nil, sb.config.ProposerPolicy, int64(0))
+	}
+	return snap.ValSet
+}
+
+func (sb *backend) prepareExtra(header *types.Header) []byte {
+	var (
+		tdm     *types.TendermintExtra
+		payload []byte
+		buf     bytes.Buffer
+	)
+
+	if len(header.Extra) < types.TendermintExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:types.TendermintExtraVanity])
+
+	// Add validator voting to header
+	valAddr, vote, isStick := sb.proposedValidator.getPendingProposedValidator()
+	if !reflect.DeepEqual(valAddr, common.Address{}) && !isStick {
+		if vote {
+			copy(header.Nonce[:], nonceAuthVote)
+		} else {
+			copy(header.Nonce[:], nonceDropVote)
+		}
+
+		tdm = &types.TendermintExtra{
+			ModifiedValidator: valAddr,
+		}
+		payload, _ = rlp.EncodeToBytes(&tdm)
+
+		//lock validator
+		sb.proposedValidator.stickValidator(header.Number.Int64())
+	} else {
+		tdm = &types.TendermintExtra{}
+		payload, _ = rlp.EncodeToBytes(&tdm)
+	}
+
+	return append(buf.Bytes(), payload...)
 }

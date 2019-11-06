@@ -35,7 +35,7 @@ func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
 
 func newTestBackend() *backend {
 	var (
-		engine consensus.Engine = newEngine()
+		engine consensus.Engine = newTestEngine()
 		config                  = params.TendermintTestChainConfig
 		b                       = engine.(*backend)
 	)
