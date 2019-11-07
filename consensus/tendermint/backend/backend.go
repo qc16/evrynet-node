@@ -179,13 +179,7 @@ func (sb *backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.
 
 //Commit implement tendermint.Backend.Commit()
 func (sb *backend) Commit(block *types.Block) {
-	ch, ok := sb.commitChs.getCommitChannel(block.Number().String())
-	if !ok {
-		log.Error("no commit channel available", "block_number", block.Number().String())
-		return
-	}
-	ch <- block
-
+	sb.commitChs.sendBlock(block)
 	// if node is not proposer, EnqueueBlock for downloading
 	if block.Coinbase() != sb.address {
 		sb.EnqueueBlock(block)
@@ -193,12 +187,8 @@ func (sb *backend) Commit(block *types.Block) {
 }
 
 func (sb *backend) Cancel(block *types.Block) {
-	ch, ok := sb.commitChs.getCommitChannel(block.Number().String())
-	if !ok {
-		log.Warn("no commit channel available", "block_number", block.Number().String())
-		return
-	}
-	ch <- block
+	sb.commitChs.sendBlock(block)
+
 }
 
 // EnqueueBlock adds a block returned from consensus into fetcher queue

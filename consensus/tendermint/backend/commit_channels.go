@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/log"
 )
 
 type commitChannels struct {
@@ -18,16 +19,19 @@ func newCommitChannels() *commitChannels {
 	}
 }
 
-//getCommitChannel return the channel and true if available.
-func (cc *commitChannels) getCommitChannel(blockNumberStr string) (ch chan *types.Block, avail bool) {
+func (cc *commitChannels) sendBlock(block *types.Block) {
 	cc.mutex.RLock()
 	defer cc.mutex.RUnlock()
-	ch, avail = cc.chs[blockNumberStr]
-	return ch, avail
+	ch, ok := cc.chs[block.Number().String()]
+	if !ok {
+		log.Error("no commit channel available", "block_number", block.Number().String())
+		return
+	}
+	ch <- block
 }
 
 //getOrCreateCommitChannel return the channel if available, or create a new one.
-func (cc *commitChannels) getOrCreateCommitChannel(blockNumberStr string) chan *types.Block {
+func (cc *commitChannels) getOrCreateCommitChannel(blockNumberStr string) <- chan *types.Block {
 	cc.mutex.Lock()
 	defer cc.mutex.Unlock()
 	ch, avail := cc.chs[blockNumberStr]
