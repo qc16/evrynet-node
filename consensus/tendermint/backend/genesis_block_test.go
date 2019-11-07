@@ -84,7 +84,7 @@ func getGenesisConf() (*core.Genesis, error) {
 	return config, nil
 }
 
-func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.BlockChain, error) {
+func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.BlockChain, error) {
 	config, err := makeNodeConfig()
 	if err != nil {
 		return nil, nil, nil, err
@@ -107,7 +107,7 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 	}
 
 	//init tendermint backend
-	backend := &backend{
+	backend := &Backend{
 		config:             config.Tendermint,
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         nodePK,
@@ -116,7 +116,7 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 		mutex:              &sync.RWMutex{},
 		storingMsgs:        queue.NewFIFO(),
 	}
-	backend.core = tendermintCore.New(backend, config.Tendermint, nil)
+	backend.core = tendermintCore.New(backend, config.Tendermint)
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
 
 	//init tendermint engine

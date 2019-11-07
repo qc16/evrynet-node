@@ -8,6 +8,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -28,6 +29,8 @@ type Engine interface {
 	Stop() error
 	//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
 	SetBlockForProposal(block *types.Block)
+	//SetTxPool define a method to allow Injecting a txpool
+	SetTxPool(txPool *evrynetCore.TxPool)
 }
 
 // TODO: More msg codes here if needed

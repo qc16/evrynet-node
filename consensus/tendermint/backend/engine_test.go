@@ -124,9 +124,9 @@ func TestVerifySeal(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func newTestEngine() *backend {
+func newTestEngine() *Backend {
 	nodeKey, _ := crypto.GenerateKey()
-	be, _ := New(tendermint.DefaultConfig, nodeKey, nil).(*backend)
+	be, _ := New(tendermint.DefaultConfig, nodeKey, nil).(*Backend)
 	be.address = crypto.PubkeyToAddress(nodeKey.PublicKey)
 	be.db = ethdb.NewMemDatabase()
 	return be

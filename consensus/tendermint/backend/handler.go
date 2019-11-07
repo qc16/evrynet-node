@@ -28,7 +28,7 @@ func rLPHash(v interface{}) (h common.Hash) {
 	return h
 }
 
-func (sb *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
+func (sb *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	var data []byte
 	if err := msg.Decode(&data); err != nil {
 		return nil, common.Hash{}, errDecodeFailed
@@ -36,7 +36,7 @@ func (sb *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	return data, rLPHash(data), nil
 }
 
-func (sb *backend) sendDataToCore(data []byte) {
+func (sb *Backend) sendDataToCore(data []byte) {
 	if err := sb.EventMux().Post(tendermint.MessageEvent{
 		Payload: data,
 	}); err != nil {
@@ -44,7 +44,7 @@ func (sb *backend) sendDataToCore(data []byte) {
 	}
 }
 
-func (sb *backend) replayTendermintMsg() (done bool, err error) {
+func (sb *Backend) replayTendermintMsg() (done bool, err error) {
 	sb.mutex.Lock()
 	defer sb.mutex.Unlock()
 	if !sb.coreStarted {
@@ -71,7 +71,7 @@ func (sb *backend) replayTendermintMsg() (done bool, err error) {
 
 // HandleMsg implements consensus.Handler.HandleMsg
 // return false if the message cannot be handle by Tendermint Backend
-func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
+func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	switch msg.Code {
 	case consensus.TendermintMsg:
 		decodedMsg, _, err := sb.decode(msg)
@@ -124,7 +124,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 }
 
 // HandleNewChainHead implements consensus.Handler.HandleNewChainHead
-func (sb *backend) HandleNewChainHead(blockNumber *big.Int) error {
+func (sb *Backend) HandleNewChainHead(blockNumber *big.Int) error {
 	sb.mutex.RLock()
 	defer sb.mutex.RUnlock()
 	if !sb.coreStarted {

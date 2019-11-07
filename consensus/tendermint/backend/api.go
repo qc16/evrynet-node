@@ -11,7 +11,7 @@ import (
 // TendermintAPI is a user facing RPC API to dump tendermint state
 type TendermintAPI struct {
 	chain consensus.ChainReader
-	be    *backend
+	be    *Backend
 }
 
 // ProposeValidator proposes a validator

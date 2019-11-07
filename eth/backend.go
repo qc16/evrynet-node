@@ -137,13 +137,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	config.GPO.GasPrice = config.GasPrice
 	config.Miner.GasPrice = config.GasPrice
 
-	txPool := &core.TxPool{}
 	eth := &Ethereum{
 		config:         config,
 		chainDb:        chainDb,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, chainConfig, config, config.Miner.Notify, config.Miner.Noverify, chainDb, txPool),
+		engine:         CreateConsensusEngine(ctx, chainConfig, config, config.Miner.Notify, config.Miner.Noverify, chainDb),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
 		gasPrice:       config.GasPrice,
@@ -196,8 +195,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	*txPool = *core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
-	eth.txPool = txPool
+	eth.txPool = core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
+
+	if engine, ok := eth.engine.(*tendermintBackend.Backend); ok {
+		log.Info("Set TxPool to Engine")
+		engine.SetTxPool(eth.txPool)
+	}
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieCleanLimit + cacheConfig.TrieDirtyLimit
@@ -235,7 +238,7 @@ func makeExtraData(extra []byte) []byte {
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
-func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *Config, notify []string, noverify bool, db ethdb.Database, txPool *core.TxPool) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainConfig, config *Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
@@ -245,7 +248,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		config.Tendermint.ProposerPolicy = tendermint.ProposerPolicy(chainConfig.Tendermint.ProposerPolicy)
 		config.Tendermint.Epoch = chainConfig.Tendermint.Epoch
 		log.Info("Create Tendermint consensus engine")
-		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey(), txPool, tendermintBackend.WithDB(db))
+		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey(), tendermintBackend.WithDB(db))
 	}
 
 	// Otherwise assume proof-of-work

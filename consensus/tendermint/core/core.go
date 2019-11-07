@@ -17,7 +17,7 @@ import (
 )
 
 // New creates an Tendermint consensus core
-func New(backend tendermint.Backend, config *tendermint.Config, txPool *evrynetCore.TxPool) Engine {
+func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 	c := &core{
 		handlerWg:      new(sync.WaitGroup),
 		backend:        backend,
@@ -26,7 +26,6 @@ func New(backend tendermint.Backend, config *tendermint.Config, txPool *evrynetC
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewFIFO(),
-		txPool:         txPool,
 	}
 	return c
 }
@@ -101,6 +100,7 @@ func (c *core) Stop() error {
 	c.timeout.Stop()
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
+	c.getLogger().Infow("Tendermint's timeout core stopped")
 	return nil
 }
 
@@ -147,8 +147,14 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	logger.Infow("sent proposal")
 }
 
+//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
 func (c *core) SetBlockForProposal(b *types.Block) {
 	c.CurrentState().SetBlock(b)
+}
+
+//SetTxPool define a method to allow Injecting a txpool
+func (c *core) SetTxPool(txPool *evrynetCore.TxPool) {
+	c.txPool = txPool
 }
 
 //SendVote send broadcast its vote to the network

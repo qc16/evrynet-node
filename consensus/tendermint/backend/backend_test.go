@@ -21,7 +21,7 @@ import (
 
 func TestSign(t *testing.T) {
 	privateKey, _ := tests_utils.GeneratePrivateKey()
-	b := &backend{
+	b := &Backend{
 		privateKey: privateKey,
 	}
 	data := []byte("Here is a string....")
@@ -76,7 +76,7 @@ func TestValidators(t *testing.T) {
 	assert.Equal(t, 0, valSet2.Size())
 }
 
-func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) *backend {
+func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) *Backend {
 	var (
 		address = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		trigger = false
@@ -96,7 +96,7 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
 		memDB  = ethdb.NewMemDatabase()
 		config = tendermint.DefaultConfig
-		be     = New(config, nodePrivateKey, pool, WithDB(memDB)).(*backend)
+		be     = New(config, nodePrivateKey, WithDB(memDB)).(*Backend)
 	)
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
 	defer pool.Stop()

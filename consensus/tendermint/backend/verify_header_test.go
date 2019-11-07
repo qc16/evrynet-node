@@ -59,10 +59,10 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header) (*tests_utils.MockChainReader, *backend) {
+func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header) (*tests_utils.MockChainReader, *Backend) {
 	memDB := ethdb.NewMemDatabase()
 	config := tendermint.DefaultConfig
-	b, ok := New(config, nodePK, nil, WithDB(memDB)).(*backend)
+	b, ok := New(config, nodePK, nil, WithDB(memDB)).(*Backend)
 	b.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	if !ok {
 		panic("New() cannot be asserted back to backend")
