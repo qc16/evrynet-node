@@ -208,6 +208,8 @@ func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 
 	sb.coreStarted = true
+
+	go sb.dequeueMsgLoop()
 	return nil
 }
 
