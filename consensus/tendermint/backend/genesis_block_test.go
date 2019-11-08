@@ -16,9 +16,9 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
-	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/event"
@@ -84,24 +84,7 @@ func getGenesisConf() (*core.Genesis, error) {
 	return config, nil
 }
 
-// mockBroadcast is a mock for passing check number of validator when backend.Start()
-type mockBroadcast struct {
-}
-
-func (m *mockBroadcast) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
-	out := make(map[common.Address]consensus.Peer)
-	for addr := range targets {
-		out[addr] = nil
-	}
-	return out
-}
-
-// Enqueue add a block into fetcher queue
-func (m *mockBroadcast) Enqueue(id string, block *types.Block) {
-	panic("unimplemented method")
-}
-
-func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.BlockChain, error) {
+func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.BlockChain, error) {
 	config, err := makeNodeConfig()
 	if err != nil {
 		return nil, nil, nil, err
@@ -124,7 +107,7 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 	}
 
 	//init tendermint backend
-	backend := &backend{
+	backend := &Backend{
 		config:             config.Tendermint,
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         nodePK,
@@ -134,10 +117,10 @@ func createBlockchainAndBackendFromGenesis() (*backend, consensus.Engine, *core.
 		storingMsgs:        queue.NewFIFO(),
 	}
 	backend.core = tendermintCore.New(backend, config.Tendermint)
-	backend.SetBroadcaster(&mockBroadcast{})
+	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
 
 	//init tendermint engine
-	engine := New(config.Tendermint, nodePK, WithDB(db))
+	engine := New(config.Tendermint, nodePK, nil, WithDB(db))
 
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)

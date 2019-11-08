@@ -69,7 +69,7 @@ func (c *core) handleEvents() {
 				if err := rlp.DecodeBytes(ev.Payload, &msg); err != nil {
 					logger.Errorw("failed to decode msg", "error", err)
 				} else {
-					//log.Info("received Message event", "from", msg.Address, "msg_Code", msg.Code)
+					//log.Info("received message event", "from", msg.Address, "msg_Code", msg.Code)
 					if err := c.handleMsg(msg); err != nil {
 						logger.Errorw("failed to handle msg", "error", err)
 					}
@@ -129,8 +129,8 @@ func (c *core) handleNewBlock(block *types.Block) {
 	state.SetBlock(block)
 }
 
-func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
-
+//VerifyProposal validate msg & proposal when get from other nodes
+func (c *core) VerifyProposal(proposal tendermint.Proposal, msg message) error {
 	// Verify POLRound, which must be -1 or in range [0, proposal.Round).
 	if proposal.POLRound < -1 ||
 		((proposal.POLRound >= 0) && proposal.POLRound >= proposal.Round) {
@@ -150,6 +150,41 @@ func (c *core) verifyProposal(proposal tendermint.Proposal, msg message) error {
 
 	if proposal.Block == nil || (proposal.Block != nil && proposal.Block.Hash().Hex() == emptyBlockHash.Hex()) {
 		return ErrEmptyBlockProposal
+	}
+
+	// verify the header of proposed block
+	// ignore ErrEmptyCommittedSeals error because we don't have the committed seals yet
+	if err := c.backend.VerifyProposalHeader(proposal.Block.Header()); err != nil && err != tendermint.ErrEmptyCommittedSeals {
+		return err
+	}
+
+	// verify transaction hash & header
+	if err := c.verifyTxs(proposal); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *core) verifyTxs(proposal tendermint.Proposal) error {
+	var (
+		block   = proposal.Block
+		txs     = block.Transactions()
+		txsHash = types.DeriveSha(txs)
+	)
+
+	// Verify txs hash
+	if txsHash != block.Header().TxHash {
+		return tendermint.ErrMismatchTxhashes
+	}
+
+	// Verify transaction for CoreTxPool
+	if c.txPool != nil {
+		for _, tx := range txs {
+			if err := c.txPool.ValidateTx(tx, false); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -178,7 +213,7 @@ func (c *core) handlePropose(msg message) error {
 		logger.Warnw("received proposal with different height/round. Skip processing it")
 		return nil
 	}
-	if err := c.verifyProposal(proposal, msg); err != nil {
+	if err := c.VerifyProposal(proposal, msg); err != nil {
 		return err
 	}
 	logger.Infow("setProposal receive...")

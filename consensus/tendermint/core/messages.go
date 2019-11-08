@@ -8,7 +8,6 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -19,17 +18,6 @@ var (
 	ErrDifferentMsgType = errors.New("message set is not of the same type of the received message")
 )
 
-//Engine abstract the core's functionalities
-//Note that backend and other packages doesn't care about core's internal logic.
-//It only requires core to start receiving/handling messages
-//The sending of events/message from core to backend will be done by calling accessing Backend.EventMux()
-type Engine interface {
-	Start() error
-	Stop() error
-	//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
-	SetBlockForProposal(block *types.Block)
-}
-
 // TODO: More msg codes here if needed
 const (
 	msgPropose uint64 = iota
@@ -37,7 +25,7 @@ const (
 	msgPrecommit
 )
 
-//Message is used to store consensus information between steps
+//message is used to store consensus information between steps
 type message struct {
 	Code      uint64
 	Msg       []byte

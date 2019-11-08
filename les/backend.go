@@ -43,7 +43,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/p2p/discv5"
 	"github.com/evrynet-official/evrynet-client/params"
-	rpc "github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
 type LightEthereum struct {

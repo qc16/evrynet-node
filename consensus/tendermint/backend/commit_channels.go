@@ -31,7 +31,7 @@ func (cc *commitChannels) sendBlock(block *types.Block) {
 }
 
 //getOrCreateCommitChannel return the channel if available, or create a new one.
-func (cc *commitChannels) getOrCreateCommitChannel(blockNumberStr string) <- chan *types.Block {
+func (cc *commitChannels) getOrCreateCommitChannel(blockNumberStr string) <-chan *types.Block {
 	cc.mutex.Lock()
 	defer cc.mutex.Unlock()
 	ch, avail := cc.chs[blockNumberStr]

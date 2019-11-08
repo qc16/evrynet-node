@@ -11,7 +11,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/state"
@@ -56,12 +55,8 @@ var (
 	errInvalidExtraDataFormat = errors.New("invalid extra data format")
 	// errInvalidMixDigest is returned if a block's mix digest is not Tendermint digest.
 	errInvalidMixDigest = errors.New("invalid Tendermint mix digest")
-	// errInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
-	errInvalidTimestamp = errors.New("invalid timestamp")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	errInvalidCommittedSeals = errors.New("invalid committed seals")
-	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
-	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	errInvalidVotingChain = errors.New("invalid voting chain")
@@ -69,8 +64,6 @@ var (
 	errCoinBaseInvalid = errors.New("invalid coin base address")
 	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
 	errInvalidUncleHash = errors.New("non empty uncle hash")
-	// errMalformedChannelData is returned if data return from blockFinalization does not conform to its struct definition
-	errMalformedChannelData = errors.New("data received is not an event type")
 	// errInvalidVote is returned if a nonce value is something else that the two
 	// allowed constants of 0x00..0 or 0xff..f.
 	errInvalidVote = errors.New("vote nonce not 0x0000000000000000 or 0xffffffffffffffff")
@@ -78,7 +71,7 @@ var (
 	errInvalidCandidate = errors.New("candidate for validator is invalid")
 )
 
-func (sb *backend) addProposalSeal(h *types.Header) error {
+func (sb *Backend) addProposalSeal(h *types.Header) error {
 	seal, err := sb.Sign(utils.SigHash(h).Bytes())
 	if err != nil {
 		return err
@@ -89,7 +82,7 @@ func (sb *backend) addProposalSeal(h *types.Header) error {
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
-func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
+func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
 	blockNumber := header.Number.Uint64()
@@ -188,7 +181,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, results
 }
 
 // Start implements consensus.Tendermint.Start
-func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block) error {
+func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block) error {
 	sb.mutex.Lock()
 	defer sb.mutex.Unlock()
 	if sb.coreStarted {
@@ -219,7 +212,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 }
 
 // Stop implements consensus.Tendermint.Stop
-func (sb *backend) Stop() error {
+func (sb *Backend) Stop() error {
 	sb.mutex.Lock()
 	defer sb.mutex.Unlock()
 	if !sb.coreStarted {
@@ -235,22 +228,30 @@ func (sb *backend) Stop() error {
 // Author retrieves the Evrynet address of the account that minted the given
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
-func (sb *backend) Author(header *types.Header) (common.Address, error) {
+func (sb *Backend) Author(header *types.Header) (common.Address, error) {
 	return blockProposer(header)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of a
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
-func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
+func (sb *Backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	return sb.verifyHeader(chain, header, nil)
+}
+
+// VerifyProposalHeader will call be.verifyHeader for checking
+func (sb *Backend) VerifyProposalHeader(header *types.Header) error {
+	if sb.chain == nil {
+		return errors.New("no chain reader ")
+	}
+	return sb.verifyHeader(sb.chain, header, nil)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *Backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -281,7 +282,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// get block number from header of block
 	blockNumber := header.Number.Uint64()
 	if blockNumber == 0 {
@@ -320,7 +321,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 // concurrently. The method returns a quit channel to abort the operations and
 // a results channel to retrieve the async verifications (the order is that of
 // the input slice).
-func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (sb *Backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	errorHeaders := make(chan error, len(headers))
 	go func() {
@@ -339,7 +340,7 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
 // rules of a given engine.
-func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+func (sb *Backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	if len(block.Uncles()) > 0 {
 		return errInvalidUncleHash
 	}
@@ -348,7 +349,7 @@ func (sb *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block)
 
 // VerifySeal checks whether the crypto seal on a header is valid according to
 // the consensus rules of the given engine.
-func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
+func (sb *Backend) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
 	// get parent header and ensure the signer is in parent's validator set
 	blockNumber := header.Number.Uint64()
 	if blockNumber == 0 {
@@ -366,7 +367,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 
 // Prepare initializes the consensus fields of a block header according to the
 // rules of a particular engine. The changes are executed inline.
-func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// set coinbase with the proposer's address
 	header.Coinbase = sb.Address()
 	// use the same difficulty and mixDigest for all blocks
@@ -409,7 +410,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 //
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
-func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
@@ -424,7 +425,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 //
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
-func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (sb *Backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
@@ -438,17 +439,17 @@ func (sb *backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
-func (sb *backend) SealHash(header *types.Header) (hash common.Hash) {
+func (sb *Backend) SealHash(header *types.Header) (hash common.Hash) {
 	return utils.SigHash(header)
 }
 
 // CalcDifficulty tempo return default difficulty
-func (sb *backend) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
+func (sb *Backend) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
 	return defaultDifficulty
 }
 
 // APIs will expose some RPC API methods
-func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
+func (sb *Backend) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "tendermint",
 		Version:   "1.0",
@@ -457,14 +458,14 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	}}
 }
 
-func (sb *backend) Close() error {
+func (sb *Backend) Close() error {
 	log.Warn("Close: implement me")
 	//TODO: Research & Implement
 	return nil
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
-func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+func (sb *Backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.Header
@@ -546,7 +547,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 }
 
 // verifyProposalSeal checks proposal seal is signed by validator
-func (sb *backend) verifyProposalSeal(header *types.Header, snap *Snapshot) error {
+func (sb *Backend) verifyProposalSeal(header *types.Header, snap *Snapshot) error {
 	// resolve the authorization key and check against signers
 	signer, err := blockProposer(header)
 	if err != nil {
@@ -566,20 +567,20 @@ func (sb *backend) verifyProposalSeal(header *types.Header, snap *Snapshot) erro
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (sb *backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) error {
+func (sb *Backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) error {
 	extra, err := types.ExtractTendermintExtra(header)
 	if err != nil {
 		return err
 	}
 	// The length of Committed seals should be larger than 0
 	if len(extra.CommittedSeal) == 0 {
-		return errEmptyCommittedSeals
+		return tendermint.ErrEmptyCommittedSeals
 	}
 
 	vals := snap.ValSet.Copy()
 	// Check whether the committed seals are generated by parent's validators
 	validSeal := 0
-	proposalSeal := tendermintCore.PrepareCommittedSeal(header.Hash())
+	proposalSeal := utils.PrepareCommittedSeal(header.Hash())
 	// 1. Get committed seals from current header
 	for _, seal := range extra.CommittedSeal {
 		// 2. Get the original address by seal and parent block hash
@@ -631,7 +632,7 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	state.AddBalance(header.Coinbase, reward)
 }
 
-func (sb *backend) getValSet(chainReader consensus.ChainReader, blockNumber *big.Int) tendermint.ValidatorSet {
+func (sb *Backend) getValSet(chainReader consensus.ChainReader, blockNumber *big.Int) tendermint.ValidatorSet {
 	var (
 		previousBlock uint64
 		header        *types.Header
@@ -658,7 +659,7 @@ func (sb *backend) getValSet(chainReader consensus.ChainReader, blockNumber *big
 	return snap.ValSet
 }
 
-func (sb *backend) prepareExtra(header *types.Header) []byte {
+func (sb *Backend) prepareExtra(header *types.Header) []byte {
 	var (
 		tdm     *types.TendermintExtra
 		payload []byte

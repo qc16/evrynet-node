@@ -10,13 +10,18 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
+	evrynetCore "github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 func TestSign(t *testing.T) {
-	privateKey, _ := generatePrivateKey()
-	b := &backend{
+	privateKey, _ := tests_utils.GeneratePrivateKey()
+	b := &Backend{
 		privateKey: privateKey,
 	}
 	data := []byte("Here is a string....")
@@ -31,65 +36,72 @@ func TestSign(t *testing.T) {
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
-	if signer != getAddress() {
-		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
+	if signer != tests_utils.GetAddress() {
+		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), tests_utils.GetAddress().Hex())
 	}
 }
 
 func TestValidators(t *testing.T) {
-	backend, _, blockchain, err := createBlockchainAndBackendFromGenesis()
-	assert.NoError(t, err)
+	var (
+		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators     = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
+	)
 
-	backend.Start(blockchain, nil)
+	valSet0 := be.Validators(big.NewInt(0))
+	assert.Equal(t, 1, valSet0.Size())
 
-	valSet0 := backend.Validators(big.NewInt(0))
-	if valSet0.Size() != 1 {
-		t.Errorf("Valset size of zero block should be 1, get: %d", valSet0.Size())
-	}
 	list := valSet0.List()
 	log.Println("validator set of block 0 is")
 
 	for _, val := range list {
 		log.Println(val.String())
 	}
-	valSet1 := backend.Validators(big.NewInt(1))
-	if valSet1.Size() != 1 {
-		t.Errorf("Valset size of block 1st should be 1, get: %d", valSet1.Size())
-	}
+
+	valSet1 := be.Validators(big.NewInt(1))
+	assert.Equal(t, 1, valSet1.Size())
+
 	list = valSet1.List()
 	log.Println("validator set of block 1 is")
 
 	for _, val := range list {
 		log.Println(val.String())
 	}
-	valSet2 := backend.Validators(big.NewInt(2))
-	if valSet2.Size() != 0 {
-		t.Errorf("Valset size of block 2th should be 0, get: %d", valSet2.Size())
-	}
+
+	valSet2 := be.Validators(big.NewInt(2))
+	assert.Equal(t, 0, valSet2.Size())
 }
 
-/**
- * SimpleBackend
- * Private key: bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1
- * Public key: 04a2bfb0f7da9e1b9c0c64e14f87e8fb82eb0144e97c25fe3a977a921041a50976984d18257d2495e7bfd3d4b280220217f429287d25ecdf2b0d7c0f7aae9aa624
- * Address: 0x70524d664ffe731100208a0154e556f9bb679ae6
- */
-func getAddress() common.Address {
-	return common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
-}
+func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) *Backend {
+	var (
+		address = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		trigger = false
+		statedb = tests_utils.MustCreateStateDB(t)
 
-func generatePrivateKey() (*ecdsa.PrivateKey, error) {
-	key := "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
-	return crypto.HexToECDSA(key)
-}
+		testTxPoolConfig evrynetCore.TxPoolConfig
+		blockchain       = &tests_utils.MockChainReader{
+			GenesisHeader: genesisHeader,
+			MockBlockChain: &tests_utils.MockBlockChain{
+				Statedb:       statedb,
+				GasLimit:      1000000000,
+				ChainHeadFeed: new(event.Feed),
+			},
+			Address: address,
+			Trigger: &trigger,
+		}
+		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
+		memDB  = ethdb.NewMemDatabase()
+		config = tendermint.DefaultConfig
+		be     = New(config, nodePrivateKey, WithDB(memDB)).(*Backend)
+	)
+	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
+	defer pool.Stop()
+	be.chain = blockchain
+	be.currentBlock = blockchain.CurrentBlock
 
-func newTestValidatorSet(n int) tendermint.ValidatorSet {
-	// generate validators
-	addrs := make([]common.Address, n)
-	for i := 0; i < n; i++ {
-		privateKey, _ := crypto.GenerateKey()
-		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
-	}
-	vset := validator.NewSet(addrs, tendermint.RoundRobin, int64(0))
-	return vset
+	return be
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
+	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
@@ -30,11 +31,11 @@ var (
 )
 
 //Option return an optional function for backend's initial behaviour
-type Option func(b *backend) error
+type Option func(b *Backend) error
 
 //WithDB return an option to set backend's db
 func WithDB(db ethdb.Database) Option {
-	return func(b *backend) error {
+	return func(b *Backend) error {
 		b.db = db
 		return nil
 	}
@@ -43,7 +44,7 @@ func WithDB(db ethdb.Database) Option {
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
-	be := &backend{
+	be := &Backend{
 		config:             config,
 		tendermintEventMux: new(event.TypeMux),
 		privateKey:         privateKey,
@@ -53,23 +54,23 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		storingMsgs:        queue.NewFIFO(),
 		proposedValidator:  newProposedValidator(),
 	}
-	be.core = tendermintCore.New(be, tendermint.DefaultConfig)
+	be.core = tendermintCore.New(be, config)
+
 	for _, opt := range opts {
 		if err := opt(be); err != nil {
-			log.Error("error at initialization of backend",
-				err)
+			log.Error("error at initialization of backend", err)
 		}
 	}
 	return be
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
-func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
+func (sb *Backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
 // ----------------------------------------------------------------------------
-type backend struct {
+type Backend struct {
 	config             *tendermint.Config
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
@@ -95,24 +96,29 @@ type backend struct {
 }
 
 // EventMux implements tendermint.Backend.EventMux
-func (sb *backend) EventMux() *event.TypeMux {
+func (sb *Backend) EventMux() *event.TypeMux {
 	return sb.tendermintEventMux
 }
 
 // Sign implements tendermint.Backend.Sign
-func (sb *backend) Sign(data []byte) ([]byte, error) {
+func (sb *Backend) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256(data)
 	return crypto.Sign(hashData, sb.privateKey)
 }
 
 // Address implements tendermint.Backend.Address
-func (sb *backend) Address() common.Address {
+func (sb *Backend) Address() common.Address {
 	return sb.address
+}
+
+// SetTxPool define a method to allow Injecting a txpool
+func (sb *Backend) SetTxPool(txpool *core.TxPool) {
+	sb.core.SetTxPool(txpool)
 }
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
 	// send to others
 	if err := sb.Gossip(valSet, payload); err != nil {
 		return err
@@ -132,7 +138,7 @@ func (sb *backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return backend.ErrNoBroadcaster if no broadcaster is set for backend
-func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 
 	targets := make(map[common.Address]bool)
@@ -162,12 +168,12 @@ func (sb *backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 
 // Validators return validator set for a block number
 // TODO: revise this function once auth vote is implemented
-func (sb *backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
+func (sb *Backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	return sb.getValSet(sb.chain, blockNumber)
 }
 
 // FindExistingPeers check validator peers exist or not by address
-func (sb *backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.Address]consensus.Peer {
+func (sb *Backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.Address]consensus.Peer {
 	targets := make(map[common.Address]bool)
 	for _, val := range valSet.List() {
 		if val.Address() != sb.Address() {
@@ -178,7 +184,7 @@ func (sb *backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.
 }
 
 //Commit implement tendermint.Backend.Commit()
-func (sb *backend) Commit(block *types.Block) {
+func (sb *Backend) Commit(block *types.Block) {
 	sb.commitChs.sendBlock(block)
 	// if node is not proposer, EnqueueBlock for downloading
 	if block.Coinbase() != sb.address {
@@ -186,29 +192,22 @@ func (sb *backend) Commit(block *types.Block) {
 	}
 }
 
-func (sb *backend) Cancel(block *types.Block) {
+func (sb *Backend) Cancel(block *types.Block) {
 	sb.commitChs.sendBlock(block)
-
 }
 
 // EnqueueBlock adds a block returned from consensus into fetcher queue
-func (sb *backend) EnqueueBlock(block *types.Block) {
+func (sb *Backend) EnqueueBlock(block *types.Block) {
 	if sb.broadcaster != nil {
 		sb.broadcaster.Enqueue(fetcherID, block)
 	}
 }
 
-func (sb *backend) CurrentHeadBlock() *types.Block {
+func (sb *Backend) CurrentHeadBlock() *types.Block {
 	return sb.currentBlock()
 }
 
-//ClearStoringMsg will delete all item in queue
-func (sb *backend) ClearStoringMsg() {
-	log.Info("Clear storing msg queue")
-	sb.storingMsgs = queue.NewFIFO()
-}
-
 // ValidatorsByChainReader returns val-set from snapshot
-func (sb *backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
+func (sb *Backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
 	return sb.getValSet(chain, blockNumber)
 }

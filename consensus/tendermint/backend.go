@@ -52,4 +52,9 @@ type Backend interface {
 	// this function supports to get validator's addresses in case a miner not run yet.
 	// for reason because when the miner not run then chaỉn-reader in core not initialized.
 	ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
+
+	// VerifyProposalHeader checks whether a header conforms to the consensus rules of a
+	// given engine. Verifying the seal may be done optionally here, or explicitly
+	// via the VerifySeal method.
+	VerifyProposalHeader(header *types.Header) error
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
@@ -35,9 +36,9 @@ func TestStartingTendermint(t *testing.T) {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
 	var (
-		nodePk1    = mustGeneratePrivateKey(pkey1)
-		nodePk2    = mustGeneratePrivateKey(pkey2)
-		tbe1       = backend.New(tendermint.DefaultConfig, nodePk1)
+		nodePk1    = tests_utils.MustGeneratePrivateKey(pkey1)
+		nodePk2    = tests_utils.MustGeneratePrivateKey(pkey2)
+		tbe1       = backend.New(tendermint.DefaultConfig, nodePk1, nil)
 		totalPeers = 2
 		n1         = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk1.PublicKey)[1:]) + "@33.4.2.1:30303")
 		n2         = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk2.PublicKey)[1:]) + "@33.4.2.1:30304")

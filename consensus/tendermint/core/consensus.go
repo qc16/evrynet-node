@@ -11,6 +11,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/metrics"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -63,6 +64,14 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 
 	c.enterPropose(blockNumber, round)
 
+}
+func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *tendermint.Proposal {
+	proposal := c.defaultDecideProposal(logger, round)
+
+	if err := c.checkAndFakeProposal(proposal); err != nil {
+		log.Error("fail to fake proposal block", "err", err)
+	}
+	return proposal
 }
 
 //defaultDecideProposal is the default proposal selector
@@ -158,7 +167,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		//	state.SetValidRoundAndBlock(lockedRound, lockedBlock)
 		//
 		//}
-		proposal := c.defaultDecideProposal(logger, round)
+		proposal := c.getDefaultProposal(logger, round)
 		if proposal != nil {
 			c.SendPropose(proposal)
 		}
@@ -596,7 +605,7 @@ func (c *core) updateStateForNewblock() {
 	}
 	//this is to safeguard the case where miner send a newer block, which should not be discarded.
 	//
-	if state.Block()!=nil && state.Block().Number().Cmp(state.BlockNumber()) < 0 {
+	if state.Block() != nil && state.Block().Number().Cmp(state.BlockNumber()) < 0 {
 		state.SetBlock(nil)
 	}
 	state.SetLockedRoundAndBlock(-1, nil)

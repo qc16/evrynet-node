@@ -1,22 +1,18 @@
 package core
 
 import (
-	"bytes"
 	"sync"
 	"time"
 
+	queue "github.com/enriquebris/goconcurrentqueue"
 	"go.uber.org/zap"
 
-	queue "github.com/enriquebris/goconcurrentqueue"
-	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
+	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/rlp"
-)
-
-const (
-	msgCommit uint64 = iota
 )
 
 // New creates an Tendermint consensus core
@@ -71,6 +67,8 @@ type core struct {
 	// futureMessages stores future messages (prevote and precommit) fromo other peers
 	// and handle them later when we jump to that block number
 	futureMessages *queue.FIFO
+
+	txPool *evrynetCore.TxPool
 }
 
 // Start implements core.Engine.Start
@@ -101,17 +99,11 @@ func (c *core) Stop() error {
 	c.timeout.Stop()
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
+	c.getLogger().Infow("Tendermint's timeout core stopped")
 	return nil
 }
 
-// PrepareCommittedSeal returns a committed seal for the given hash
-func PrepareCommittedSeal(hash common.Hash) []byte {
-	var buf bytes.Buffer
-	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(msgCommit)})
-	return buf.Bytes()
-}
-
+//FinalizeMsg set address, signature and encode msg to bytes
 func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 	msg.Address = c.backend.Address()
 	msgPayLoadWithoutSignature, err := msg.PayLoadWithoutSignature()
@@ -154,8 +146,14 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	logger.Infow("sent proposal")
 }
 
+//SetBlockForProposal define a method to allow Injecting a Block for testing purpose
 func (c *core) SetBlockForProposal(b *types.Block) {
 	c.CurrentState().SetBlock(b)
+}
+
+//SetTxPool define a method to allow Injecting a txpool
+func (c *core) SetTxPool(txPool *evrynetCore.TxPool) {
+	c.txPool = txPool
 }
 
 //SendVote send broadcast its vote to the network
@@ -177,7 +175,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	)
 	if block != nil {
 		var err error
-		commitHash := PrepareCommittedSeal(block.Header().Hash())
+		commitHash := utils.PrepareCommittedSeal(block.Header().Hash())
 		seal, err = c.backend.Sign(commitHash)
 		if err != nil {
 			logger.Errorw("failed to sign seal", err, "err")

@@ -9,6 +9,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
@@ -25,22 +26,19 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
 	// without seal
-	block := makeBlockWithoutSeal(engine, genesisHeader)
-	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(chain, block.Header(), false))
+	block := tests_utils.MakeBlockWithoutSeal(genesisHeader)
+	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, be.VerifyHeader(be.chain, block.Header(), false))
 
-	err = engine.Seal(chain, block, nil, nil)
+	err = be.Seal(be.chain, block, nil, nil)
 
 	// Sleep to make sure that the block can be received from
 	time.Sleep(2 * time.Second)
@@ -59,22 +57,19 @@ func TestAuthor(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
-	block := makeBlockWithSeal(engine, genesisHeader)
+	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
 	header := block.Header()
-	signer, err := engine.Author(header)
+	signer, err := be.Author(header)
 	assert.NoError(t, err)
-	assert.Equal(t, engine.Address(), signer)
+	assert.Equal(t, be.Address(), signer)
 }
 
 // TestPrepare
@@ -85,25 +80,22 @@ func TestPrepare(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
-	block := makeBlockWithoutSeal(engine, genesisHeader)
+	block := tests_utils.MakeBlockWithoutSeal(genesisHeader)
 	header := block.Header()
 
-	err = engine.Prepare(chain, header)
+	err = be.Prepare(be.chain, header)
 	assert.NoError(t, err)
 
 	header.ParentHash = common.HexToHash("1234567890")
-	err = engine.Prepare(chain, header)
+	err = be.Prepare(be.chain, header)
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 }
 
@@ -115,29 +107,26 @@ func TestVerifySeal(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-	assert.Equal(t, true, engine.coreStarted)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
 
 	// cannot verify genesis
-	err = engine.VerifySeal(chain, genesisHeader)
+	err = be.VerifySeal(be.chain, genesisHeader)
 	assert.Equal(t, errUnknownBlock, err)
 
-	block := makeBlockWithSeal(engine, genesisHeader)
-	err = engine.VerifySeal(chain, block.Header())
+	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
+	err = be.VerifySeal(be.chain, block.Header())
 	assert.NoError(t, err)
 }
 
-func newTestEngine() *backend {
+func newTestEngine() *Backend {
 	nodeKey, _ := crypto.GenerateKey()
-	be, _ := New(tendermint.DefaultConfig, nodeKey).(*backend)
+	be, _ := New(tendermint.DefaultConfig, nodeKey, nil).(*Backend)
 	be.address = crypto.PubkeyToAddress(nodeKey.PublicKey)
 	be.db = ethdb.NewMemDatabase()
 	return be
@@ -152,7 +141,7 @@ func TestPrepareExtra(t *testing.T) {
 		validators   = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = makeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
@@ -172,13 +161,15 @@ func TestPrepareExtra(t *testing.T) {
 		Number: big.NewInt(0),
 	}
 
-	header.Extra = engine.prepareExtra(header)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
 	assert.Equal(t, expectedResult, header.Extra)
 
 	// append useless information to extra-data
 	header.Extra = append(vanity, make([]byte, 15)...)
 
-	header.Extra = engine.prepareExtra(header)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
 	assert.Equal(t, expectedResult, header.Extra)
 
 	var (
@@ -193,15 +184,21 @@ func TestPrepareExtra(t *testing.T) {
 	)
 
 	// will attach a candidate to voting
-	engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote)
-	header.Extra = engine.prepareExtra(header)
-	candidateAddr, _ := getModifiedValidator(*header)
+	err = engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote)
+	assert.Nil(t, err)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
+	candidateAddr, err := getModifiedValidator(*header)
+	assert.Nil(t, err)
 	assert.Equal(t, candidate.address, candidateAddr)
 
 	// the candidate will be repplaced by new candidate when call setProposedValidator and old candidate have not processed yet
-	engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote)
-	header.Extra = engine.prepareExtra(header)
-	newCandidateAddr, _ := getModifiedValidator(*header)
+	err = engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote)
+	assert.Nil(t, err)
+	header.Extra, err = tests_utils.PrepareExtra(header)
+	assert.Nil(t, err)
+	newCandidateAddr, err := getModifiedValidator(*header)
+	assert.Nil(t, err)
 	assert.NotEqual(t, candidate.address, newCandidateAddr)
 	assert.Equal(t, newCandidate.address, newCandidateAddr)
 }
