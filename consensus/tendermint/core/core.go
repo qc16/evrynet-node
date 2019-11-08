@@ -4,12 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
-
+	queue "github.com/enriquebris/goconcurrentqueue"
 	"go.uber.org/zap"
 
-	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"

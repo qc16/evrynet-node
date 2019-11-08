@@ -5,13 +5,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/log"
 	"go.uber.org/zap"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/metrics"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
