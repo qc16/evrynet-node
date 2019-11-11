@@ -220,12 +220,27 @@ func (s *LightEthereum) APIs() []rpc.API {
 			Service:   &LightDummyAPI{},
 			Public:    true,
 		}, {
+			Namespace: "evr",
+			Version:   "1.0",
+			Service:   &LightDummyAPI{},
+			Public:    true,
+		}, {
 			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
 		}, {
+			Namespace: "evr",
+			Version:   "1.0",
+			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
+			Public:    true,
+		}, {
 			Namespace: "eth",
+			Version:   "1.0",
+			Service:   filters.NewPublicFilterAPI(s.ApiBackend, true),
+			Public:    true,
+		}, {
+			Namespace: "evr",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, true),
 			Public:    true,
