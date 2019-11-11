@@ -230,7 +230,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing Ethereum Peer", "Peer", id)
+	log.Info("Removing Ethereum Peer", "Peer", id)
 
 	// Unregister the Peer from the downloader and Ethereum Peer set
 	pm.downloader.UnregisterPeer(id)
@@ -339,6 +339,7 @@ func (pm *ProtocolManager) handle(p *Peer) error {
 		// Start a timer to disconnect if the Peer doesn't reply in time
 		p.syncDrop = time.AfterFunc(syncChallengeTimeout, func() {
 			p.Log().Warn("Checkpoint challenge timed out, dropping", "addr", p.RemoteAddr(), "type", p.Name())
+			log.Warn("removing peer because of the syncDrop")
 			pm.removePeer(p.id)
 		})
 		// Make sure it's cleaned up if the Peer dies off
@@ -359,6 +360,7 @@ func (pm *ProtocolManager) handle(p *Peer) error {
 	for {
 		if err := pm.HandleMsg(p); err != nil {
 			p.Log().Debug("Ethereum message handling failed", "err", err)
+			log.Warn("removing peer because of failed handling cause an exit in handling loop")
 			return err
 		}
 	}
