@@ -36,8 +36,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/clique"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	tdmintBackend "github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
@@ -1664,12 +1662,6 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var engine consensus.Engine
 	if config.Clique != nil {
 		engine = clique.New(config.Clique, chainDb)
-	} else if config.Tendermint != nil { // In case Clique config was not defined
-		//TODO: allow using tendermint config
-		tdmintConfig := tendermint.DefaultConfig
-		tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(config.Tendermint.ProposerPolicy)
-		tdmintConfig.Epoch = config.Tendermint.Epoch
-		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey())
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
