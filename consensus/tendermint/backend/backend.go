@@ -23,6 +23,7 @@ import (
 const (
 	fetcherID         = "tendermint"
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
+	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
 )
 
 var (
@@ -53,7 +54,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		mutex:                &sync.RWMutex{},
 		storingMsgs:          queue.NewFIFO(),
 		proposedValidator:    newProposedValidator(),
-		dequeueMsgTriggering: make(chan struct{}, 1000),
+		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 	}
 	be.core = tendermintCore.New(be, config)
 
