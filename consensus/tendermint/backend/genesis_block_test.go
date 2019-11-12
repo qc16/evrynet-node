@@ -70,7 +70,7 @@ func getGenesisConf() (*core.Genesis, error) {
 	}
 
 	// Read file genesis generated from pupeth
-	genesisFile, err := ioutil.ReadFile(filepath.Join(workingDir, "genesis.json"))
+	genesisFile, err := ioutil.ReadFile(filepath.Join(workingDir, "../../../genesis.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -108,19 +108,20 @@ func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.
 
 	//init tendermint backend
 	backend := &Backend{
-		config:             config.Tendermint,
-		tendermintEventMux: new(event.TypeMux),
-		privateKey:         nodePK,
-		address:            crypto.PubkeyToAddress(nodePK.PublicKey),
-		db:                 db,
-		mutex:              &sync.RWMutex{},
-		storingMsgs:        queue.NewFIFO(),
+		config:               config.Tendermint,
+		tendermintEventMux:   new(event.TypeMux),
+		privateKey:           nodePK,
+		address:              crypto.PubkeyToAddress(nodePK.PublicKey),
+		db:                   db,
+		mutex:                &sync.RWMutex{},
+		storingMsgs:          queue.NewFIFO(),
+		dequeueMsgTriggering: make(chan struct{}, 1000),
 	}
 	backend.core = tendermintCore.New(backend, config.Tendermint)
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
 
 	//init tendermint engine
-	engine := New(config.Tendermint, nodePK, nil, WithDB(db))
+	engine := New(config.Tendermint, nodePK, WithDB(db))
 
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)

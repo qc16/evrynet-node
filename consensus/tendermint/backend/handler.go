@@ -36,12 +36,10 @@ func (sb *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	return data, rLPHash(data), nil
 }
 
-func (sb *Backend) sendDataToCore(data []byte) {
-	if err := sb.EventMux().Post(tendermint.MessageEvent{
+func (sb *Backend) sendDataToCore(data []byte) error {
+	return sb.EventMux().Post(tendermint.MessageEvent{
 		Payload: data,
-	}); err != nil {
-		log.Error("failed to Post msg to core", "error", err)
-	}
+	})
 }
 
 func (sb *Backend) replayTendermintMsg() (done bool, err error) {
@@ -55,7 +53,7 @@ func (sb *Backend) replayTendermintMsg() (done bool, err error) {
 		return true, nil
 	}
 
-	stored, err := sb.storingMsgs.Dequeue()
+	stored, err := sb.storingMsgs.Get(0)
 	if err != nil {
 		if queueErr, ok := err.(*queue.QueueError); ok {
 			if queueErr.Code() == queue.QueueErrorCodeEmptyQueue { // avoid get error when queue.length == 0
@@ -65,8 +63,32 @@ func (sb *Backend) replayTendermintMsg() (done bool, err error) {
 		log.Error("failed to get data from queue", "error", err)
 		return false, err
 	}
-	sb.sendDataToCore(stored.([]byte))
+	if err := sb.sendDataToCore(stored.([]byte)); err != nil {
+		log.Error("failed to Post msg to core", "error", err)
+		return false, err
+	}
+	_, _ = sb.storingMsgs.Dequeue()
 	return false, nil
+}
+
+func (sb *Backend) dequeueMsgLoop() {
+	for {
+		// w8 signal to trigger dequeue msg
+		_ = <-sb.dequeueMsgTriggering
+		log.Trace("replay msg started")
+	replayLoop:
+		for {
+			// replay message one by one to core until there is no more message
+			done, err := sb.replayTendermintMsg()
+			if err != nil {
+				log.Error("failed to replayTendermintMsg", "err", err)
+				break replayLoop
+			}
+			if done {
+				break replayLoop
+			}
+		}
+	}
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
@@ -100,20 +122,10 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		//log.Debug("Received Message from peer", "address", addr.Hex(), "code", msg.Code, "hash", hash.String())
 		//TODO: mark peer's message and self known message with the hash get from message
 
-		//replay message one by one to core until there is no more message
+		// Trigger dequeue loop
 		go func() {
-			for {
-				done, err := sb.replayTendermintMsg()
-				if err != nil {
-					log.Error("failed to replayTendermintMsg", "err", err)
-					return
-				}
-				if done {
-					return
-				}
-			}
+			sb.dequeueMsgTriggering <- struct{}{}
 		}()
-
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown message code %d for Tendermint's protocol", msg.Code)

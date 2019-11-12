@@ -2,6 +2,7 @@ package backend
 
 import (
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -127,25 +128,29 @@ func TestBackend_HandleMsg(t *testing.T) {
 	mockCore := NewMockCore(be)
 	be.core = mockCore
 
-	data := []byte("data1")
+	count := 0
 	// send msg when core is not started
 	numMsg := 10
 	for i := 0; i < numMsg; i++ {
-		_, err := be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, data))
+		_, err := be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, []byte(strconv.FormatInt(int64(count), 10))))
+		count += 1
 		require.NoError(t, err)
 	}
 	// start core
 	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock))
 	// trigger to  dequeue and replay msg
-	_, err = be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, data))
+	_, err = be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, []byte(strconv.FormatInt(int64(count), 10))))
+	count += 1
 	require.NoError(t, err)
 	time.Sleep(time.Millisecond)
 	// immediately stop core
 	require.NoError(t, be.Stop())
 
 	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock))
-	_, err = be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, data))
+	_, err = be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, []byte(strconv.FormatInt(int64(count), 10))))
+	count += 1
+	require.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 12)
+	time.Sleep(time.Millisecond * 16)
 	require.Equal(t, int64(numMsg+2), mockCore.numMsg)
 }

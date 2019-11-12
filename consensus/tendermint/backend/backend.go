@@ -23,6 +23,7 @@ import (
 const (
 	fetcherID         = "tendermint"
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
+	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
 )
 
 var (
@@ -45,14 +46,15 @@ func WithDB(db ethdb.Database) Option {
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
 	be := &Backend{
-		config:             config,
-		tendermintEventMux: new(event.TypeMux),
-		privateKey:         privateKey,
-		address:            crypto.PubkeyToAddress(privateKey.PublicKey),
-		commitChs:          newCommitChannels(),
-		mutex:              &sync.RWMutex{},
-		storingMsgs:        queue.NewFIFO(),
-		proposedValidator:  newProposedValidator(),
+		config:               config,
+		tendermintEventMux:   new(event.TypeMux),
+		privateKey:           privateKey,
+		address:              crypto.PubkeyToAddress(privateKey.PublicKey),
+		commitChs:            newCommitChannels(),
+		mutex:                &sync.RWMutex{},
+		storingMsgs:          queue.NewFIFO(),
+		proposedValidator:    newProposedValidator(),
+		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 	}
 	be.core = tendermintCore.New(be, config)
 
@@ -88,7 +90,8 @@ type Backend struct {
 	chain       consensus.ChainReader
 
 	//storingMsgs is used to store msg to handler when core stopped
-	storingMsgs *queue.FIFO
+	storingMsgs          *queue.FIFO
+	dequeueMsgTriggering chan struct{}
 
 	currentBlock func() *types.Block
 
