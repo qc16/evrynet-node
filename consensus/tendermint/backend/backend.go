@@ -25,6 +25,10 @@ const (
 	fetcherID         = "tendermint"
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
+
+	maxBroadcastSleepTime        = time.Second
+	initialBroadcastSleepTime    = time.Millisecond * 100
+	broadcastSleepTimeIncreament = time.Millisecond * 100
 )
 
 var (
@@ -180,22 +184,22 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 func (sb *Backend) gossipLoop() {
 	for {
 		task := <-sb.broadcastCh
-		timeSleep := 100 * time.Millisecond
+		timeSleep := initialBroadcastSleepTime
 	taskLoop:
 		for {
 			ps := sb.broadcaster.FindPeers(task.Targets)
 			log.Info("find peers", "len", len(ps), "min", task.minPeers)
 			if len(ps) < task.minPeers {
-				if timeSleep >= time.Second {
+				if timeSleep >= maxBroadcastSleepTime {
 					break taskLoop
 				}
 				select {
 				// increase timeSleep 100ms after each epoch
 				// if receive new task then reset the timer
 				case <-time.After(timeSleep):
-					timeSleep += 100 * time.Millisecond
+					timeSleep += broadcastSleepTimeIncreament
 				case task = <-sb.broadcastCh:
-					timeSleep = 100 * time.Millisecond
+					timeSleep = initialBroadcastSleepTime
 				}
 				continue taskLoop
 			}
