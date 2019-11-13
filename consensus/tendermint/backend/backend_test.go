@@ -2,11 +2,12 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"log"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 )
 
@@ -60,20 +62,20 @@ func TestValidators(t *testing.T) {
 	assert.Equal(t, 1, valSet0.Size())
 
 	list := valSet0.List()
-	log.Println("validator set of block 0 is")
+	log.Info("validator set of block 0 is")
 
 	for _, val := range list {
-		log.Println(val.String())
+		log.Info(val.String())
 	}
 
 	valSet1 := be.Validators(big.NewInt(1))
 	assert.Equal(t, 1, valSet1.Size())
 
 	list = valSet1.List()
-	log.Println("validator set of block 1 is")
+	log.Info("validator set of block 1 is")
 
 	for _, val := range list {
-		log.Println(val.String())
+		log.Info(val.String())
 	}
 
 	valSet2 := be.Validators(big.NewInt(2))
@@ -111,8 +113,9 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 }
 
 type mockBroadcaster struct {
-	handleFn     func(interface{})
+	handleFn     func(interface{}) error
 	isDisconnect bool
+	isSendFailed bool
 }
 
 // FindPeers returns a map of mockPeer but only one with trigger HandleMsg
@@ -121,6 +124,17 @@ func (m *mockBroadcaster) FindPeers(targets map[common.Address]bool) map[common.
 		return nil
 	}
 	out := make(map[common.Address]consensus.Peer)
+
+	if m.isSendFailed {
+		for addr := range targets {
+			out[addr] = &tests_utils.MockPeer{SendFn: func(data interface{}) error {
+				return errors.New("test send failed")
+			}}
+		}
+
+		return out
+	}
+
 	hasHandle := false
 	for addr := range targets {
 		if !hasHandle {
@@ -137,7 +151,8 @@ func (m *mockBroadcaster) Enqueue(id string, block *types.Block) {
 	panic("implement me")
 }
 
-func TestGossip(t *testing.T) {
+func TestBackend_Gossip(t *testing.T) {
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 	var (
 		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
@@ -158,10 +173,12 @@ func TestGossip(t *testing.T) {
 	dataCh := make(chan string)
 
 	broadcaster := &mockBroadcaster{
-		handleFn: func(data interface{}) {
+		handleFn: func(data interface{}) error {
 			dataCh <- string(data.([]byte))
+			return nil
 		},
 		isDisconnect: false,
+		isSendFailed: false,
 	}
 	be.SetBroadcaster(broadcaster)
 	valSet := validator.NewSet(nodeAddrs, tendermint.RoundRobin, 100)
@@ -220,6 +237,19 @@ func TestGossip(t *testing.T) {
 			t.Fatal("not receive msg to peer")
 		case data := <-dataCh:
 			assert.Equal(t, expectedData2, data)
+		}
+	})
+
+	t.Run("test not passed when sending failed", func(t *testing.T) {
+		broadcaster.isSendFailed = true
+		var expectedData = "aaa"
+		err := be.Gossip(valSet, []byte(expectedData))
+		require.NoError(t, err)
+
+		select {
+		case <-time.After(time.Millisecond * 20):
+		case <-dataCh:
+			t.Fatal("expected not send to peer when disconnect")
 		}
 	})
 }

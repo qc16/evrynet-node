@@ -149,9 +149,10 @@ func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 }
 
 type broadcastTask struct {
-	Payload  []byte
-	minPeers int
-	Targets  map[common.Address]bool
+	Payload    []byte
+	MinPeers   int
+	TotalPeers int
+	Targets    map[common.Address]bool
 }
 
 // Gossip implements tendermint.Backend.Gossip
@@ -173,9 +174,10 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 	}
 	if len(targets) > 0 {
 		sb.broadcastCh <- broadcastTask{
-			Payload:  payload,
-			minPeers: valSet.F() * 2,
-			Targets:  targets,
+			Payload:    payload,
+			MinPeers:   valSet.F() * 2,
+			Targets:    targets,
+			TotalPeers: len(targets),
 		}
 	}
 	return nil
@@ -184,13 +186,38 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 func (sb *Backend) gossipLoop() {
 	for {
 		task := <-sb.broadcastCh
-		timeSleep := initialBroadcastSleepTime
+		var (
+			timeSleep   = initialBroadcastSleepTime
+			successSent = 0
+			mu          sync.Mutex
+		)
+
 	taskLoop:
 		for {
 			ps := sb.broadcaster.FindPeers(task.Targets)
-			log.Info("find peers", "len", len(ps), "min", task.minPeers)
-			if len(ps) < task.minPeers {
+			log.Info("find peers", "len", len(ps), "min", task.MinPeers, "success", successSent)
+
+			var wg sync.WaitGroup
+			wg.Add(len(ps))
+			for addr, p := range ps {
+				//TODO: check for recent messsages using lru.ARCCache
+				go func(p consensus.Peer, addr common.Address) {
+					defer wg.Done()
+					if err := p.Send(consensus.TendermintMsg, task.Payload); err != nil {
+						log.Error("failed to send message to peer", "error", err)
+						return
+					}
+					mu.Lock()
+					delete(task.Targets, addr)
+					successSent += 1
+					mu.Unlock()
+				}(p, addr)
+			}
+			wg.Wait()
+
+			if successSent < task.MinPeers {
 				if timeSleep >= maxBroadcastSleepTime {
+					log.Warn("failed to sent msg to peer with retries", "success", successSent, "min_peers", task.MinPeers, "total_peers", task.TotalPeers)
 					break taskLoop
 				}
 				select {
@@ -199,17 +226,11 @@ func (sb *Backend) gossipLoop() {
 				case <-time.After(timeSleep):
 					timeSleep += broadcastSleepTimeIncreament
 				case task = <-sb.broadcastCh:
+					log.Debug("receive new broadcast task, abort current task")
 					timeSleep = initialBroadcastSleepTime
+					successSent = 0
 				}
 				continue taskLoop
-			}
-			for _, p := range ps {
-				//TODO: check for recent messsages using lru.ARCCache
-				go func(p consensus.Peer) {
-					if err := p.Send(consensus.TendermintMsg, task.Payload); err != nil {
-						log.Error("failed to send message to peer", "error", err)
-					}
-				}(p)
 			}
 			break taskLoop
 		}
