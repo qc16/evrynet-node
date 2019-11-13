@@ -116,9 +116,12 @@ func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.
 		mutex:                &sync.RWMutex{},
 		storingMsgs:          queue.NewFIFO(),
 		dequeueMsgTriggering: make(chan struct{}, 1000),
+		broadcastCh:          make(chan broadcastTask),
 	}
 	backend.core = tendermintCore.New(backend, config.Tendermint)
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
+	go backend.dequeueMsgLoop()
+	go backend.gossipLoop()
 
 	//init tendermint engine
 	engine := New(config.Tendermint, nodePK, WithDB(db))

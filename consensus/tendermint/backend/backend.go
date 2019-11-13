@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/big"
 	"sync"
+	"time"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
 
@@ -24,6 +25,10 @@ const (
 	fetcherID         = "tendermint"
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
+
+	maxBroadcastSleepTime        = time.Second
+	initialBroadcastSleepTime    = time.Millisecond * 100
+	broadcastSleepTimeIncreament = time.Millisecond * 100
 )
 
 var (
@@ -55,6 +60,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		storingMsgs:          queue.NewFIFO(),
 		proposedValidator:    newProposedValidator(),
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
+		broadcastCh:          make(chan broadcastTask),
 	}
 	be.core = tendermintCore.New(be, config)
 
@@ -63,6 +69,9 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 			log.Error("error at initialization of backend", err)
 		}
 	}
+
+	go be.gossipLoop()
+	go be.dequeueMsgLoop()
 	return be
 }
 
@@ -96,6 +105,8 @@ type Backend struct {
 	currentBlock func() *types.Block
 
 	proposedValidator *ProposalValidator
+
+	broadcastCh chan broadcastTask
 }
 
 // EventMux implements tendermint.Backend.EventMux
@@ -137,6 +148,13 @@ func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 	return nil
 }
 
+type broadcastTask struct {
+	Payload    []byte
+	MinPeers   int
+	TotalPeers int
+	Targets    map[common.Address]bool
+}
+
 // Gossip implements tendermint.Backend.Gossip
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
@@ -155,18 +173,68 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		return ErrNoBroadcaster
 	}
 	if len(targets) > 0 {
-		ps := sb.broadcaster.FindPeers(targets)
-		log.Info("prepare to send message to peers", "total_peers", len(ps))
-		for _, p := range ps {
-			//TODO: check for recent messsages using lru.ARCCache
-			go func(p consensus.Peer) {
-				if err := p.Send(consensus.TendermintMsg, payload); err != nil {
-					log.Error("failed to send message to peer", "error", err)
-				}
-			}(p)
+		sb.broadcastCh <- broadcastTask{
+			Payload:    payload,
+			MinPeers:   valSet.F() * 2,
+			Targets:    targets,
+			TotalPeers: len(targets),
 		}
 	}
 	return nil
+}
+
+func (sb *Backend) gossipLoop() {
+	for {
+		task := <-sb.broadcastCh
+		var (
+			timeSleep   = initialBroadcastSleepTime
+			successSent = 0
+			mu          sync.Mutex
+		)
+
+	taskLoop:
+		for {
+			ps := sb.broadcaster.FindPeers(task.Targets)
+			log.Info("find peers", "len", len(ps), "min", task.MinPeers, "success", successSent)
+
+			var wg sync.WaitGroup
+			for addr, p := range ps {
+				wg.Add(1)
+				//TODO: check for recent messsages using lru.ARCCache
+				go func(p consensus.Peer, addr common.Address) {
+					defer wg.Done()
+					if err := p.Send(consensus.TendermintMsg, task.Payload); err != nil {
+						log.Error("failed to send message to peer", "error", err)
+						return
+					}
+					mu.Lock()
+					delete(task.Targets, addr)
+					successSent += 1
+					mu.Unlock()
+				}(p, addr)
+			}
+			wg.Wait()
+
+			if successSent < task.MinPeers {
+				if timeSleep >= maxBroadcastSleepTime {
+					log.Warn("failed to sent msg to peer with retries", "success", successSent, "min_peers", task.MinPeers, "total_peers", task.TotalPeers)
+					break taskLoop
+				}
+				select {
+				// increase timeSleep 100ms after each epoch
+				// if receive new task then reset the timer
+				case <-time.After(timeSleep):
+					timeSleep += broadcastSleepTimeIncreament
+				case task = <-sb.broadcastCh:
+					log.Debug("receive new broadcast task, abort current task")
+					timeSleep = initialBroadcastSleepTime
+					successSent = 0
+				}
+				continue taskLoop
+			}
+			break taskLoop
+		}
+	}
 }
 
 // Validators return validator set for a block number
