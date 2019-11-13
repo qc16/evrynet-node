@@ -198,8 +198,8 @@ func (sb *Backend) gossipLoop() {
 			log.Info("find peers", "len", len(ps), "min", task.MinPeers, "success", successSent)
 
 			var wg sync.WaitGroup
-			wg.Add(len(ps))
 			for addr, p := range ps {
+				wg.Add(1)
 				//TODO: check for recent messsages using lru.ARCCache
 				go func(p consensus.Peer, addr common.Address) {
 					defer wg.Done()
