@@ -6,7 +6,7 @@ import (
 
 // MockPeer implements consensus/protocol/Peers
 type MockPeer struct {
-	SendFn func(data interface{})
+	SendFn func(data interface{}) error
 }
 
 func (p *MockPeer) Send(msgCode uint64, data interface{}) error {
