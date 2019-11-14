@@ -26,25 +26,25 @@ import (
 )
 
 func TestSign(t *testing.T) {
-	privateKey, _ := tests_utils.GeneratePrivateKey()
+	privateKey, err := tests_utils.GeneratePrivateKey()
+	require.NoError(t, err)
 	b := &Backend{
 		privateKey: privateKey,
 	}
 	data := []byte("Here is a string....")
 	sig, err := b.Sign(data)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
+	require.NoError(t, err)
 	// Check signature recover
 	hashData := crypto.Keccak256([]byte(data))
 	pubkey, _ := crypto.Ecrecover(hashData, sig)
-
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
-	if signer != tests_utils.GetAddress() {
-		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), tests_utils.GetAddress().Hex())
-	}
+	// Get Address from private key
+	publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
+	require.True(t, ok)
+	address := crypto.PubkeyToAddress(*publicKeyECDSA)
+	assert.Equal(t, signer, address, "address mismatch")
 }
 
 func TestValidators(t *testing.T) {
