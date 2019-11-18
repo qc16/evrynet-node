@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -88,6 +89,7 @@ func TestApplyHeaders(t *testing.T) {
 	db := ethdb.NewMemDatabase()
 	assert.NoError(t, snap.store(db))
 	snap4, err := loadSnapshot(snap.Epoch, db, snap.Hash)
+	require.NoError(t, err)
 	if val := snap4.ValSet.GetProposer(); !reflect.DeepEqual(val.Address(), addr1) {
 		t.Errorf("validator mismatch: have %v, want %v", val.Address(), addr1)
 	}

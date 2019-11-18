@@ -57,7 +57,6 @@ func (A timeoutInfo) earlierOrEqual(B timeoutInfo) bool {
 // and fired on the tockChan.
 // NOTE: timeoutTicker only allow 1 timeout to run at a time, any newer timeout will stop the earlier one.
 type timeoutTicker struct {
-	started  bool
 	timer    *time.Timer
 	tickChan chan timeoutInfo // for scheduling timeouts
 	tockChan chan timeoutInfo // for notifying about them
@@ -126,7 +125,7 @@ func (tt *timeoutTicker) timeoutRoutine() {
 		case newti := <-tt.tickChan:
 			// ignore tickers for old height/round/step
 			if newti.earlierOrEqual(ti) {
-				log.Info("timeout ignore: New ticker is not ealier or equal to current ticker",
+				log.Info("timeout ignore: New ticker is not earlier or equal to current ticker",
 					"new_ticker_block_number", newti.BlockNumber, "current_ticker_block_number", ti.BlockNumber,
 					"new_ticker_round", newti.Round, "current_ticker_round", ti.Round,
 					"new_ticker_step", newti.Step.String(), "current_ticker_step", ti.Step)

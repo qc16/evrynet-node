@@ -3,7 +3,6 @@ package eth
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/evrynet-official/evrynet-client/core/types"
 	"math/big"
 	"testing"
 	"time"
@@ -14,13 +13,14 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintBackend "github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/p2p/enode"
 )
 
 //TestTendermintBroadcast setup a test to broadcast a message from a node
-//Broadcast included Gossip hence Gossip is not required to test separatedly
+//Broadcast included Gossip hence Gossip is not required to test separately
 //Expectation: the MessageEvent is shown for consensus/tendermint/core.handleEvents (internal events)
 //And the Message's Hash is shown for consensus/tendermint/backend.HandleMsg (external message from peers)
 func TestTendermintBroadcast(t *testing.T) {

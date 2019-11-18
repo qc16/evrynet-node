@@ -535,7 +535,9 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", fx2+1, totalPrecommits)
 	}
 	//writeCommitSeals
-	utils.WriteCommittedSeals(header, commitSeals)
+	if err := utils.WriteCommittedSeals(header, commitSeals); err != nil {
+		return nil, err
+	}
 	return proposal.Block.WithSeal(header), nil
 }
 
@@ -558,7 +560,7 @@ func (c *core) startRoundZero() {
 	}
 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 
-	sleepDuration := state.startTime.Sub(time.Now())
+	sleepDuration := time.Until(state.startTime)
 
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
 	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
@@ -579,6 +581,10 @@ func (c *core) updateStateForNewblock() {
 	if state.commitRound > -1 {
 		// having commit round, should have seen +2/3 precommits
 		precommits, ok := state.GetPrecommitsByRound(state.commitRound)
+		if !ok {
+			logger.Errorw("updateStateForNewblock(): Can not found the message set")
+			return
+		}
 		_, ok = precommits.TwoThirdMajority()
 		if !ok {
 			logger.Errorw("updateStateForNewblock(): Having commitRound with no +2/3 precommits")
@@ -620,7 +626,10 @@ func (c *core) updateStateForNewblock() {
 	c.currentState = state
 	logger.Infow("updated to new block", "new_block_number", state.BlockNumber())
 
-	c.processFutureMessages(logger)
+	if _, err := c.processFutureMessages(logger); err != nil {
+		logger.Errorw("failed to process future msg", "err", err)
+	}
+
 }
 
 func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err error) {
@@ -650,7 +659,9 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		if vote.BlockNumber.Cmp(state.BlockNumber()) < 0 {
 			logger.Infow("vote from older block number, ignore")
 			// Ignore vote from older block, remove element at position 0 and continue
-			c.futureMessages.Remove(0)
+			if err := c.futureMessages.Remove(0); err != nil {
+				logger.Warn("failed to remove from future msgs", "err", err)
+			}
 			continue
 		}
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
@@ -660,8 +671,12 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		// at here vote block number should be equal state block number
 		// remove message and handle it
 		logger.Infow("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
-		c.futureMessages.Remove(0)
-		c.handleMsg(msg)
+		if err := c.futureMessages.Remove(0); err != nil {
+			logger.Warn("failed to remove from future msgs", "err", err)
+		}
+		if err := c.handleMsg(msg); err != nil {
+			logger.Warn("failed to handle msg", "err", err)
+		}
 	}
 	return true, nil
 }

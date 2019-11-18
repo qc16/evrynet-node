@@ -14,6 +14,4 @@ func (pm *MockProtocolManager) FindPeers(targets map[common.Address]bool) map[co
 }
 
 // Enqueue adds a block into fetcher queue
-func (pm *MockProtocolManager) Enqueue(id string, block *types.Block) {
-	return
-}
+func (pm *MockProtocolManager) Enqueue(id string, block *types.Block) {}

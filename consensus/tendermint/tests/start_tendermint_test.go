@@ -96,6 +96,7 @@ func TestStartingTendermint(t *testing.T) {
 	assert.Equal(t, true, ok)
 	//This is unsafe (it might send new block after core get into propose
 	//but repeated run will get a correct case. It is the easiest way to inject a valid block for proposal
+	//nolint:errcheck
 	go be.EventMux().Post(tendermint.Proposal{
 		Block: block,
 	})

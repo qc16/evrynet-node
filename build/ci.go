@@ -80,7 +80,7 @@ func main() {
 	case "test":
 		doTest(os.Args[2:])
 	case "lint":
-		doLint(os.Args[2:])
+		doGolangCiLint(os.Args[2:])
 	default:
 		log.Fatal("unknown command ", os.Args[1])
 	}
@@ -227,6 +227,7 @@ func doTest(cmdline []string) {
 }
 
 // runs gometalinter on requested packages
+// Deprecated: using golangci-lint
 func doLint(cmdline []string) {
 	flag.CommandLine.Parse(cmdline)
 
@@ -259,4 +260,13 @@ func doLint(cmdline []string) {
 		configs = []string{"--vendor", "--tests", "--deadline=10m", "--disable-all", "--enable=" + linter}
 		build.MustRunCommand(filepath.Join(GOBIN, "gometalinter.v2"), append(configs, packages...)...)
 	}
+}
+
+// runs golang-lint on requested packages
+func doGolangCiLint(cmdline []string) {
+	flag.CommandLine.Parse(cmdline)
+	// run basic test on all packages
+	build.MustRunCommand("golangci-lint", "run", "./...")
+	// run strict test on our core tendermint
+	build.MustRunCommand("golangci-lint", "run", "./consensus/tendermint", "--no-config", "--disable", "staticcheck")
 }

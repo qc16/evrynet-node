@@ -97,7 +97,7 @@ func (m *txSortedMap) Forward(threshold uint64) types.Transactions {
 	return removed
 }
 
-//RemoveTxs removes a list of tx with corresponding nonces fomr its sorted Map
+//RemoveTxs removes a list of tx with corresponding nonces from its sorted Map
 func (m *txSortedMap) RemoveTxs(nonces []uint64) {
 	if len(nonces) == 0 {
 		return

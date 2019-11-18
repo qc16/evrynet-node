@@ -108,7 +108,7 @@ func MustMakeBlockWithCommittedSeal(be tendermint.Backend, pHeader *types.Header
 func AppendSeal(header *types.Header, be tendermint.Backend) {
 	// sign the hash
 	seal, _ := be.Sign(utils.SigHash(header).Bytes())
-	utils.WriteSeal(header, seal)
+	_ = utils.WriteSeal(header, seal)
 }
 
 //appendCommittedSeal
@@ -117,7 +117,7 @@ func appendCommittedSeal(header *types.Header, committedSeal []byte) {
 	committedSeals := make([][]byte, 1)
 	committedSeals[0] = make([]byte, types.TendermintExtraSeal)
 	copy(committedSeals[0][:], committedSeal[:])
-	utils.WriteCommittedSeals(header, committedSeals)
+	_ = utils.WriteCommittedSeals(header, committedSeals)
 }
 
 //makeHeaderFromParent return a new block With valid information from its parents.

@@ -17,7 +17,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 )
@@ -26,8 +25,6 @@ type MockBackend struct {
 	config             *tendermint.Config
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
-	db                 ethdb.Database
-	broadcaster        consensus.Broadcaster
 	address            common.Address
 	validators         []common.Address
 
