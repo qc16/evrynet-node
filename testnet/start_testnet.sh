@@ -4,6 +4,7 @@
 pathShareVolumes=$1
 shift
 
+docker stop gev-bootnode gev-node-1 gev-node-2 gev-node-3
 # Clear network bridge
 yes | docker network prune
 # Remove evrynet-builder
