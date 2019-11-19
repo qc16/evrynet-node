@@ -1,0 +1,93 @@
+version: "3"
+services:
+  gev-bootnode:
+    hostname: gev-bootnode
+    build:
+      context: ./bootnode
+    image: img_bootnode
+    container_name: gev-bootnode
+    environment:
+      NODE_HEX_KEY: 9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09
+    ports:
+      - 30300:30300/udp
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.100
+
+  gev-node-1:
+    hostname: gev-node-1
+    build:
+      context: ./node
+      args:
+        node_id: 1
+        has_metric: 0
+    image: img_node_1
+    container_name: gev-node-1
+    environment:
+      BOOTNODE_ID: aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f
+      BOOTNODE_IP: 172.25.0.100
+    depends_on:
+      - gev-bootnode
+    ports:
+      - 22001:22001
+      - 30301:30301 # For explorer
+    volumes:
+      - $shareVolumes/node_1/data:/node_1/data
+      - $shareVolumes/node_1/log:/node_1/log
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.101
+
+  gev-node-2:
+    hostname: gev-node-2
+    build:
+      context: ./node
+      args:
+        node_id: 2
+        has_metric: 0
+    image: img_node_2
+    container_name: gev-node-2
+    environment:
+      BOOTNODE_ID: aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f
+      BOOTNODE_IP: 172.25.0.100
+    depends_on:
+      - gev-bootnode
+    ports:
+      - 22002:22002
+    volumes:
+      - $shareVolumes/node_2/data:/node_2/data
+      - $shareVolumes/node_2/log:/node_2/log
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.102
+
+  gev-node-3:
+    hostname: gev-node-3
+    build:
+      context: ./node
+      args:
+        node_id: 3
+        has_metric: 1
+    image: img_node_3
+    container_name: gev-node-3
+    environment:
+      BOOTNODE_ID: aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f
+      BOOTNODE_IP: 172.25.0.100
+    depends_on:
+      - gev-bootnode
+    ports:
+      - 22003:22003
+    volumes:
+      - $shareVolumes/node_3/data:/node_3/data
+      - $shareVolumes/node_3/log:/node_3/log
+    networks:
+      chainnet:
+        ipv4_address: 172.25.0.103
+
+
+networks:
+  chainnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
