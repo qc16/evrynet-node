@@ -84,25 +84,18 @@ func (m *mockCore) handleEvents() {
 		m.handlerWg.Done()
 	}()
 	m.handlerWg.Add(1)
-	for {
-		select {
-		case event, ok := <-m.events.Chan():
-			if !ok {
-				log.Debug("exit loop")
-				return
-			}
-
-			switch ev := event.Data.(type) {
-			case tendermint.MessageEvent:
-				_ = ev
-				log.Debug("handling event", "payload", string(ev.Payload))
-				time.Sleep(time.Millisecond)
-				atomic.AddInt64(&m.numMsg, 1)
-			default:
-				panic("unexpected type")
-			}
+	for event := range m.events.Chan() {
+		switch ev := event.Data.(type) {
+		case tendermint.MessageEvent:
+			_ = ev
+			log.Debug("handling event", "payload", string(ev.Payload))
+			time.Sleep(time.Millisecond)
+			atomic.AddInt64(&m.numMsg, 1)
+		default:
+			panic("unexpected type")
 		}
 	}
+	log.Debug("exit loop")
 }
 
 func (m *mockCore) Stop() error {
@@ -115,9 +108,7 @@ func (m *mockCore) SetBlockForProposal(block *types.Block) {
 	panic("implement me")
 }
 
-func (m *mockCore) SetTxPool(txPool *core.TxPool) {
-	return
-}
+func (m *mockCore) SetTxPool(txPool *core.TxPool) {}
 
 // This test case is when user start miner then stop it before core handles all msg in storingMsgs
 func TestBackend_HandleMsg(t *testing.T) {
@@ -148,7 +139,6 @@ func TestBackend_HandleMsg(t *testing.T) {
 
 	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock))
 	_, err = be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, []byte(strconv.FormatInt(int64(count), 10))))
-	count += 1
 	require.NoError(t, err)
 
 	time.Sleep(time.Millisecond * 16)

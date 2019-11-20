@@ -88,7 +88,7 @@ func (c *core) handleEvents() {
 			}
 			switch ev := event.Data.(type) {
 			case tendermint.FinalCommittedEvent:
-				c.handleFinalCommitted(ev.BlockNumber)
+				_ = c.handleFinalCommitted(ev.BlockNumber)
 			}
 		}
 	}
@@ -272,7 +272,7 @@ func (c *core) handlePrevote(msg message) error {
 	if !ok {
 		logger.Panic("expect prevotes to exist now")
 	}
-	//at this stage, state.PrevoteReceived[vote.Round] is guaranted to exist.
+	//at this stage, state.PrevoteReceived[vote.Round] is guaranteed to exist.
 	if blockHash, ok := prevotes.TwoThirdMajority(); ok {
 		logger.Infow("got 2/3 majority on a block", "prevote_block", blockHash.Hex())
 		var (
@@ -392,7 +392,7 @@ func (c *core) handlePrecommit(msg message) error {
 	if !ok {
 		panic("expect precommits to exist now")
 	}
-	//at this stage, state.PrevoteReceived[vote.Round] is guaranted to exist.
+	//at this stage, state.PrevoteReceived[vote.Round] is guaranteed to exist.
 
 	blockHash, ok := precommits.TwoThirdMajority()
 	if ok {

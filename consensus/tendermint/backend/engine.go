@@ -76,8 +76,7 @@ func (sb *Backend) addProposalSeal(h *types.Header) error {
 	if err != nil {
 		return err
 	}
-	utils.WriteSeal(h, seal)
-	return nil
+	return utils.WriteSeal(h, seal)
 }
 
 // Seal generates a new block for the given input block with the local miner's
@@ -125,6 +124,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	//TODO: clear previous data of proposal
 	// post block into tendermint engine
 	go func(block *types.Block) {
+		//nolint:errcheck
 		sb.EventMux().Post(tendermint.NewBlockEvent{
 			Block: block,
 		})
@@ -133,48 +133,42 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	// a sealing task can only exist when core consensus agreed upon a block
 	go func(blockNumberStr string) {
 		//TODO: DO we need timeout for consensus?
-		for {
-			select {
-			case bl, ok := <-ch:
-				// remove lock whether Seal is success or not
-				sb.proposedValidator.removeStick()
-				if !ok {
-					log.Info("committing... Channel closed, exit seal...", "number", blockNumberStr)
-					return
-				}
-				if bl.Number().String() != blockNumberStr {
-					log.Warn("committing.. Received a different block number than the sealing block number", "received", bl.Number().String(), "expected", blockNumberStr)
-				}
-				//this step is to stop other go routine wait for a block
-				sb.commitChs.closeAndRemoveCommitChannel(bl.Number().String())
-
-				if bl == nil {
-					log.Error("committing... Received nil ")
-					return
-				}
-
-				//we only posted the block back to the miner if and only if the block is ours
-				if bl.Coinbase() == sb.address {
-					log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
-
-					// clear pending proposed validator if sealing Successfully
-					if bl.Number().Int64() == sb.proposedValidator.getStickBlock() {
-						// get proposedValidator from the extra-data of block-header
-						proposedValidator, _ := getModifiedValidator(*bl.Header())
-						// compares if the current proposedValidator is not changed
-						if reflect.DeepEqual(proposedValidator, sb.proposedValidator.address) {
-							// removes pending ProposedValidator
-							sb.proposedValidator.clearPendingProposedValidator()
-						}
-					}
-					results <- bl
-				} else {
-					log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...", "block_hash", block.Hash(), "number", block.Number())
-				}
-				return
-				//case <-stop:
-				//log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block", "number", block.Number())
+		for bl := range ch {
+			// remove lock whether Seal is success or not
+			sb.proposedValidator.removeStick()
+			if bl.Number().String() != blockNumberStr {
+				log.Warn("committing.. Received a different block number than the sealing block number", "received", bl.Number().String(), "expected", blockNumberStr)
 			}
+			//this step is to stop other go routine wait for a block
+			sb.commitChs.closeAndRemoveCommitChannel(bl.Number().String())
+
+			if bl == nil {
+				log.Error("committing... Received nil ")
+				return
+			}
+
+			//we only posted the block back to the miner if and only if the block is ours
+			if bl.Coinbase() == sb.address {
+				log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
+
+				// clear pending proposed validator if sealing Successfully
+				if bl.Number().Int64() == sb.proposedValidator.getStickBlock() {
+					// get proposedValidator from the extra-data of block-header
+					proposedValidator, _ := getModifiedValidator(*bl.Header())
+					// compares if the current proposedValidator is not changed
+					if reflect.DeepEqual(proposedValidator, sb.proposedValidator.address) {
+						// removes pending ProposedValidator
+						sb.proposedValidator.clearPendingProposedValidator()
+					}
+				}
+				results <- bl
+			} else {
+				log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...", "block_hash", block.Hash(), "number", block.Number())
+			}
+			return
+			//case <-stop:
+			//log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block", "number", block.Number())
+
 		}
 	}(blockNumberStr)
 	return nil

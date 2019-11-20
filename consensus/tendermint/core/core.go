@@ -58,7 +58,7 @@ type core struct {
 	timeout TimeoutTicker
 	//config store the config of the chain
 	config *tendermint.Config
-	//mutex mark critical section of core which should not be accessed parralel
+	//mutex mark critical section of core which should not be accessed parallel
 	mu *sync.RWMutex
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
@@ -96,11 +96,11 @@ func (c *core) Start() error {
 // Stop implements core.Engine.Stop
 func (c *core) Stop() error {
 	c.getLogger().Infow("stopping Tendermint's timeout core...")
-	c.timeout.Stop()
+	err := c.timeout.Stop()
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
 	c.getLogger().Infow("Tendermint's timeout core stopped")
-	return nil
+	return err
 }
 
 //FinalizeMsg set address, signature and encode msg to bytes

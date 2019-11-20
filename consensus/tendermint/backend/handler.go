@@ -23,7 +23,7 @@ var (
 
 func rLPHash(v interface{}) (h common.Hash) {
 	hw := sha3.New256()
-	rlp.Encode(hw, v)
+	_ = rlp.Encode(hw, v)
 	hw.Sum(h[:0])
 	return h
 }
@@ -74,7 +74,7 @@ func (sb *Backend) replayTendermintMsg() (done bool, err error) {
 func (sb *Backend) dequeueMsgLoop() {
 	for {
 		// w8 signal to trigger dequeue msg
-		_ = <-sb.dequeueMsgTriggering
+		<-sb.dequeueMsgTriggering
 		log.Trace("replay msg started")
 	replayLoop:
 		for {

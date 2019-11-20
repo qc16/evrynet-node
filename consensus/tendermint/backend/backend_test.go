@@ -26,25 +26,25 @@ import (
 )
 
 func TestSign(t *testing.T) {
-	privateKey, _ := tests_utils.GeneratePrivateKey()
+	privateKey, err := tests_utils.GeneratePrivateKey()
+	require.NoError(t, err)
 	b := &Backend{
 		privateKey: privateKey,
 	}
 	data := []byte("Here is a string....")
 	sig, err := b.Sign(data)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
+	require.NoError(t, err)
 	// Check signature recover
 	hashData := crypto.Keccak256([]byte(data))
 	pubkey, _ := crypto.Ecrecover(hashData, sig)
-
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
-	if signer != tests_utils.GetAddress() {
-		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), tests_utils.GetAddress().Hex())
-	}
+	// Get Address from private key
+	publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
+	require.True(t, ok)
+	address := crypto.PubkeyToAddress(*publicKeyECDSA)
+	assert.Equal(t, signer, address, "address mismatch")
 }
 
 func TestValidators(t *testing.T) {
@@ -168,6 +168,7 @@ func TestBackend_Gossip(t *testing.T) {
 			common.HexToAddress("3"),
 			nodeAddr,
 		}
+		expectedData = "aaa"
 	)
 
 	dataCh := make(chan string)
@@ -183,73 +184,61 @@ func TestBackend_Gossip(t *testing.T) {
 	be.SetBroadcaster(broadcaster)
 	valSet := validator.NewSet(nodeAddrs, tendermint.RoundRobin, 100)
 
-	t.Run("test basic", func(t *testing.T) {
-		var expectedData = "aaa"
-		err := be.Gossip(valSet, []byte(expectedData))
-		require.NoError(t, err)
+	//test basic
+	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
+	select {
+	case <-time.After(time.Millisecond * 20):
+		t.Fatal("not receive msg to peer")
+	case data := <-dataCh:
+		assert.Equal(t, expectedData, data)
+	}
 
-		select {
-		case <-time.After(time.Millisecond * 20):
-			t.Fatal("not receive msg to peer")
-		case data := <-dataCh:
-			assert.Equal(t, expectedData, data)
-		}
-	})
+	//test retrying broadcast data
+	broadcaster.isDisconnect = true
+	err := be.Gossip(valSet, []byte(expectedData))
+	require.NoError(t, err)
+	select {
+	case <-time.After(time.Millisecond * 80):
+	case <-dataCh:
+		t.Fatal("expected not send to peer when disconnect")
+	}
 
-	t.Run("test retrying broadcast data ", func(t *testing.T) {
-		broadcaster.isDisconnect = true
-		var expectedData = "aaa"
-		err := be.Gossip(valSet, []byte(expectedData))
-		require.NoError(t, err)
-		select {
-		case <-time.After(time.Millisecond * 80):
-		case <-dataCh:
-			t.Fatal("expected not send to peer when disconnect")
-		}
+	broadcaster.isDisconnect = false
+	select {
+	case <-time.After(time.Millisecond * 40):
+		t.Fatal("not receive msg to peer")
+	case data := <-dataCh:
+		assert.Equal(t, expectedData, data)
+	}
 
-		broadcaster.isDisconnect = false
-		select {
-		case <-time.After(time.Millisecond * 40):
-			t.Fatal("not receive msg to peer")
-		case data := <-dataCh:
-			assert.Equal(t, expectedData, data)
-		}
-	})
+	//test skipping retry when having msg
+	broadcaster.isDisconnect = true
+	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
+	select {
+	case <-time.After(time.Millisecond * 80):
+	case <-dataCh:
+		t.Fatal("expected not send to peer when disconnect")
+	}
 
-	t.Run("test skipping retry when having msg", func(t *testing.T) {
-		broadcaster.isDisconnect = true
-		var expectedData = "aaa"
-		err := be.Gossip(valSet, []byte(expectedData))
-		require.NoError(t, err)
-		select {
-		case <-time.After(time.Millisecond * 80):
-		case <-dataCh:
-			t.Fatal("expected not send to peer when disconnect")
-		}
+	broadcaster.isDisconnect = false
+	var expectedData2 = "bbb"
+	err = be.Gossip(valSet, []byte(expectedData2))
+	require.NoError(t, err)
 
-		broadcaster.isDisconnect = false
-		var expectedData2 = "bbb"
-		err = be.Gossip(valSet, []byte(expectedData2))
-		require.NoError(t, err)
+	select {
+	case <-time.After(time.Millisecond * 40):
+		t.Fatal("not receive msg to peer")
+	case data := <-dataCh:
+		assert.Equal(t, expectedData2, data)
+	}
 
-		select {
-		case <-time.After(time.Millisecond * 40):
-			t.Fatal("not receive msg to peer")
-		case data := <-dataCh:
-			assert.Equal(t, expectedData2, data)
-		}
-	})
+	//test not passed when sending failed
+	broadcaster.isSendFailed = true
+	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
 
-	t.Run("test not passed when sending failed", func(t *testing.T) {
-		broadcaster.isSendFailed = true
-		var expectedData = "aaa"
-		err := be.Gossip(valSet, []byte(expectedData))
-		require.NoError(t, err)
-
-		select {
-		case <-time.After(time.Millisecond * 20):
-		case <-dataCh:
-			t.Fatal("expected not send to peer when disconnect")
-		}
-	})
+	select {
+	case <-time.After(time.Millisecond * 20):
+	case <-dataCh:
+		t.Fatal("expected not send to peer when disconnect")
+	}
 }

@@ -5,16 +5,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/consensus"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
-	"github.com/evrynet-official/evrynet-client/ethdb"
-	"github.com/stretchr/testify/assert"
 )
 
 // TestSimulateSubscribeAndReceiveToSeal is a simple test to pass a block to backend.Seal()
@@ -124,14 +124,6 @@ func TestVerifySeal(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func newTestEngine() *Backend {
-	nodeKey, _ := crypto.GenerateKey()
-	be, _ := New(tendermint.DefaultConfig, nodeKey, nil).(*Backend)
-	be.address = crypto.PubkeyToAddress(nodeKey.PublicKey)
-	be.db = ethdb.NewMemDatabase()
-	return be
-}
-
 // TestPrepareExtra
 // 0xd8c094000000000000000000000000000000000000000080c0
 func TestPrepareExtra(t *testing.T) {
@@ -161,15 +153,13 @@ func TestPrepareExtra(t *testing.T) {
 		Number: big.NewInt(0),
 	}
 
-	header.Extra, err = tests_utils.PrepareExtra(header)
-	assert.Nil(t, err)
+	header.Extra = engine.prepareExtra(header)
 	assert.Equal(t, expectedResult, header.Extra)
 
 	// append useless information to extra-data
 	header.Extra = append(vanity, make([]byte, 15)...)
 
-	header.Extra, err = tests_utils.PrepareExtra(header)
-	assert.Nil(t, err)
+	header.Extra = engine.prepareExtra(header)
 	assert.Equal(t, expectedResult, header.Extra)
 
 	var (
@@ -184,21 +174,14 @@ func TestPrepareExtra(t *testing.T) {
 	)
 
 	// will attach a candidate to voting
-	err = engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote)
-	assert.Nil(t, err)
-	header.Extra, err = tests_utils.PrepareExtra(header)
-	assert.Nil(t, err)
-	candidateAddr, err := getModifiedValidator(*header)
-	assert.Nil(t, err)
+	require.NoError(t, engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote))
+	header.Extra = engine.prepareExtra(header)
+	candidateAddr, _ := getModifiedValidator(*header)
 	assert.Equal(t, candidate.address, candidateAddr)
 
 	// the candidate will be repplaced by new candidate when call setProposedValidator and old candidate have not processed yet
-	err = engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote)
-	assert.Nil(t, err)
-	header.Extra, err = tests_utils.PrepareExtra(header)
-	assert.Nil(t, err)
-	newCandidateAddr, err := getModifiedValidator(*header)
-	assert.Nil(t, err)
-	assert.NotEqual(t, candidate.address, newCandidateAddr)
+	require.NoError(t, engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote))
+	header.Extra = engine.prepareExtra(header)
+	newCandidateAddr, _ := getModifiedValidator(*header)
 	assert.Equal(t, newCandidate.address, newCandidateAddr)
 }

@@ -11,7 +11,7 @@ type MockPeer struct {
 
 func (p *MockPeer) Send(msgCode uint64, data interface{}) error {
 	if p.SendFn != nil {
-		p.SendFn(data)
+		return p.SendFn(data)
 	}
 	return nil
 }

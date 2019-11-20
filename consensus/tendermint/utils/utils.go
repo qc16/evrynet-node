@@ -27,7 +27,7 @@ func SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.New256()
 
 	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.TendermintFilteredHeader(header, false))
+	_ = rlp.Encode(hasher, types.TendermintFilteredHeader(header, false))
 	hasher.Sum(hash[:0])
 
 	return hash

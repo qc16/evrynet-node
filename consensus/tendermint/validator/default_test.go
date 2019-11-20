@@ -24,7 +24,6 @@ func TestValidatorSet(t *testing.T) {
 }
 
 func testNewValidatorSet(t *testing.T) {
-	var validators []tendermint.Validator
 	const ValCnt = 3
 
 	// Create 100 validators with random addresses
@@ -33,7 +32,6 @@ func testNewValidatorSet(t *testing.T) {
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		val := New(addr)
-		validators = append(validators, val)
 		log.Printf("index %d address %s", i, addr.Hex())
 
 		b = append(b, val.Address().Bytes()...)
