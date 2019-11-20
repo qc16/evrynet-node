@@ -22,14 +22,14 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/jackpal/go-nat-pmp"
+	natpmp "github.com/jackpal/go-nat-pmp"
 )
 
 // natPMPClient adapts the NAT-PMP protocol implementation so it conforms to
 // the common interface.
 type pmp struct {
 	gw net.IP
-	c  *Client
+	c  *natpmp.Client
 }
 
 func (n *pmp) String() string {
@@ -69,7 +69,7 @@ func discoverPMP() Interface {
 	for i := range gws {
 		gw := gws[i]
 		go func() {
-			c := NewClient(gw)
+			c := natpmp.NewClient(gw)
 			if _, err := c.GetExternalAddress(); err != nil {
 				found <- nil
 			} else {
