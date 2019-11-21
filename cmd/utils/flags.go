@@ -36,6 +36,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/clique"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tdmintBackend "github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
@@ -673,11 +675,55 @@ var (
 		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
 		Value: eth.DefaultConfig.Tendermint.BlockPeriod,
 	}
-
 	TendermintFaultyModeFlag = cli.Uint64Flag{
 		Name:  "tendermint.faultymode",
 		Usage: "0: not faulty, 1: send fake proposal",
 		Value: eth.DefaultConfig.Tendermint.FaultyMode,
+	}
+	TendermintProposerPolicyFlag = cli.Uint64Flag{
+		Name:  "tendermint.proposer-policy",
+		Usage: "0: RoundRobin, 1: Sticky",
+		Value: uint64(eth.DefaultConfig.Tendermint.ProposerPolicy),
+	}
+	TendermintEpochFlag = cli.Uint64Flag{
+		Name:  "tendermint.epoch",
+		Usage: "The number of blocks after which to checkpoint and reset the pending votes",
+		Value: eth.DefaultConfig.Tendermint.Epoch,
+	}
+	TendermintTimeoutProposeFlag = cli.Uint64Flag{
+		Name:  "tendermint.timeout-propose",
+		Usage: "Duration waiting a propose",
+		Value: uint64(eth.DefaultConfig.Tendermint.TimeoutPropose),
+	}
+	TendermintTimeoutProposeDeltaFlag = cli.Uint64Flag{
+		Name:  "tendermint.timeout-propose-delta",
+		Usage: "Increment if timeout happens at propose step to reach eventually synchronous",
+		Value: uint64(eth.DefaultConfig.Tendermint.TimeoutProposeDelta),
+	}
+	TendermintTimeoutPrevoteFlag = cli.Uint64Flag{
+		Name:  "tendermint.timeout-prevote",
+		Usage: "Duration waiting for more prevote after 2/3 received",
+		Value: uint64(eth.DefaultConfig.Tendermint.TimeoutPrevote),
+	}
+	TendermintTimeoutPrevoteDeltaFlag = cli.Uint64Flag{
+		Name:  "tendermint.timeout-prevote-delta",
+		Usage: "Increment if timeout happens at prevoteWait to reach eventually synchronous",
+		Value: uint64(eth.DefaultConfig.Tendermint.TimeoutPrevoteDelta),
+	}
+	TendermintTimeoutPrecommitFlag = cli.Uint64Flag{
+		Name:  "tendermint.timeout-precommit",
+		Usage: "Duration waiting for more precommit after 2/3 received",
+		Value: uint64(eth.DefaultConfig.Tendermint.TimeoutPrecommit),
+	}
+	TendermintTimeoutPrecommitDeltaFlag = cli.Uint64Flag{
+		Name:  "tendermint.timeout-precommit-delta",
+		Usage: "Duration waiting to increase if precommit wait expired to reach eventually synchronous",
+		Value: uint64(eth.DefaultConfig.Tendermint.TimeoutPrecommitDelta),
+	}
+	TendermintTimeoutCommitFlag = cli.Uint64Flag{
+		Name:  "tendermint.timeout-commit",
+		Usage: "Duration waiting to start round with new height",
+		Value: uint64(eth.DefaultConfig.Tendermint.TimeoutCommit),
 	}
 
 	// Metrics flags
@@ -1662,6 +1708,9 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var engine consensus.Engine
 	if config.Clique != nil {
 		engine = clique.New(config.Clique, chainDb)
+	} else if config.Tendermint != nil { // In case Clique config was not defined
+		tdmintConfig := setDataToTendermintConfigFromCLI(config, ctx)
+		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey(), tdmintBackend.WithDB(chainDb))
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
@@ -1697,6 +1746,47 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		Fatalf("Can't create BlockChain: %v", err)
 	}
 	return chain, chainDb
+}
+
+func setDataToTendermintConfigFromCLI(config *params.ChainConfig, ctx *cli.Context) *tendermint.Config {
+	tdmintConfig := tendermint.DefaultConfig
+	tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(config.Tendermint.ProposerPolicy)
+	tdmintConfig.Epoch = config.Tendermint.Epoch
+	// Set data from CLI
+	if ctx.IsSet(TendermintProposerPolicyFlag.Name) {
+		tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(ctx.Uint64(TendermintProposerPolicyFlag.Name))
+	}
+	if ctx.IsSet(TendermintEpochFlag.Name) {
+		tdmintConfig.Epoch = ctx.Uint64(TendermintEpochFlag.Name)
+	}
+	if ctx.IsSet(TendermintBlockPeriodFlag.Name) {
+		tdmintConfig.BlockPeriod = ctx.Uint64(TendermintBlockPeriodFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutProposeFlag.Name) {
+		tdmintConfig.TimeoutPropose = time.Duration(ctx.Uint64(TendermintTimeoutProposeFlag.Name)) * time.Millisecond
+	}
+	if ctx.IsSet(TendermintTimeoutProposeDeltaFlag.Name) {
+		tdmintConfig.TimeoutProposeDelta = time.Duration(ctx.Uint64(TendermintTimeoutProposeDeltaFlag.Name)) * time.Millisecond
+	}
+	if ctx.IsSet(TendermintTimeoutPrevoteFlag.Name) {
+		tdmintConfig.TimeoutPrevote = time.Duration(ctx.Uint64(TendermintTimeoutPrevoteFlag.Name)) * time.Millisecond
+	}
+	if ctx.IsSet(TendermintTimeoutPrevoteDeltaFlag.Name) {
+		tdmintConfig.TimeoutPrevoteDelta = time.Duration(ctx.Uint64(TendermintTimeoutPrevoteDeltaFlag.Name)) * time.Millisecond
+	}
+	if ctx.IsSet(TendermintTimeoutPrecommitFlag.Name) {
+		tdmintConfig.TimeoutPrecommit = time.Duration(ctx.Uint64(TendermintTimeoutPrecommitFlag.Name)) * time.Millisecond
+	}
+	if ctx.IsSet(TendermintTimeoutPrecommitDeltaFlag.Name) {
+		tdmintConfig.TimeoutPrecommitDelta = time.Duration(ctx.Uint64(TendermintTimeoutPrecommitDeltaFlag.Name)) * time.Millisecond
+	}
+	if ctx.IsSet(TendermintTimeoutCommitFlag.Name) {
+		tdmintConfig.TimeoutCommit = time.Duration(ctx.Uint64(TendermintTimeoutCommitFlag.Name)) * time.Millisecond
+	}
+	if ctx.IsSet(TendermintFaultyModeFlag.Name) {
+		tdmintConfig.FaultyMode = ctx.Uint64(TendermintFaultyModeFlag.Name)
+	}
+	return tdmintConfig
 }
 
 // MakeConsolePreloads retrieves the absolute paths for the console JavaScript
