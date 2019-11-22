@@ -43,8 +43,8 @@ func (sb *Backend) sendDataToCore(data []byte) error {
 }
 
 func (sb *Backend) replayTendermintMsg() (done bool, err error) {
-	sb.mutex.Lock()
-	defer sb.mutex.Unlock()
+	sb.mutex.RLock()
+	defer sb.mutex.RUnlock()
 	if !sb.coreStarted {
 		log.Info("core stopped. Exit replaying tenderming msg to core.")
 		return true, nil

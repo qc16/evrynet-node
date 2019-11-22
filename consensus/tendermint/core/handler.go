@@ -99,7 +99,8 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 	var (
 		state = c.CurrentState()
 	)
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if state.BlockNumber().Cmp(newHeadNumber) > 0 {
 		log.Warn("current state block number is ahead of new Head number. Ignore updating...",
 			"current_block_number", state.BlockNumber().String(),
@@ -112,6 +113,8 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 }
 
 func (c *core) handleNewBlock(block *types.Block) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	var state = c.CurrentState()
 	c.getLogger().Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
 
