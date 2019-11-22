@@ -120,7 +120,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 
 	blockNumberStr := block.Number().String()
 
-	ch := sb.commitChs.getOrCreateCommitChannel(blockNumberStr)
+	ch := sb.commitChs.createCommitChannelAndCloseIfExist(blockNumberStr)
 	//TODO: clear previous data of proposal
 	// post block into tendermint engine
 	go func(block *types.Block) {

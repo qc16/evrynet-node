@@ -30,13 +30,13 @@ func (cc *commitChannels) sendBlock(block *types.Block) {
 	ch <- block
 }
 
-//getOrCreateCommitChannel return the channel if available, or create a new one.
-func (cc *commitChannels) getOrCreateCommitChannel(blockNumberStr string) <-chan *types.Block {
+//createCommitChannelAndCloseIfExist creates the channel and if the channel is exist then close it and replace with new one
+func (cc *commitChannels) createCommitChannelAndCloseIfExist(blockNumberStr string) <-chan *types.Block {
 	cc.mutex.Lock()
 	defer cc.mutex.Unlock()
 	ch, avail := cc.chs[blockNumberStr]
 	if avail {
-		return ch
+		close(ch)
 	}
 	cc.chs[blockNumberStr] = make(chan *types.Block, 1)
 	return cc.chs[blockNumberStr]
