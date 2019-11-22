@@ -680,16 +680,6 @@ var (
 		Usage: "0: not faulty, 1: send fake proposal",
 		Value: eth.DefaultConfig.Tendermint.FaultyMode,
 	}
-	TendermintProposerPolicyFlag = cli.Uint64Flag{
-		Name:  "tendermint.proposer-policy",
-		Usage: "0: RoundRobin, 1: Sticky",
-		Value: uint64(eth.DefaultConfig.Tendermint.ProposerPolicy),
-	}
-	TendermintEpochFlag = cli.Uint64Flag{
-		Name:  "tendermint.epoch",
-		Usage: "The number of blocks after which to checkpoint and reset the pending votes",
-		Value: eth.DefaultConfig.Tendermint.Epoch,
-	}
 	TendermintTimeoutProposeFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-propose",
 		Usage: "Duration waiting a propose",

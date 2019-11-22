@@ -250,8 +250,6 @@ var AppHelpFlagGroups = []flagGroup{
 	{
 		Name: "TENDERMINT",
 		Flags: []cli.Flag{
-			utils.TendermintProposerPolicyFlag,
-			utils.TendermintEpochFlag,
 			utils.TendermintBlockPeriodFlag,
 			utils.TendermintTimeoutProposeFlag,
 			utils.TendermintTimeoutProposeDeltaFlag,
