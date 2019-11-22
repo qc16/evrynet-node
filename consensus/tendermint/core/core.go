@@ -72,6 +72,7 @@ type core struct {
 }
 
 // Start implements core.Engine.Start
+// Note: this function is not thread-safe
 func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
@@ -93,6 +94,7 @@ func (c *core) Start() error {
 }
 
 // Stop implements core.Engine.Stop
+// Note: this function is not thread-safe
 func (c *core) Stop() error {
 	c.getLogger().Infow("stopping Tendermint's timeout core...")
 	err := c.timeout.Stop()
