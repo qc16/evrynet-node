@@ -36,6 +36,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/clique"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tdmintBackend "github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
@@ -673,11 +675,45 @@ var (
 		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
 		Value: eth.DefaultConfig.Tendermint.BlockPeriod,
 	}
-
 	TendermintFaultyModeFlag = cli.Uint64Flag{
 		Name:  "tendermint.faultymode",
 		Usage: "0: not faulty, 1: send fake proposal",
 		Value: eth.DefaultConfig.Tendermint.FaultyMode,
+	}
+	TendermintTimeoutProposeFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-propose",
+		Usage: "Duration waiting a propose",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPropose,
+	}
+	TendermintTimeoutProposeDeltaFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-propose-delta",
+		Usage: "Increment if timeout happens at propose step to reach eventually synchronous",
+		Value: eth.DefaultConfig.Tendermint.TimeoutProposeDelta,
+	}
+	TendermintTimeoutPrevoteFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-prevote",
+		Usage: "Duration waiting for more prevote after 2/3 received",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrevote,
+	}
+	TendermintTimeoutPrevoteDeltaFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-prevote-delta",
+		Usage: "Increment if timeout happens at prevoteWait to reach eventually synchronous",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrevoteDelta,
+	}
+	TendermintTimeoutPrecommitFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-precommit",
+		Usage: "Duration waiting for more precommit after 2/3 received",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrecommit,
+	}
+	TendermintTimeoutPrecommitDeltaFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-precommit-delta",
+		Usage: "Duration waiting to increase if precommit wait expired to reach eventually synchronous",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrecommitDelta,
+	}
+	TendermintTimeoutCommitFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-commit",
+		Usage: "Duration waiting to start round with new height",
+		Value: eth.DefaultConfig.Tendermint.TimeoutCommit,
 	}
 
 	// Metrics flags
@@ -1331,14 +1367,18 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 	}
 }
 
-// set tendermint config
-func setTendermint(ctx *cli.Context, cfg *eth.Config) {
-	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
-		cfg.Tendermint.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
-	}
-	if ctx.GlobalIsSet(TendermintFaultyModeFlag.Name) {
-		cfg.Tendermint.FaultyMode = ctx.GlobalUint64(TendermintFaultyModeFlag.Name)
-	}
+// setTendermint will use params from CLI for tendermint config
+// NOTE: ProposerPolicy, Epoch are used for chain, so they not allowed to inject. They will be got from genesis
+func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
+	cfg.BlockPeriod = ctx.Uint64(TendermintBlockPeriodFlag.Name)
+	cfg.FaultyMode = ctx.Uint64(TendermintFaultyModeFlag.Name)
+	cfg.TimeoutPropose = ctx.Duration(TendermintTimeoutProposeFlag.Name)
+	cfg.TimeoutProposeDelta = ctx.Duration(TendermintTimeoutProposeDeltaFlag.Name)
+	cfg.TimeoutPrevote = ctx.Duration(TendermintTimeoutPrevoteFlag.Name)
+	cfg.TimeoutPrevoteDelta = ctx.Duration(TendermintTimeoutPrevoteDeltaFlag.Name)
+	cfg.TimeoutPrecommit = ctx.Duration(TendermintTimeoutPrecommitFlag.Name)
+	cfg.TimeoutPrecommitDelta = ctx.Duration(TendermintTimeoutPrecommitDeltaFlag.Name)
+	cfg.TimeoutCommit = ctx.Duration(TendermintTimeoutCommitFlag.Name)
 }
 
 // checkExclusive verifies that only a single instance of the provided flags was
@@ -1412,7 +1452,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	setEthash(ctx, cfg)
 	setMiner(ctx, &cfg.Miner)
 	setWhitelist(ctx, cfg)
-	setTendermint(ctx, cfg)
+	setTendermint(ctx, &cfg.Tendermint)
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
@@ -1662,6 +1702,12 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var engine consensus.Engine
 	if config.Clique != nil {
 		engine = clique.New(config.Clique, chainDb)
+	} else if config.Tendermint != nil { // In case Clique config was not defined
+		tdmintConfig := tendermint.DefaultConfig
+		setTendermint(ctx, tdmintConfig)
+		tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(config.Tendermint.ProposerPolicy)
+		tdmintConfig.Epoch = config.Tendermint.Epoch
+		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey(), tdmintBackend.WithDB(chainDb))
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {

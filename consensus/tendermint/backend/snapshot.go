@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	dbKeySnapshotPrefix = "tendermint-snapshot"
+	dbKeySnapshotPrefix = "tendermint-snapshot-"
 )
 
 // Vote represents a single vote that an authorized validator made to modify the

@@ -231,18 +231,19 @@ func InspectDatabase(db ethdb.Database) error {
 		logged = time.Now()
 
 		// Key-value store statistics
-		total           common.StorageSize
-		headerSize      common.StorageSize
-		bodySize        common.StorageSize
-		receiptSize     common.StorageSize
-		tdSize          common.StorageSize
-		numHashPairing  common.StorageSize
-		hashNumPairing  common.StorageSize
-		trieSize        common.StorageSize
-		txlookupSize    common.StorageSize
-		preimageSize    common.StorageSize
-		bloomBitsSize   common.StorageSize
-		cliqueSnapsSize common.StorageSize
+		total               common.StorageSize
+		headerSize          common.StorageSize
+		bodySize            common.StorageSize
+		receiptSize         common.StorageSize
+		tdSize              common.StorageSize
+		numHashPairing      common.StorageSize
+		hashNumPairing      common.StorageSize
+		trieSize            common.StorageSize
+		txlookupSize        common.StorageSize
+		preimageSize        common.StorageSize
+		bloomBitsSize       common.StorageSize
+		cliqueSnapsSize     common.StorageSize
+		tendermintSnapsSize common.StorageSize
 
 		// Ancient store statistics
 		ancientHeaders  common.StorageSize
@@ -287,6 +288,8 @@ func InspectDatabase(db ethdb.Database) error {
 			bloomBitsSize += size
 		case bytes.HasPrefix(key, []byte("clique-")) && len(key) == 7+common.HashLength:
 			cliqueSnapsSize += size
+		case bytes.HasPrefix(key, tendermintPrefix) && len(key) == (len(tendermintPrefix)+common.HashLength):
+			tendermintSnapsSize += size
 		case bytes.HasPrefix(key, []byte("cht-")) && len(key) == 4+common.HashLength:
 			chtTrieNodes += size
 		case bytes.HasPrefix(key, []byte("blt-")) && len(key) == 4+common.HashLength:
@@ -333,6 +336,7 @@ func InspectDatabase(db ethdb.Database) error {
 		{"Key-Value store", "Trie nodes", trieSize.String()},
 		{"Key-Value store", "Trie preimages", preimageSize.String()},
 		{"Key-Value store", "Clique snapshots", cliqueSnapsSize.String()},
+		{"Key-Value store", "Tendermint snapshots", tendermintSnapsSize.String()},
 		{"Key-Value store", "Singleton metadata", metadata.String()},
 		{"Ancient store", "Headers", ancientHeaders.String()},
 		{"Ancient store", "Bodies", ancientBodies.String()},

@@ -474,6 +474,8 @@ func (lc *LightChain) SyncCht(ctx context.Context) bool {
 	latest := sections*lc.indexerConfig.ChtSize - 1
 	if clique := lc.hc.Config().Clique; clique != nil {
 		latest -= latest % clique.Epoch // epoch snapshot for clique
+	} else if tdmint := lc.hc.Config().Tendermint; tdmint != nil {
+		latest -= latest % tdmint.Epoch // epoch snapshot for tendermint
 	}
 	if head >= latest {
 		return false

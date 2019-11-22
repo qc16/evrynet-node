@@ -251,6 +251,13 @@ var AppHelpFlagGroups = []flagGroup{
 		Name: "TENDERMINT",
 		Flags: []cli.Flag{
 			utils.TendermintBlockPeriodFlag,
+			utils.TendermintTimeoutProposeFlag,
+			utils.TendermintTimeoutProposeDeltaFlag,
+			utils.TendermintTimeoutPrevoteFlag,
+			utils.TendermintTimeoutPrevoteDeltaFlag,
+			utils.TendermintTimeoutPrecommitFlag,
+			utils.TendermintTimeoutPrecommitDeltaFlag,
+			utils.TendermintTimeoutCommitFlag,
 			utils.TendermintFaultyModeFlag,
 		},
 	},
