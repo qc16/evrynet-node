@@ -3,7 +3,6 @@ package tests_utils
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"math/big"
 	"testing"
 
@@ -82,11 +81,11 @@ func MakeBlockWithSeal(be tendermint.Backend, pHeader *types.Header) *types.Bloc
 func MustMakeBlockWithCommittedSealInvalid(be tendermint.Backend, pHeader *types.Header) *types.Block {
 	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader))
 	AppendSeal(header, be)
-	invalidCommitSeal := make([]byte, types.TendermintExtraSeal)
-	_, err := rand.Read(invalidCommitSeal)
-	if err != nil {
-		panic(err)
-	}
+	// generate a random private key not in validator set
+	privateKey, _ := GeneratePrivateKey()
+	//sign header with rand private key
+	hashData := crypto.Keccak256(utils.SigHash(header).Bytes())
+	invalidCommitSeal, _ := crypto.Sign(hashData, privateKey)
 	appendCommittedSeal(header, invalidCommitSeal)
 	return types.NewBlockWithHeader(header)
 }
