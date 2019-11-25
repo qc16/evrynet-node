@@ -79,6 +79,8 @@ func main() {
 		doInstall(os.Args[2:])
 	case "test":
 		doTest(os.Args[2:])
+	case "testwithnode":
+		doProviderTest(os.Args[2:])
 	case "lint":
 		doGolangCiLint(os.Args[2:])
 	default:
@@ -209,6 +211,30 @@ func doTest(cmdline []string) {
 
 	// TODO: fix all remaining tests so this could be ./...
 	packages := []string{"./consensus/..."}
+	if len(flag.CommandLine.Args()) > 0 {
+		packages = flag.CommandLine.Args()
+	}
+
+	// Run the actual tests.
+	// Test a single package at a time. CI builders are slow
+	// and some tests run into timeouts under load.
+	gotest := goTool("test", buildFlags(env)...)
+	gotest.Args = append(gotest.Args, "-p", "1", "-timeout", "5m", "--short")
+	if *coverage {
+		gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover")
+	}
+
+	gotest.Args = append(gotest.Args, packages...)
+	build.MustRun(gotest)
+}
+
+func doProviderTest(cmdline []string) {
+	coverage := flag.Bool("coverage", false, "Whether to record code coverage")
+	flag.CommandLine.Parse(cmdline)
+	env := build.Env()
+
+	// TODO: fix all remaining tests so this could be ./...
+	packages := []string{"./tests/provider_logic_test/..."}
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}

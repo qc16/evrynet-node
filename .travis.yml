@@ -48,7 +48,15 @@ jobs:
         - go run build/ci.go install
         - go run build/ci.go test -coverage $TEST_PACKAGES
 
-after_success:
-  - docker --version
-  - docker build . -f ./dev/onenode/Dockerfile --label "commit=$TRAVIS_COMMIT" -t $TRAVIS_COMMIT
-  - docker run -d -it $TRAVIS_COMMIT
+    - stage: build
+      name: "Run unittests with one node"
+      os: linux
+      dist: xenial
+      go: 1.13.x
+      script:
+        - docker --version
+        - go mod vendor
+        - go run build/ci.go install
+        - docker build . -f ./dev/onenode/Dockerfile --label "commit=$TRAVIS_COMMIT" -t $TRAVIS_COMMIT
+        - docker run -d -p 8545:8545 -it $TRAVIS_COMMIT
+        - go run build/ci.go testwithnode -coverage $TEST_PACKAGES

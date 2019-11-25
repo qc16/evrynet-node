@@ -76,7 +76,7 @@ func TestCreateContractWithoutProviderAddress(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
@@ -96,7 +96,7 @@ func TestCreateContractWithProviderSignature(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
@@ -119,7 +119,7 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
@@ -140,7 +140,7 @@ func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
@@ -158,7 +158,7 @@ func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)

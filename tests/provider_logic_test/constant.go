@@ -4,8 +4,8 @@ package test
 const (
 	// this is just a random address to run negative test
 	normalAddress                  = "0x7e8A370FD68DeBe1f6B5f3537061F1069BAC783C"
-	senderPK                       = "62199ECEC394ED8B6BEB52924B8AF3AE41D1887D624A368A3305ED8894B99DCF"
-	senderAddrStr                  = "0xc1d38df8d2342c84faab9623b2d021466fb2844c"
+	senderPK                       = "ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1"
+	senderAddrStr                  = "0x560089ab68dc224b250f9588b3db540d87a66b7a"
 	contractAddrStrWithoutProvider = "0x7Dadf7b6c9C828afd6E814cDb3e820f9F3261e49"
 	contractAddrStrWithProvider    = "0xe09faac3574aa5f498b8006b0974aace2ee90b06"
 
