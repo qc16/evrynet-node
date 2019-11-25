@@ -4,6 +4,8 @@ sudo: false
 env:
   global:
     - GO111MODULE=on
+services:
+  - docker
 jobs:
   include:
     # This builder only tests code linters on latest version of Go
@@ -45,3 +47,8 @@ jobs:
         - go mod vendor
         - go run build/ci.go install
         - go run build/ci.go test -coverage $TEST_PACKAGES
+
+after_success:
+  - docker --version
+  - docker build . -f ./dev/onenode/Dockerfile --label "commit=$TRAVIS_COMMIT" -t $TRAVIS_COMMIT
+  - docker run -d -it $TRAVIS_COMMIT
