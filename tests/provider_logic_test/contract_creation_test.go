@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -81,8 +82,30 @@ func TestCreateContractWithoutProviderAddress(t *testing.T) {
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
 
+	err = ethClient.SendTransaction(context.Background(), tx)
+	assert.NoError(t, err)
+	if err == nil {
+		var (
+			maxTrie = 10
+			trie    = 1
+		)
+
+		for {
+			if trie > maxTrie {
+				break
+			}
+			var receipt *types.Receipt
+			receipt, err = ethClient.TransactionReceipt(context.Background(), tx.Hash())
+			if err == nil {
+				assert.Equal(t, uint64(1), receipt.Status)
+				assert.NotEqual(t, receipt.ContractAddress, common.Address{})
+				break
+			}
+			time.Sleep(1 * time.Second)
+			trie = trie + 1
+		}
+	}
 }
 
 func TestCreateContractWithProviderSignature(t *testing.T) {

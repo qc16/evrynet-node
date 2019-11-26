@@ -9,8 +9,8 @@ const (
 	contractAddrStrWithoutProvider = "0x7Dadf7b6c9C828afd6E814cDb3e820f9F3261e49"
 	contractAddrStrWithProvider    = "0xe09faac3574aa5f498b8006b0974aace2ee90b06"
 
-	providerPK         = "1E85810610998B50AF1FD7D3F6526CAE8EF497FC9A95CA5E3F42D019D0B0F860"
-	providerAddrStr    = "0x13BA40986098A83520C06028c6a6470De246b92E"
+	providerPK         = "ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1"
+	providerAddrStr    = "0x560089ab68dc224b250f9588b3db540d87a66b7a"
 	invadlidProviderPK = "5564a4ddd059ba6352aae637812ea6be7d818f92b5aff3564429478fcdfe4e8a"
 
 	// payload to create a smart contract
