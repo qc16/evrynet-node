@@ -632,6 +632,7 @@ func (c *core) updateStateForNewblock() {
 
 }
 
+// processFutureMessages dequeue and runs all msgs for the next block (caller should lock the mutex to ensure thread-safe)
 func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err error) {
 	var (
 		vote  tendermint.Vote
@@ -674,9 +675,23 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		if err := c.futureMessages.Remove(0); err != nil {
 			logger.Warn("failed to remove from future msgs", "err", err)
 		}
-		if err := c.handleMsg(msg); err != nil {
+		if err := c.processFutureMessage(msg); err != nil {
 			logger.Warn("failed to handle msg", "err", err)
 		}
 	}
 	return true, nil
+}
+
+// processFutureMessage applied msg to state
+func (c *core) processFutureMessage(msg message) error {
+	switch msg.Code {
+	case msgPropose:
+		return c.handlePropose(msg)
+	case msgPrevote:
+		return c.handlePrevote(msg)
+	case msgPrecommit:
+		return c.handlePrecommit(msg)
+	default:
+		return fmt.Errorf("unknown msg code %d", msg.Code)
+	}
 }

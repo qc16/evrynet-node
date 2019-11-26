@@ -214,6 +214,13 @@ func (c *core) handlePropose(msg message) error {
 	// Does not apply, this is not an error but may happen due to network lattency
 	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
 		logger.Warnw("received proposal with different height/round. Skip processing it")
+		if proposal.Block.Number().Cmp(state.BlockNumber()) > 0 {
+			// vote from future block, save to future message queue
+			logger.Infow("store prevote vote from future block", "from", msg.Address)
+			if err := c.futureMessages.Enqueue(msg); err != nil {
+				logger.Errorw("failed to store future prevote message to queue", "err", err, "from", msg.Address)
+			}
+		}
 		return nil
 	}
 	if err := c.VerifyProposal(proposal, msg); err != nil {
@@ -248,15 +255,15 @@ func (c *core) handlePrevote(msg message) error {
 	if vote.BlockHash == nil || vote.BlockNumber == nil {
 		c.getLogger().Panic("nil block hash is not allowed. Please make sure that prevote nil send an emptyBlockHash")
 	}
-	logger := c.getLogger().With("vote_block_number", vote.BlockNumber, "from", msg.Address, "vote_round", vote.Round, "block_hash", vote.BlockHash.Hex())
+	logger := c.getLogger().With("vote_block", vote.BlockNumber, "from", msg.Address, "vote_round", vote.Round, "block_hash", vote.BlockHash.Hex())
 
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		logger.Warnw("vote's block is different with current block", "vote_block", vote.BlockNumber, "from", msg.Address)
+		logger.Warnw("vote's block is different with current block")
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
-			logger.Infow("store prevote vote from future block", "vote_block", vote.BlockNumber, "vote_round", vote.Round, "from", msg.Address)
+			logger.Infow("store prevote vote from future block")
 			if err := c.futureMessages.Enqueue(msg); err != nil {
-				log.Error("failed to store future prevote message to queue", "err", err, "vote_block", vote.BlockNumber, "from", msg.Address)
+				logger.Errorw("failed to store future prevote message to queue", "err", err)
 			}
 		}
 		return nil
@@ -352,12 +359,12 @@ func (c *core) handlePrecommit(msg message) error {
 	logger := c.getLogger().With("vote_block", vote.BlockNumber, "vote_round", vote.Round,
 		"from", msg.Address.Hex(), "block_hash", vote.BlockHash.Hex())
 	if vote.BlockNumber.Cmp(state.BlockNumber()) != 0 {
-		logger.Warnw("vote's block is different with current block", "vote_block", vote.BlockNumber, "from", msg.Address)
+		logger.Warnw("vote's block is different with current block")
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
-			logger.Infow("store precommit vote from future block", "vote_block", vote.BlockNumber, "vote_round", vote.Round, "from", msg.Address)
+			logger.Infow("store precommit vote from future block")
 			if err := c.futureMessages.Enqueue(msg); err != nil {
-				logger.Errorw("failed to store future prevote message to queue", "err", err, "vote_block", vote.BlockNumber, "from", msg.Address)
+				logger.Errorw("failed to store future prevote message to queue", "err", err)
 			}
 		}
 		logger.Warnw("vote's block is different with current block")
