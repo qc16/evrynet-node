@@ -2,7 +2,7 @@
 
 1. Attach gev console with module tendermint to a running node. Please ensure the node is a validator in network and miner is started.
     ```shell
-    $ ./gev --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,tendermint attach ipc:[path_to_geth_ipc]/geth.ipc     
+    $ ./gev --rpcapi admin,db,evr,debug,miner,net,shh,txpool,personal,web3,tendermint attach ipc:[path_to_geth_ipc]/geth.ipc     
     ```
 
 2. Run command voting in gev console 
