@@ -151,6 +151,13 @@ var (
 		configFileFlag,
 		utils.TendermintBlockPeriodFlag,
 		utils.TendermintFaultyModeFlag,
+		utils.TendermintTimeoutProposeFlag,
+		utils.TendermintTimeoutProposeDeltaFlag,
+		utils.TendermintTimeoutPrevoteFlag,
+		utils.TendermintTimeoutPrevoteDeltaFlag,
+		utils.TendermintTimeoutPrecommitFlag,
+		utils.TendermintTimeoutPrecommitDeltaFlag,
+		utils.TendermintTimeoutCommitFlag,
 	}
 
 	rpcFlags = []cli.Flag{

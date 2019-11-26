@@ -1370,15 +1370,61 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 // setTendermint will use params from CLI for tendermint config
 // NOTE: ProposerPolicy, Epoch are used for chain, so they not allowed to inject. They will be got from genesis
 func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
-	cfg.BlockPeriod = ctx.Uint64(TendermintBlockPeriodFlag.Name)
-	cfg.FaultyMode = ctx.Uint64(TendermintFaultyModeFlag.Name)
-	cfg.TimeoutPropose = ctx.Duration(TendermintTimeoutProposeFlag.Name)
-	cfg.TimeoutProposeDelta = ctx.Duration(TendermintTimeoutProposeDeltaFlag.Name)
-	cfg.TimeoutPrevote = ctx.Duration(TendermintTimeoutPrevoteFlag.Name)
-	cfg.TimeoutPrevoteDelta = ctx.Duration(TendermintTimeoutPrevoteDeltaFlag.Name)
-	cfg.TimeoutPrecommit = ctx.Duration(TendermintTimeoutPrecommitFlag.Name)
-	cfg.TimeoutPrecommitDelta = ctx.Duration(TendermintTimeoutPrecommitDeltaFlag.Name)
-	cfg.TimeoutCommit = ctx.Duration(TendermintTimeoutCommitFlag.Name)
+	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
+		cfg.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintFaultyModeFlag.Name) {
+		cfg.FaultyMode = ctx.GlobalUint64(TendermintFaultyModeFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutProposeFlag.Name) {
+		cfg.TimeoutPropose = ctx.GlobalDuration(TendermintTimeoutProposeFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutProposeDeltaFlag.Name) {
+		cfg.TimeoutProposeDelta = ctx.GlobalDuration(TendermintTimeoutProposeDeltaFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrevoteFlag.Name) {
+		cfg.TimeoutPrevote = ctx.GlobalDuration(TendermintTimeoutPrevoteFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrevoteDeltaFlag.Name) {
+		cfg.TimeoutPrevoteDelta = ctx.GlobalDuration(TendermintTimeoutPrevoteDeltaFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrecommitFlag.Name) {
+		cfg.TimeoutPrecommit = ctx.GlobalDuration(TendermintTimeoutPrecommitFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrecommitDeltaFlag.Name) {
+		cfg.TimeoutPrecommitDelta = ctx.GlobalDuration(TendermintTimeoutPrecommitDeltaFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutCommitFlag.Name) {
+		cfg.TimeoutCommit = ctx.GlobalDuration(TendermintTimeoutCommitFlag.Name)
+	}
+
+	if ctx.IsSet(TendermintBlockPeriodFlag.Name) {
+		cfg.BlockPeriod = ctx.Uint64(TendermintBlockPeriodFlag.Name)
+	}
+	if ctx.IsSet(TendermintFaultyModeFlag.Name) {
+		cfg.FaultyMode = ctx.Uint64(TendermintFaultyModeFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutProposeFlag.Name) {
+		cfg.TimeoutPropose = ctx.Duration(TendermintTimeoutProposeFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutProposeDeltaFlag.Name) {
+		cfg.TimeoutProposeDelta = ctx.Duration(TendermintTimeoutProposeDeltaFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrevoteFlag.Name) {
+		cfg.TimeoutPrevote = ctx.Duration(TendermintTimeoutPrevoteFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrevoteDeltaFlag.Name) {
+		cfg.TimeoutPrevoteDelta = ctx.Duration(TendermintTimeoutPrevoteDeltaFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrecommitFlag.Name) {
+		cfg.TimeoutPrecommit = ctx.Duration(TendermintTimeoutPrecommitFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrecommitDeltaFlag.Name) {
+		cfg.TimeoutPrecommitDelta = ctx.Duration(TendermintTimeoutPrecommitDeltaFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutCommitFlag.Name) {
+		cfg.TimeoutCommit = ctx.Duration(TendermintTimeoutCommitFlag.Name)
+	}
 }
 
 // checkExclusive verifies that only a single instance of the provided flags was
