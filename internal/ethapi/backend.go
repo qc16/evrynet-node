@@ -78,29 +78,14 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
-			Namespace: "eth",
+			Namespace: "evr",
 			Version:   "1.0",
 			Service:   NewPublicEthereumAPI(apiBackend),
 			Public:    true,
 		}, {
 			Namespace: "evr",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(apiBackend),
-			Public:    true,
-		}, {
-			Namespace: "eth",
-			Version:   "1.0",
 			Service:   NewPublicBlockChainAPI(apiBackend),
-			Public:    true,
-		}, {
-			Namespace: "evr",
-			Version:   "1.0",
-			Service:   NewPublicBlockChainAPI(apiBackend),
-			Public:    true,
-		}, {
-			Namespace: "eth",
-			Version:   "1.0",
-			Service:   NewPublicTransactionPoolAPI(apiBackend, nonceLock),
 			Public:    true,
 		}, {
 			Namespace: "evr",
@@ -121,11 +106,6 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Namespace: "debug",
 			Version:   "1.0",
 			Service:   NewPrivateDebugAPI(apiBackend),
-		}, {
-			Namespace: "eth",
-			Version:   "1.0",
-			Service:   NewPublicAccountAPI(apiBackend.AccountManager()),
-			Public:    true,
 		}, {
 			Namespace: "evr",
 			Version:   "1.0",
