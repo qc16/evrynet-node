@@ -50,7 +50,7 @@ func TestBackend_VerifyHeader(t *testing.T) {
 
 	// with committed seal but is invalid
 	block = tests_utils.MustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
-	assert.Equal(t, errInvalidSignature, engine.VerifyHeader(engine.chain, block.Header(), false))
+	assert.Equal(t, errInvalidCommittedSeals, engine.VerifyHeader(engine.chain, block.Header(), false))
 
 	// with committed seal
 	block = tests_utils.MustMakeBlockWithCommittedSeal(engine, genesisHeader, validators)
