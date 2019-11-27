@@ -53,12 +53,12 @@ go.sum
 *.log
 .idea/
 
-bootnode
-gev
-puppeth
-nodekey
-validator-node
-singlenode
+/bootnode
+/gev
+/puppeth
+/nodekey
+/validator-node
+/singlenode
 
 # Ignore data of test node
 /tests/test_nodes/*/geth.ipc
