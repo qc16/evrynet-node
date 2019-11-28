@@ -61,7 +61,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		proposedValidator:    newProposedValidator(),
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 		broadcastCh:          make(chan broadcastTask),
-``		controlChan:          make(chan struct{}),
+		controlChan:          make(chan struct{}),
 	}
 	be.core = tendermintCore.New(be, config)
 
