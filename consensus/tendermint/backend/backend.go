@@ -61,6 +61,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		proposedValidator:    newProposedValidator(),
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 		broadcastCh:          make(chan broadcastTask),
+``		controlChan:          make(chan struct{}),
 	}
 	be.core = tendermintCore.New(be, config)
 
@@ -97,6 +98,7 @@ type Backend struct {
 	coreStarted bool
 	mutex       *sync.RWMutex
 	chain       consensus.ChainReader
+	controlChan chan struct{}
 
 	//storingMsgs is used to store msg to handler when core stopped
 	storingMsgs          *queue.FIFO
