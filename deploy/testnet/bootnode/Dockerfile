@@ -8,4 +8,4 @@ COPY ./bin/bootnode .
 
 CMD ./bootnode -nodekeyhex "$NODE_HEX_KEY" -verbosity 9 -addr ":30300"
 
-EXPOSE 30300/udp
+EXPOSE 30300

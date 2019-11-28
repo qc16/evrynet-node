@@ -5,7 +5,7 @@
 Everything was setup. You only need to run this script  
 `./deploy/testnet/deploy.sh <path_to_share_volumes> <rpc_corsdomain> <wanna_to_deploy_explorer>`    
 
-Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-client/deploy/testnet/nodes/data http://localhost:8080 y`
+Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-client/deploy/testnet/nodes/data localhost y`
 - `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
 - `wanna_to_deploy_explorer` if you wanna deploy explorer, input is `y`
@@ -49,13 +49,8 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
 4. Generate node key and copy it into folder `node_1`, `node_2` `node_3`
     ```shell script
     $ bootnode --genkey=nodekey1
-    $ cp nodekey1 node_1/data/geth/nodekey
-    
     $ bootnode --genkey=nodekey2
-    $ cp nodekey2 node_2/data/geth/nodekey
-   
     $ bootnode --genkey=nodekey3
-    $ cp nodekey3 node_3/data/geth/nodekey
     ```
    
 5. Now we will generate initial accounts for any of the nodes in the required node’s working directory. The resulting public account address printed in the terminal should be recorded. Repeat as many times as necessary. A set of funded accounts may be required depending what you are trying to accomplish  
@@ -75,7 +70,7 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
     ... 
     ```
   
- 6. Now we will get address for 3 nodes. Using the content of nodekey file in 3 nodes (Ex: `node_1/data/geth/nodekey`) as Private Key to get Address of each nodes at [myetherwallet](myetherwallet.com) 
+ 6. Now we will get address for 3 nodes. Using the content of nodekey1,2,3 files (Ex: `node_1/data/geth/nodekey`) as Private Key to get Address of each nodes at [myetherwallet](myetherwallet.com) 
  7. Last step, we need to update `deploy/testnet/nodes/bin/genesis.json` by new address of validators.  
  Run `puppeth` and full fill data of your chain. Using 3 Addresses we just get from 3 Private Keys above.   
     ```shell script

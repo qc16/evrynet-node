@@ -1,21 +1,35 @@
-#!/bin/sh
-set -e
+#!/bin/bash
 
 ./gev --datadir ./data init ./genesis.json
 
 # shellcheck disable=SC2039
-if [[ $HAS_METRIC = 1 ]]; then
-  echo "Start node $ID with metric!"
-  ./gev --datadir ./data --identity "$ID" --verbosity 4 --tendermint.blockperiod 1 --syncmode full --networkid 15 \
-    --rpc --rpcaddr 0.0.0.0 --rpcvhosts "*" --rpcport 2200"$ID" --port 3030"$ID" \
+if [[ $HAS_METRIC ]]; then
+  if [[ ! $METRICS_ENDPOINT ]]; then
+    METRICS_ENDPOINT=http://52.220.52.16:8086
+  fi
+  if [[ ! $METRICS_USER ]]; then
+    # shellcheck disable=SC2209
+    METRICS_USER=test
+  fi
+  if [[ ! $METRICS_PASS ]]; then
+    # shellcheck disable=SC2209
+    METRICS_PASS=test
+  fi
+
+  echo "Start node $NODE_ID with metric!"
+  ./gev --datadir ./data --identity "$NODE_ID" --verbosity 4 --tendermint.blockperiod 1 --syncmode full --networkid 15 --mine \
+    --rpc --rpcaddr 0.0.0.0 --rpcvhosts "*" --rpcport 2200"$NODE_ID" --port 3030"$NODE_ID" \
     --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 \
     --bootnodes "enode://$BOOTNODE_ID@$BOOTNODE_IP:30300" \
-    --metrics --metrics.influxdb --metrics.influxdb.endpoint "http://52.220.52.16:8086" --metrics.influxdb.username test --metrics.influxdb.password test 2>>./log/node_"$ID".log
+    --allow-insecure-unlock --unlock "$UNLOCK_ACCOUNT" --password <(echo -n "$UNLOCK_PASS") \
+    --nodekeyhex "$NODEKEYHEX"\
+    --metrics --metrics.influxdb --metrics.influxdb.endpoint "$METRICS_ENDPOINT" --metrics.influxdb.username $METRICS_USER --metrics.influxdb.password $METRICS_PASS 2>>./log/node.log
 else
-  echo "Start node $ID! RPC_CORSDOMAIN: $RPC_CORSDOMAIN"
-  ./gev --datadir ./data --identity "$ID" --verbosity 4 --tendermint.blockperiod 1 --syncmode full --networkid 15 \
-    --rpc --rpcaddr 0.0.0.0 --rpccorsdomain "$RPC_CORSDOMAIN" --rpcvhosts "*" --rpcport 2200"$ID" --port 3030"$ID" \
+  echo "Start node $NODE_ID!"
+  ./gev --datadir ./data --identity "$NODE_ID" --verbosity 4 --tendermint.blockperiod 1 --syncmode full --networkid 15 --mine \
+    --rpc --rpcaddr 0.0.0.0 --rpccorsdomain http://"$RPC_CORSDOMAIN":8080 --rpcvhosts "*" --rpcport 2200"$NODE_ID" --port 3030"$NODE_ID" \
     --bootnodes "enode://$BOOTNODE_ID@$BOOTNODE_IP:30300" \
-    --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 2>>./log/node_"$ID".log
+    --allow-insecure-unlock --unlock "$UNLOCK_ACCOUNT" --password <(echo -n "$UNLOCK_PASS") \
+    --nodekeyhex "$NODEKEYHEX"\
+    --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 2>>./log/node.log
 fi
-

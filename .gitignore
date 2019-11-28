@@ -67,3 +67,12 @@ go.sum
 /tests/test_nodes/*/data/geth/chaindata/
 /tests/test_nodes/*/data/geth/lightchaindata/
 /tests/test_nodes/*/data/geth/nodes/
+
+/deploy/testnet/bootnode/bin
+/deploy/testnet/builder/bin
+/deploy/testnet/explorer/web
+/deploy/testnet/nodes/bin/gev
+
+/deploy/testnet/nodes/data/node_1/data
+/deploy/testnet/nodes/data/node_2/data
+/deploy/testnet/nodes/data/node_3/data
