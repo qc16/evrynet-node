@@ -4,13 +4,13 @@ package test
 const (
 	// this is just a random address to run negative test
 	normalAddress                  = "0x7e8A370FD68DeBe1f6B5f3537061F1069BAC783C"
-	senderPK                       = "ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1"
-	senderAddrStr                  = "0x560089ab68dc224b250f9588b3db540d87a66b7a"
+	senderPK                       = "0BC15BA68AAEC11F2638BC7C98BBA3E17A1D1F4BD5C27BB6043BA68D7F262962"
+	senderAddrStr                  = "0x608fe17b82cdc38bcda9aba3bf1e90d61b412248"
 	contractAddrStrWithoutProvider = "0x7Dadf7b6c9C828afd6E814cDb3e820f9F3261e49"
 	contractAddrStrWithProvider    = "0xe09faac3574aa5f498b8006b0974aace2ee90b06"
 
-	providerPK         = "ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1"
-	providerAddrStr    = "0x560089ab68dc224b250f9588b3db540d87a66b7a"
+	providerPK         = "09C73E3F79CFAA928089CD69AFCD5E1623B1D32415166A6A0436BF0FECAC9B7C"
+	providerAddrStr    = "0xD3817DF2146AB9582b9Ec5adc4683d684118ae68"
 	invadlidProviderPK = "5564a4ddd059ba6352aae637812ea6be7d818f92b5aff3564429478fcdfe4e8a"
 
 	// payload to create a smart contract
@@ -26,5 +26,5 @@ const (
 	testGasLimit   = 1000000
 	testGasPrice   = 1000000000
 	testAmountSend = 1000000000
-	ethRPCEndpoint = "http://localhost:8545"
+	ethRPCEndpoint = "http://localhost:22001"
 )

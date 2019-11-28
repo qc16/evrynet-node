@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+
 	"github.com/evrynet-official/evrynet-client/ethclient"
 )
 
@@ -50,19 +51,8 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
-
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	var (
-		maxTrie = 10
-		trie    = 1
-	)
-
-	for {
-		if trie > maxTrie {
-			break
-		}
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -71,7 +61,6 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 			break
 		}
 		time.Sleep(1 * time.Second)
-		trie = trie + 1
 	}
 }
 
@@ -136,18 +125,8 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	var (
-		maxTrie = 10
-		trie    = 1
-	)
-
-	for {
-		if trie > maxTrie {
-			break
-		}
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -156,7 +135,6 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 			break
 		}
 		time.Sleep(1 * time.Second)
-		trie = trie + 1
 	}
 }
 

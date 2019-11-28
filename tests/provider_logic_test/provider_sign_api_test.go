@@ -108,25 +108,14 @@ func prepareNewContract(hasProvider bool) *common.Address {
 	if err != nil {
 		return nil
 	}
-	if err == nil {
-		var (
-			maxTrie = 10
-			trie    = 1
-		)
-
-		for {
-			if trie > maxTrie {
-				break
-			}
-			var receipt *types.Receipt
-			receipt, err = ethClient.TransactionReceipt(context.Background(), tx.Hash())
-			if err == nil && receipt.Status == uint64(1) {
-				return &receipt.ContractAddress
-			}
-
-			time.Sleep(1 * time.Second)
-			trie = trie + 1
+	for i := 0; i < 10; i++ {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), tx.Hash())
+		if err == nil && receipt.Status == uint64(1) {
+			return &receipt.ContractAddress
 		}
+
+		time.Sleep(1 * time.Second)
 	}
 	return nil
 }

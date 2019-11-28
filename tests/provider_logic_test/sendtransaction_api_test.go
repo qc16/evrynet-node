@@ -85,15 +85,7 @@ func TestSendTxCreateContractNormal(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, emptyHash, hash)
 	if hash != emptyHash {
-		var (
-			maxTrie = 10
-			trie    = 1
-		)
-
-		for {
-			if trie > maxTrie {
-				break
-			}
+		for i := 0; i < 10; i++ {
 			var receipt *types.Receipt
 			receipt, err = ethClient.TransactionReceipt(context.Background(), hash)
 			if err == nil {
@@ -101,7 +93,6 @@ func TestSendTxCreateContractNormal(t *testing.T) {
 				break
 			}
 			time.Sleep(2 * time.Second)
-			trie = trie + 1
 		}
 	}
 }
@@ -136,15 +127,7 @@ func TestSendTxNormal(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, emptyHash, hash)
 	if hash != emptyHash {
-		var (
-			maxTrie = 10
-			trie    = 1
-		)
-
-		for {
-			if trie > maxTrie {
-				break
-			}
+		for i := 0; i < 10; i++ {
 			var receipt *types.Receipt
 			receipt, err = ethClient.TransactionReceipt(context.Background(), hash)
 			if err == nil {
@@ -152,7 +135,6 @@ func TestSendTxNormal(t *testing.T) {
 				break
 			}
 			time.Sleep(2 * time.Second)
-			trie = trie + 1
 		}
 	}
 }

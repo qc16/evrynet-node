@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethclient"
 )
 
@@ -40,18 +40,8 @@ func TestSendToNormalAddress(t *testing.T) {
 
 	transaction := types.NewTransaction(nonce, normalAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-	// Check gas payer, should be sender's address
-	var (
-		maxTrie = 10
-		trie    = 1
-	)
-
-	for {
-		if trie > maxTrie {
-			break
-		}
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -60,7 +50,6 @@ func TestSendToNormalAddress(t *testing.T) {
 			break
 		}
 		time.Sleep(1 * time.Second)
-		trie = trie + 1
 	}
 }
 
@@ -113,19 +102,8 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
 	// return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	// Check gasPayer, should be sender's address
-	var (
-		maxTrie = 10
-		trie    = 1
-	)
-
-	for {
-		if trie > maxTrie {
-			break
-		}
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -134,7 +112,6 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 			break
 		}
 		time.Sleep(1 * time.Second)
-		trie = trie + 1
 	}
 }
 
@@ -249,18 +226,8 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	var (
-		maxTrie = 10
-		trie    = 1
-	)
-
-	for {
-		if trie > maxTrie {
-			break
-		}
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -269,7 +236,6 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 			break
 		}
 		time.Sleep(1 * time.Second)
-		trie = trie + 1
 	}
 }
 
@@ -364,18 +330,8 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	var (
-		maxTrie = 10
-		trie    = 1
-	)
-
-	for {
-		if trie > maxTrie {
-			break
-		}
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -384,6 +340,5 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 			break
 		}
 		time.Sleep(1 * time.Second)
-		trie = trie + 1
 	}
 }

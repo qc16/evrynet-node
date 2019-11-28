@@ -22,6 +22,7 @@ jobs:
         - ./vendor.sh
         - go run build/ci.go lint
 
+    # This builder run unittests for our project with go version 1.11.x
     - stage: build
       os: linux
       dist: xenial
@@ -29,7 +30,8 @@ jobs:
       script:
         - go run build/ci.go install
         - go run build/ci.go test -coverage $TEST_PACKAGES
-
+    
+    # This builder run unittests for our project with go version 1.12.x
     - stage: build
       os: linux
       dist: xenial
@@ -48,8 +50,9 @@ jobs:
         - go run build/ci.go install
         - go run build/ci.go test -coverage $TEST_PACKAGES
 
+    # This builder run integration tests for our project with go version 1.13.x
     - stage: build
-      name: "Run unittests with one node"
+      name: "Run integration test"
       os: linux
       dist: xenial
       go: 1.13.x
@@ -58,5 +61,5 @@ jobs:
         - go mod vendor
         - go run build/ci.go install
         - docker build . -f ./dev/onenode/Dockerfile --label "commit=$TRAVIS_COMMIT" -t $TRAVIS_COMMIT
-        - docker run -d -p 8545:8545 -it $TRAVIS_COMMIT
-        - go run build/ci.go testwithnode -coverage $TEST_PACKAGES
+        - docker run -d -p 22001:8545 -it $TRAVIS_COMMIT
+        - go run build/ci.go test -integration -coverage $TEST_PACKAGES
