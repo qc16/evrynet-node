@@ -239,7 +239,11 @@ func (sb *Backend) Stop() error {
 	sb.mutex.Lock()
 	defer sb.mutex.Unlock()
 	if !sb.coreStarted {
-		sb.controlChan <- struct{}{}
+		// send to sb.controlChan if backend in tryStartCore loop
+		select {
+		case sb.controlChan <- struct{}{}:
+		default:
+		}
 		return tendermint.ErrStoppedEngine
 	}
 	if err := sb.core.Stop(); err != nil {
