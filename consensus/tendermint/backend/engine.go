@@ -69,6 +69,8 @@ var (
 	errInvalidVote = errors.New("vote nonce not 0x0000000000000000 or 0xffffffffffffffff")
 	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
 	errInvalidCandidate = errors.New("candidate for validator is invalid")
+	// peerWaitDuration is the duration to wait for 2f+1 peer before starting
+	peerWaitDuration = 2 * time.Second
 )
 
 func (sb *Backend) addProposalSeal(h *types.Header) error {
@@ -174,10 +176,37 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	return nil
 }
 
+//tryStartCore will attempt to start core
+//it return true if core is already start/ started successfully
+//false in case core's still waiting for enough peer to start
+func (sb *Backend) tryStartCore() bool {
+	sb.mutex.Lock()
+	defer sb.mutex.Unlock()
+	log.Info("attempt to start tendermint core")
+	if sb.coreStarted {
+		log.Warn("core is already started", "error", tendermint.ErrStartedEngine)
+		return true
+	}
+
+	// Check enough 2f+1 peers
+	valSet := sb.Validators(sb.currentBlock().Number())
+	if len(sb.FindExistingPeers(valSet)) < 2*valSet.F() {
+		log.Warn("not enough 2f+1 peers to start backend")
+		return false
+	}
+
+	//TODO: clear previous data of proposal
+	if err := sb.core.Start(); err != nil {
+		log.Error("failed to start tendermint core", "error", err)
+		return false
+	}
+	sb.coreStarted = true
+	return true
+}
+
 // Start implements consensus.Tendermint.Start
 func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block) error {
 	sb.mutex.Lock()
-	defer sb.mutex.Unlock()
 	if sb.coreStarted {
 		return tendermint.ErrStartedEngine
 	}
@@ -185,25 +214,31 @@ func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	//set chain reader
 	sb.chain = chain
 	sb.currentBlock = currentBlock
-
 	if sb.commitChs != nil {
 		sb.commitChs.closeAndRemoveAllChannels()
 	}
+	sb.mutex.Unlock()
 
-	// Check enough 2f+1 peers
-	valSet := sb.Validators(sb.currentBlock().Number())
-	if len(sb.FindExistingPeers(valSet)) < 2*valSet.F() {
-		return errors.New("not enough 2f+1 peers to start backend")
+	//clear Previous start loop
+	select {
+	case sb.controlChan <- struct{}{}:
+	default:
 	}
 
-	//TODO: clear previous data of proposal
-	if err := sb.core.Start(); err != nil {
-		return err
+	ticker := time.NewTicker(peerWaitDuration)
+
+	for {
+		select {
+		case <-sb.controlChan:
+			log.Info("interrupt mining start loop")
+			return errors.New("start miner interrupted")
+		case <-ticker.C:
+			if sb.tryStartCore() {
+				return nil
+			}
+		}
 	}
 
-	sb.coreStarted = true
-
-	return nil
 }
 
 // Stop implements consensus.Tendermint.Stop
@@ -211,6 +246,11 @@ func (sb *Backend) Stop() error {
 	sb.mutex.Lock()
 	defer sb.mutex.Unlock()
 	if !sb.coreStarted {
+		// send to sb.controlChan if backend in tryStartCore loop
+		select {
+		case sb.controlChan <- struct{}{}:
+		default:
+		}
 		return tendermint.ErrStoppedEngine
 	}
 	if err := sb.core.Stop(); err != nil {
