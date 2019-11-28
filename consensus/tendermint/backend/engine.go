@@ -218,6 +218,13 @@ func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types
 		sb.commitChs.closeAndRemoveAllChannels()
 	}
 	sb.mutex.Unlock()
+
+	//clear Previous start loop
+	select {
+	case sb.controlChan <- struct{}{}:
+	default:
+	}
+
 	ticker := time.NewTicker(peerWaitDuration)
 
 	for {
