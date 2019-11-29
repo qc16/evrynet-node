@@ -26,7 +26,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -36,6 +36,8 @@ const (
 	HashLength = 32
 	// AddressLength is the expected length of the address
 	AddressLength = 20
+	// MaxProvider is the maximum of provider
+	MaxProvider = 16
 )
 
 var (
@@ -293,6 +295,16 @@ func (a *Address) UnmarshalGraphQL(input interface{}) error {
 		err = fmt.Errorf("Unexpected type for Address: %v", input)
 	}
 	return err
+}
+
+// InList will return true if list addresses include this address
+func (a *Address) InList(list []*Address) bool {
+	for _, ad := range list {
+		if a.Hex() == ad.Hex() {
+			return true
+		}
+	}
+	return false
 }
 
 // UnprefixedAddress allows marshaling an Address without 0x prefix.

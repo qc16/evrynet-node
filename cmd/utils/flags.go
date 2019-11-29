@@ -29,37 +29,39 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/fdlimit"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/dashboard"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/ethstats"
-	"github.com/ethereum/go-ethereum/les"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/metrics/influxdb"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
-	"github.com/ethereum/go-ethereum/params"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv6"
+	"github.com/evrynet-official/evrynet-client/accounts"
+	"github.com/evrynet-official/evrynet-client/accounts/keystore"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/fdlimit"
+	"github.com/evrynet-official/evrynet-client/consensus"
+	"github.com/evrynet-official/evrynet-client/consensus/clique"
+	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
+	tdmintBackend "github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/vm"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/dashboard"
+	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/eth/gasprice"
+	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/ethstats"
+	"github.com/evrynet-official/evrynet-client/les"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/evrynet-official/evrynet-client/metrics/influxdb"
+	"github.com/evrynet-official/evrynet-client/miner"
+	"github.com/evrynet-official/evrynet-client/node"
+	"github.com/evrynet-official/evrynet-client/p2p"
+	"github.com/evrynet-official/evrynet-client/p2p/discv5"
+	"github.com/evrynet-official/evrynet-client/p2p/enode"
+	"github.com/evrynet-official/evrynet-client/p2p/nat"
+	"github.com/evrynet-official/evrynet-client/p2p/netutil"
+	"github.com/evrynet-official/evrynet-client/params"
+	whisper "github.com/evrynet-official/evrynet-client/whisper/whisperv6"
 	pcsclite "github.com/gballet/go-libpcsclite"
-	cli "gopkg.in/urfave/cli.v1"
+	cli "github.com/urfave/cli"
 )
 
 var (
@@ -139,6 +141,11 @@ var (
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: eth.DefaultConfig.NetworkId,
+	}
+	GasPriceFlag = BigFlag{
+		Name:  "gasprice",
+		Usage: "GasPrice for every transaction in the network",
+		Value: eth.DefaultConfig.GasPrice,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -660,6 +667,53 @@ var (
 	WhisperRestrictConnectionBetweenLightClientsFlag = cli.BoolFlag{
 		Name:  "shh.restrict-light",
 		Usage: "Restrict connection between two whisper light clients",
+	}
+
+	// Tendermint settings
+	TendermintBlockPeriodFlag = cli.Uint64Flag{
+		Name:  "tendermint.blockperiod",
+		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
+		Value: eth.DefaultConfig.Tendermint.BlockPeriod,
+	}
+	TendermintFaultyModeFlag = cli.Uint64Flag{
+		Name:  "tendermint.faultymode",
+		Usage: "0: not faulty, 1: send fake proposal",
+		Value: eth.DefaultConfig.Tendermint.FaultyMode,
+	}
+	TendermintTimeoutProposeFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-propose",
+		Usage: "Duration waiting a propose",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPropose,
+	}
+	TendermintTimeoutProposeDeltaFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-propose-delta",
+		Usage: "Increment if timeout happens at propose step to reach eventually synchronous",
+		Value: eth.DefaultConfig.Tendermint.TimeoutProposeDelta,
+	}
+	TendermintTimeoutPrevoteFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-prevote",
+		Usage: "Duration waiting for more prevote after 2/3 received",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrevote,
+	}
+	TendermintTimeoutPrevoteDeltaFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-prevote-delta",
+		Usage: "Increment if timeout happens at prevoteWait to reach eventually synchronous",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrevoteDelta,
+	}
+	TendermintTimeoutPrecommitFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-precommit",
+		Usage: "Duration waiting for more precommit after 2/3 received",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrecommit,
+	}
+	TendermintTimeoutPrecommitDeltaFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-precommit-delta",
+		Usage: "Duration waiting to increase if precommit wait expired to reach eventually synchronous",
+		Value: eth.DefaultConfig.Tendermint.TimeoutPrecommitDelta,
+	}
+	TendermintTimeoutCommitFlag = cli.DurationFlag{
+		Name:  "tendermint.timeout-commit",
+		Usage: "Duration waiting to start round with new height",
+		Value: eth.DefaultConfig.Tendermint.TimeoutCommit,
 	}
 
 	// Metrics flags
@@ -1279,12 +1333,9 @@ func setMiner(ctx *cli.Context, cfg *miner.Config) {
 	if ctx.GlobalIsSet(MinerGasLimitFlag.Name) {
 		cfg.GasCeil = ctx.GlobalUint64(MinerGasLimitFlag.Name)
 	}
-	if ctx.GlobalIsSet(MinerLegacyGasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, MinerLegacyGasPriceFlag.Name)
-	}
-	if ctx.GlobalIsSet(MinerGasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, MinerGasPriceFlag.Name)
-	}
+	// if ctx.GlobalIsSet(MinerLegacyGasPriceFlag.Name) {
+	// 	cfg.GasPrice = GlobalBig(ctx, MinerLegacyGasPriceFlag.Name)
+	// }
 	if ctx.GlobalIsSet(MinerRecommitIntervalFlag.Name) {
 		cfg.Recommit = ctx.Duration(MinerRecommitIntervalFlag.Name)
 	}
@@ -1313,6 +1364,66 @@ func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
 			Fatalf("Invalid whitelist hash %s: %v", parts[1], err)
 		}
 		cfg.Whitelist[number] = hash
+	}
+}
+
+// setTendermint will use params from CLI for tendermint config
+// NOTE: ProposerPolicy, Epoch are used for chain, so they not allowed to inject. They will be got from genesis
+func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
+	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
+		cfg.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintFaultyModeFlag.Name) {
+		cfg.FaultyMode = ctx.GlobalUint64(TendermintFaultyModeFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutProposeFlag.Name) {
+		cfg.TimeoutPropose = ctx.GlobalDuration(TendermintTimeoutProposeFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutProposeDeltaFlag.Name) {
+		cfg.TimeoutProposeDelta = ctx.GlobalDuration(TendermintTimeoutProposeDeltaFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrevoteFlag.Name) {
+		cfg.TimeoutPrevote = ctx.GlobalDuration(TendermintTimeoutPrevoteFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrevoteDeltaFlag.Name) {
+		cfg.TimeoutPrevoteDelta = ctx.GlobalDuration(TendermintTimeoutPrevoteDeltaFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrecommitFlag.Name) {
+		cfg.TimeoutPrecommit = ctx.GlobalDuration(TendermintTimeoutPrecommitFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutPrecommitDeltaFlag.Name) {
+		cfg.TimeoutPrecommitDelta = ctx.GlobalDuration(TendermintTimeoutPrecommitDeltaFlag.Name)
+	}
+	if ctx.GlobalIsSet(TendermintTimeoutCommitFlag.Name) {
+		cfg.TimeoutCommit = ctx.GlobalDuration(TendermintTimeoutCommitFlag.Name)
+	}
+
+	if ctx.IsSet(TendermintBlockPeriodFlag.Name) {
+		cfg.BlockPeriod = ctx.Uint64(TendermintBlockPeriodFlag.Name)
+	}
+	if ctx.IsSet(TendermintFaultyModeFlag.Name) {
+		cfg.FaultyMode = ctx.Uint64(TendermintFaultyModeFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutProposeFlag.Name) {
+		cfg.TimeoutPropose = ctx.Duration(TendermintTimeoutProposeFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutProposeDeltaFlag.Name) {
+		cfg.TimeoutProposeDelta = ctx.Duration(TendermintTimeoutProposeDeltaFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrevoteFlag.Name) {
+		cfg.TimeoutPrevote = ctx.Duration(TendermintTimeoutPrevoteFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrevoteDeltaFlag.Name) {
+		cfg.TimeoutPrevoteDelta = ctx.Duration(TendermintTimeoutPrevoteDeltaFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrecommitFlag.Name) {
+		cfg.TimeoutPrecommit = ctx.Duration(TendermintTimeoutPrecommitFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutPrecommitDeltaFlag.Name) {
+		cfg.TimeoutPrecommitDelta = ctx.Duration(TendermintTimeoutPrecommitDeltaFlag.Name)
+	}
+	if ctx.IsSet(TendermintTimeoutCommitFlag.Name) {
+		cfg.TimeoutCommit = ctx.Duration(TendermintTimeoutCommitFlag.Name)
 	}
 }
 
@@ -1387,6 +1498,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	setEthash(ctx, cfg)
 	setMiner(ctx, &cfg.Miner)
 	setWhitelist(ctx, cfg)
+	setTendermint(ctx, &cfg.Tendermint)
 
 	if ctx.GlobalIsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
@@ -1404,6 +1516,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	}
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
+	}
+	if ctx.GlobalIsSet(GasPriceFlag.Name) {
+		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
 	}
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
 		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
@@ -1633,6 +1748,12 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var engine consensus.Engine
 	if config.Clique != nil {
 		engine = clique.New(config.Clique, chainDb)
+	} else if config.Tendermint != nil { // In case Clique config was not defined
+		tdmintConfig := tendermint.DefaultConfig
+		setTendermint(ctx, tdmintConfig)
+		tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(config.Tendermint.ProposerPolicy)
+		tdmintConfig.Epoch = config.Tendermint.Epoch
+		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey(), tdmintBackend.WithDB(chainDb))
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {

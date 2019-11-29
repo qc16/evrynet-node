@@ -15,15 +15,16 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package ethereum defines interfaces for interacting with Ethereum.
-package ethereum
+package evrynet
 
 import (
 	"context"
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.
@@ -119,6 +120,22 @@ type CallMsg struct {
 	GasPrice *big.Int        // wei <-> gas exchange ratio
 	Value    *big.Int        // amount of wei sent along with the call
 	Data     []byte          // input data, usually an ABI-encoded contract method invocation
+}
+
+// SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
+type SendTxArgs struct {
+	From     common.Address
+	To       *common.Address
+	Gas      *hexutil.Uint64
+	GasPrice *hexutil.Big
+	Value    *hexutil.Big
+	Nonce    *hexutil.Uint64
+	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
+	// newer name and should be preferred by clients.
+	Data     *hexutil.Bytes
+	Input    *hexutil.Bytes
+	Provider *common.Address
+	Owner    *common.Address
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by

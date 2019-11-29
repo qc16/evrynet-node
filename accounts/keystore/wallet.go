@@ -19,10 +19,10 @@ package keystore
 import (
 	"math/big"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	ethereum "github.com/evrynet-official/evrynet-client"
+	"github.com/evrynet-official/evrynet-client/accounts"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original
@@ -136,6 +136,19 @@ func (w *keystoreWallet) SignTx(account accounts.Account, tx *types.Transaction,
 	return w.keystore.SignTx(account, tx, chainID)
 }
 
+// ProviderSignTx implements accounts.Wallet, attempting to sign the given transaction
+// with the given account. If the wallet does not wrap this particular account,
+// an error is returned to avoid account leakage (even though in theory we may
+// be able to sign via our shared keystore backend).
+func (w *keystoreWallet) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	// Make sure the requested account is contained within
+	if !w.Contains(account) {
+		return nil, accounts.ErrUnknownAccount
+	}
+	// Account seems valid, request the keystore to sign
+	return w.keystore.ProviderSignTx(account, tx, chainID)
+}
+
 // SignTxWithPassphrase implements accounts.Wallet, attempting to sign the given
 // transaction with the given account using passphrase as extra authentication.
 func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
@@ -145,4 +158,15 @@ func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphra
 	}
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTxWithPassphrase(account, passphrase, tx, chainID)
+}
+
+// ProviderSignTxWithPassphrase implements accounts.Wallet, attempting to sign the given
+// transaction with the given account using passphrase as extra authentication.
+func (w *keystoreWallet) ProviderSignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	// Make sure the requested account is contained within
+	if !w.Contains(account) {
+		return nil, accounts.ErrUnknownAccount
+	}
+	// Account seems valid, request the keystore to sign
+	return w.keystore.ProviderSignTxWithPassphrase(account, passphrase, tx, chainID)
 }

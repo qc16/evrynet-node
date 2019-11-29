@@ -26,26 +26,28 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/accounts/scwallet"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/evrynet-official/evrynet-client/accounts"
+	"github.com/evrynet-official/evrynet-client/accounts/keystore"
+	"github.com/evrynet-official/evrynet-client/accounts/scwallet"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/common/math"
+	"github.com/evrynet-official/evrynet-client/consensus/clique"
+	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/rawdb"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/core/vm"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/p2p"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/evrynet-official/evrynet-client/rpc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -371,6 +373,19 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
+// providerSignTransaction sets defaults and signs the given transaction
+// NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
+// and release it after the transaction has been submitted to the tx pool
+func (s *PrivateAccountAPI) providerSignTransaction(ctx context.Context, tx *types.Transaction, passwd string, providerAddr common.Address) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: providerAddr}
+	wallet, err := s.am.Find(account)
+	if err != nil {
+		return nil, err
+	}
+	return wallet.ProviderSignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
+}
+
 // SendTransaction will create a transaction from the given arguments and
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails.
@@ -387,6 +402,23 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 		return common.Hash{}, err
 	}
 	return SubmitTransaction(ctx, s.b, signed)
+}
+
+// ProviderSignTransaction will create a transaction from the given arguments and
+// tries to sign it with the key associated with args.To. If the given passwd isn't
+// able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
+// to other nodes
+func (s *PrivateAccountAPI) ProviderSignTransaction(ctx context.Context, tx *types.Transaction, passwd string, providerAddr common.Address) (*SignTransactionResult, error) {
+	// provider will be signing transaction
+	signed, err := s.providerSignTransaction(ctx, tx, passwd, providerAddr)
+	if err != nil {
+		return nil, err
+	}
+	data, err := rlp.EncodeToBytes(signed)
+	if err != nil {
+		return nil, err
+	}
+	return &SignTransactionResult{data, signed}, nil
 }
 
 // SignTransaction will create a transaction from the given arguments and
@@ -410,11 +442,12 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 		log.Warn("Failed transaction sign attempt", "from", args.From, "to", args.To, "value", args.Value.ToInt(), "err", err)
 		return nil, err
 	}
+
 	data, err := rlp.EncodeToBytes(signed)
 	if err != nil {
 		return nil, err
 	}
-	return &SignTransactionResult{data, signed}, nil
+	return &SignTransactionResult{Raw: data, Tx: signed}, nil
 }
 
 // Sign calculates an Ethereum ECDSA signature for:
@@ -425,7 +458,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 //
 // The key used to calculate the signature is decrypted with the given password.
 //
-// https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_sign
+// https://github.com/evrynet-official/evrynet-client/wiki/Management-APIs#personal_sign
 func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr common.Address, passwd string) (hexutil.Bytes, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
@@ -453,7 +486,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 // Note, the signature must conform to the secp256k1 curve R, S and V values, where
 // the V value must be 27 or 28 for legacy reasons.
 //
-// https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_ecRecover
+// https://github.com/evrynet-official/evrynet-client/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
 	if len(sig) != 65 {
 		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
@@ -615,6 +648,24 @@ func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Addre
 		StorageHash:  storageHash,
 		StorageProof: storageProof,
 	}, state.Error()
+}
+
+// GetBlockSignerByHash return to requested extradata's infor with the fields blockProposer, commitSigner via the block's hash
+func (s *PublicBlockChainAPI) GetBlockSignerByHash(ctx context.Context, blockHash common.Hash) (map[string]interface{}, error) {
+	block, err := s.b.GetBlock(ctx, blockHash)
+	if block != nil {
+		return s.rpcOutputExtraData(block)
+	}
+	return nil, err
+}
+
+// GetBlockSignerByNumber return to requested extradata's infor with the fields blockProposer, commitSigner via the block's number
+func (s *PublicBlockChainAPI) GetBlockSignerByNumber(ctx context.Context, blockNr rpc.BlockNumber) (map[string]interface{}, error) {
+	block, err := s.b.BlockByNumber(ctx, blockNr)
+	if block != nil {
+		return s.rpcOutputExtraData(block)
+	}
+	return nil, err
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -985,6 +1036,74 @@ func RPCMarshalBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]inter
 	return fields, nil
 }
 
+// RPCMarshalExtraData converts the given extra data with (extraData, blockProposer, commitSigners to the RPC output
+func RPCMarshalExtraData(b *types.Block) (map[string]interface{}, error) {
+	blockHeader := b.Header() // copies the header once
+	fields := map[string]interface{}{
+		"rawData": hexutil.Bytes(blockHeader.Extra),
+	}
+
+	// extract the extra data from header
+	extra, err := types.ExtractTendermintExtra(blockHeader)
+	if err != nil {
+		return fields, err
+	}
+
+	// get address of block proposer
+	blockProposer, err := getSignatureAddress(sigHash(blockHeader).Bytes(), extra.Seal)
+	if err != nil {
+		return fields, err
+	}
+	fields["blockProposer"] = blockProposer
+
+	// get all committed's signer
+	var commitSigner []common.Address
+	proposalSeal := utils.PrepareCommittedSeal(blockHeader.Hash())
+	log.Info("RPCMarshalExtraData", "committedSeal", extra.CommittedSeal)
+	for _, seal := range extra.CommittedSeal {
+		// Get the original address by seal and parent block hash
+		addr, err := getSignatureAddress(proposalSeal, seal)
+		if err != nil {
+			return fields, err
+		}
+		commitSigner = append(commitSigner, addr)
+	}
+
+	fields["commitSigners"] = commitSigner
+
+	return fields, nil
+}
+
+func sigHash(header *types.Header) (hash common.Hash) {
+	hasher := sha3.New256()
+
+	// Clean seal is required for calculating proposer seal.
+	rlp.Encode(hasher, types.TendermintFilteredHeader(header, false))
+	hasher.Sum(hash[:0])
+
+	return hash
+}
+
+// GetSignatureAddress gets the signer address from the signature
+func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
+	// 1. Keccak data
+	hashData := crypto.Keccak256(data)
+	// 2. Recover public key
+	pubkey, err := crypto.SigToPub(hashData, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func (s *PublicBlockChainAPI) rpcOutputExtraData(b *types.Block) (map[string]interface{}, error) {
+	fields, err := RPCMarshalExtraData(b)
+	if err != nil {
+		return nil, err
+	}
+	return fields, err
+}
+
 // rpcOutputBlock uses the generalized output filler, then adds the total difficulty field, which requires
 // a `PublicBlockchainAPI`.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
@@ -1009,9 +1128,17 @@ type RPCTransaction struct {
 	To               *common.Address `json:"to"`
 	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
-	V                *hexutil.Big    `json:"v"`
-	R                *hexutil.Big    `json:"r"`
-	S                *hexutil.Big    `json:"s"`
+
+	Owner    common.Address `json:"owner"`
+	Provider common.Address `json:"provider"`
+
+	V *hexutil.Big `json:"v"`
+	R *hexutil.Big `json:"r"`
+	S *hexutil.Big `json:"s"`
+
+	PV *hexutil.Big `json:"pv"`
+	PR *hexutil.Big `json:"pr"`
+	PS *hexutil.Big `json:"ps"`
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1023,6 +1150,8 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	}
 	from, _ := types.Sender(signer, tx)
 	v, r, s := tx.RawSignatureValues()
+
+	PV, PR, PS := tx.RawProviderSignatureValues()
 
 	result := &RPCTransaction{
 		From:     from,
@@ -1036,7 +1165,22 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		V:        (*hexutil.Big)(v),
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
+
+		PV: (*hexutil.Big)(PV),
+		PR: (*hexutil.Big)(PR),
+		PS: (*hexutil.Big)(PS),
 	}
+
+	ownerAddr := tx.Owner()
+	if ownerAddr != nil {
+		result.Owner = *ownerAddr
+	}
+
+	providerAddr := tx.Provider()
+	if providerAddr != nil {
+		result.Provider = *providerAddr
+	}
+
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
 		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
@@ -1226,6 +1370,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
 		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
 		"contractAddress":   nil,
+		"gasPayer":          nil,
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
 	}
@@ -1243,6 +1388,9 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 	if receipt.ContractAddress != (common.Address{}) {
 		fields["contractAddress"] = receipt.ContractAddress
 	}
+	if receipt.GasPayer != (common.Address{}) {
+		fields["gasPayer"] = receipt.GasPayer
+	}
 	return fields, nil
 }
 
@@ -1259,6 +1407,19 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	return wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
 }
 
+// providerSign is a helper function that signs a transaction with the private key of the given address.
+func (s *PublicTransactionPoolAPI) providerSign(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	// Request the wallet to sign the transaction from provider
+	return wallet.ProviderSignTx(account, tx, s.b.ChainConfig().ChainID)
+}
+
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
 	From     common.Address  `json:"from"`
@@ -1269,8 +1430,10 @@ type SendTxArgs struct {
 	Nonce    *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.
-	Data  *hexutil.Bytes `json:"data"`
-	Input *hexutil.Bytes `json:"input"`
+	Data     *hexutil.Bytes  `json:"data"`
+	Input    *hexutil.Bytes  `json:"input"`
+	Owner    *common.Address `json:"owner" rlp:"nil"`
+	Provider *common.Address `json:"provider" rlp:"nil"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
@@ -1340,7 +1503,14 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 		input = *args.Data
 	}
 	if args.To == nil {
-		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
+		var option types.CreateAccountOption
+		if args.Owner != nil {
+			option.OwnerAddress = args.Owner
+		}
+		if args.Provider != nil {
+			option.ProviderAddress = args.Provider
+		}
+		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input, option)
 	}
 	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
 }
@@ -1462,6 +1632,21 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 		return nil, err
 	}
 	return &SignTransactionResult{data, tx}, nil
+}
+
+// ProviderSignTransaction will sign the given transaction with the from account.
+// The node needs to have the private key of the account corresponding with
+// the given from address and it needs to be unlocked.
+func (s *PublicTransactionPoolAPI) ProviderSignTransaction(ctx context.Context, encodedTx hexutil.Bytes, providerAddr common.Address) (*RPCTransaction, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return nil, err
+	}
+	txSigned, err := s.providerSign(providerAddr, tx)
+	if err != nil {
+		return nil, err
+	}
+	return newRPCPendingTransaction(txSigned), nil
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool

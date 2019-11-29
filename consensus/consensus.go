@@ -20,11 +20,12 @@ package consensus
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/p2p"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
@@ -50,6 +51,11 @@ type ChainReader interface {
 }
 
 // Engine is an algorithm agnostic consensus engine.
+// Note: Prepare, Finalize and FinalizeAndAssemple are used in order to
+// populate all of the necessary header fields including the state root.
+// Remember that in order to have state root, the state db must be updated
+// with some post transaction effect such as block reward or anything, up
+// to the consensus algorithm.
 type Engine interface {
 	// Author retrieves the Ethereum address of the account that minted the given
 	// block, which may be different from the header's coinbase if a consensus
@@ -96,13 +102,31 @@ type Engine interface {
 		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error)
 
 	// Seal generates a new sealing request for the given input block and pushes
-	// the result into the given channel.
+	// the result into the `results` channel.
+	//
+	// This function will be invoked immediately after the mining worker has a new
+	//     mining task. It also means this function can be invoked multiple times
+	//     for the same block height.
+	//
+	// - block: this block is expected to be modified (normally its header) to
+	//     to including sealing requirement of the consensus engine. For example
+	//     the nonce, mixhash and block hash will be updated in ethash, extradata
+	//     and block hash will be updated in clique...
+	// - results channel: this channel expects to receive 1 or more blocks after
+	//     they are sealed. Those blocks will be checked against the chain and
+	//     used to append to the chain, the state tree will be updated
+	//     immediately then.
+	// - stop channel: this channel will be closed when the miner worker has
+	//     another mining task (block). A new mining task can appear during
+	//     the current one.
 	//
 	// Note, the method returns immediately and will send the result async. More
 	// than one result may also be returned depending on the consensus algorithm.
 	Seal(chain ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error
 
 	// SealHash returns the hash of a block prior to it being sealed.
+	// This hash will be used BY miner worker as the mining task identifier (mining is not limited to POW, it refers to the process to
+	// come to a consensus of a block to add to the chain).
 	SealHash(header *types.Header) common.Hash
 
 	// CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
@@ -122,4 +146,30 @@ type PoW interface {
 
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
+}
+
+// Tendermint is a consensus engine to avoid byzantine failure
+type Tendermint interface {
+	Engine
+
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block) error
+
+	// Stop stops the engine
+	Stop() error
+
+	//Address return the coinbase of the engine
+	Address() common.Address
+}
+
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+	// HandleNewChainHead handles a new head block comes
+	HandleNewChainHead(blockNumber *big.Int) error
+
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
+
+	// SetBroadcaster sets the broadcaster to send message to peers
+	SetBroadcaster(Broadcaster)
 }

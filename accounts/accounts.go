@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"math/big"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
+	ethereum "github.com/evrynet-official/evrynet-client"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/event"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -147,8 +147,24 @@ type Wallet interface {
 	// the account in a keystore).
 	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
+	// ProviderSignTx requests the wallet to sign the given transaction.
+	//
+	// It looks up the account specified either solely via its address contained within,
+	// or optionally with the aid of any location metadata from the embedded URL field.
+	//
+	// If the wallet requires additional authentication to sign the request (e.g.
+	// a password to decrypt the account, or a PIN code to verify the transaction),
+	// an AuthNeededError instance will be returned, containing infos for the user
+	// about which fields or actions are needed. The user may retry by providing
+	// the needed details via ProviderSignTxWithPassphrase, or by other means (e.g. unlock
+	// the account in a keystore).
+	ProviderSignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
 	// SignTxWithPassphrase is identical to SignTx, but also takes a password
 	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
+	// ProviderSignTxWithPassphrase is identical to ProviderSignTx, but also takes a password
+	ProviderSignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can

@@ -25,15 +25,15 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus"
+	"github.com/evrynet-official/evrynet-client/consensus/misc"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 const (
@@ -264,12 +264,25 @@ func (w *worker) pendingBlock() *types.Block {
 
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) start() {
+	if tendermint, ok := w.engine.(consensus.Tendermint); ok {
+		log.Info("Start Tendermint worker")
+		err := tendermint.Start(w.chain, w.chain.CurrentBlock)
+		if err != nil {
+			log.Error("Failed to start Tendermint engine", "err", err)
+			return
+		}
+	}
 	atomic.StoreInt32(&w.running, 1)
 	w.startCh <- struct{}{}
 }
 
 // stop sets the running status as 0.
 func (w *worker) stop() {
+	if tendermint, ok := w.engine.(consensus.Tendermint); ok {
+		if err := tendermint.Stop(); err != nil {
+			log.Error("Failed to stop Tendermint engine", "err", err)
+		}
+	}
 	atomic.StoreInt32(&w.running, 0)
 }
 
@@ -345,6 +358,9 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			commit(false, commitInterruptNewHead)
 
 		case head := <-w.chainHeadCh:
+			if h, ok := w.engine.(consensus.Handler); ok {
+				h.HandleNewChainHead(head.Block.Number())
+			}
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -352,7 +368,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
-			if w.isRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0) {
+			if w.isRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0 || w.chainConfig.Tendermint == nil) {
 				// Short circuit if no new transaction arrives.
 				if atomic.LoadInt32(&w.newTxs) == 0 {
 					timer.Reset(recommit)
@@ -466,9 +482,9 @@ func (w *worker) mainLoop() {
 				w.commitTransactions(txset, coinbase, nil)
 				w.updateSnapshot()
 			} else {
-				// If clique is running in dev mode(period is 0), disable
+				// If clique|tendermint is running in dev mode(period is 0), disable
 				// advance sealing here.
-				if w.chainConfig.Clique != nil && w.chainConfig.Clique.Period == 0 {
+				if w.chainConfig.Clique != nil && w.chainConfig.Clique.Period == 0 && w.chainConfig.Tendermint != nil {
 					w.commitNewWork(nil, true, time.Now().Unix())
 				}
 			}
@@ -527,6 +543,7 @@ func (w *worker) taskLoop() {
 			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
 				log.Warn("Block sealing failed", "err", err)
 			}
+
 		case <-w.exitCh:
 			interrupt()
 			return
@@ -853,6 +870,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		}
 		header.Coinbase = w.coinbase
 	}
+
 	if err := w.engine.Prepare(w.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return

@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/evrynet-official/evrynet-client/accounts/keystore"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/log"
 )
 
 // deployNode creates a new node configuration based on some user input.
@@ -118,7 +118,7 @@ func (w *wizard) deployNode(boot bool) {
 				fmt.Printf("What address should the miner use? (default = %s)\n", infos.etherbase)
 				infos.etherbase = w.readDefaultAddress(common.HexToAddress(infos.etherbase)).Hex()
 			}
-		} else if w.conf.Genesis.Config.Clique != nil {
+		} else if w.conf.Genesis.Config.Clique != nil || w.conf.Genesis.Config.Tendermint != nil {
 			// If a previous signer was already set, offer to reuse it
 			if infos.keyJSON != "" {
 				if key, err := keystore.DecryptKey([]byte(infos.keyJSON), infos.keyPass); err != nil {
@@ -131,7 +131,7 @@ func (w *wizard) deployNode(boot bool) {
 					}
 				}
 			}
-			// Clique based signers need a keyfile and unlock password, ask if unavailable
+			// Clique & Tendermint based signers need a keyfile and unlock password, ask if unavailable
 			if infos.keyJSON == "" {
 				fmt.Println()
 				fmt.Println("Please paste the signer's key JSON:")

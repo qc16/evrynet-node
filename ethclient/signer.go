@@ -20,8 +20,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
 // senderFromServer is a types.Signer that remembers the sender address returned by the RPC
@@ -49,6 +49,10 @@ func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error)
 		return common.Address{}, errNotCached
 	}
 	return s.addr, nil
+}
+
+func (s *senderFromServer) Provider(tx *types.Transaction) (common.Address, error) {
+	return common.Address{}, errors.New("no provdier with senderFromServer")
 }
 
 func (s *senderFromServer) Hash(tx *types.Transaction) common.Hash {

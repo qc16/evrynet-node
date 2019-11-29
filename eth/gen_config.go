@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/miner"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/consensus/ethash"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/eth/gasprice"
+	"github.com/evrynet-official/evrynet-client/miner"
 )
 
 // MarshalTOML marshals as TOML.
@@ -19,6 +19,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	type Config struct {
 		Genesis                 *core.Genesis `toml:",omitempty"`
 		NetworkId               uint64
+		GasPrice                *big.Int
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
 		NoPrefetch              bool
@@ -49,6 +50,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	var enc Config
 	enc.Genesis = c.Genesis
 	enc.NetworkId = c.NetworkId
+	enc.GasPrice = c.GasPrice
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
 	enc.NoPrefetch = c.NoPrefetch
@@ -83,6 +85,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type Config struct {
 		Genesis                 *core.Genesis `toml:",omitempty"`
 		NetworkId               *uint64
+		GasPrice                *big.Int
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
 		NoPrefetch              *bool
@@ -119,6 +122,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.NetworkId != nil {
 		c.NetworkId = *dec.NetworkId
+	}
+	if dec.GasPrice != nil {
+		c.GasPrice = dec.GasPrice
 	}
 	if dec.SyncMode != nil {
 		c.SyncMode = *dec.SyncMode

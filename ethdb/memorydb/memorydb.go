@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/ethdb"
 )
 
 var (
@@ -340,4 +340,32 @@ func (it *iterator) Value() []byte {
 // be called multiple times without causing error.
 func (it *iterator) Release() {
 	it.keys, it.values = nil, nil
+}
+
+func (db *Database) HasAncient(kind string, number uint64) (bool, error) {
+	panic("implement me")
+}
+
+func (db *Database) Ancient(kind string, number uint64) ([]byte, error) {
+	panic("implement me")
+}
+
+func (db *Database) Ancients() (uint64, error) {
+	panic("implement me")
+}
+
+func (db *Database) AncientSize(kind string) (uint64, error) {
+	panic("implement me")
+}
+
+func (db *Database) AppendAncient(number uint64, hash, header, body, receipt, td []byte) error {
+	panic("implement me")
+}
+
+func (db *Database) TruncateAncients(n uint64) error {
+	panic("implement me")
+}
+
+func (db *Database) Sync() error {
+	panic("implement me")
 }

@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 var (
@@ -50,6 +50,16 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 		signer = FrontierSigner{}
 	}
 	return signer
+}
+
+// ProviderSignTx signs the transaction using the given signer and private key
+func ProviderSignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
+	h := s.Hash(tx)
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+	return tx.WithProviderSignature(s, sig)
 }
 
 // SignTx signs the transaction using the given signer and private key
@@ -88,11 +98,34 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 	return addr, nil
 }
 
+// Provider returns the address derived from the signature (V, R, S) using secp256k1
+// If there is no provider signature, it will return nil address pointer and nill error.
+func Provider(signer Signer, tx *Transaction) (*common.Address, error) {
+	// Not caching provider for now
+	// Short circuit
+	if (tx.data.PV == nil || tx.data.PV.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PR == nil || tx.data.PR.Cmp(big.NewInt(0)) == 0) &&
+		(tx.data.PS == nil || tx.data.PS.Cmp(big.NewInt(0)) == 0) {
+		return nil, nil
+	}
+	provider, err := signer.Provider(tx)
+	if err != nil {
+		return nil, err
+	}
+	// if it recovered as zero address
+	if provider == (common.Address{}) {
+		return nil, nil
+	}
+	return &provider, nil
+}
+
 // Signer encapsulates transaction signature handling. Note that this interface is not a
 // stable API and may change at any time to accommodate new protocol rules.
 type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
+	// Provider returns the provider address of the transaction
+	Provider(tx *Transaction) (common.Address, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
 	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
@@ -100,6 +133,8 @@ type Signer interface {
 	Hash(tx *Transaction) common.Hash
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
+
+	//TODO: Implement HashWithSenderSignature
 }
 
 // EIP155Transaction implements Signer using the EIP155 rules.
@@ -136,6 +171,19 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V, true)
 }
 
+//Provider return the Address of provider based on PV, PS, PR
+func (s EIP155Signer) Provider(tx *Transaction) (common.Address, error) {
+	if !tx.ProviderProtected() {
+		return HomesteadSigner{}.Provider(tx)
+	}
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return common.Address{}, ErrInvalidChainId
+	}
+	V := new(big.Int).Sub(tx.data.PV, s.chainIdMul)
+	V.Sub(V, big8)
+	return recoverPlain(s.Hash(tx), tx.data.PR, tx.data.PS, V, true)
+}
+
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
@@ -153,6 +201,17 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
+	if tx.data.Provider == nil {
+		return rlpHash([]interface{}{
+			tx.data.AccountNonce,
+			tx.data.Price,
+			tx.data.GasLimit,
+			tx.data.Recipient,
+			tx.data.Amount,
+			tx.data.Payload,
+			s.chainId, uint(0), uint(0),
+		})
+	}
 	return rlpHash([]interface{}{
 		tx.data.AccountNonce,
 		tx.data.Price,
@@ -160,8 +219,11 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
+		tx.data.Owner,
+		tx.data.Provider,
 		s.chainId, uint(0), uint(0),
 	})
+
 }
 
 // HomesteadTransaction implements TransactionInterface using the
@@ -177,6 +239,12 @@ func (s HomesteadSigner) Equal(s2 Signer) bool {
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
 	return hs.FrontierSigner.SignatureValues(tx, sig)
+}
+
+//Provider return the Address of provider based on PV, PS, PR
+func (hs HomesteadSigner) Provider(tx *Transaction) (common.Address, error) {
+	return recoverPlain(hs.Hash(tx), tx.data.PR, tx.data.PS, tx.data.PV, true)
+
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
@@ -205,6 +273,17 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
+	if tx.data.Provider == nil {
+		return rlpHash([]interface{}{
+			tx.data.AccountNonce,
+			tx.data.Price,
+			tx.data.GasLimit,
+			tx.data.Recipient,
+			tx.data.Amount,
+			tx.data.Payload,
+		})
+	}
+
 	return rlpHash([]interface{}{
 		tx.data.AccountNonce,
 		tx.data.Price,
@@ -212,7 +291,13 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
+		tx.data.Owner,
+		tx.data.Provider,
 	})
+}
+
+func (fs FrontierSigner) Provider(tx *Transaction) (common.Address, error) {
+	return recoverPlain(fs.Hash(tx), tx.data.PR, tx.data.PS, tx.data.PV, false)
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
@@ -220,7 +305,7 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
-	if Vb.BitLen() > 8 {
+	if Vb == nil || Vb.BitLen() > 8 {
 		return common.Address{}, ErrInvalidSig
 	}
 	V := byte(Vb.Uint64() - 27)

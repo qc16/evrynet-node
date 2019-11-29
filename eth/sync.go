@@ -21,11 +21,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/p2p/enode"
 )
 
 const (
@@ -38,12 +38,12 @@ const (
 )
 
 type txsync struct {
-	p   *peer
+	p   *Peer
 	txs []*types.Transaction
 }
 
-// syncTransactions starts sending all currently pending transactions to the given peer.
-func (pm *ProtocolManager) syncTransactions(p *peer) {
+// syncTransactions starts sending all currently pending transactions to the given Peer.
+func (pm *ProtocolManager) syncTransactions(p *Peer) {
 	var txs types.Transactions
 	pending, _ := pm.txpool.Pending()
 	for _, batch := range pending {
@@ -59,9 +59,9 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 }
 
 // txsyncLoop takes care of the initial transaction sync for each new
-// connection. When a new peer appears, we relay all currently pending
+// connection. When a new Peer appears, we relay all currently pending
 // transactions. In order to minimise egress bandwidth usage, we send
-// the transactions in small packs to one peer at a time.
+// the transactions in small packs to one Peer at a time.
 func (pm *ProtocolManager) txsyncLoop() {
 	var (
 		pending = make(map[enode.ID]*txsync)
@@ -160,13 +160,13 @@ func (pm *ProtocolManager) syncer() {
 	}
 }
 
-// synchronise tries to sync up our local block chain with a remote peer.
-func (pm *ProtocolManager) synchronise(peer *peer) {
+// synchronise tries to sync up our local block chain with a remote Peer.
+func (pm *ProtocolManager) synchronise(peer *Peer) {
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
 	}
-	// Make sure the peer's TD is higher than our own
+	// Make sure the Peer's TD is higher than our own
 	currentBlock := pm.blockchain.CurrentBlock()
 	td := pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 
@@ -189,7 +189,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		mode = downloader.FastSync
 	}
 	if mode == downloader.FastSync {
-		// Make sure the peer's total difficulty we are synchronizing is higher.
+		// Make sure the Peer's total difficulty we are synchronizing is higher.
 		if pm.blockchain.GetTdByHash(pm.blockchain.CurrentFastBlock().Hash()).Cmp(pTd) >= 0 {
 			return
 		}

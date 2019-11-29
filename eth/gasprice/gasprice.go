@@ -22,11 +22,11 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
 var maxPrice = big.NewInt(500 * params.GWei)
@@ -34,6 +34,7 @@ var maxPrice = big.NewInt(500 * params.GWei)
 type Config struct {
 	Blocks     int
 	Percentile int
+	GasPrice   *big.Int
 	Default    *big.Int `toml:",omitempty"`
 }
 
@@ -41,6 +42,7 @@ type Config struct {
 // blocks. Suitable for both light and full clients.
 type Oracle struct {
 	backend   ethapi.Backend
+	gasPrice  *big.Int
 	lastHead  common.Hash
 	lastPrice *big.Int
 	cacheLock sync.RWMutex
@@ -65,6 +67,7 @@ func NewOracle(backend ethapi.Backend, params Config) *Oracle {
 	}
 	return &Oracle{
 		backend:     backend,
+		gasPrice:    params.GasPrice,
 		lastPrice:   params.Default,
 		checkBlocks: blocks,
 		maxEmpty:    blocks / 2,
@@ -76,75 +79,8 @@ func NewOracle(backend ethapi.Backend, params Config) *Oracle {
 // SuggestPrice returns the recommended gas price.
 func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	gpo.cacheLock.RLock()
-	lastHead := gpo.lastHead
-	lastPrice := gpo.lastPrice
-	gpo.cacheLock.RUnlock()
-
-	head, _ := gpo.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
-	headHash := head.Hash()
-	if headHash == lastHead {
-		return lastPrice, nil
-	}
-
-	gpo.fetchLock.Lock()
-	defer gpo.fetchLock.Unlock()
-
-	// try checking the cache again, maybe the last fetch fetched what we need
-	gpo.cacheLock.RLock()
-	lastHead = gpo.lastHead
-	lastPrice = gpo.lastPrice
-	gpo.cacheLock.RUnlock()
-	if headHash == lastHead {
-		return lastPrice, nil
-	}
-
-	blockNum := head.Number.Uint64()
-	ch := make(chan getBlockPricesResult, gpo.checkBlocks)
-	sent := 0
-	exp := 0
-	var blockPrices []*big.Int
-	for sent < gpo.checkBlocks && blockNum > 0 {
-		go gpo.getBlockPrices(ctx, types.MakeSigner(gpo.backend.ChainConfig(), big.NewInt(int64(blockNum))), blockNum, ch)
-		sent++
-		exp++
-		blockNum--
-	}
-	maxEmpty := gpo.maxEmpty
-	for exp > 0 {
-		res := <-ch
-		if res.err != nil {
-			return lastPrice, res.err
-		}
-		exp--
-		if res.price != nil {
-			blockPrices = append(blockPrices, res.price)
-			continue
-		}
-		if maxEmpty > 0 {
-			maxEmpty--
-			continue
-		}
-		if blockNum > 0 && sent < gpo.maxBlocks {
-			go gpo.getBlockPrices(ctx, types.MakeSigner(gpo.backend.ChainConfig(), big.NewInt(int64(blockNum))), blockNum, ch)
-			sent++
-			exp++
-			blockNum--
-		}
-	}
-	price := lastPrice
-	if len(blockPrices) > 0 {
-		sort.Sort(bigIntArray(blockPrices))
-		price = blockPrices[(len(blockPrices)-1)*gpo.percentile/100]
-	}
-	if price.Cmp(maxPrice) > 0 {
-		price = new(big.Int).Set(maxPrice)
-	}
-
-	gpo.cacheLock.Lock()
-	gpo.lastHead = headHash
-	gpo.lastPrice = price
-	gpo.cacheLock.Unlock()
-	return price, nil
+	defer gpo.cacheLock.RUnlock()
+	return gpo.gasPrice, nil
 }
 
 type getBlockPricesResult struct {

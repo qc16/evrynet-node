@@ -19,13 +19,13 @@ package vm
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
 )
 
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
-	CreateAccount(common.Address)
+	CreateAccount(common.Address, ...types.CreateAccountOption)
 
 	SubBalance(common.Address, *big.Int)
 	AddBalance(common.Address, *big.Int)

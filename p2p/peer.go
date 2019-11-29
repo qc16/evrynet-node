@@ -25,12 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common/mclock"
+	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/p2p/enode"
+	"github.com/evrynet-official/evrynet-client/p2p/enr"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 var (
@@ -119,6 +119,15 @@ type Peer struct {
 func NewPeer(id enode.ID, name string, caps []Cap) *Peer {
 	pipe, _ := net.Pipe()
 	node := enode.SignNull(new(enr.Record), id)
+	conn := &conn{fd: pipe, transport: nil, node: node, caps: caps, name: name}
+	peer := newPeer(log.Root(), conn, nil)
+	close(peer.closed) // ensures Disconnect doesn't block
+	return peer
+}
+
+// NewPeerFromNode returns a peer for testing purposes.
+func NewPeerFromNode(node *enode.Node, name string, caps []Cap) *Peer {
+	pipe, _ := net.Pipe()
 	conn := &conn{fd: pipe, transport: nil, node: node, caps: caps, name: name}
 	peer := newPeer(log.Root(), conn, nil)
 	close(peer.closed) // ensures Disconnect doesn't block

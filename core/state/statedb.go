@@ -24,13 +24,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/evrynet-official/evrynet-client/trie"
 )
 
 type revision struct {
@@ -217,6 +217,23 @@ func (self *StateDB) Exist(addr common.Address) bool {
 func (self *StateDB) Empty(addr common.Address) bool {
 	so := self.getStateObject(addr)
 	return so == nil || so.empty()
+}
+
+// Get owner address corresponding to an address
+func (self *StateDB) GetOwner(addr common.Address) *common.Address {
+	if so := self.getStateObject(addr); so != nil {
+		return so.OwnerAddress()
+	}
+	return nil
+}
+
+// GetProviders returns providers of account
+func (self *StateDB) GetProviders(addr common.Address) []*common.Address {
+	so := self.getStateObject(addr)
+	if so != nil {
+		return so.ProviderAddresses()
+	}
+	return []*common.Address{}
 }
 
 // Retrieve the balance from the given address or 0 if object not found
@@ -461,8 +478,13 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 	}
 	var data Account
 	if err := rlp.DecodeBytes(enc, &data); err != nil {
-		log.Error("Failed to decode state object", "addr", addr, "err", err)
-		return nil
+		log.Debug("Failed to decode state object, fall back to AccountWithoutProvider", "addr", addr, "err", err)
+		var dataWithoutProvider AccountWithoutProvider
+		if retryErr := rlp.DecodeBytes(enc, &dataWithoutProvider); retryErr != nil {
+			log.Error("Failed to decode state object without provider", "addr", addr, "err", retryErr)
+			return nil
+		}
+		data = dataWithoutProvider.ToAccount()
 	}
 	// Insert into the live set
 	obj := newObject(s, addr, data)
@@ -485,9 +507,20 @@ func (self *StateDB) GetOrNewStateObject(addr common.Address) *stateObject {
 
 // createObject creates a new state object. If there is an existing account with
 // the given address, it is overwritten and returned as the second return value.
-func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) {
+func (self *StateDB) createObject(addr common.Address, opts ...types.CreateAccountOption) (newobj, prev *stateObject) {
 	prev = self.getStateObject(addr)
-	newobj = newObject(self, addr, Account{})
+	var account Account
+	if len(opts) > 0 {
+		log.Info("got optional parameters, take only the first Option, ignore the rest", opts)
+		account = Account{
+			OwnerAddress: opts[0].OwnerAddress,
+		}
+		if opts[0].ProviderAddress != nil {
+			account.ProviderAddresses = []*common.Address{opts[0].ProviderAddress}
+		}
+	}
+	newobj = newObject(self, addr, account)
+
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.journal.append(createObjectChange{account: &addr})
@@ -508,8 +541,9 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *stateObjec
 //   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
-func (self *StateDB) CreateAccount(addr common.Address) {
-	newObj, prev := self.createObject(addr)
+func (self *StateDB) CreateAccount(addr common.Address, opts ...types.CreateAccountOption) {
+	// check if deploy enterprise smartcontract
+	newObj, prev := self.createObject(addr, opts...)
 	if prev != nil {
 		newObj.setBalance(prev.data.Balance)
 	}
@@ -561,7 +595,7 @@ func (self *StateDB) Copy() *StateDB {
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
-		// As documented [here](https://github.com/ethereum/go-ethereum/pull/16485#issuecomment-380438527),
+		// As documented [here](https://github.com/evrynet-official/evrynet-client/pull/16485#issuecomment-380438527),
 		// and in the Finalise-method, there is a case where an object is in the journal but not
 		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
 		// nil

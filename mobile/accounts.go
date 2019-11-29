@@ -23,10 +23,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/evrynet-official/evrynet-client/accounts"
+	"github.com/evrynet-official/evrynet-client/accounts/keystore"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/crypto"
 )
 
 const (
@@ -141,6 +141,19 @@ func (ks *KeyStore) SignTxPassphrase(account *Account, passphrase string, tx *Tr
 		chainID = new(BigInt)
 	}
 	signed, err := ks.keystore.SignTxWithPassphrase(account.account, passphrase, tx.tx, chainID.bigint)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{signed}, nil
+}
+
+// ProviderSignTxPassphrase signs the transaction if the private key matching the
+// given address can be decrypted with the given passphrase.
+func (ks *KeyStore) ProviderSignTxPassphrase(account *Account, passphrase string, tx *Transaction, chainID *BigInt) (*Transaction, error) {
+	if chainID == nil { // Null passed from mobile app
+		chainID = new(BigInt)
+	}
+	signed, err := ks.keystore.ProviderSignTxWithPassphrase(account.account, passphrase, tx.tx, chainID.bigint)
 	if err != nil {
 		return nil, err
 	}

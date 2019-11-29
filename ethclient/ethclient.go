@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
+	ethereum "github.com/evrynet-official/evrynet-client"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.
@@ -86,6 +86,28 @@ func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Blo
 // if you don't need all transactions or uncle headers.
 func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	return ec.getBlock(ctx, "eth_getBlockByNumber", toBlockNumArg(number), true)
+}
+
+// GetBlockSignerByNumber returns datas from the current extra data about (blockSigner and commitSigners)
+// the input is block's number
+func (ec *Client) GetBlockSignerByNumber(ctx context.Context, number *big.Int) (*ExtraDataDetails, error) {
+	var json *ExtraDataDetails
+	err := ec.c.CallContext(ctx, &json, "eth_getBlockSignerByNumber", toBlockNumArg(number))
+	if err == nil && json == nil {
+		err = ethereum.NotFound
+	}
+	return json, err
+}
+
+// GetBlockSignerByHash returns datas from the current extra data about (blockSigner and commitSigners)
+// the input is block's hash
+func (ec *Client) GetBlockSignerByHash(ctx context.Context, hash common.Hash) (*ExtraDataDetails, error) {
+	var json *ExtraDataDetails
+	err := ec.c.CallContext(ctx, &json, "eth_getBlockSignerByHash", hash)
+	if err == nil && json == nil {
+		err = ethereum.NotFound
+	}
+	return json, err
 }
 
 type rpcBlock struct {
@@ -178,6 +200,26 @@ func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 		err = ethereum.NotFound
 	}
 	return head, err
+}
+
+// ExtraDataDetails is a details for the extradata of a block
+type ExtraDataDetails struct {
+	RawData       hexutil.Bytes     `json:"rawData"`
+	BlockProposer *common.Address   `json:"blockProposer"`
+	CommitSigners []*common.Address `json:"commitSigners"`
+}
+
+// UnmarshalJSON unmarshals from JSON.
+func (h *ExtraDataDetails) UnmarshalJSON(input []byte) error {
+	type extraDataDetails ExtraDataDetails
+	var dec extraDataDetails
+	if err := json.Unmarshal(input, &dec); err != nil {
+		return err
+	}
+	h.RawData = dec.RawData
+	h.BlockProposer = dec.BlockProposer
+	h.CommitSigners = dec.CommitSigners
+	return nil
 }
 
 type rpcTransaction struct {
@@ -505,6 +547,16 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64
 	return uint64(hex), nil
 }
 
+// SendTx injects args transaction into the pending pool for execution.
+//
+// If the transaction was a contract creation use the TransactionReceipt method to get the
+// contract address after the transaction has been mined.
+func (ec *Client) SendTx(ctx context.Context, args ethereum.SendTxArgs) (common.Hash, error) {
+	var hash common.Hash
+	err := ec.c.CallContext(ctx, &hash, "eth_sendTransaction", toSendTxArgs(args))
+	return hash, err
+}
+
 // SendTransaction injects a signed transaction into the pending pool for execution.
 //
 // If the transaction was a contract creation use the TransactionReceipt method to get the
@@ -515,6 +567,27 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 		return err
 	}
 	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
+}
+
+// ProviderSignTx allows request from provider to sign transaction.
+// Please note that the provider account must be unlocked prior to run this function
+func (ec *Client) ProviderSignTx(ctx context.Context, tx *types.Transaction, providerAddr *common.Address) (*types.Transaction, error) {
+	if providerAddr == nil {
+		return nil, errors.New("Providers address is required")
+	}
+	data, err := rlp.EncodeToBytes(tx)
+	if err != nil {
+		return nil, err
+	}
+	var json *rpcTransaction
+	err = ec.c.CallContext(ctx, &json, "eth_providerSignTransaction", common.ToHex(data), providerAddr.Hex())
+	if err != nil {
+		return nil, err
+	}
+	if json == nil {
+		return nil, ethereum.NotFound
+	}
+	return json.tx, nil
 }
 
 func toCallArg(msg ethereum.CallMsg) interface{} {
@@ -534,5 +607,37 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
+	return arg
+}
+
+func toSendTxArgs(args ethereum.SendTxArgs) interface{} {
+	arg := map[string]interface{}{
+		"from": args.From,
+	}
+	if args.To != nil {
+		arg["to"] = args.To
+	}
+	if args.Nonce != nil {
+		arg["nonce"] = args.Nonce
+	}
+	if args.Value != nil {
+		arg["value"] = args.Value
+	}
+	if args.Data != nil {
+		arg["data"] = args.Data
+	}
+	if args.GasPrice != nil {
+		arg["gasPrice"] = args.GasPrice
+	}
+	if args.Gas != nil {
+		arg["gas"] = args.Gas
+	}
+	if args.Owner != nil {
+		arg["Owner"] = args.Owner
+	}
+	if args.Provider != nil {
+		arg["provider"] = args.Provider
+	}
+
 	return arg
 }

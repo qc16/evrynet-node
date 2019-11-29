@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/log"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -95,6 +95,25 @@ func (m *txSortedMap) Forward(threshold uint64) types.Transactions {
 		m.cache = m.cache[len(removed):]
 	}
 	return removed
+}
+
+//RemoveTxs removes a list of tx with corresponding nonces from its sorted Map
+func (m *txSortedMap) RemoveTxs(nonces []uint64) {
+	if len(nonces) == 0 {
+		return
+	}
+	for _, nonce := range nonces {
+		delete(m.items, nonce)
+	}
+	// If transactions were removed, the heap and cache are ruined
+
+	*m.index = make([]uint64, 0, len(m.items))
+	for nonce := range m.items {
+		*m.index = append(*m.index, nonce)
+	}
+	heap.Init(m.index)
+
+	m.cache = nil
 }
 
 // Filter iterates over the list of transactions and removes all of them for which

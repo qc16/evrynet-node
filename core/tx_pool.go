@@ -25,14 +25,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/prque"
+	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/evrynet-official/evrynet-client/params"
 )
 
 const (
@@ -41,8 +42,18 @@ const (
 )
 
 var (
+	// ErrOwnerReqired is returned if the transaction to create contract with a provider but not contains an owner.
+	ErrOwnerReqired = errors.New("owner is required")
+
 	// ErrInvalidSender is returned if the transaction contains an invalid signature.
 	ErrInvalidSender = errors.New("invalid sender")
+
+	// ErrInvalidProvider is returned if the transaction contains an invalid signature.
+	ErrInvalidProvider = errors.New("invalid provider")
+
+	// ErrRedundantProvider is returned if the transaction does not require provider to sign
+	// but still contains a provider's signature
+	ErrRedundantProvider = errors.New("redundant provider's signature")
 
 	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
 	// one present in the local chain.
@@ -57,8 +68,16 @@ var (
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
 
 	// ErrInsufficientFunds is returned if the total cost of executing a transaction
-	// is higher than the balance of the user's account.
+	// is higher than the balance of the user's account (fee's paid by user).
 	ErrInsufficientFunds = errors.New("insufficient funds for gas * price + value")
+
+	// ErrProviderInsufficientFunds is returned if the transaction fee
+	// is higher than the balance of the provider's account (fee's paid by provider)
+	ErrProviderInsufficientFunds = errors.New("provider has insufficient funds for gas * price")
+
+	// ErrSenderInsufficientFunds is returned if the transaction value
+	// is higher than the balance of the user's account (fee's paid by provider)
+	ErrSenderInsufficientFunds = errors.New("sender has insufficient funds for value")
 
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
@@ -76,6 +95,19 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
+	emptyCodeHash    = crypto.Keccak256Hash(nil)
+
+	// ErrOversizedData is returned if new tx has the same nonce with an old one
+	ErrSameNonce = errors.New("Transaction same nonce")
+
+	// ErrTxPoolFull is returned tx pool is full
+	ErrTxPoolFull = errors.New("Tx pool is full")
+
+	// ErrInvalidGasPrice is returned if tx gasPrice is different from gasPrice of the network
+	ErrInvalidGasPrice = errors.New("Tx gasPrice is different from gasPrice of the network")
+
+	// ErrMaxProvider will be returned if the providers are over the limit
+	ErrMaxProvider = errors.New("maximum provider in contract")
 )
 
 var (
@@ -603,9 +635,9 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 	return txs
 }
 
-// validateTx checks whether a transaction is valid according to the consensus
+// ValidateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
-func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+func (pool *TxPool) ValidateTx(tx *types.Transaction, local bool) error {
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
@@ -624,6 +656,57 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return ErrInvalidSender
 	}
+
+	//Vlidate gasPrice of tx must be as the same as gasPrice of chainConfig
+	if tx.GasPrice().Cmp(pool.chainconfig.GasPrice) != 0 {
+		return ErrInvalidGasPrice
+	}
+
+	// If the destination is an enterprise smart contract, the tx must be signed with valid provider
+	// Otherwise, it should not have any provider's signature
+	// TODO: remove the log in production
+	signedProvider, providerRetrieveErr := types.Provider(pool.signer, tx)
+	var isEnterpriseContract = false
+	if tx.To() != nil {
+		to := tx.To()
+		contractHash := pool.currentState.GetCodeHash(*to)
+		if (contractHash != common.Hash{}) && (contractHash != emptyCodeHash) {
+			log.Info("destination is a contract, must check its providers")
+			expectedProviders := pool.currentState.GetProviders(*to)
+			if len(expectedProviders) == 0 {
+				log.Info("destination is a non-enteprise contract, should not have provider's signature")
+			} else {
+				isEnterpriseContract = true
+				if providerRetrieveErr != nil {
+					log.Info("invalid provider address", "error", providerRetrieveErr)
+					return ErrInvalidProvider
+				}
+				if signedProvider == nil {
+					log.Info("invalid provider address", "provider address is nil")
+					return ErrInvalidProvider
+				}
+				if !signedProvider.InList(expectedProviders) {
+					log.Info("invalid provider address", "provider address", signedProvider.String())
+					return ErrInvalidProvider
+				}
+			}
+		} else {
+			log.Info("destination is a normal address, should not have any provider's signature")
+		}
+	} else {
+		log.Info("the transaction to create SC")
+		emptyAddress := common.Address{}
+		if tx.Provider() != nil && tx.Provider() != &emptyAddress {
+			if tx.Owner() == nil || tx.Owner() == &emptyAddress {
+				log.Info("owner address is required")
+				return ErrOwnerReqired
+			}
+		}
+	}
+	if (signedProvider != nil) && (!isEnterpriseContract) {
+		// this case happens when there is no provider address required but still have provider's signature
+		return ErrRedundantProvider
+	}
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
 	if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
@@ -634,9 +717,25 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNonceTooLow
 	}
 	// Transactor should have enough funds to cover the costs
-	// cost == V + GP * GL
-	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
-		return ErrInsufficientFunds
+	if signedProvider != nil {
+		// Provider's cost == GP * GL
+		// Sender's cost == V
+
+		// Check sender's balance with tx amount
+		if pool.currentState.GetBalance(from).Cmp(tx.Value()) < 0 {
+			return ErrSenderInsufficientFunds
+		}
+
+		// Check provider's balance for transaction fee
+		if pool.currentState.GetBalance(*signedProvider).Cmp(tx.TransactionFee()) < 0 {
+			return ErrProviderInsufficientFunds
+		}
+	} else {
+		// Sender pays transaction fee, check sender's balance for tx costs
+		// cost == V + GP * GL
+		if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+			return ErrInsufficientFunds
+		}
 	}
 	intrGas, err := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
 	if err != nil {
@@ -664,52 +763,24 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
 	// If the transaction fails basic validation, discard it
-	if err := pool.validateTx(tx, local); err != nil {
+	if err := pool.ValidateTx(tx, local); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxMeter.Mark(1)
 		return false, err
 	}
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(pool.all.Count()) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
-		// If the new transaction is underpriced, don't accept it
-		if !local && pool.priced.Underpriced(tx, pool.locals) {
-			log.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
-			underpricedTxMeter.Mark(1)
-			return false, ErrUnderpriced
-		}
-		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(pool.all.Count()-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1), pool.locals)
-		for _, tx := range drop {
-			log.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
-			underpricedTxMeter.Mark(1)
-			pool.removeTx(tx.Hash(), false)
-		}
+		//discard new transaction when transaction pool is full
+		log.Trace("Discarding new transaction because transaction pool is full", "hash", hash, "price", tx.GasPrice())
+		pendingDiscardMeter.Mark(1)
+		return false, ErrTxPoolFull
 	}
-	// If the transaction is replacing an already pending one, do directly
+	// If the transaction has the same nonce with a pending transaction, discard it
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
-		// Nonce already pending, check if required price bump is met
-		inserted, old := list.Add(tx, pool.config.PriceBump)
-		if !inserted {
-			pendingDiscardMeter.Mark(1)
-			return false, ErrReplaceUnderpriced
-		}
-		// New transaction is better, replace old one
-		if old != nil {
-			pool.all.Remove(old.Hash())
-			pool.priced.Removed(1)
-			pendingReplaceMeter.Mark(1)
-		}
-		pool.all.Add(tx)
-		pool.priced.Put(tx)
-		pool.journalTx(from, tx)
-
-		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
-
-		// We've directly injected a replacement transaction, notify subsystems
-		go pool.txFeed.Send(NewTxsEvent{types.Transactions{tx}})
-
-		return old != nil, nil
+		// discard new tx, which has the same nonce with old tx
+		pendingDiscardMeter.Mark(1)
+		return false, ErrSameNonce
 	}
 	// New transaction isn't replacing a pending one, push into queue
 	replace, err := pool.enqueueTx(hash, tx)
@@ -984,6 +1055,44 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 	}
 }
 
+// TODO: Write comments about what this function does and returns
+func (pool *TxPool) filterUnpayableTransactions(account common.Address, l *txList) (types.Transactions, types.Transactions) {
+	var (
+		filtereds, invalids types.Transactions
+		providerBalance     *big.Int
+		accountBalance      = pool.currentState.GetBalance(account)
+		nonces              []uint64
+		hasEnoughFunds      bool
+	)
+	for nonce, tx := range l.txs.items {
+
+		hasEnoughFunds = true
+		if provider := tx.SignedProvider(pool.signer); provider != nil {
+			providerBalance = pool.currentState.GetBalance(*provider)
+			// provider pays for fee, sender pays for value
+			hasEnoughFunds = tx.Value().Cmp(accountBalance) <= 0 && tx.TransactionFee().Cmp(providerBalance) <= 0
+		} else {
+			// sender pays for fee + value
+			hasEnoughFunds = tx.Cost().Cmp(accountBalance) <= 0
+		}
+		if !hasEnoughFunds || tx.Gas() > pool.currentMaxGas {
+			nonces = append(nonces, nonce)
+			filtereds = append(filtereds, tx)
+		}
+	}
+	l.txs.RemoveTxs(nonces)
+	if l.strict && len(filtereds) > 0 {
+		lowest := uint64(math.MaxUint64)
+		for _, tx := range filtereds {
+			if nonce := tx.Nonce(); lowest > nonce {
+				lowest = nonce
+			}
+		}
+		invalids = l.txs.Filter(func(tx *types.Transaction) bool { return tx.Nonce() > lowest })
+	}
+	return filtereds, invalids
+}
+
 // promoteExecutables moves transactions that have become processable from the
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
@@ -1011,8 +1120,9 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.all.Remove(hash)
 			log.Trace("Removed old queued transaction", "hash", hash)
 		}
+
 		// Drop all transactions that are too costly (low balance or out of gas)
-		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, _ := pool.filterUnpayableTransactions(addr, list)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			pool.all.Remove(hash)
@@ -1198,7 +1308,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			log.Trace("Removed old pending transaction", "hash", hash)
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
-		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
+		drops, invalids := pool.filterUnpayableTransactions(addr, list)
 		for _, tx := range drops {
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash)

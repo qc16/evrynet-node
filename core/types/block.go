@@ -19,6 +19,7 @@ package types
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math/big"
 	"reflect"
@@ -26,9 +27,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/rlp"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -99,6 +100,12 @@ type headerMarshaling struct {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
+	if h.MixDigest == TendermintDigest {
+		// Use Tendermint hash calculation if the mix digest is equivalent to the predefined Tendermint digest
+		if header := TendermintFilteredHeader(h, true); header != nil {
+			return rlpHash(header)
+		}
+	}
 	return rlpHash(h)
 }
 
@@ -365,6 +372,10 @@ func (b *Block) Hash() common.Hash {
 	v := b.header.Hash()
 	b.hash.Store(v)
 	return v
+}
+
+func (b *Block) String() string {
+	return fmt.Sprintf("{Header: %v}", b.header)
 }
 
 type Blocks []*Block

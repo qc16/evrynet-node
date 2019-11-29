@@ -21,27 +21,31 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/core"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 // Constants to match up protocol versions and messages
 const (
 	eth62 = 62
 	eth63 = 63
+	//Version 64 contain the extra message namely TendermintMsg, which supports
+	//The Tendermint consensus implementation
+	//TODO: official declaration of this protocol with an EIP
+	eth64 = 64
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
 var ProtocolName = "eth"
 
 // ProtocolVersions are the supported versions of the eth protocol (first is primary).
-var ProtocolVersions = []uint{eth63, eth62}
+var ProtocolVersions = []uint{eth64, eth63, eth62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17, 8}
+var ProtocolLengths = []uint64{18, 17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
@@ -62,6 +66,10 @@ const (
 	NodeDataMsg    = 0x0e
 	GetReceiptsMsg = 0x0f
 	ReceiptsMsg    = 0x10
+
+	// TendermintMsg is the new message belong to eth/64.
+	// However due to packages importability it is kept at ./consensus/
+
 )
 
 type errCode int
@@ -92,7 +100,7 @@ var errorToString = map[int]string{
 	ErrGenesisBlockMismatch:    "Genesis block mismatch",
 	ErrNoStatusMsg:             "No status message",
 	ErrExtraStatusMsg:          "Extra status message",
-	ErrSuspendedPeer:           "Suspended peer",
+	ErrSuspendedPeer:           "Suspended Peer",
 }
 
 type txPool interface {

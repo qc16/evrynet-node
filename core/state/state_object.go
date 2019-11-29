@@ -23,10 +23,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -98,10 +98,32 @@ func (s *stateObject) empty() bool {
 // Account is the Ethereum consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account struct {
+	Nonce             uint64
+	Balance           *big.Int
+	Root              common.Hash // merkle root of the storage trie
+	CodeHash          []byte
+	OwnerAddress      *common.Address   `rlp:"nil"`
+	ProviderAddresses []*common.Address `rlp:"nil"`
+}
+
+// AccountWithoutProvider represent an account without provider
+type AccountWithoutProvider struct {
 	Nonce    uint64
 	Balance  *big.Int
 	Root     common.Hash // merkle root of the storage trie
 	CodeHash []byte
+}
+
+// ToAccount convert an AccountWithoutProvider to Account
+func (a *AccountWithoutProvider) ToAccount() Account {
+	return Account{
+		Nonce:             a.Nonce,
+		Balance:           a.Balance,
+		Root:              a.Root,
+		CodeHash:          a.CodeHash,
+		OwnerAddress:      nil,
+		ProviderAddresses: []*common.Address{},
+	}
 }
 
 // newObject creates a state object.
@@ -400,4 +422,12 @@ func (s *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (s *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+func (s *stateObject) OwnerAddress() *common.Address {
+	return s.data.OwnerAddress
+}
+
+func (s *stateObject) ProviderAddresses() []*common.Address {
+	return s.data.ProviderAddresses
 }

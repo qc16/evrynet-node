@@ -21,16 +21,17 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/signer/core"
+	ethereum "github.com/evrynet-official/evrynet-client"
+	"github.com/evrynet-official/evrynet-client/accounts"
+	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/evrynet-official/evrynet-client/signer/core"
 )
 
 type ExternalBackend struct {
@@ -200,6 +201,19 @@ func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transactio
 	return res.Tx, nil
 }
 
+// ProviderSignTx request to sign the specified transaction from provider
+func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	data, err := rlp.EncodeToBytes(tx)
+	if err != nil {
+		return nil, err
+	}
+	res := ethapi.SignTransactionResult{}
+	if err := api.client.Call(&res, "account_providerSignTransaction", common.ToHex(data), account.Address.Hex()); err != nil {
+		return nil, err
+	}
+	return res.Tx, nil
+}
+
 func (api *ExternalSigner) SignTextWithPassphrase(account accounts.Account, passphrase string, text []byte) ([]byte, error) {
 	return []byte{}, fmt.Errorf("passphrase-operations not supported on external signers")
 }
@@ -207,6 +221,11 @@ func (api *ExternalSigner) SignTextWithPassphrase(account accounts.Account, pass
 func (api *ExternalSigner) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	return nil, fmt.Errorf("passphrase-operations not supported on external signers")
 }
+
+func (api *ExternalSigner) ProviderSignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	return nil, fmt.Errorf("passphrase-operations not supported on external signers")
+}
+
 func (api *ExternalSigner) SignDataWithPassphrase(account accounts.Account, passphrase, mimeType string, data []byte) ([]byte, error) {
 	return nil, fmt.Errorf("passphrase-operations not supported on external signers")
 }
