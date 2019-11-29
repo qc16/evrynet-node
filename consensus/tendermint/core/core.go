@@ -101,6 +101,7 @@ func (c *core) Stop() error {
 	err := c.timeout.Stop()
 	c.unsubscribeEvents()
 	c.handlerWg.Wait()
+	c.clearCoreState()
 	c.getLogger().Infow("Tendermint's timeout core stopped")
 	return err
 }
@@ -213,6 +214,42 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 
 func (c *core) CurrentState() *roundState {
 	return c.currentState
+}
+
+// clearn core's state when the core stop and node in step propose a block
+func (c *core) clearCoreState() {
+	var (
+		state  = c.CurrentState()
+		logger = c.getLogger()
+	)
+
+	if c.currentState.step == RoundStepPropose {
+		// if the currentState in step propose when stop core
+		// we have to clear state of core
+		logger.Infow("Core's state is cleaning...")
+		state.UpdateRoundStep(0, RoundStepNewHeight)
+
+		if state.commitTime.IsZero() {
+			// "Now" makes it easier to sync up dev nodes.
+			// We add timeoutCommit to allow transactions
+			// to be gathered for the first block.
+			// And alternative solution that relies on clocks:
+			state.startTime = c.config.Commit(time.Now())
+		} else {
+			state.startTime = c.config.Commit(state.commitTime)
+		}
+		state.SetLockedRoundAndBlock(-1, nil)
+		state.SetValidRoundAndBlock(-1, nil)
+		state.SetProposalReceived(nil)
+
+		state.commitRound = -1
+		state.PrevotesReceived = make(map[int64]*messageSet)
+		state.PrecommitsReceived = make(map[int64]*messageSet)
+		state.PrecommitWaited = false
+
+		c.currentState = state
+		logger.Infow("Core's state is cleaned")
+	}
 }
 
 // getLogger returns a zap logger with state info
