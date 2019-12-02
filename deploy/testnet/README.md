@@ -1,7 +1,7 @@
-#How to use Testsnet Docker  
+# How to use Testsnet Docker  
 
-##1. Using Existing Config
-###Run Testnet Docker
+## 1. Using Existing Config
+### Run Testnet Docker
 Everything was setup. You only need to run this script  
 `./deploy/testnet/deploy.sh <path_to_share_volumes> <rpc_corsdomain> <wanna_to_deploy_explorer>`    
 
@@ -10,20 +10,20 @@ Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-clie
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
 - `wanna_to_deploy_explorer` if you wanna deploy explorer, input is `y`
 
-###Nodes Information
+### Nodes Information
 Everything about 3 nodes I put at `deploy/testnet/nodes/data`.  
 You can clear all data by running this file `deploy/testnet/nodes/data/clear_data.sh`
 
-###Webs
+### Webs
 - Explorer: http://localhost:8080
 
-###NOTICE!
+### NOTICE!
 - If you want to stop nodes, DON'T USE `docker stop ...`. It can make a crash to DB of nodes => can not run for next time!
 - To stop nodes gracefully, USE this file `deploy/testnet/stop_dockers.sh`. It will interact with node in docker to stop gracefully.
 
 ---
 
-##2. Setup From Zero
+## 2. Setup From Zero
 1. Build and export to `PATH`
     ```shell script
     $ go build ./cmd/gev
