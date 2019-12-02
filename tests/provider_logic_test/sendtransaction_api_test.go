@@ -85,7 +85,7 @@ func TestSendTxCreateContractNormal(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, emptyHash, hash)
 	if hash != emptyHash {
-		for {
+		for i := 0; i < 10; i++ {
 			var receipt *types.Receipt
 			receipt, err = ethClient.TransactionReceipt(context.Background(), hash)
 			if err == nil {
@@ -127,7 +127,7 @@ func TestSendTxNormal(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, emptyHash, hash)
 	if hash != emptyHash {
-		for {
+		for i := 0; i < 10; i++ {
 			var receipt *types.Receipt
 			receipt, err = ethClient.TransactionReceipt(context.Background(), hash)
 			if err == nil {

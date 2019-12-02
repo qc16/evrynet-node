@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethclient"
 )
 
@@ -40,10 +40,8 @@ func TestSendToNormalAddress(t *testing.T) {
 
 	transaction := types.NewTransaction(nonce, normalAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-	// Check gas payer, should be sender's address
-	for {
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -104,11 +102,8 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
 	// return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	// Check gasPayer, should be sender's address
-	for {
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -210,7 +205,7 @@ func TestSendToEnterPriseSmartContractWithInvalidProviderSignature(t *testing.T)
 */
 func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
+	contractAddr := prepareNewContract(true)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
@@ -225,16 +220,14 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
 	assert.NoError(t, err)
 
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
+	transaction := types.NewTransaction(nonce, *contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	for {
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -253,7 +246,7 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 */
 func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testing.T) {
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
+	contractAddr := prepareNewContract(true)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
@@ -270,7 +263,7 @@ func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testin
 
 	// data to interact with a function of this contract
 	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
+	transaction := types.NewTransaction(nonce, *contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
@@ -286,7 +279,7 @@ func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testin
 */
 func TestInteractToEnterpriseSmartContractWithoutProviderSignature(t *testing.T) {
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
+	contractAddr := prepareNewContract(true)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
@@ -300,7 +293,7 @@ func TestInteractToEnterpriseSmartContractWithoutProviderSignature(t *testing.T)
 
 	// data to interact with a function of this contract
 	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
+	transaction := types.NewTransaction(nonce, *contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 
@@ -314,7 +307,7 @@ func TestInteractToEnterpriseSmartContractWithoutProviderSignature(t *testing.T)
 */
 func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.T) {
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
+	contractAddr := prepareNewContract(true)
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
@@ -331,16 +324,14 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 
 	// data to interact with a function of this contract
 	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
+	transaction := types.NewTransaction(nonce, *contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	for {
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {

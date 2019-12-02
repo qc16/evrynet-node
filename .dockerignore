@@ -3,3 +3,5 @@
 build/_workspace
 build/_bin
 tests/testdata
+tests/test_nodes/**/*.ipc
+dev/**/*.ipc

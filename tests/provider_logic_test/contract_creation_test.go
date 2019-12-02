@@ -6,8 +6,10 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
@@ -76,13 +78,23 @@ func TestCreateContractWithoutProviderAddress(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
 
+	require.NoError(t, ethClient.SendTransaction(context.Background(), tx))
+	for i := 0; i < 10; i++ {
+		var receipt *types.Receipt
+		receipt, err = ethClient.TransactionReceipt(context.Background(), tx.Hash())
+		if err == nil {
+			assert.Equal(t, uint64(1), receipt.Status)
+			assert.NotEqual(t, receipt.ContractAddress, common.Address{})
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func TestCreateContractWithProviderSignature(t *testing.T) {
@@ -96,7 +108,7 @@ func TestCreateContractWithProviderSignature(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
@@ -119,7 +131,7 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
@@ -140,7 +152,7 @@ func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
@@ -158,7 +170,7 @@ func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
 
 	ethClient, err := ethclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
-	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
