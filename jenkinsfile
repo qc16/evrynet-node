@@ -1,0 +1,83 @@
+pipeline {
+    agent { label "slave" }
+    environment{
+        branchName = sh(
+            script: "echo ${env.GIT_BRANCH} | sed -e 's|/|-|g'",
+            returnStdout: true
+        ).trim()
+        dockerTag="${env.branchName}-${env.BUILD_NUMBER}"
+        dockerImage="${env.CONTAINER_IMAGE}:${env.dockerTag}"
+        appName="evrynet-client"
+
+        CONTAINER_IMAGE="registry.gitlab.com/evry/${appName}"
+    }
+    stages {
+        stage ('Cleanup') {
+            steps {
+                dir('directoryToDelete') {
+                    deleteDir()
+                }
+            }
+        }
+
+        stage('Build Image Test') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'devopsautomate', passwordVariable: 'gitlabPassword', usernameVariable: 'gitlabUsername')]) {
+                    sh '''
+                        echo "Build Image"
+                        docker login -u ${gitlabUsername} -p ${gitlabPassword} registry.gitlab.com
+                        docker build --pull --target builder -t ${dockerImage}:${dockerTag}-test -f Dockerfile .
+                    '''
+                }
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                sh '''
+                    echo "Run lint -> ${dockerImage}"
+                    docker run --rm ${CONTAINER_IMAGE}:${dockerTag}-test sh -c "go run build/ci.go lint"
+                '''
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh '''
+                    echo "Run unit test -> ${dockerImage}"
+                    docker run --rm ${CONTAINER_IMAGE}:${dockerTag} sh -c "go run build/ci.go test"
+                '''
+            }
+        }
+
+        stage('Build and Push to Registry') {
+            when {
+                anyOf {
+                    branch 'develop';
+                    branch 'release/*';
+                    branch 'master'
+                }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'devopsautomate', passwordVariable: 'gitlabPassword', usernameVariable: 'gitlabUsername')]) {
+                    sh '''
+                        echo "Push to Registry"
+                        docker login -u ${gitlabUsername} -p ${gitlabPassword} registry.gitlab.com
+                        docker push ${dockerImage}
+                        docker tag ${dockerImage} ${CONTAINER_IMAGE}:${branchName}
+                        docker push ${CONTAINER_IMAGE}:${branchName}
+                    '''
+                }
+            }
+        }
+    }
+    post {
+            always {
+            sh '''
+               docker image rm -f ${CONTAINER_IMAGE}:${branchName}
+               docker image rm -f ${dockerImage}
+            '''
+                deleteDir()
+            }
+    }
+}
