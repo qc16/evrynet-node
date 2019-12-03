@@ -21,6 +21,14 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
 - To stop nodes gracefully, USE this file `deploy/testnet/stop_dockers.sh`. It will interact with node in docker to stop gracefully.
 
 ---
+##3. Build Images  
+### Bootnode  
+Using this command `deploy/devnet/bootnode/build_image.sh`
+ 
+### Node  
+Using this command `deploy/devnet/node/build_image.sh` 
+
+---
 
 ##2. Setup From Zero
 1. Build and export to `PATH`

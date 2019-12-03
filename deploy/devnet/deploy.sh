@@ -26,17 +26,17 @@ yes | docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --b
 # Start nodes
 echo "------ Start nodes ------"
 yes | shareVolumes=$localVolumes rpccorsdomain=$rpccorsdomain docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-node-1 gev-node-2 gev-node-3
-
-# Start explorer
-# shellcheck disable=SC2039
-if [[ "$deployExplorer" == "y" ]]; then
-  echo "------ Start explorer ------"
-  rm -rf "$BASEDIR"/explorer/web
-  echo "Cloning explorer from master branch ..."
-  git clone git@github.com:evrynet-official/explorer.git "$BASEDIR"/explorer/web
-
-  docker rmi -f img_explorer
-  docker rm -f gev-explorer
-  yes | gevRPCPort=22001 docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-explorer
-  rm -rf "$BASEDIR"/explorer/web
-fi
+#
+## Start explorer
+## shellcheck disable=SC2039
+#if [[ "$deployExplorer" == "y" ]]; then
+#  echo "------ Start explorer ------"
+#  rm -rf "$BASEDIR"/explorer/web
+#  echo "Cloning explorer from master branch ..."
+#  git clone git@github.com:evrynet-official/explorer.git "$BASEDIR"/explorer/web
+#
+#  docker rmi -f img_explorer
+#  docker rm -f gev-explorer
+#  yes | gevRPCPort=22001 docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-explorer
+#  rm -rf "$BASEDIR"/explorer/web
+#fi
