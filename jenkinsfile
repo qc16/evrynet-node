@@ -26,7 +26,7 @@ pipeline {
                     sh '''
                         echo "Build Image"
                         docker login -u ${gitlabUsername} -p ${gitlabPassword} registry.gitlab.com
-                        docker build --pull --target builder -t ${dockerImage}:${dockerTag}-test -f Dockerfile .
+                        docker build --pull --target builder -t ${dockerImage} -f Dockerfile .
                     '''
                 }
             }
@@ -36,7 +36,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Run lint -> ${dockerImage}"
-                    docker run --rm ${CONTAINER_IMAGE}:${dockerTag}-test sh -c "go run build/ci.go lint"
+                    docker run --rm ${dockerImage} sh -c "go run build/ci.go lint"
                 '''
             }
         }
@@ -45,7 +45,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Run unit test -> ${dockerImage}"
-                    docker run --rm ${CONTAINER_IMAGE}:${dockerTag}-test sh -c "go run build/ci.go test"
+                    docker run --rm ${dockerImage} sh -c "go run build/ci.go test"
                 '''
             }
         }
@@ -63,6 +63,7 @@ pipeline {
                     sh '''
                         echo "Push to Registry"
                         docker login -u ${gitlabUsername} -p ${gitlabPassword} registry.gitlab.com
+                        docker build --pull -t ${dockerImage} -f Dockerfile .
                         docker push ${dockerImage}
                         docker tag ${dockerImage} ${CONTAINER_IMAGE}:${branchName}
                         docker push ${CONTAINER_IMAGE}:${branchName}
