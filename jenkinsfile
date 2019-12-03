@@ -45,7 +45,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Run unit test -> ${dockerImage}"
-                    docker run --rm ${CONTAINER_IMAGE}:${dockerTag} sh -c "go run build/ci.go test"
+                    docker run --rm ${CONTAINER_IMAGE}:${dockerTag}-test sh -c "go run build/ci.go test"
                 '''
             }
         }
