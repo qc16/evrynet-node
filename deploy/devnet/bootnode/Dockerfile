@@ -15,6 +15,6 @@ RUN echo "------ Bootnode ------"
 WORKDIR "/bootnode"
 COPY --from=builder ./evrynet/project/bootnode .
 
-CMD ./bootnode -nodekeyhex "$NODE_HEX_KEY" -verbosity 9 -addr ":30300"
+CMD ./bootnode -nodekeyhex "$NODE_HEX_KEY" -verbosity 9 -addr "$IP:$PORT" -nat any
 
 EXPOSE 30300
