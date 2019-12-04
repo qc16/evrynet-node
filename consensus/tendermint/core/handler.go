@@ -217,7 +217,7 @@ func (c *core) handlePropose(msg message) error {
 		if proposal.Block.Number().Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
 			logger.Infow("store prevote vote from future block", "from", msg.Address)
-			if err := c.futureMessages.Enqueue(msg); err != nil {
+			if err := c.futureMessages.Put(&msgItem{message: msg, height: proposal.Block.Number().Uint64()}); err != nil {
 				logger.Errorw("failed to store future prevote message to queue", "err", err, "from", msg.Address)
 			}
 		}
@@ -262,7 +262,7 @@ func (c *core) handlePrevote(msg message) error {
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
 			logger.Infow("store prevote vote from future block")
-			if err := c.futureMessages.Enqueue(msg); err != nil {
+			if err := c.futureMessages.Put(&msgItem{message: msg, height: vote.BlockNumber.Uint64()}); err != nil {
 				logger.Errorw("failed to store future prevote message to queue", "err", err)
 			}
 		}
@@ -363,7 +363,7 @@ func (c *core) handlePrecommit(msg message) error {
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
 			logger.Infow("store precommit vote from future block")
-			if err := c.futureMessages.Enqueue(msg); err != nil {
+			if err := c.futureMessages.Put(&msgItem{message: msg, height: vote.BlockNumber.Uint64()}); err != nil {
 				logger.Errorw("failed to store future prevote message to queue", "err", err)
 			}
 		}

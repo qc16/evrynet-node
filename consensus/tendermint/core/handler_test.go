@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	queue "github.com/enriquebris/goconcurrentqueue"
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -29,7 +29,7 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *
 		config:         config,
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
-		futureMessages: queue.NewFIFO(),
+		futureMessages: queue.NewPriorityQueue(0, true),
 		txPool:         txPool,
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/pkg/errors"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -81,6 +82,24 @@ func (m *message) GetAddressFromSignature() (common.Address, error) {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+type msgItem struct {
+	message interface{}
+	height  uint64
+}
+
+func (item msgItem) Compare(other queue.Item) int {
+	if otherItem, ok := other.(msgItem); !ok {
+		return 0
+	} else {
+		if item.height > otherItem.height {
+			return 1
+		} else if item.height == otherItem.height {
+			return 0
+		}
+		return -1
+	}
 }
 
 //blockVotes store the voting received for a particular block
