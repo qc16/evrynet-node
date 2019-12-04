@@ -5,9 +5,9 @@ services:
     image: kybernetwork/evrynet-bootnode:1.0.1-dev
     container_name: gev-bootnode
     environment:
-      NODE_HEX_KEY: 9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09
-      IP: 0.0.0.0
+      NODEKEYHEX: 9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09
       PORT: 30300
+      VERBOSITY: 4
     ports:
       - 30300:30300
       - 30300:30300/udp
