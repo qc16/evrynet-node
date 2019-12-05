@@ -36,7 +36,8 @@ services:
       UNLOCK_PASS: 123
       RPC_CORSDOMAIN: $rpccorsdomain
     ports:
-      - 22001:22001
+      - 22001:8545
+      - 6061:6060
     volumes:
       - $shareVolumes/node_1/data:/node/data
       - $shareVolumes/node_1/log:/node/log
@@ -59,7 +60,8 @@ services:
       UNLOCK_PASS: 123
       RPC_CORSDOMAIN: $rpccorsdomain
     ports:
-      - 22002:22002
+      - 22002:8545
+      - 6062:6060
     volumes:
       - $shareVolumes/node_2/data:/node/data
       - $shareVolumes/node_2/log:/node/log
@@ -86,7 +88,8 @@ services:
       METRICS_USER: test # Only use if HAS_METRIC is 1
       METRICS_PASS: test # Only use if HAS_METRIC is 1
     ports:
-      - 22003:22003
+      - 22003:8545
+      - 6063:6060
     volumes:
       - $shareVolumes/node_3/data:/node/data
       - $shareVolumes/node_3/log:/node/log
