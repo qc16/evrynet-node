@@ -90,16 +90,19 @@ type msgItem struct {
 }
 
 func (item msgItem) Compare(other queue.Item) int {
-	if otherItem, ok := other.(msgItem); !ok {
-		return 0
-	} else {
-		if item.height > otherItem.height {
-			return 1
-		} else if item.height == otherItem.height {
-			return 0
-		}
-		return -1
+	var (
+		otherItem msgItem
+		ok        bool
+	)
+	if otherItem, ok = other.(msgItem); !ok {
+		panic("can not compare msgItem with other types")
 	}
+	if item.height > otherItem.height {
+		return 1
+	} else if item.height == otherItem.height {
+		return 0
+	}
+	return -1
 }
 
 //blockVotes store the voting received for a particular block

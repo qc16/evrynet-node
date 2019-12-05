@@ -66,6 +66,7 @@ type core struct {
 
 	// futureMessages stores future messages (prevote and precommit) fromo other peers
 	// and handle them later when we jump to that block number
+	// futureMessages only accepts msgItem
 	futureMessages *queue.PriorityQueue
 
 	txPool *evrynetCore.TxPool
