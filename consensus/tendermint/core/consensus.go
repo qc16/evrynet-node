@@ -541,12 +541,60 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	return proposal.Block.WithSeal(header), nil
 }
 
+// start round form know state (the last state before core is stopped)
+func (c *core) startRoundFromLastState() {
+	var (
+		state                 = c.CurrentState()
+		lastBlockNumber       = c.backend.CurrentHeadBlock().Number()
+		expectedBlock         = big.NewInt(0).Add(lastBlockNumber, big.NewInt(1))
+		initStep              RoundStepType
+		needInitializeTimeout = true
+	)
+
+	if state.BlockNumber().Cmp(expectedBlock) == 0 {
+		c.getLogger().Infow("Catch up with the latest block")
+	} else {
+		// update new round with lastKnownHeight
+		c.getLogger().Infow("New height is not catch up with the latest block, update height to lastest block + 1")
+		state.SetView(&tendermint.View{
+			Round:       0,
+			BlockNumber: expectedBlock,
+		})
+	}
+
+	// if state of core in [RoundStepPrevote, RoundStepPrecommit] before stop and re-start core
+	// we have to re-assign the last state of core for ticker
+	switch state.Step() {
+	case RoundStepPrevote:
+	case RoundStepPrecommit:
+		needInitializeTimeout = false
+		c.getLogger().Infow("Ignore. because not need re-assign the last step with these cases")
+	default:
+		initStep = state.Step()
+
+		c.getLogger().Infow("Skip the round step from core", "ticker's step", state.Step().String())
+	}
+
+	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
+
+	if needInitializeTimeout {
+		sleepDuration := time.Until(state.startTime)
+		//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
+		timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
+		c.timeout.ScheduleTimeout(timeoutInfo{
+			Duration:    sleepDuration,
+			BlockNumber: timeOutBlock,
+			Round:       state.Round(),
+			Step:        initStep,
+		})
+	}
+}
+
 func (c *core) startRoundZero() {
 	var (
 		state           = c.CurrentState()
 		lastBlockNumber = c.backend.CurrentHeadBlock().Number()
 		expectedBlock   = big.NewInt(0).Add(lastBlockNumber, big.NewInt(1))
-		initStep        RoundStepType
 	)
 
 	if state.BlockNumber().Cmp(expectedBlock) == 0 {
@@ -561,27 +609,6 @@ func (c *core) startRoundZero() {
 	}
 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 
-	// if state of core in [RoundStepPropose, RoundStepPrevote, RoundStepPrecommit] before stop and re-start core
-	// we have to re-assign the last state of core for ticker
-	switch state.Step() {
-	case RoundStepPrevoteWait:
-		initStep = RoundStepPrevoteWait
-		c.getLogger().Infow("Re-assign round step for a ticker timeout", "ticker's Step", RoundStepPrevoteWait.String())
-		break
-	case RoundStepPrecommit:
-		initStep = RoundStepPrecommitWait
-		c.getLogger().Infow("Re-assign round step for a ticker timeout", "ticker's Step", RoundStepPrecommitWait.String())
-		break
-	case RoundStepPropose:
-		initStep = RoundStepPropose
-		c.getLogger().Infow("Re-assign round step for a ticker timeout", "ticker's Step", RoundStepPropose.String())
-		break
-	default:
-		initStep = state.Step()
-		c.getLogger().Infow("Skip the round step from core", "ticker's step", state.Step().String())
-		break
-	}
-
 	sleepDuration := time.Until(state.startTime)
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
 	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
@@ -589,7 +616,7 @@ func (c *core) startRoundZero() {
 		Duration:    sleepDuration,
 		BlockNumber: timeOutBlock,
 		Round:       0,
-		Step:        initStep,
+		Step:        RoundStepNewHeight,
 	})
 }
 

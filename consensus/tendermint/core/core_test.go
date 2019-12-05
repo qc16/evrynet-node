@@ -37,7 +37,7 @@ func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 	require.NoError(t, core.Start())
 
 	//wait for 4 second to core's state jump from RoundStepPropose to RoundStepPrevote
-	time.Sleep(4 * time.Second)
+	time.Sleep(tendermint.DefaultConfig.TimeoutPropose + 1)
 	assert.Equal(t, RoundStepPrevote, core.CurrentState().Step())
 }
 
@@ -65,7 +65,7 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 	assert.Equal(t, RoundStepPrevoteWait, core.CurrentState().Step())
 
 	//wait for 4 second to core's state jump from RoundStepPrevoteWait to RoundStepPrecommit
-	time.Sleep(4 * time.Second)
+	time.Sleep(tendermint.DefaultConfig.TimeoutPrevote + 1)
 	assert.Equal(t, RoundStepPrecommit, core.CurrentState().Step())
 }
 
@@ -86,13 +86,13 @@ func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
 
-	state.UpdateRoundStep(0, RoundStepPrecommit)
+	state.UpdateRoundStep(0, RoundStepPrecommitWait)
 	require.NoError(t, core.Stop())
 	time.Sleep(2 * time.Second)
 	require.NoError(t, core.Start())
-	assert.Equal(t, RoundStepPrecommit, core.CurrentState().Step())
+	assert.Equal(t, RoundStepPrecommitWait, core.CurrentState().Step())
 
-	//wait for 1 second to core's state jump from RoundStepPrecommit to RoundStepPropose
-	time.Sleep(1 * time.Second)
+	//wait for core's state jump from RoundStepPrecommit to RoundStepPropose
+	time.Sleep(tendermint.DefaultConfig.TimeoutPrecommit)
 	assert.Equal(t, RoundStepPropose, core.CurrentState().Step())
 }
