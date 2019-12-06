@@ -639,16 +639,12 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		state = c.CurrentState()
 	)
 	for {
-		if c.futureMessages.GetLen() == 0 {
+		if c.futureMessages.Len() == 0 {
 			return true, nil
 		}
 		// get at position 0, check if it is current block number
-		data, err := c.futureMessages.Get(0)
-		if err != nil {
-			logger.Errorw("Failed to get message from future message queue", "error", err)
-			return false, err
-		}
-		msg, ok := data.(message)
+		data := c.futureMessages.Peek()
+		msg, ok := data.(msgItem).message.(message)
 		if !ok {
 			logger.Errorw("Failed to decode data to message")
 			return false, err
@@ -660,7 +656,7 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		if vote.BlockNumber.Cmp(state.BlockNumber()) < 0 {
 			logger.Infow("vote from older block number, ignore")
 			// Ignore vote from older block, remove element at position 0 and continue
-			if err := c.futureMessages.Remove(0); err != nil {
+			if _, err := c.futureMessages.Get(1); err != nil {
 				logger.Warn("failed to remove from future msgs", "err", err)
 			}
 			continue
@@ -672,7 +668,7 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		// at here vote block number should be equal state block number
 		// remove message and handle it
 		logger.Infow("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
-		if err := c.futureMessages.Remove(0); err != nil {
+		if _, err := c.futureMessages.Get(1); err != nil {
 			logger.Warn("failed to remove from future msgs", "err", err)
 		}
 		if err := c.processFutureMessage(msg); err != nil {

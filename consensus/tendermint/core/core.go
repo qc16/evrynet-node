@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	queue "github.com/enriquebris/goconcurrentqueue"
+	"github.com/Workiva/go-datastructures/queue"
 	"go.uber.org/zap"
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -24,7 +24,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		config:         config,
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
-		futureMessages: queue.NewFIFO(),
+		futureMessages: queue.NewPriorityQueue(0, true),
 	}
 	return c
 }
@@ -66,7 +66,8 @@ type core struct {
 
 	// futureMessages stores future messages (prevote and precommit) fromo other peers
 	// and handle them later when we jump to that block number
-	futureMessages *queue.FIFO
+	// futureMessages only accepts msgItem
+	futureMessages *queue.PriorityQueue
 
 	txPool *evrynetCore.TxPool
 }
