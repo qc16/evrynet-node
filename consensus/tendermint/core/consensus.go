@@ -565,8 +565,7 @@ func (c *core) startRoundFromLastState() {
 	// if state of core in [RoundStepPrevote, RoundStepPrecommit] before stop and re-start core
 	// we have to re-assign the last state of core for ticker
 	switch state.Step() {
-	case RoundStepPrevote:
-	case RoundStepPrecommit:
+	case RoundStepPrevote, RoundStepPrecommit:
 		needInitializeTimeout = false
 		c.getLogger().Infow("Ignore. because not need re-assign the last step with these cases")
 	default:
