@@ -1,0 +1,24 @@
+FROM golang:1.12-alpine as builder
+RUN echo "------ Builder ------"
+RUN apk add --no-cache make gcc musl-dev linux-headers git
+
+COPY . /evrynet-client
+WORKDIR "/evrynet-client"
+RUN go build ./cmd/gev
+RUN pwd
+RUN ls
+
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates bash perl
+
+RUN echo "------ Node ------"
+
+COPY --from=builder /evrynet-client/gev /
+COPY --from=builder /evrynet-client/deploy/devnet/node/genesis.json /genesis.json
+COPY --from=builder /evrynet-client/deploy/devnet/node/entrypoint.sh /entrypoint.sh
+
+RUN ls
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT /entrypoint.sh
+
+CMD ["/gev", "--help"]
