@@ -11,12 +11,13 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 // New creates an Tendermint consensus core
-func New(backend tendermint.Backend, config *tendermint.Config) Engine {
+func New(backend tendermint.Backend, config *tendermint.Config, db ethdb.Database) Engine {
 	c := &core{
 		handlerWg:      new(sync.WaitGroup),
 		backend:        backend,
@@ -25,6 +26,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
+		sosMsg:         NewSOSMsg(db),
 	}
 	return c
 }
@@ -60,6 +62,9 @@ type core struct {
 	config *tendermint.Config
 	//mutex mark critical section of core which should not be accessed parallel
 	mu *sync.RWMutex
+
+	// a Helper supports to store message before send proposal/ vote for every block
+	sosMsg *SOSMsg
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
 	proposeStart time.Time
@@ -140,6 +145,9 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		return
 	}
 
+	// store before send propose msg
+	c.StoreSentMsg(RoundStepPropose, propose.Round, propose)
+
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
 		return
@@ -204,6 +212,16 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		logger.Errorw("Failed to Finalize Vote", "error", err)
 		return
 	}
+
+	// store before send propose msg
+	switch voteType {
+	case msgPrevote:
+		c.StoreSentMsg(RoundStepPrevote, round, vote)
+	case msgPrecommit:
+		c.StoreSentMsg(RoundStepPrecommit, round, vote)
+	default:
+	}
+
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 		logger.Errorw("Failed to Broadcast vote", "error", err)
 		return

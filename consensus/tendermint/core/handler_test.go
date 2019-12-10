@@ -16,6 +16,7 @@ import (
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -31,8 +32,10 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
 		txPool:         txPool,
+		sosMsg: NewSOSMsg(memorydb.New()),
 	}
 }
+
 func TestVerifyProposal(t *testing.T) {
 	var (
 		nodePrivateKey     = tests_utils.MakeNodeKey()

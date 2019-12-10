@@ -17,6 +17,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/log"
 )
@@ -63,13 +64,15 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		broadcastCh:          make(chan broadcastTask),
 		controlChan:          make(chan struct{}),
 	}
-	be.core = tendermintCore.New(be, config)
-
 	for _, opt := range opts {
 		if err := opt(be); err != nil {
 			log.Error("error at initialization of backend", err)
 		}
 	}
+	if be.db == nil {
+		be.db = memorydb.New()
+	}
+	be.core = tendermintCore.New(be, config, be.db)
 
 	go be.gossipLoop()
 	go be.dequeueMsgLoop()
