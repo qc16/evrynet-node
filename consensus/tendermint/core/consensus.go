@@ -644,7 +644,7 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		}
 		// get at position 0, check if it is current block number
 		data := c.futureMessages.Peek()
-		msg, ok := data.(msgItem).message.(message)
+		msg, ok := data.(*msgItem).message.(message)
 		if !ok {
 			logger.Errorw("Failed to decode data to message")
 			return false, err

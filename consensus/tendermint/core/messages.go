@@ -89,12 +89,12 @@ type msgItem struct {
 	height  uint64
 }
 
-func (item msgItem) Compare(other queue.Item) int {
+func (item *msgItem) Compare(other queue.Item) int {
 	var (
-		otherItem msgItem
+		otherItem *msgItem
 		ok        bool
 	)
-	if otherItem, ok = other.(msgItem); !ok {
+	if otherItem, ok = other.(*msgItem); !ok {
 		panic("can not compare msgItem with other types")
 	}
 	if item.height > otherItem.height {
