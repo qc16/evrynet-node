@@ -27,7 +27,7 @@ type SosData struct {
 	BlockNumber uint64        `json:"BlockNumber"`
 	Step        RoundStepType `json:"Step"`
 	Round       int64         `json:"Round"`
-	Data        *[]byte       `json:"Data"`
+	Data        []byte        `json:"Data"`
 }
 
 // NewSOSMsg return new instance of SOSMsg
@@ -60,7 +60,7 @@ func (c *core) StoreSentMsg(step RoundStepType, round int64, msg interface{}) {
 			BlockNumber: blockNumber,
 			Round:       round,
 			Step:        step,
-			Data:        &msgBytes,
+			Data:        msgBytes,
 		}
 	)
 
