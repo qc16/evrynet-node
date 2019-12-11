@@ -81,7 +81,7 @@ func (c *core) StoreSentMsg(step RoundStepType, round int64, msg interface{}) {
 	}
 }
 
-// LookupSentMsg
+// LookupSentMsg lockups proposal/ vote messages had stored
 func (c *core) LookupSentMsg(step RoundStepType, round int64) (*SosData, error) {
 	c.sosMsg.mu.Lock()
 	defer c.sosMsg.mu.Unlock()
@@ -108,8 +108,8 @@ func (c *core) LookupSentMsg(step RoundStepType, round int64) (*SosData, error) 
 	return sData, nil
 }
 
-// Truncate removes all data stored by the block's number
-func (c *core) Truncate() {
+// TruncateMsgStored removes all data stored by the block's number
+func (c *core) TruncateMsgStored() {
 	c.sosMsg.mu.Lock()
 	defer c.sosMsg.mu.Unlock()
 
