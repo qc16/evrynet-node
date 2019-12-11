@@ -26,6 +26,7 @@ const (
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
 
+	maxBroadcastSleepTime        = time.Minute * 5
 	initialBroadcastSleepTime    = time.Millisecond * 100
 	broadcastSleepTimeIncreament = time.Millisecond * 100
 )
@@ -226,10 +227,12 @@ func (sb *Backend) gossipLoop() {
 			if successSent < task.MinPeers {
 				log.Info("failed to sent to peer, sleeping", "min", task.MinPeers, "success", successSent,
 					"time_sleep", timeSleep)
-				// increase timeSleep 100ms after each epoch
+				// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
 				// if receive new task then reset the timer
 				<-time.After(timeSleep)
-				timeSleep += broadcastSleepTimeIncreament
+				if timeSleep < maxBroadcastSleepTime {
+					timeSleep += broadcastSleepTimeIncreament
+				}
 				continue taskLoop
 			}
 			break taskLoop
