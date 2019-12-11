@@ -3,8 +3,9 @@ package core
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -24,6 +25,7 @@ type SOSMsg struct {
 
 // SosData contain data for message stored
 type SosData struct {
+	Time        time.Time     `json:"Time"`
 	BlockNumber uint64        `json:"BlockNumber"`
 	Step        RoundStepType `json:"Step"`
 	Round       int64         `json:"Round"`
@@ -40,8 +42,13 @@ func NewSOSMsg(db ethdb.Database) *SOSMsg {
 
 // StoreSentMsg stores vote/ propose to database
 func (c *core) StoreSentMsg(step RoundStepType, round int64, msg interface{}) {
-	if data, _ := c.LookupSentMsg(step, round); data != nil {
-		c.sosMsg.logger.Warnw("message had saved at before", "Step", step.String(), "Round", round)
+	var (
+		blockNumber = c.currentState.BlockNumber().Uint64()
+		logger      = c.sosMsg.logger.With("block", blockNumber, "step", step.String(), "round", round)
+	)
+
+	if index := c.LookupSentMsg(step, round); index >= 0 {
+		logger.Warnw("message had saved at before")
 		return
 	}
 	c.sosMsg.mu.Lock()
@@ -49,14 +56,14 @@ func (c *core) StoreSentMsg(step RoundStepType, round int64, msg interface{}) {
 
 	msgBytes, err := rlp.EncodeToBytes(msg)
 	if err != nil {
-		c.sosMsg.logger.Warnw("failed to encode rlp for sentMsg data", "err", err)
+		logger.Warnw("failed to encode rlp for sentMsg data", "err", err)
 		return
 	}
 
 	var (
-		key         []byte
-		blockNumber = c.currentState.BlockNumber().Uint64()
-		sData       = &SosData{
+		key   = getKey(blockNumber, step, round)
+		sData = &SosData{
+			Time:        time.Now(),
 			BlockNumber: blockNumber,
 			Round:       round,
 			Step:        step,
@@ -66,46 +73,57 @@ func (c *core) StoreSentMsg(step RoundStepType, round int64, msg interface{}) {
 
 	blob, err := json.Marshal(sData)
 	if err != nil {
-		c.sosMsg.logger.Warnw("failed to encode rlp for SOSMsg data", "err", err)
+		logger.Warnw("failed to encode rlp for SOSMsg data", "err", err)
 		return
 	}
 
-	fmt.Printf("StoreSentMsg block number %d  in Step %s at Round %d \n", blockNumber, step.String(), round)
-	key = append(key, []byte(dbKeySOSMsgPrefix)...)
-	key = append(key, encodeUint64(blockNumber)...)
-	key = append(key, []byte(step.String())...)
-	key = append(key, encodeInt64(round)...)
-
+	logger.Infow("saving a sent Msg")
 	if err = c.sosMsg.db.Put(key, blob); err != nil {
-		c.sosMsg.logger.Warnw("failed write to SOSMsg file", "err", err)
+		logger.Warnw("failed write to SOSMsg file", "err", err)
 	}
 }
 
-// LookupSentMsg lockups proposal/ vote messages had stored
-func (c *core) LookupSentMsg(step RoundStepType, round int64) (*SosData, error) {
+// LookupSentMsg lockups proposal/ vote messages had stored and return index of the message
+// if message were not found returns -1
+func (c *core) LookupSentMsg(step RoundStepType, round int64) int64 {
 	c.sosMsg.mu.Lock()
 	defer c.sosMsg.mu.Unlock()
 	var (
-		key         []byte
-		sData       *SosData
+		msgs        []*SosData
+		prefix      []byte
 		blockNumber = c.currentState.BlockNumber().Uint64()
+		logger      = c.sosMsg.logger.With("block", blockNumber, "step", step.String(), "round", round)
 	)
 
-	key = append(key, []byte(dbKeySOSMsgPrefix)...)
-	key = append(key, encodeUint64(blockNumber)...)
-	key = append(key, []byte(step.String())...)
-	key = append(key, encodeInt64(round)...)
+	prefix = append(prefix, []byte(dbKeySOSMsgPrefix)...)
+	prefix = append(prefix, encodeUint64(blockNumber)...)
+	it := c.sosMsg.db.NewIteratorWithPrefix(prefix)
+	for it.Next() {
+		blob, err := c.sosMsg.db.Get(it.Key())
+		if err != nil {
+			continue
+		}
+		var sData *SosData
+		if err := json.Unmarshal(blob, &sData); err != nil {
+			continue
+		}
+		msgs = append(msgs, sData)
+	}
 
-	blob, err := c.sosMsg.db.Get(key)
-	if err != nil {
-		c.sosMsg.logger.Warnw("failed to get SOSMsg by key", "err", err)
-		return nil, err
+	if len(msgs) > 0 {
+		// sort array
+		sort.Slice(msgs, func(i, j int) bool {
+			return msgs[i].Time.Before(msgs[j].Time)
+		})
+		// find index of message
+		for i := 0; i < len(msgs); i++ {
+			if msgs[i].Step == step && msgs[i].Round == round {
+				return int64(i)
+			}
+		}
 	}
-	if err := json.Unmarshal(blob, &sData); err != nil {
-		c.sosMsg.logger.Warnw("failed to decode SOSData", "err", err)
-		return nil, err
-	}
-	return sData, nil
+	logger.Warnw("LookupSentMsg: message not found")
+	return int64(-1)
 }
 
 // TruncateMsgStored removes all data stored by the block's number
@@ -116,6 +134,7 @@ func (c *core) TruncateMsgStored() {
 	var (
 		key         []byte
 		blockNumber = c.currentState.BlockNumber().Uint64()
+		logger      = c.sosMsg.logger.With("block", blockNumber)
 	)
 
 	key = append(key, []byte(dbKeySOSMsgPrefix)...)
@@ -123,10 +142,10 @@ func (c *core) TruncateMsgStored() {
 	it := c.sosMsg.db.NewIteratorWithPrefix(key)
 	for it.Next() {
 		if err := c.sosMsg.db.Delete(it.Key()); err != nil {
-			c.sosMsg.logger.Warnw("failed to delete SOSMsg by key", "err", err)
+			logger.Warnw("failed to delete SOSMsg by key", "err", err)
 		}
 	}
-	c.sosMsg.logger.Info("truncate SOSMsg done", "block", c.currentState.BlockNumber().Uint64())
+	logger.Info("truncate SOSMsg done", "block", c.currentState.BlockNumber().Uint64())
 }
 
 // UnmarshalJSON unmarshals from JSON.
@@ -153,4 +172,13 @@ func encodeInt64(number int64) []byte {
 	buf := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutVarint(buf, number)
 	return buf[:n]
+}
+
+func getKey(blockNumber uint64, step RoundStepType, round int64) []byte {
+	var key []byte
+	key = append(key, []byte(dbKeySOSMsgPrefix)...)
+	key = append(key, encodeUint64(blockNumber)...)
+	key = append(key, []byte(step.String())...)
+	key = append(key, encodeInt64(round)...)
+	return key
 }
