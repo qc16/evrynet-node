@@ -80,6 +80,7 @@ func (c *core) Start() error {
 	c.getLogger().Infow("starting Tendermint's core...")
 	if c.currentState == nil {
 		c.currentState = c.getInitializedState()
+		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 	}
 	c.subscribeEvents()
 

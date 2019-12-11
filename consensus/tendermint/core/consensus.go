@@ -305,6 +305,7 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 
 	//after this we setPrecommitWaited to true to make sure that the wait happens only once each round
 	defer func() {
+		state.UpdateRoundStep(round, RoundStepPrecommitWait)
 		state.setPrecommitWaited(true)
 	}()
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
@@ -560,7 +561,9 @@ func (c *core) startNewRound() {
 			Round:       0,
 			BlockNumber: expectedBlock,
 		})
+
 		state.clearPreviousRoundData()
+		c.valSet = c.backend.Validators(state.BlockNumber())
 	}
 
 	//TODO: the timeout must account for the stopped time that core wasn't
@@ -576,9 +579,6 @@ func (c *core) startNewRound() {
 	default:
 		needInitializeTimeout = false
 	}
-
-	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
-
 	if needInitializeTimeout {
 		//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
 		timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
