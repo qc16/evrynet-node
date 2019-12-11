@@ -108,7 +108,7 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 		return nil
 	}
 	c.updateStateForNewblock()
-	c.startRoundZero()
+	c.startNewRound()
 	return nil
 }
 

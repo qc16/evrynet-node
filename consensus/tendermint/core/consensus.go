@@ -541,8 +541,7 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	return proposal.Block.WithSeal(header), nil
 }
 
-// start round form know state (the last state before core is stopped)
-func (c *core) startRoundFromLastState() {
+func (c *core) startNewRound() {
 	var (
 		state                 = c.CurrentState()
 		lastBlockNumber       = c.backend.CurrentHeadBlock().Number()
@@ -554,16 +553,17 @@ func (c *core) startRoundFromLastState() {
 	if state.BlockNumber().Cmp(expectedBlock) == 0 {
 		c.getLogger().Infow("Catch up with the latest block")
 	} else {
+		//special case:core is stopped and the network has already consensus newer block
 		// update new round with lastKnownHeight
 		c.getLogger().Infow("New height is not catch up with the latest block, update height to lastest block + 1")
 		state.SetView(&tendermint.View{
 			Round:       0,
 			BlockNumber: expectedBlock,
 		})
+		state.clearPreviousRoundData()
 	}
 
-	// if state of core in [RoundStepNewHeight, RoundStepPrevote, RoundStepPrevoteWait, RoundStepPrecommitWait]
-	// before stop and re-start core and we will initialize a timeout for these states
+	//TODO: the timeout must account for the stopped time that core wasn't
 	switch state.Step() {
 	case RoundStepNewHeight:
 		duration = time.Until(state.startTime)
@@ -575,7 +575,6 @@ func (c *core) startRoundFromLastState() {
 		duration = c.config.PrecommitTimeout(state.Round())
 	default:
 		needInitializeTimeout = false
-		c.getLogger().Infow("Ignore. because not need re-assign the last step with these cases")
 	}
 
 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
@@ -590,96 +589,6 @@ func (c *core) startRoundFromLastState() {
 			Step:        state.Step(),
 		})
 	}
-}
-
-func (c *core) startRoundZero() {
-	var (
-		state           = c.CurrentState()
-		lastBlockNumber = c.backend.CurrentHeadBlock().Number()
-		expectedBlock   = big.NewInt(0).Add(lastBlockNumber, big.NewInt(1))
-	)
-
-	if state.BlockNumber().Cmp(expectedBlock) == 0 {
-		c.getLogger().Infow("Catch up with the latest block")
-	} else {
-		// update new round with lastKnownHeight
-		c.getLogger().Infow("New height is not catch up with the latest block, update height to lastest block + 1")
-		state.SetView(&tendermint.View{
-			Round:       0,
-			BlockNumber: expectedBlock,
-		})
-	}
-	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
-
-	sleepDuration := time.Until(state.startTime)
-	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
-	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
-	c.timeout.ScheduleTimeout(timeoutInfo{
-		Duration:    sleepDuration,
-		BlockNumber: timeOutBlock,
-		Round:       0,
-		Step:        RoundStepNewHeight,
-	})
-}
-
-func (c *core) updateStateForNewblock() {
-	var (
-		state  = c.CurrentState()
-		logger = c.getLogger()
-	)
-
-	if state.commitRound > -1 {
-		// having commit round, should have seen +2/3 precommits
-		precommits, ok := state.GetPrecommitsByRound(state.commitRound)
-		if !ok {
-			logger.Errorw("updateStateForNewblock(): Can not found the message set")
-			return
-		}
-		_, ok = precommits.TwoThirdMajority()
-		if !ok {
-			logger.Errorw("updateStateForNewblock(): Having commitRound with no +2/3 precommits")
-			return
-		}
-	}
-
-	// Update all roundState's fields
-	height := state.BlockNumber()
-	state.SetView(&tendermint.View{
-		Round:       0,
-		BlockNumber: height.Add(height, big.NewInt(1)),
-	})
-	state.UpdateRoundStep(0, RoundStepNewHeight)
-
-	if state.commitTime.IsZero() {
-		// "Now" makes it easier to sync up dev nodes.
-		// We add timeoutCommit to allow transactions
-		// to be gathered for the first block.
-		// And alternative solution that relies on clocks:
-		state.startTime = c.config.Commit(time.Now())
-	} else {
-		state.startTime = c.config.Commit(state.commitTime)
-	}
-	//this is to safeguard the case where miner send a newer block, which should not be discarded.
-	//
-	if state.Block() != nil && state.Block().Number().Cmp(state.BlockNumber()) < 0 {
-		state.SetBlock(nil)
-	}
-	state.SetLockedRoundAndBlock(-1, nil)
-	state.SetValidRoundAndBlock(-1, nil)
-	state.SetProposalReceived(nil)
-
-	state.commitRound = -1
-	state.PrevotesReceived = make(map[int64]*messageSet)
-	state.PrecommitsReceived = make(map[int64]*messageSet)
-	state.PrecommitWaited = false
-
-	c.currentState = state
-	logger.Infow("updated to new block", "new_block_number", state.BlockNumber())
-
-	if _, err := c.processFutureMessages(logger); err != nil {
-		logger.Errorw("failed to process future msg", "err", err)
-	}
-
 }
 
 // processFutureMessages dequeue and runs all msgs for the next block (caller should lock the mutex to ensure thread-safe)
