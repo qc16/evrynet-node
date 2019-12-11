@@ -5,6 +5,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -30,7 +31,8 @@ func TestCore_LookupSentMsg(t *testing.T) {
 		proposal = core.getDefaultProposal(core.getLogger(), round)
 	)
 
-	core.StoreSentMsg(step, round, proposal)
-	index := core.LookupSentMsg(step, round)
+	msgData, _ := rlp.EncodeToBytes(proposal)
+	core.storeSentMsg(step, round, msgData)
+	index := core.lookupSentMsg(step, round)
 	assert.Equal(t, int64(0), index)
 }

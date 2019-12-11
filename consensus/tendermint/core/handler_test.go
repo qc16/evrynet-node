@@ -32,7 +32,7 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
 		txPool:         txPool,
-		sosMsg: NewSOSMsg(memorydb.New()),
+		sentMsgStorage: NewMsgStorageData(memorydb.New()),
 	}
 }
 

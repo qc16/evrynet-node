@@ -26,7 +26,7 @@ func New(backend tendermint.Backend, config *tendermint.Config, db ethdb.Databas
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
-		sosMsg:         NewSOSMsg(db),
+		sentMsgStorage: NewMsgStorageData(db),
 	}
 	return c
 }
@@ -64,7 +64,7 @@ type core struct {
 	mu *sync.RWMutex
 
 	// a Helper supports to store message before send proposal/ vote for every block
-	sosMsg *SOSMsg
+	sentMsgStorage *MsgStorage
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
 	proposeStart time.Time
@@ -146,7 +146,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	}
 
 	// store before send propose msg
-	c.StoreSentMsg(RoundStepPropose, propose.Round, propose)
+	c.storeSentMsg(RoundStepPropose, propose.Round, payload)
 
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
@@ -216,9 +216,9 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	// store before send propose msg
 	switch voteType {
 	case msgPrevote:
-		c.StoreSentMsg(RoundStepPrevote, round, vote)
+		c.storeSentMsg(RoundStepPrevote, round, payload)
 	case msgPrecommit:
-		c.StoreSentMsg(RoundStepPrecommit, round, vote)
+		c.storeSentMsg(RoundStepPrecommit, round, payload)
 	default:
 	}
 
