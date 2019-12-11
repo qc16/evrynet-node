@@ -175,11 +175,18 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		return ErrNoBroadcaster
 	}
 	if len(targets) > 0 {
-		sb.broadcastCh <- broadcastTask{
+		task := broadcastTask{
 			Payload:    payload,
 			MinPeers:   valSet.F() * 2,
 			Targets:    targets,
 			TotalPeers: len(targets),
+		}
+		select {
+		case sb.broadcastCh <- task:
+		default:
+			go func() {
+				sb.broadcastCh <- task
+			}()
 		}
 	}
 	return nil
@@ -221,16 +228,10 @@ func (sb *Backend) gossipLoop() {
 				if timeSleep >= maxBroadcastSleepTime {
 					log.Warn("failed to sent msg to peer with retries", "success", successSent, "min_peers", task.MinPeers, "total_peers", task.TotalPeers)
 				}
-				select {
 				// increase timeSleep 100ms after each epoch
 				// if receive new task then reset the timer
-				case <-time.After(timeSleep):
-					timeSleep += broadcastSleepTimeIncreament
-				case task = <-sb.broadcastCh:
-					log.Debug("receive new broadcast task, abort current task")
-					timeSleep = initialBroadcastSleepTime
-					successSent = 0
-				}
+				<-time.After(timeSleep)
+				timeSleep += broadcastSleepTimeIncreament
 				continue taskLoop
 			}
 			break taskLoop

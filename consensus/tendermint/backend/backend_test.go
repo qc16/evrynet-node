@@ -211,27 +211,6 @@ func TestBackend_Gossip(t *testing.T) {
 		assert.Equal(t, expectedData, data)
 	}
 
-	//test skipping retry when having msg
-	broadcaster.isDisconnect = true
-	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
-	select {
-	case <-time.After(time.Millisecond * 80):
-	case <-dataCh:
-		t.Fatal("expected not send to peer when disconnect")
-	}
-
-	broadcaster.isDisconnect = false
-	var expectedData2 = "bbb"
-	err = be.Gossip(valSet, []byte(expectedData2))
-	require.NoError(t, err)
-
-	select {
-	case <-time.After(time.Millisecond * 40):
-		t.Fatal("not receive msg to peer")
-	case data := <-dataCh:
-		assert.Equal(t, expectedData2, data)
-	}
-
 	//test not passed when sending failed
 	broadcaster.isSendFailed = true
 	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
