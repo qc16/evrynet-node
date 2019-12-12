@@ -146,7 +146,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 	}
 
 	// store before send propose msg
-	c.storeSentMsg(RoundStepPropose, propose.Round, payload)
+	c.sentMsgStorage.storeSentMsg(propose.Block.Number().Uint64(), RoundStepPropose, propose.Round, payload)
 
 	if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
@@ -216,9 +216,9 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	// store before send propose msg
 	switch voteType {
 	case msgPrevote:
-		c.storeSentMsg(RoundStepPrevote, round, payload)
+		c.sentMsgStorage.storeSentMsg(c.CurrentState().BlockNumber().Uint64(), RoundStepPrevote, round, payload)
 	case msgPrecommit:
-		c.storeSentMsg(RoundStepPrecommit, round, payload)
+		c.sentMsgStorage.storeSentMsg(c.CurrentState().BlockNumber().Uint64(), RoundStepPrecommit, round, payload)
 	default:
 	}
 

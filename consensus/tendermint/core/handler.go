@@ -107,9 +107,10 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 			"new_head_number", newHeadNumber.String())
 		return nil
 	}
+
+	c.sentMsgStorage.truncateMsgStored(state.BlockNumber().Uint64())
 	c.updateStateForNewblock()
 	c.startRoundZero()
-	c.truncateMsgStored()
 	return nil
 }
 

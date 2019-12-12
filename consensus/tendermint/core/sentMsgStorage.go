@@ -3,7 +3,6 @@ package core
 import (
 	"encoding/binary"
 	"encoding/json"
-	"sort"
 	"sync"
 	"time"
 
@@ -41,18 +40,17 @@ func NewMsgStorageData(db ethdb.Database) *MsgStorage {
 }
 
 // storeSentMsg stores vote/ propose to database
-func (c *core) storeSentMsg(step RoundStepType, round int64, msgData []byte) {
+func (c *MsgStorage) storeSentMsg(blockNumber uint64, step RoundStepType, round int64, msgData []byte) {
 	var (
-		blockNumber = c.currentState.BlockNumber().Uint64()
-		logger      = c.sentMsgStorage.logger.With("block", blockNumber, "step", step.String(), "round", round)
+		logger = c.logger.With("block", blockNumber, "step", step.String(), "round", round)
 	)
 
-	if index := c.lookupSentMsg(step, round); index >= 0 {
+	if index := c.lookupSentMsg(blockNumber, step, round); index >= 0 {
 		logger.Warnw("message had saved at before")
 		return
 	}
-	c.sentMsgStorage.mu.Lock()
-	defer c.sentMsgStorage.mu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	var (
 		key   = getKey(blockNumber, step, round)
@@ -72,28 +70,28 @@ func (c *core) storeSentMsg(step RoundStepType, round int64, msgData []byte) {
 	}
 
 	logger.Infow("saving a sent Msg")
-	if err = c.sentMsgStorage.db.Put(key, blob); err != nil {
+	if err = c.db.Put(key, blob); err != nil {
 		logger.Warnw("failed write to MsgStorage file", "err", err)
 	}
 }
 
 // lookupSentMsg lockups proposal/ vote messages had stored and return index of the message
 // if message were not found returns -1
-func (c *core) lookupSentMsg(step RoundStepType, round int64) int64 {
-	c.sentMsgStorage.mu.Lock()
-	defer c.sentMsgStorage.mu.Unlock()
+func (c *MsgStorage) lookupSentMsg(blockNumber uint64, step RoundStepType, round int64) int64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	var (
-		msgs        []*MsgStorageData
-		prefix      []byte
-		blockNumber = c.currentState.BlockNumber().Uint64()
-		logger      = c.sentMsgStorage.logger.With("block", blockNumber, "step", step.String(), "round", round)
+		prefix []byte
+		logger = c.logger.With("block", blockNumber, "step", step.String(), "round", round)
 	)
 
 	prefix = append(prefix, []byte(dbKeyMsgStoragePrefix)...)
 	prefix = append(prefix, encodeUint64(blockNumber)...)
-	it := c.sentMsgStorage.db.NewIteratorWithPrefix(prefix)
+	it := c.db.NewIteratorWithPrefix(prefix)
+	var i = int64(-1)
 	for it.Next() {
-		blob, err := c.sentMsgStorage.db.Get(it.Key())
+		i++
+		blob, err := c.db.Get(it.Key())
 		if err != nil {
 			continue
 		}
@@ -101,19 +99,8 @@ func (c *core) lookupSentMsg(step RoundStepType, round int64) int64 {
 		if err := json.Unmarshal(blob, &sData); err != nil {
 			continue
 		}
-		msgs = append(msgs, sData)
-	}
-
-	if len(msgs) > 0 {
-		// sort array
-		sort.Slice(msgs, func(i, j int) bool {
-			return msgs[i].Time.Before(msgs[j].Time)
-		})
-		// find index of message
-		for i := 0; i < len(msgs); i++ {
-			if msgs[i].Step == step && msgs[i].Round == round {
-				return int64(i)
-			}
+		if sData.Step == step && sData.Round == round {
+			return int64(i)
 		}
 	}
 	logger.Warnw("lookupSentMsg: message not found")
@@ -121,25 +108,24 @@ func (c *core) lookupSentMsg(step RoundStepType, round int64) int64 {
 }
 
 // truncateMsgStored removes all data stored by the block's number
-func (c *core) truncateMsgStored() {
-	c.sentMsgStorage.mu.Lock()
-	defer c.sentMsgStorage.mu.Unlock()
+func (c *MsgStorage) truncateMsgStored(blockNumber uint64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	var (
-		key         []byte
-		blockNumber = c.currentState.BlockNumber().Uint64()
-		logger      = c.sentMsgStorage.logger.With("block", blockNumber)
+		key    []byte
+		logger = c.logger.With("block", blockNumber)
 	)
 
 	key = append(key, []byte(dbKeyMsgStoragePrefix)...)
 	key = append(key, encodeUint64(blockNumber)...)
-	it := c.sentMsgStorage.db.NewIteratorWithPrefix(key)
+	it := c.db.NewIteratorWithPrefix(key)
 	for it.Next() {
-		if err := c.sentMsgStorage.db.Delete(it.Key()); err != nil {
+		if err := c.db.Delete(it.Key()); err != nil {
 			logger.Warnw("failed to delete MsgStorage by key", "err", err)
 		}
 	}
-	logger.Info("truncate MsgStorage done", "block", c.currentState.BlockNumber().Uint64())
+	logger.Info("truncate MsgStorage done")
 }
 
 // UnmarshalJSON unmarshals from JSON.
@@ -172,7 +158,7 @@ func getKey(blockNumber uint64, step RoundStepType, round int64) []byte {
 	var key []byte
 	key = append(key, []byte(dbKeyMsgStoragePrefix)...)
 	key = append(key, encodeUint64(blockNumber)...)
-	key = append(key, []byte(step.String())...)
+	key = append(key, encodeUint64(uint64(step))...)
 	key = append(key, encodeInt64(round)...)
 	return key
 }
