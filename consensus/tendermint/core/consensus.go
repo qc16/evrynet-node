@@ -502,7 +502,7 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 
 	block, err := c.FinalizeBlock(state.ProposalReceived())
 	if err != nil {
-		logger.Errorw("block committing failed", "error", err)
+		logger.Panicw("block committing failed", "error", err)
 	}
 
 	c.backend.Commit(block)
@@ -522,10 +522,22 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	if !ok {
 		c.getLogger().Panicw("no precommits at commitRound")
 	}
-	//commitVotes := precommits.VoteByAddress()
-	for _, vote := range precommits.VotesByAddress() {
+
+	votes, ok := precommits.voteByBlock[header.Hash()]
+	if !ok || votes == nil {
+		c.getLogger().Panicw("no votes for the commiting block", "block_hash", header.Hash())
+	}
+	if votes.totalReceived <= fx2 {
+		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", fx2+1, totalPrecommits)
+	}
+
+	for _, vote := range votes.votes {
+		if vote == nil {
+			continue
+		}
 		commitSeals = append(commitSeals, vote.Seal)
 		totalPrecommits++
+		//TODO: is it fair to always take the first 2F+1 seals?
 		if totalPrecommits > fx2 {
 			break
 		}
