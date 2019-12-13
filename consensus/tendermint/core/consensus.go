@@ -535,7 +535,6 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 		if vote == nil {
 			continue
 		}
-		c.getLogger().Infow("vote printing", "vote", vote)
 		commitSeals = append(commitSeals, vote.Seal)
 		totalPrecommits++
 		//TODO: is it fair to always take the first 2F+1 seals?
