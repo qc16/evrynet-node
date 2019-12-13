@@ -79,7 +79,8 @@ func (c *core) Start() error {
 	// be able to call in test.
 	c.getLogger().Infow("starting Tendermint's core...")
 	if c.currentState == nil {
-		c.currentState = c.getStoredState()
+		c.currentState = c.getInitializedState()
+		c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 	}
 	c.subscribeEvents()
 
@@ -88,7 +89,7 @@ func (c *core) Start() error {
 	if err := c.timeout.Start(); err != nil {
 		return err
 	}
-	c.startRoundZero()
+	c.startNewRound()
 	go c.handleEvents()
 
 	return nil

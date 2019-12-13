@@ -274,3 +274,18 @@ func (s *roundState) getPrecommitWaited() bool {
 func (s *roundState) setPrecommitWaited(waited bool) {
 	s.PrecommitWaited = waited
 }
+
+func (s *roundState) clearPreviousRoundData() {
+	//this is to safeguard the case where miner send a newer block, which should not be discarded.
+	if s.Block() != nil && s.Block().Number().Cmp(s.BlockNumber()) < 0 {
+		s.SetBlock(nil)
+	}
+
+	s.SetLockedRoundAndBlock(-1, nil)
+	s.SetValidRoundAndBlock(-1, nil)
+	s.SetProposalReceived(nil)
+	s.commitRound = -1
+	s.PrevotesReceived = make(map[int64]*messageSet)
+	s.PrecommitsReceived = make(map[int64]*messageSet)
+	s.PrecommitWaited = false
+}

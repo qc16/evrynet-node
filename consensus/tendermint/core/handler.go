@@ -108,7 +108,7 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 		return nil
 	}
 	c.updateStateForNewblock()
-	c.startRoundZero()
+	c.startNewRound()
 	return nil
 }
 
@@ -213,7 +213,7 @@ func (c *core) handlePropose(msg message) error {
 
 	// Does not apply, this is not an error but may happen due to network lattency
 	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		logger.Warnw("received proposal with different height/round. Skip processing it")
+		logger.Warnw("received proposal with different height/round.")
 		if proposal.Block.Number().Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
 			logger.Infow("store prevote vote from future block", "from", msg.Address)
