@@ -186,7 +186,9 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 	ms.messages[msg.Address] = &msg
 	ms.voteByAddress[msg.Address] = vote
 	ms.totalReceived++
-	_ = ms.addVoteToBlockVote(vote, index)
+	if err := ms.addVoteToBlockVote(vote, index); err != nil {
+		return false, err
+	}
 
 	if ms.voteByBlock[copyHash].totalReceived > 2*ms.valSet.F() {
 		if ms.maj23 == nil {
