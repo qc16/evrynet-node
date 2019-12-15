@@ -257,6 +257,7 @@ func (sb *Backend) Stop() error {
 		return err
 	}
 	sb.coreStarted = false
+	sb.EventMux().Post(tendermint.StopCoreEvent{})
 	return nil
 }
 

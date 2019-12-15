@@ -23,11 +23,11 @@ type Backend interface {
 
 	// Gossip sends a message to all validators (exclude self)
 	// these message are send via p2p network interface.
-	Gossip(valSet ValidatorSet, payload []byte) error
+	Gossip(valSet ValidatorSet, blockNumber *big.Int, payload []byte) error
 
 	// Broadcast sends a message to all validators (including self)
 	// It will call gossip and post an identical event to its EventMux().
-	Broadcast(valSet ValidatorSet, payload []byte) error
+	Broadcast(valSet ValidatorSet, blockNumber *big.Int, payload []byte) error
 
 	// Validators returns the validator set
 	// we should only use this method when core is started.

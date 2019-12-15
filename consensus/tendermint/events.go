@@ -21,3 +21,6 @@ type MessageEvent struct {
 type FinalCommittedEvent struct {
 	BlockNumber *big.Int
 }
+
+// StopCoreEvent is posted when core is stopped
+type StopCoreEvent struct{}

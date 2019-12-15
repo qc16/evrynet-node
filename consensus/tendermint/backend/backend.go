@@ -134,9 +134,9 @@ func (sb *Backend) SetTxPool(txpool *core.TxPool) {
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	// send to others
-	if err := sb.Gossip(valSet, payload); err != nil {
+	if err := sb.Gossip(valSet, blockNumber, payload); err != nil {
 		return err
 	}
 	// send to self
@@ -151,17 +151,18 @@ func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 }
 
 type broadcastTask struct {
-	Payload    []byte
-	MinPeers   int
-	TotalPeers int
-	Targets    map[common.Address]bool
+	Payload     []byte
+	MinPeers    int
+	TotalPeers  int
+	Targets     map[common.Address]bool
+	BlockNumber *big.Int
 }
 
 // Gossip implements tendermint.Backend.Gossip
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return backend.ErrNoBroadcaster if no broadcaster is set for backend
-func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 
 	targets := make(map[common.Address]bool)
@@ -176,10 +177,11 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 	}
 	if len(targets) > 0 {
 		task := broadcastTask{
-			Payload:    payload,
-			MinPeers:   valSet.F() * 2,
-			Targets:    targets,
-			TotalPeers: len(targets),
+			Payload:     payload,
+			MinPeers:    valSet.F() * 2,
+			Targets:     targets,
+			TotalPeers:  len(targets),
+			BlockNumber: blockNumber,
 		}
 		select {
 		case sb.broadcastCh <- task:
@@ -193,6 +195,9 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 }
 
 func (sb *Backend) gossipLoop() {
+	finalEvtCh := sb.EventMux().Subscribe(tendermint.FinalCommittedEvent{})
+	stopEvtSub := sb.EventMux().Subscribe(tendermint.StopCoreEvent{})
+
 	for {
 		task := <-sb.broadcastCh
 		var (
@@ -227,12 +232,23 @@ func (sb *Backend) gossipLoop() {
 			if successSent < task.MinPeers {
 				log.Info("failed to sent to peer, sleeping", "min", task.MinPeers, "success", successSent,
 					"time_sleep", timeSleep)
-				// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
-				// if receive new task then reset the timer
-				<-time.After(timeSleep)
-				if timeSleep < maxBroadcastSleepTime {
-					timeSleep += broadcastSleepTimeIncreament
+				// sleep and retries until success or core stop or new block event
+				select {
+				case finalEvt := <-finalEvtCh.Chan():
+					if finalEvt.Data.(tendermint.FinalCommittedEvent).BlockNumber.Cmp(task.BlockNumber) >= 0 {
+						log.Info("cancel broadcast task because of final event")
+						break taskLoop
+					}
+				case <-stopEvtSub.Chan():
+					log.Info("cancel broadcast task because core is stopped")
+					break taskLoop
+				case <-time.After(timeSleep):
+					// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
+					if timeSleep < maxBroadcastSleepTime {
+						timeSleep += broadcastSleepTimeIncreament
+					}
 				}
+
 				continue taskLoop
 			}
 			break taskLoop
