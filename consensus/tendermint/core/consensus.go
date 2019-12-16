@@ -606,8 +606,9 @@ func (c *core) startNewRound() {
 // processFutureMessages dequeue and runs all msgs for the next block (caller should lock the mutex to ensure thread-safe)
 func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err error) {
 	var (
-		vote  tendermint.Vote
-		state = c.CurrentState()
+		state          = c.CurrentState()
+		msgBlockNumber *big.Int
+		msgRound       int64
 	)
 	for {
 		if c.futureMessages.Len() == 0 {
@@ -620,11 +621,27 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 			logger.Errorw("Failed to decode data to message")
 			return false, err
 		}
-		if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
-			logger.Errorw("Failed to decode vote from message", "error", err)
-			return false, err
+		switch msg.Code {
+		case msgPrecommit, msgPrevote:
+			var vote tendermint.Vote
+			if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
+				logger.Errorw("Failed to decode vote from message", "error", err)
+				return false, err
+			}
+			msgBlockNumber = vote.BlockNumber
+			msgRound = vote.Round
+		case msgPropose:
+			var proposal tendermint.Proposal
+			if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
+				logger.Errorw("Failed to decode vote from message", "error", err)
+				return false, err
+			}
+			msgBlockNumber = proposal.Block.Number()
+			msgRound = proposal.Round
+		default:
+			return false, fmt.Errorf("unknown msg code %d", msg.Code)
 		}
-		if vote.BlockNumber.Cmp(state.BlockNumber()) < 0 {
+		if msgBlockNumber.Cmp(state.BlockNumber()) < 0 {
 			logger.Infow("vote from older block number, ignore")
 			// Ignore vote from older block, remove element at position 0 and continue
 			if _, err := c.futureMessages.Get(1); err != nil {
@@ -632,13 +649,14 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 			}
 			continue
 		}
-		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
+		if msgBlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// It is future block, stop processing
 			break
 		}
 		// at here vote block number should be equal state block number
 		// remove message and handle it
-		logger.Infow("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
+		logger.Infow("handle vote message in future message queue",
+			"msg_block", msgBlockNumber, "msg_round", msgRound, "from", msg.Address)
 		if _, err := c.futureMessages.Get(1); err != nil {
 			logger.Warn("failed to remove from future msgs", "err", err)
 		}
