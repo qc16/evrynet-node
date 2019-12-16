@@ -79,6 +79,10 @@ func (s *roundState) BlockNumber() *big.Int {
 	return s.view.BlockNumber
 }
 
+func (s *roundState) CopyBlockNumber() *big.Int {
+	return big.NewInt(0).Set(s.view.BlockNumber)
+}
+
 func (s *roundState) Round() int64 {
 	return s.view.Round
 }

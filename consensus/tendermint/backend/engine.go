@@ -201,6 +201,7 @@ func (sb *Backend) tryStartCore() bool {
 		return false
 	}
 	sb.coreStarted = true
+	go sb.gossipLoop()
 	return true
 }
 

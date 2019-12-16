@@ -172,6 +172,7 @@ func TestBackend_Gossip(t *testing.T) {
 	)
 
 	be.coreStarted = true
+	go be.gossipLoop()
 	dataCh := make(chan string)
 
 	broadcaster := &mockBroadcaster{

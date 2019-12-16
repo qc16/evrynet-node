@@ -71,7 +71,6 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		}
 	}
 
-	go be.gossipLoop()
 	go be.dequeueMsgLoop()
 	return be
 }
@@ -183,23 +182,33 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, 
 			TotalPeers:  len(targets),
 			BlockNumber: blockNumber,
 		}
-		select {
-		case sb.broadcastCh <- task:
-		default:
-			go func() {
-				sb.broadcastCh <- task
-			}()
-		}
+		go func() {
+			sb.broadcastCh <- task
+		}()
 	}
 	return nil
 }
 
 func (sb *Backend) gossipLoop() {
-	finalEvtCh := sb.EventMux().Subscribe(tendermint.FinalCommittedEvent{})
-	stopEvtSub := sb.EventMux().Subscribe(tendermint.StopCoreEvent{})
-
+	var (
+		task        broadcastTask
+		finalEvtSub = sb.EventMux().Subscribe(tendermint.FinalCommittedEvent{})
+		stopEvtSub  = sb.EventMux().Subscribe(tendermint.StopCoreEvent{})
+	)
+	defer func() {
+		finalEvtSub.Unsubscribe()
+		stopEvtSub.Unsubscribe()
+	}()
 	for {
-		task := <-sb.broadcastCh
+		select {
+		case task = <-sb.broadcastCh:
+		case <-finalEvtSub.Chan():
+			continue
+		case <-stopEvtSub.Chan():
+			log.Info("cancel broadcast task because core is stopped")
+			return
+		}
+
 		var (
 			timeSleep   = initialBroadcastSleepTime
 			successSent = 0
@@ -234,21 +243,20 @@ func (sb *Backend) gossipLoop() {
 					"time_sleep", timeSleep)
 				// sleep and retries until success or core stop or new block event
 				select {
-				case finalEvt := <-finalEvtCh.Chan():
+				case finalEvt := <-finalEvtSub.Chan():
 					if finalEvt.Data.(tendermint.FinalCommittedEvent).BlockNumber.Cmp(task.BlockNumber) >= 0 {
 						log.Info("cancel broadcast task because of final event")
 						break taskLoop
 					}
 				case <-stopEvtSub.Chan():
 					log.Info("cancel broadcast task because core is stopped")
-					break taskLoop
+					return
 				case <-time.After(timeSleep):
 					// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
 					if timeSleep < maxBroadcastSleepTime {
 						timeSleep += broadcastSleepTimeIncreament
 					}
 				}
-
 				continue taskLoop
 			}
 			break taskLoop

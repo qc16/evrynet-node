@@ -141,7 +141,7 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		return
 	}
 
-	if err := c.backend.Broadcast(c.valSet, c.currentState.BlockNumber(), payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
 		return
 	}
@@ -205,7 +205,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		logger.Errorw("Failed to Finalize Vote", "error", err)
 		return
 	}
-	if err := c.backend.Broadcast(c.valSet, c.currentState.BlockNumber(), payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
 		logger.Errorw("Failed to Broadcast vote", "error", err)
 		return
 	}
