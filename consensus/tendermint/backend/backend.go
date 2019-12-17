@@ -13,7 +13,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
-	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/ethdb"
@@ -125,11 +124,6 @@ func (sb *Backend) Sign(data []byte) ([]byte, error) {
 // Address implements tendermint.Backend.Address
 func (sb *Backend) Address() common.Address {
 	return sb.address
-}
-
-// SetTxPool define a method to allow Injecting a txpool
-func (sb *Backend) SetTxPool(txpool *core.TxPool) {
-	sb.core.SetTxPool(txpool)
 }
 
 // Broadcast implements tendermint.Backend.Broadcast

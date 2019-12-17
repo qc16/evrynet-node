@@ -93,7 +93,7 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 	assert.Equal(t, RoundStepPrevoteWait, core.CurrentState().Step())
 
 	//wait for 4 second to core's state jump from RoundStepPrevoteWait to RoundStepPrecommit
-	time.Sleep(tendermint.DefaultConfig.TimeoutPrevote +  (500 * time.Millisecond))
+	time.Sleep(tendermint.DefaultConfig.TimeoutPrevote + (500 * time.Millisecond))
 	assert.Equal(t, RoundStepPrecommit, core.CurrentState().Step())
 }
 
