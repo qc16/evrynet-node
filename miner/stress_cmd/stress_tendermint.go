@@ -41,39 +41,19 @@ import (
 	"github.com/evrynet-official/evrynet-client/params"
 )
 
-var privateKey = []string{
-	"ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1",
-	"e74f3525fb69f193b51d33f4baf602c4572d81ede57907c61a62eaf9ed95374a",
-	"276cd299f350174a6005525a523b59fccd4c536771e4876164adb9f1459b79e4",
-	"65c4cd470cfe3d46b7e8f9635e5e1043c8d4f1e96d01dc82cf06f2bd6d2531a6",
-}
-
 func main() {
 	var err error
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 	fdlimit.Raise(2048)
 
-	// Generate a batch of accounts to seal and fund with
-	faucets := make([]*ecdsa.PrivateKey, len(privateKey))
-	for i := 0; i < len(faucets); i++ {
-		if faucets[i], err = crypto.HexToECDSA(privateKey[i]); err != nil {
-			panic(err)
-		}
-	}
+	enodes, faucets := parseTestConfig("stress_config.json")
 
 	nodePriKey, _ := crypto.GenerateKey()
 	// Create a Clique network based off of the Rinkeby config
-	genesis, err := makeGenesis("../../tests/test_nodes/genesis.json")
+	genesis, err := makeGenesis("./genesis_testnet.json")
 	if err != nil {
 		panic(err)
 	}
-
-	var (
-		nodes  []*node.Node
-		enodes []*enode.Node
-	)
-
-	enodes = append(enodes, enode.MustParse("enode://442dc80afbfbd8d7c335359c08ff3c5944d7296aea679d58c6baeeeeadd250a7896f92128c502f4503b7cde84aa10a0c386df70be25e863c84874be8cb0f3573@192.168.1.2:30301?discport=0"))
 
 	//make node
 	node, err := makeNode(genesis)
@@ -89,9 +69,6 @@ func main() {
 	for _, n := range enodes {
 		node.Server().AddPeer(n)
 	}
-	// Start tracking the node and it's enode
-	nodes = append(nodes, node)
-	enodes = append(enodes, node.Server().Self())
 
 	// Inject the signer key and start sealing with it
 	store := node.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
@@ -109,20 +86,33 @@ func main() {
 	if err := node.Service(&ethereum); err != nil {
 		panic(err)
 	}
+	bc := ethereum.BlockChain()
 	for !ethereum.Synced() {
-		log.Warn("node is not synced, sleeping")
+		log.Warn("node is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
 		time.Sleep(3 * time.Second)
 	}
 
 	nonces := make([]uint64, len(faucets))
-
-	for i, faucet := range faucets {
-		addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
-		var ethereum *eth.Ethereum
-		if err := node.Service(&ethereum); err != nil {
-			panic(err)
+	// wait for nonce is not change
+	for {
+		for i, faucet := range faucets {
+			log.Info("faucet addr", "addr", faucet)
+			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
+			nonces[i] = ethereum.TxPool().State().GetNonce(addr)
 		}
-		nonces[i] = ethereum.TxPool().State().GetNonce(addr)
+		time.Sleep(time.Second * 10)
+		var diff = false
+		for i, faucet := range faucets {
+			log.Info("faucet addr", "addr", faucet)
+			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
+			tmp := ethereum.TxPool().State().GetNonce(addr)
+			if tmp != nonces[i] {
+				diff = true
+			}
+		}
+		if !diff {
+			break
+		}
 	}
 
 	maxBlockNumber := ethereum.BlockChain().CurrentHeader().Number.Uint64()
@@ -131,11 +121,6 @@ func main() {
 	// Start injecting transactions from the faucet like crazy
 	go func() {
 		for {
-			var ethereum *eth.Ethereum
-			if err := node.Service(&ethereum); err != nil {
-				panic(err)
-			}
-			bc := ethereum.BlockChain()
 			currentBlk := bc.CurrentHeader().Number.Uint64()
 			for currentBlk > maxBlockNumber {
 				maxBlockNumber++
@@ -143,7 +128,7 @@ func main() {
 			}
 			duration := time.Since(start)
 			log.Warn("num tx info", "txs", numTxs, "duration", time.Since(start),
-				"txs_per_seconds", float64(numTxs)/duration.Seconds())
+				"txs_per_seconds", float64(numTxs)/duration.Seconds(), "block", currentBlk)
 			time.Sleep(2 * time.Second)
 		}
 	}()
@@ -153,7 +138,7 @@ func main() {
 
 		// Fetch the accessor for the relevant signer
 		var ethereum *eth.Ethereum
-		if err := nodes[index%len(nodes)].Service(&ethereum); err != nil {
+		if err := node.Service(&ethereum); err != nil {
 			panic(err)
 		}
 		// Create a self transaction and inject into the pool
@@ -167,12 +152,51 @@ func main() {
 		nonces[index]++
 
 		// Wait if we're too saturated
-		if pend, queue := ethereum.TxPool().Stats(); pend > 2048 {
+		for {
+			pend, queue := ethereum.TxPool().Stats()
+			if pend < 2048 {
+				break
+			}
 			log.Info("sleeping tx_pool is full", "pend", pend, "queue", queue)
 			time.Sleep(100 * time.Millisecond)
 		}
 
 	}
+}
+
+type stressConfig struct {
+	EnodeStrings  []string `json:"enodes"`
+	FaucetStrings []string `json:"faucets"`
+}
+
+func parseTestConfig(fileName string) ([]*enode.Node, []*ecdsa.PrivateKey) {
+	var cfg stressConfig
+	f, err := os.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	decoder := json.NewDecoder(f)
+	if err := decoder.Decode(&cfg); err != nil {
+		panic(err)
+	}
+
+	log.Info("test config", "enodes", cfg.EnodeStrings, "faucet", cfg.FaucetStrings)
+	var (
+		enodes  []*enode.Node
+		faucets []*ecdsa.PrivateKey
+	)
+	for _, enodeS := range cfg.EnodeStrings {
+		enodes = append(enodes, enode.MustParse(enodeS))
+	}
+
+	for _, faucetS := range cfg.FaucetStrings {
+		faucetPriKey, err := crypto.HexToECDSA(faucetS)
+		if err != nil {
+			panic(err)
+		}
+		faucets = append(faucets, faucetPriKey)
+	}
+	return enodes, faucets
 }
 
 // makeGenesis creates a custom Clique genesis block based on some pre-defined
