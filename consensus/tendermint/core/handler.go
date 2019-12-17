@@ -181,14 +181,6 @@ func (c *core) verifyTxs(proposal tendermint.Proposal) error {
 		return tendermint.ErrMismatchTxhashes
 	}
 
-	// Verify transaction for CoreTxPool
-	if c.txPool != nil {
-		for _, tx := range txs {
-			if err := c.txPool.ValidateTx(tx, false); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 

@@ -9,7 +9,6 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
-	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -68,8 +67,6 @@ type core struct {
 	// and handle them later when we jump to that block number
 	// futureMessages only accepts msgItem
 	futureMessages *queue.PriorityQueue
-
-	txPool *evrynetCore.TxPool
 }
 
 // Start implements core.Engine.Start
@@ -152,11 +149,6 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 //SetBlockForProposal define a method to allow Injecting a Block for testing purpose
 func (c *core) SetBlockForProposal(b *types.Block) {
 	c.CurrentState().SetBlock(b)
-}
-
-//SetTxPool define a method to allow Injecting a txpool
-func (c *core) SetTxPool(txPool *evrynetCore.TxPool) {
-	c.txPool = txPool
 }
 
 //SendVote send broadcast its vote to the network

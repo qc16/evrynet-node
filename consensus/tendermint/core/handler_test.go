@@ -30,7 +30,6 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
-		txPool:         txPool,
 	}
 }
 func TestVerifyProposal(t *testing.T) {
@@ -107,7 +106,7 @@ func TestVerifyProposal(t *testing.T) {
 			block:      block3,
 			privateKey: nodePrivateKey,
 			assertFn: func(err error) {
-				assert.EqualError(t, err, evrynetCore.ErrInsufficientFunds.Error())
+				assert.NoError(t, err)
 			},
 		},
 		{
