@@ -811,6 +811,13 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	}
 }
 
+func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
+	log.Info("rebroardcast transaction", "len", pm.peers.Len())
+	for _, peer := range pm.peers.Peers() {
+		peer.AsyncSendTransactions(txs)
+	}
+}
+
 // Mined broadcast loop
 func (pm *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
