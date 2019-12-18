@@ -153,11 +153,10 @@ func main() {
 
 		// Wait if we're too saturated
 		for epoch := 0; ; epoch++ {
-			pend, queue := ethereum.TxPool().Stats()
+			pend, _ := ethereum.TxPool().Stats()
 			if pend < 4096 {
 				break
 			}
-			log.Info("sleeping tx_pool is full", "pend", pend, "queue", queue)
 			time.Sleep(200 * time.Millisecond)
 			// force rebroadcast no more txs is mined for too long
 			if epoch > 30 {
@@ -170,6 +169,7 @@ func main() {
 					txs = append(txs, pendingTxs...)
 				}
 				go func() {
+					log.Warn("rebroadcast txs", "pend", len(txs))
 					ethereum.GetPm().BroadcastTxs(txs)
 				}()
 			}
