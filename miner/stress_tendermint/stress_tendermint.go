@@ -152,15 +152,28 @@ func main() {
 		nonces[index]++
 
 		// Wait if we're too saturated
-		for {
+		for epoch := 0; ; epoch++ {
 			pend, queue := ethereum.TxPool().Stats()
-			if pend < 2048 {
+			if pend < 4096 {
 				break
 			}
 			log.Info("sleeping tx_pool is full", "pend", pend, "queue", queue)
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
+			// force rebroadcast no more txs is mined for too long
+			if epoch > 30 {
+				var txs types.Transactions
+				pendings, err := ethereum.TxPool().Pending()
+				if err != nil {
+					panic(err)
+				}
+				for _, pendingTxs := range pendings {
+					txs = append(txs, pendingTxs...)
+				}
+				go func() {
+					ethereum.GetPm().BroadcastTxs(txs)
+				}()
+			}
 		}
-
 	}
 }
 
