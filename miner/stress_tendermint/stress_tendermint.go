@@ -20,6 +20,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -42,15 +43,24 @@ import (
 )
 
 func main() {
-	var err error
+	var (
+		err         error
+		genesisFile = "./genesis_testnet.json"
+		configFile  = "stress_config.json"
+	)
+	if len(os.Args) == 3 {
+		fmt.Println("overwrite default config")
+		genesisFile = os.Args[1]
+		configFile = os.Args[2]
+	}
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 	fdlimit.Raise(2048)
 
-	enodes, faucets := parseTestConfig("stress_config.json")
+	enodes, faucets := parseTestConfig(configFile)
 
 	nodePriKey, _ := crypto.GenerateKey()
 	// Create a Clique network based off of the Rinkeby config
-	genesis, err := makeGenesis("./genesis_testnet.json")
+	genesis, err := makeGenesis(genesisFile)
 	if err != nil {
 		panic(err)
 	}
@@ -118,6 +128,8 @@ func main() {
 	maxBlockNumber := ethereum.BlockChain().CurrentHeader().Number.Uint64()
 	numTxs := 0
 	start := time.Now()
+	preNumTxs := 0
+	prevTime := time.Now()
 	// Start injecting transactions from the faucet like crazy
 	go func() {
 		for {
@@ -126,9 +138,12 @@ func main() {
 				maxBlockNumber++
 				numTxs += len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions)
 			}
-			duration := time.Since(start)
 			log.Warn("num tx info", "txs", numTxs, "duration", time.Since(start),
-				"txs_per_seconds", float64(numTxs)/duration.Seconds(), "block", currentBlk)
+				"avg_tps", float64(numTxs)/time.Since(start).Seconds(), "current_tps", float64(numTxs-preNumTxs)/time.Since(prevTime).Seconds(),
+				"block", currentBlk)
+
+			preNumTxs = numTxs
+			prevTime = time.Now()
 			time.Sleep(2 * time.Second)
 		}
 	}()
@@ -154,25 +169,30 @@ func main() {
 		// Wait if we're too saturated
 		for epoch := 0; ; epoch++ {
 			pend, _ := ethereum.TxPool().Stats()
-			if pend < 4096 {
+			if pend < 10240 {
 				break
 			}
-			time.Sleep(200 * time.Millisecond)
-			// force rebroadcast no more txs is mined for too long
-			if epoch > 30 {
-				var txs types.Transactions
-				pendings, err := ethereum.TxPool().Pending()
-				if err != nil {
-					panic(err)
-				}
-				for _, pendingTxs := range pendings {
-					txs = append(txs, pendingTxs...)
-				}
-				go func() {
-					log.Warn("rebroadcast txs", "pend", len(txs))
-					ethereum.GetPm().BroadcastTxs(txs)
-				}()
+			time.Sleep(50 * time.Millisecond)
+
+			if pend < 40960 {
+				break
 			}
+
+			// force rebroadcast no more txs is mined for too long
+			var txs types.Transactions
+			pendings, err := ethereum.TxPool().Pending()
+			if err != nil {
+				panic(err)
+			}
+			for _, pendingTxs := range pendings {
+				ethereum.TxPool().State()
+				txs = append(txs, pendingTxs...)
+			}
+
+			go func() {
+				log.Warn("rebroadcast txs", "pend", len(txs))
+				ethereum.GetPm().ReBroadcastTxs(txs)
+			}()
 		}
 	}
 }
@@ -193,7 +213,6 @@ func parseTestConfig(fileName string) ([]*enode.Node, []*ecdsa.PrivateKey) {
 		panic(err)
 	}
 
-	log.Info("test config", "enodes", cfg.EnodeStrings, "faucet", cfg.FaucetStrings)
 	var (
 		enodes  []*enode.Node
 		faucets []*ecdsa.PrivateKey
@@ -260,8 +279,21 @@ func makeNode(genesis *core.Genesis) (*node.Node, error) {
 			SyncMode:        downloader.FullSync,
 			DatabaseCache:   256,
 			DatabaseHandles: 256,
-			TxPool:          core.DefaultTxPoolConfig,
-			GPO:             eth.DefaultConfig.GPO,
+			TxPool: core.TxPoolConfig{
+				Journal:   "transactions.rlp",
+				Rejournal: time.Hour,
+
+				PriceLimit: 1,
+				PriceBump:  10,
+
+				AccountSlots: 16,
+				GlobalSlots:  40960,
+				AccountQueue: 64,
+				GlobalQueue:  10240,
+
+				Lifetime: 3 * time.Hour,
+			},
+			GPO: eth.DefaultConfig.GPO,
 			Miner: miner.Config{
 				GasFloor: genesis.GasLimit * 9 / 10,
 				GasCeil:  genesis.GasLimit * 11 / 10,
