@@ -34,8 +34,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-client/core"
+	"github.com/Evrynetlabs/evrynet-client/rlp"
 )
 
 type allocItem struct{ Addr, Balance *big.Int }

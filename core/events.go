@@ -17,8 +17,8 @@
 package core
 
 import (
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.

@@ -1,4 +1,4 @@
-module github.com/evrynet-official/evrynet-client
+module github.com/Evrynetlabs/evrynet-client
 
 go 1.12
 

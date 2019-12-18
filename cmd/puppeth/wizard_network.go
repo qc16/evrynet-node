@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 // manageServers displays a list of servers the user can disconnect from, and an

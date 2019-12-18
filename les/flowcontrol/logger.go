@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-client/common/mclock"
 )
 
 // logger collects events in string format and discards events older than the

@@ -22,7 +22,7 @@ package geth
 import (
 	"errors"
 
-	"github.com/evrynet-official/evrynet-client/p2p/discv5"
+	"github.com/Evrynetlabs/evrynet-client/p2p/discv5"
 )
 
 // Enode represents a host on the network.

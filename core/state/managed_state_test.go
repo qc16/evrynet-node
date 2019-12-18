@@ -19,8 +19,8 @@ package state
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/core/rawdb"
 )
 
 var addr = common.BytesToAddress([]byte("test"))

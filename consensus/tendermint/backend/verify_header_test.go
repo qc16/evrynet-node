@@ -7,13 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/crypto/secp256k1"
+	"github.com/Evrynetlabs/evrynet-client/ethdb"
 )
 
 func TestBackend_VerifyHeader(t *testing.T) {

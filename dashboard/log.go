@@ -26,7 +26,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/log"
 	"github.com/mohae/deepcopy"
 	"github.com/rjeczalik/notify"
 )

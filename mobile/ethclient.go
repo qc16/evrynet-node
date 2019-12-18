@@ -21,8 +21,8 @@ package geth
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/ethclient"
 )
 
 // EthereumClient provides access to the Ethereum APIs.

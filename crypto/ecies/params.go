@@ -42,7 +42,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "github.com/evrynet-official/evrynet-client/crypto"
+	ethcrypto "github.com/Evrynetlabs/evrynet-client/crypto"
 )
 
 var (

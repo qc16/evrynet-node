@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 // walletDockerfile is the Dockerfile required to run a web wallet.

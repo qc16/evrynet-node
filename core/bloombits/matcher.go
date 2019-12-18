@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/bitutil"
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/common/bitutil"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong

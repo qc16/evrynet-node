@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common/math"
+	"github.com/Evrynetlabs/evrynet-client/common/math"
 )
 
 // Memory implements a simple memory model for the ethereum virtual machine.

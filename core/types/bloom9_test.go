@@ -54,7 +54,7 @@ func TestBloom(t *testing.T) {
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/core/state"
+	"github.com/Evrynetlabs/evrynet-client/core/state"
 )
 
 func TestBloom9(t *testing.T) {

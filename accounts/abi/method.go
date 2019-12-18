@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
 )
 
 // Method represents a callable given a `Name` and whether the method is a constant.

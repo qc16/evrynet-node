@@ -3,8 +3,8 @@ package backend
 import (
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 type commitChannels struct {

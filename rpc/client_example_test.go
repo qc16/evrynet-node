@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-client/rpc"
 )
 
 // In this example, our client wishes to track the latest 'block number'

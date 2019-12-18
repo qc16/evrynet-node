@@ -24,10 +24,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/evrynet-official/evrynet-client/cmd/utils"
-	"github.com/evrynet-official/evrynet-client/console"
-	"github.com/evrynet-official/evrynet-client/node"
-	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-client/console"
+	"github.com/Evrynetlabs/evrynet-client/node"
+	"github.com/Evrynetlabs/evrynet-client/rpc"
 	"github.com/urfave/cli"
 )
 
@@ -43,7 +43,7 @@ var (
 		Description: `
 The Geth console is an interactive shell for the JavaScript runtime environment
 which exposes a node admin interface as well as the Ðapp JavaScript API.
-See https://github.com/evrynet-official/evrynet-client/wiki/JavaScript-Console.`,
+See https://github.com/Evrynetlabs/evrynet-client/wiki/JavaScript-Console.`,
 	}
 
 	attachCommand = cli.Command{
@@ -56,7 +56,7 @@ See https://github.com/evrynet-official/evrynet-client/wiki/JavaScript-Console.`
 		Description: `
 The Geth console is an interactive shell for the JavaScript runtime environment
 which exposes a node admin interface as well as the Ðapp JavaScript API.
-See https://github.com/evrynet-official/evrynet-client/wiki/JavaScript-Console.
+See https://github.com/Evrynetlabs/evrynet-client/wiki/JavaScript-Console.
 This command allows to open a console on a running geth node.`,
 	}
 
@@ -69,7 +69,7 @@ This command allows to open a console on a running geth node.`,
 		Category:  "CONSOLE COMMANDS",
 		Description: `
 The JavaScript VM exposes a node admin interface as well as the Ðapp
-JavaScript API. See https://github.com/evrynet-official/evrynet-client/wiki/JavaScript-Console`,
+JavaScript API. See https://github.com/Evrynetlabs/evrynet-client/wiki/JavaScript-Console`,
 	}
 )
 

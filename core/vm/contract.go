@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/common"
 )
 
 // ContractRef is a reference to the contract's backing object

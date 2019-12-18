@@ -24,8 +24,8 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/evrynet-official/evrynet-client/p2p/enr"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-client/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-client/rlp"
 	"github.com/stretchr/testify/assert"
 )
 

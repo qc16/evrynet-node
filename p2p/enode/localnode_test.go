@@ -21,8 +21,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/p2p/enr"
 	"github.com/stretchr/testify/assert"
 )
 

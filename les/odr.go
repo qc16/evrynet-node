@@ -19,10 +19,10 @@ package les
 import (
 	"context"
 
-	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/ethdb"
-	"github.com/evrynet-official/evrynet-client/light"
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/core"
+	"github.com/Evrynetlabs/evrynet-client/ethdb"
+	"github.com/Evrynetlabs/evrynet-client/light"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 // LesOdr implements light.OdrBackend

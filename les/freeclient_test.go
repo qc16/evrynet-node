@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/mclock"
-	"github.com/evrynet-official/evrynet-client/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-client/core/rawdb"
 )
 
 func TestFreeClientPoolL10C100(t *testing.T) {

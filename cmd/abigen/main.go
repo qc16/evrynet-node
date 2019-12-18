@@ -24,8 +24,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/accounts/abi/bind"
-	"github.com/evrynet-official/evrynet-client/common/compiler"
+	"github.com/Evrynetlabs/evrynet-client/accounts/abi/bind"
+	"github.com/Evrynetlabs/evrynet-client/common/compiler"
 )
 
 var (

@@ -26,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-client/rlp"
 )
 
 var (

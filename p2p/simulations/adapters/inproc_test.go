@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/p2p/simulations/pipes"
+	"github.com/Evrynetlabs/evrynet-client/p2p/simulations/pipes"
 )
 
 func TestTCPPipe(t *testing.T) {

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/rpc"
 )
 
 func TestUnmarshalJSONNewFilterArgs(t *testing.T) {

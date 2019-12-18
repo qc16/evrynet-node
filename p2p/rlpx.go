@@ -35,10 +35,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/bitutil"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/crypto/ecies"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-client/common/bitutil"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/crypto/ecies"
+	"github.com/Evrynetlabs/evrynet-client/rlp"
 	"github.com/golang/snappy"
 	"golang.org/x/crypto/sha3"
 )

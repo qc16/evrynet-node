@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
 )
 
 func TestTextHash(t *testing.T) {

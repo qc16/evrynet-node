@@ -21,7 +21,7 @@ rm -rf "$BASEDIR"/builder/bin
 rm -rf "$BASEDIR"/bootnode/bin
 rm -rf "$BASEDIR"/nodes/bin/gev
 echo "Cloning evrynet-client from develop branch ..."
-git clone --single-branch -b develop --single-branch git@github.com:evrynet-official/evrynet-client.git "$BASEDIR"/builder/project
+git clone --single-branch -b develop --single-branch git@github.com:Evrynetlabs/evrynet-client.git "$BASEDIR"/builder/project
 
 # Stop all dockers gracefully to avoid DB crash
 echo "Stop docker containers of nodes"
@@ -70,7 +70,7 @@ then
     echo "------ Start explorer ------"
     rm -rf "$BASEDIR"/explorer/web
     echo "Cloning explorer from master branch ..."
-    git clone git@github.com:evrynet-official/explorer.git "$BASEDIR"/explorer/web
+    git clone git@github.com:Evrynetlabs/explorer.git "$BASEDIR"/explorer/web
 
     sudo docker rmi -f img_explorer
     sudo docker rm -f gev-explorer

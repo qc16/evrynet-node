@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/evrynet-official/evrynet-client/cmd/evm/internal/compiler"
+	"github.com/Evrynetlabs/evrynet-client/cmd/evm/internal/compiler"
 
 	cli "github.com/urfave/cli"
 )

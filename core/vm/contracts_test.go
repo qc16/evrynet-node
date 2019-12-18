@@ -21,7 +21,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/common"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.

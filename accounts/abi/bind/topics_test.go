@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/accounts/abi"
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-client/common"
 )
 
 func TestMakeTopics(t *testing.T) {

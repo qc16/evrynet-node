@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/metrics"
-	"github.com/evrynet-official/evrynet-client/metrics/prometheus"
+	"github.com/Evrynetlabs/evrynet-client/metrics"
+	"github.com/Evrynetlabs/evrynet-client/metrics/prometheus"
 )
 
 type exp struct {
