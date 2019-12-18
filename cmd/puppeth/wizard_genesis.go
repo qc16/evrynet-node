@@ -35,6 +35,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/evrynet-official/evrynet-tools/accounts"
 )
 
 // makeGenesis creates a new genesis struct based on some user input.
@@ -146,27 +147,53 @@ func (w *wizard) makeGenesis() {
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
-	// Consensus all set, just ask for initial funds and go
+
+	//Create flood accounts
 	fmt.Println()
-	fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
-	for {
-		// Read the address of the account to fund
-		if address := w.readAddress(); address != nil {
-			genesis.Alloc[*address] = core.GenesisAccount{
+	fmt.Println("Do you want to create accounts for tx flood? (default = no)")
+	if w.readDefaultYesNo(false) {
+		fmt.Println()
+		fmt.Println("How many accounts do you want? (default = 1000)")
+		numberAcc := w.readDefaultInt(1000)
+
+		fmt.Println()
+		fmt.Println("What is the seed? (default = testnet)")
+		seed := w.readDefaultString("testnet")
+		accs, err := accounts.GenerateAccounts(numberAcc, seed)
+		if err != nil {
+			log.Error("fail to generate new account", "Error:", err)
+			return
+		}
+
+		for _, acc := range accs {
+			genesis.Alloc[acc.Address] = core.GenesisAccount{
 				Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
 			}
-			continue
 		}
-		break
-	}
-	fmt.Println()
-	fmt.Println("Should the precompile-addresses (0x1 .. 0xff) be pre-funded with 1 wei? (advisable yes)")
-	if w.readDefaultYesNo(true) {
-		// Add a batch of precompile balances to avoid them getting deleted
-		for i := int64(0); i < 256; i++ {
-			genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+	} else {
+		// Consensus all set, just ask for initial funds and go
+		fmt.Println()
+		fmt.Println("Which accounts should be pre-funded? (advisable at least one)")
+		for {
+			// Read the address of the account to fund
+			if address := w.readAddress(); address != nil {
+				genesis.Alloc[*address] = core.GenesisAccount{
+					Balance: new(big.Int).Lsh(big.NewInt(1), 256-7), // 2^256 / 128 (allow many pre-funds without balance overflows)
+				}
+				continue
+			}
+			break
+		}
+		fmt.Println()
+		fmt.Println("Should the precompile-addresses (0x1 .. 0xff) be pre-funded with 1 wei? (advisable yes)")
+		if w.readDefaultYesNo(true) {
+			// Add a batch of precompile balances to avoid them getting deleted
+			for i := int64(0); i < 256; i++ {
+				genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}
+			}
 		}
 	}
+
 	// Query the user for some custom extras
 	fmt.Println()
 	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
