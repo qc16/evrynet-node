@@ -31,7 +31,7 @@ import (
 func newRoundState(view *tendermint.View, prevotesReceived, precommitsReceived map[int64]*messageSet, block *types.Block,
 	lockedRound int64, lockedBlock *types.Block,
 	validRound int64, validBlock *types.Block,
-	proposalReceived *tendermint.Proposal, step RoundStepType) *roundState {
+	proposalReceived *tendermint.Proposal, step RoundStepType, commitRound int64) *roundState {
 	return &roundState{
 		view:               view,
 		block:              block,
@@ -43,6 +43,7 @@ func newRoundState(view *tendermint.View, prevotesReceived, precommitsReceived m
 		PrevotesReceived:   prevotesReceived,
 		PrecommitsReceived: precommitsReceived,
 		step:               step,
+		commitRound:        commitRound,
 	}
 }
 
