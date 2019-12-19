@@ -26,6 +26,7 @@ func (c *core) getInitializedState() *roundState {
 		lockedBlock      *types.Block
 		validRound       int64 = -1
 		validBlock       *types.Block
+		commitRound      int64 = -1
 		proposalReceived *tendermint.Proposal
 		step             = RoundStepNewHeight
 	)
@@ -40,7 +41,7 @@ func (c *core) getInitializedState() *roundState {
 		lockedRound, lockedBlock,
 		validRound, validBlock,
 		proposalReceived,
-		step,
+		step, commitRound,
 	)
 
 	//TODO: timeout setup
