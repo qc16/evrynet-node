@@ -202,6 +202,10 @@ func (sb *Backend) tryStartCore() bool {
 	}
 	sb.coreStarted = true
 	go sb.gossipLoop()
+	// trigger dequeue msg loop
+	go func() {
+		sb.dequeueMsgTriggering <- struct{}{}
+	}()
 	return true
 }
 
