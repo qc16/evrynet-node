@@ -106,14 +106,13 @@ func main() {
 	// wait for nonce is not change
 	for {
 		for i, faucet := range faucets {
-			log.Info("faucet addr", "addr", faucet)
 			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
+			log.Info("faucet addr", "addr", addr)
 			nonces[i] = ethereum.TxPool().State().GetNonce(addr)
 		}
 		time.Sleep(time.Second * 10)
 		var diff = false
 		for i, faucet := range faucets {
-			log.Info("faucet addr", "addr", faucet)
 			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
 			tmp := ethereum.TxPool().State().GetNonce(addr)
 			if tmp != nonces[i] {
@@ -174,10 +173,6 @@ func main() {
 			}
 			time.Sleep(50 * time.Millisecond)
 
-			if pend < 40960 {
-				break
-			}
-
 			// force rebroadcast no more txs is mined for too long
 			var txs types.Transactions
 			pendings, err := ethereum.TxPool().Pending()
@@ -190,9 +185,12 @@ func main() {
 			}
 
 			go func() {
-				log.Warn("rebroadcast txs", "pend", len(txs))
 				ethereum.GetPm().ReBroadcastTxs(txs)
 			}()
+
+			if pend < 40960 {
+				break
+			}
 		}
 	}
 }

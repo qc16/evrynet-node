@@ -812,9 +812,11 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 }
 
 func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
-	log.Info("rebroardcast transaction", "len", pm.peers.Len())
+	log.Info("rebroardcast transaction", "len", pm.peers.Len(), "txs", len(txs))
 	for _, peer := range pm.peers.Peers() {
-		peer.AsyncSendTransactions(txs)
+		if err := peer.SendTransactions(txs); err != nil {
+			log.Error("failed to rebroadcast txs", err, "err", "peer", peer.head)
+		}
 	}
 }
 
