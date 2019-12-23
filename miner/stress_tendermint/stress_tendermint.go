@@ -136,6 +136,7 @@ func main() {
 			for currentBlk > maxBlockNumber {
 				maxBlockNumber++
 				numTxs += len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions)
+				log.Info("new_block", "txs", len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions), "number", maxBlockNumber)
 			}
 			log.Warn("num tx info", "txs", numTxs, "duration", time.Since(start),
 				"avg_tps", float64(numTxs)/time.Since(start).Seconds(), "current_tps", float64(numTxs-preNumTxs)/time.Since(prevTime).Seconds(),
@@ -168,20 +169,26 @@ func main() {
 		}
 
 		// Wait if we're too saturated
+		rebroardcast := false
+	waitLoop:
 		for epoch := 0; ; epoch++ {
 			pend, _ := ethereum.TxPool().Stats()
-			if pend < 10240 {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-			if pend < 40960 {
-				break
+			switch {
+			case pend < 40960:
+				break waitLoop
+			default:
+				if !rebroardcast {
+					forceBroadcastPendingTxs(ethereum)
+					rebroardcast = true
+				}
+				log.Info("tx pool is full, sleeping", "pending", pend)
+				time.Sleep(time.Second)
 			}
 		}
 	}
 }
 
-func forceBoardcastPendingTxs(ethereum *eth.Ethereum) {
+func forceBroadcastPendingTxs(ethereum *eth.Ethereum) {
 	// force rebroadcast
 	var txs types.Transactions
 	pendings, err := ethereum.TxPool().Pending()
@@ -190,11 +197,7 @@ func forceBoardcastPendingTxs(ethereum *eth.Ethereum) {
 	}
 	for _, pendingTxs := range pendings {
 		ethereum.TxPool().State()
-		if len(pendingTxs) > 100 {
-			txs = append(txs, pendingTxs[:100]...)
-		} else {
-			txs = append(txs, pendingTxs...)
-		}
+		txs = append(txs, pendingTxs...)
 	}
 	go func() {
 		ethereum.GetPm().ReBroadcastTxs(txs)
