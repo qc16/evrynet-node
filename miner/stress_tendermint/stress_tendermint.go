@@ -148,22 +148,24 @@ func main() {
 	}()
 
 	for {
-		index := rand.Intn(len(faucets))
-
-		// Fetch the accessor for the relevant signer
-		var ethereum *eth.Ethereum
-		if err := node.Service(&ethereum); err != nil {
-			panic(err)
+		var txs types.Transactions
+		// Create a batch of transaction and inject into the pool
+		// Note: if we add a single transaction one by one, the queue for broadcast txs might be full
+		for i := 0; i < 1024; i++ {
+			index := rand.Intn(len(faucets))
+			tx, err := types.SignTx(types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int), 21000, big.NewInt(params.GasPriceConfig), nil), types.HomesteadSigner{}, faucets[index])
+			if err != nil {
+				panic(err)
+			}
+			nonces[index]++
+			txs = append(txs, tx)
 		}
-		// Create a self transaction and inject into the pool
-		tx, err := types.SignTx(types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int), 21000, big.NewInt(params.GasPriceConfig), nil), types.HomesteadSigner{}, faucets[index])
-		if err != nil {
-			panic(err)
+		errs := ethereum.TxPool().AddLocals(txs)
+		for _, err := range errs {
+			if err != nil {
+				panic(err)
+			}
 		}
-		if err := ethereum.TxPool().AddLocal(tx); err != nil {
-			panic(err)
-		}
-		nonces[index]++
 
 		// Wait if we're too saturated
 		for epoch := 0; ; epoch++ {
@@ -172,27 +174,31 @@ func main() {
 				break
 			}
 			time.Sleep(50 * time.Millisecond)
-
-			// force rebroadcast no more txs is mined for too long
-			var txs types.Transactions
-			pendings, err := ethereum.TxPool().Pending()
-			if err != nil {
-				panic(err)
-			}
-			for _, pendingTxs := range pendings {
-				ethereum.TxPool().State()
-				txs = append(txs, pendingTxs...)
-			}
-
-			go func() {
-				ethereum.GetPm().ReBroadcastTxs(txs)
-			}()
-
 			if pend < 40960 {
 				break
 			}
 		}
 	}
+}
+
+func forceBoardcastPendingTxs(ethereum *eth.Ethereum) {
+	// force rebroadcast
+	var txs types.Transactions
+	pendings, err := ethereum.TxPool().Pending()
+	if err != nil {
+		panic(err)
+	}
+	for _, pendingTxs := range pendings {
+		ethereum.TxPool().State()
+		if len(pendingTxs) > 100 {
+			txs = append(txs, pendingTxs[:100]...)
+		} else {
+			txs = append(txs, pendingTxs...)
+		}
+	}
+	go func() {
+		ethereum.GetPm().ReBroadcastTxs(txs)
+	}()
 }
 
 type stressConfig struct {
@@ -262,7 +268,11 @@ func makeNode(genesis *core.Genesis) (*node.Node, error) {
 			NoDiscovery: true,
 			MaxPeers:    25,
 		},
-		NoUSB: true,
+		NoUSB:    true,
+		HTTPHost: "127.0.0.1",
+		HTTPPort: 22001,
+		HTTPModules: []string{"admin", "db", "eth", "debug", "miner", "net", "shh", "txpool",
+			"personal", "web3", "tendermint"},
 	}
 	// Start the node and configure a full Ethereum node on it
 	stack, err := node.New(config)
