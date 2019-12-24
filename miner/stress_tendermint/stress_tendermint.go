@@ -18,6 +18,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -27,13 +28,19 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/evrynet-official/evrynet-client"
 	"github.com/evrynet-official/evrynet-client/accounts/keystore"
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/fdlimit"
+	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/eth"
 	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/ethclient"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/miner"
 	"github.com/evrynet-official/evrynet-client/node"
@@ -44,9 +51,11 @@ import (
 
 func main() {
 	var (
-		err         error
-		genesisFile = "./genesis_testnet.json"
-		configFile  = "stress_config.json"
+		err          error
+		genesisFile  = "./genesis_testnet.json"
+		configFile   = "stress_config.json"
+		sendSCTxFlag = true                        //For sending SC Tx
+		rpcEndpoint  = "http://34.206.41.188:8545" //For sending SC Tx
 	)
 	if len(os.Args) == 3 {
 		fmt.Println("overwrite default config")
@@ -124,6 +133,14 @@ func main() {
 		}
 	}
 
+	contractAddr := &common.Address{}
+	if sendSCTxFlag {
+		if contractAddr, err = prepareNewContract(rpcEndpoint, faucets[0], nonces[0]); err != nil {
+			panic(err)
+		}
+		nonces[0] = ethereum.TxPool().State().GetNonce(crypto.PubkeyToAddress(faucets[0].PublicKey))
+	}
+
 	maxBlockNumber := ethereum.BlockChain().CurrentHeader().Number.Uint64()
 	numTxs := 0
 	start := time.Now()
@@ -138,7 +155,7 @@ func main() {
 				numTxs += len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions)
 				log.Info("new_block", "txs", len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions), "number", maxBlockNumber)
 			}
-			log.Warn("num tx info", "txs", numTxs, "duration", time.Since(start),
+			log.Warn("num tx info", "usingSC", sendSCTxFlag, "txs", numTxs, "duration", time.Since(start),
 				"avg_tps", float64(numTxs)/time.Since(start).Seconds(), "current_tps", float64(numTxs-preNumTxs)/time.Since(prevTime).Seconds(),
 				"block", currentBlk)
 
@@ -153,8 +170,28 @@ func main() {
 		// Create a batch of transaction and inject into the pool
 		// Note: if we add a single transaction one by one, the queue for broadcast txs might be full
 		for i := 0; i < 1024; i++ {
+			var (
+				tx  *types.Transaction
+				err error
+			)
 			index := rand.Intn(len(faucets))
-			tx, err := types.SignTx(types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int), 21000, big.NewInt(params.GasPriceConfig), nil), types.HomesteadSigner{}, faucets[index])
+			if sendSCTxFlag {
+				tx, err = types.SignTx(
+					types.NewTransaction(nonces[index], *contractAddr, big.NewInt(0),
+						40000, big.NewInt(params.GasPriceConfig),
+						[]byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")),
+					types.HomesteadSigner{},
+					faucets[index],
+				)
+			} else {
+				tx, err = types.SignTx(
+					types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int),
+						21000, big.NewInt(params.GasPriceConfig), nil),
+					types.HomesteadSigner{},
+					faucets[index],
+				)
+			}
+
 			if err != nil {
 				panic(err)
 			}
@@ -317,4 +354,51 @@ func makeNode(genesis *core.Genesis) (*node.Node, error) {
 	}
 	// Start the node and return if successful
 	return stack, stack.Start()
+}
+
+func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64) (*common.Address, error) {
+	log.Info("Creating Smart Contract ...")
+
+	evrClient, err := ethclient.Dial(rpcEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	// payload to create a smart contract
+	payload := "0x608060405260d0806100126000396000f30060806040526004361060525763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416633fb5c1cb811460545780638381f58a14605d578063f2c9ecd8146081575b005b60526004356093565b348015606857600080fd5b50606f6098565b60408051918252519081900360200190f35b348015608c57600080fd5b50606f609e565b600055565b60005481565b600054905600a165627a7a723058209573e4f95d10c1e123e905d720655593ca5220830db660f0641f3175c1cdb86e0029"
+	payLoadBytes, err := hexutil.Decode(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	accAddr := crypto.PubkeyToAddress(acc.PublicKey)
+	msg := evrynet.CallMsg{
+		From:  accAddr,
+		Value: common.Big0,
+		Data:  payLoadBytes,
+	}
+	estGas, err := evrClient.EstimateGas(context.Background(), msg)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := types.NewContractCreation(nonce, big.NewInt(0), estGas, big.NewInt(params.GasPriceConfig), payLoadBytes)
+	tx, err = types.SignTx(tx, types.HomesteadSigner{}, acc)
+
+	err = evrClient.SendTransaction(context.Background(), tx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create SC from %s", accAddr.Hex())
+	}
+
+	// Wait to get SC address
+	for i := 0; i < 10; i++ {
+		var receipt *types.Receipt
+		receipt, err = evrClient.TransactionReceipt(context.Background(), tx.Hash())
+		if err == nil && receipt.Status == uint64(1) {
+			log.Info("Creating Smart Contract successfully!")
+			return &receipt.ContractAddress, nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return nil, errors.New("Can not get SC address")
 }
