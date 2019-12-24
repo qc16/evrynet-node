@@ -49,13 +49,18 @@ import (
 	"github.com/evrynet-official/evrynet-client/params"
 )
 
+type TxMode int
+
+const (
+	NormalTxMode TxMode = iota
+	SmartContractMode
+)
+
 func main() {
 	var (
-		err          error
-		genesisFile  = "./genesis_testnet.json"
-		configFile   = "stress_config.json"
-		sendSCTxFlag = true                        //For sending SC Tx
-		rpcEndpoint  = "http://34.206.41.188:8545" //For sending SC Tx
+		err         error
+		genesisFile = "./genesis_testnet.json"
+		configFile  = "stress_config.json"
 	)
 	if len(os.Args) == 3 {
 		fmt.Println("overwrite default config")
@@ -65,7 +70,7 @@ func main() {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
 	fdlimit.Raise(2048)
 
-	enodes, faucets := parseTestConfig(configFile)
+	cfg, enodes, faucets := parseTestConfig(configFile)
 
 	nodePriKey, _ := crypto.GenerateKey()
 	// Create a Clique network based off of the Rinkeby config
@@ -134,11 +139,11 @@ func main() {
 	}
 
 	contractAddr := &common.Address{}
-	if sendSCTxFlag {
-		if contractAddr, err = prepareNewContract(rpcEndpoint, faucets[0], nonces[0]); err != nil {
+	if TxMode(cfg.TxMode) == SmartContractMode {
+		if contractAddr, err = prepareNewContract(cfg.RPCEndpoint, faucets[0], nonces[0]); err != nil {
 			panic(err)
 		}
-		nonces[0] = ethereum.TxPool().State().GetNonce(crypto.PubkeyToAddress(faucets[0].PublicKey))
+		nonces[0]++
 	}
 
 	maxBlockNumber := ethereum.BlockChain().CurrentHeader().Number.Uint64()
@@ -155,7 +160,7 @@ func main() {
 				numTxs += len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions)
 				log.Info("new_block", "txs", len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions), "number", maxBlockNumber)
 			}
-			log.Warn("num tx info", "usingSC", sendSCTxFlag, "txs", numTxs, "duration", time.Since(start),
+			log.Warn("num tx info", "tx_mode", cfg.TxMode, "txs", numTxs, "duration", time.Since(start),
 				"avg_tps", float64(numTxs)/time.Since(start).Seconds(), "current_tps", float64(numTxs-preNumTxs)/time.Since(prevTime).Seconds(),
 				"block", currentBlk)
 
@@ -170,28 +175,7 @@ func main() {
 		// Create a batch of transaction and inject into the pool
 		// Note: if we add a single transaction one by one, the queue for broadcast txs might be full
 		for i := 0; i < 1024; i++ {
-			var (
-				tx  *types.Transaction
-				err error
-			)
-			index := rand.Intn(len(faucets))
-			if sendSCTxFlag {
-				tx, err = types.SignTx(
-					types.NewTransaction(nonces[index], *contractAddr, big.NewInt(0),
-						40000, big.NewInt(params.GasPriceConfig),
-						[]byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")),
-					types.HomesteadSigner{},
-					faucets[index],
-				)
-			} else {
-				tx, err = types.SignTx(
-					types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int),
-						21000, big.NewInt(params.GasPriceConfig), nil),
-					types.HomesteadSigner{},
-					faucets[index],
-				)
-			}
-
+			index, tx, err := createTx(cfg, faucets, nonces, contractAddr)
 			if err != nil {
 				panic(err)
 			}
@@ -244,9 +228,11 @@ func forceBroadcastPendingTxs(ethereum *eth.Ethereum) {
 type stressConfig struct {
 	EnodeStrings  []string `json:"enodes"`
 	FaucetStrings []string `json:"faucets"`
+	TxMode        int      `json:"tx_mode"`
+	RPCEndpoint   string   `json:"rpc_endpoint"`
 }
 
-func parseTestConfig(fileName string) ([]*enode.Node, []*ecdsa.PrivateKey) {
+func parseTestConfig(fileName string) (*stressConfig, []*enode.Node, []*ecdsa.PrivateKey) {
 	var cfg stressConfig
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -272,7 +258,7 @@ func parseTestConfig(fileName string) ([]*enode.Node, []*ecdsa.PrivateKey) {
 		}
 		faucets = append(faucets, faucetPriKey)
 	}
-	return enodes, faucets
+	return &cfg, enodes, faucets
 }
 
 // makeGenesis creates a custom Clique genesis block based on some pre-defined
@@ -384,6 +370,9 @@ func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64)
 
 	tx := types.NewContractCreation(nonce, big.NewInt(0), estGas, big.NewInt(params.GasPriceConfig), payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, acc)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to sign Tx")
+	}
 
 	err = evrClient.SendTransaction(context.Background(), tx)
 	if err != nil {
@@ -401,4 +390,31 @@ func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64)
 		time.Sleep(1 * time.Second)
 	}
 	return nil, errors.New("Can not get SC address")
+}
+
+func createTx(cfg *stressConfig, faucets []*ecdsa.PrivateKey, nonces []uint64, contractAddr *common.Address) (int, *types.Transaction, error) {
+	var (
+		tx  *types.Transaction
+		err error
+	)
+
+	index := rand.Intn(len(faucets))
+	switch TxMode(cfg.TxMode) {
+	case NormalTxMode:
+		tx, err = types.SignTx(
+			types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int),
+				21000, big.NewInt(params.GasPriceConfig), nil),
+			types.HomesteadSigner{},
+			faucets[index],
+		)
+	case SmartContractMode:
+		tx, err = types.SignTx(
+			types.NewTransaction(nonces[index], *contractAddr, big.NewInt(0),
+				40000, big.NewInt(params.GasPriceConfig),
+				[]byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")),
+			types.HomesteadSigner{},
+			faucets[index],
+		)
+	}
+	return index, tx, err
 }
