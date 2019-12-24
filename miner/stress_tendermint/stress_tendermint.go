@@ -138,7 +138,7 @@ func main() {
 		}
 	}
 
-	contractAddr := &common.Address{}
+	var contractAddr *common.Address
 	if TxMode(cfg.TxMode) == SmartContractMode {
 		if contractAddr, err = prepareNewContract(cfg.RPCEndpoint, faucets[0], nonces[0]); err != nil {
 			panic(err)
@@ -175,7 +175,8 @@ func main() {
 		// Create a batch of transaction and inject into the pool
 		// Note: if we add a single transaction one by one, the queue for broadcast txs might be full
 		for i := 0; i < 1024; i++ {
-			index, tx, err := createTx(cfg, faucets, nonces, contractAddr)
+			index := rand.Intn(len(faucets))
+			tx, err := createTx(TxMode(cfg.TxMode), faucets[index], nonces[index], contractAddr)
 			if err != nil {
 				panic(err)
 			}
@@ -392,29 +393,22 @@ func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64)
 	return nil, errors.New("Can not get SC address")
 }
 
-func createTx(cfg *stressConfig, faucets []*ecdsa.PrivateKey, nonces []uint64, contractAddr *common.Address) (int, *types.Transaction, error) {
-	var (
-		tx  *types.Transaction
-		err error
-	)
-
-	index := rand.Intn(len(faucets))
-	switch TxMode(cfg.TxMode) {
+func createTx(txMode TxMode, faucet *ecdsa.PrivateKey, nonces uint64, contractAddr *common.Address) (*types.Transaction, error) {
+	switch txMode {
 	case NormalTxMode:
-		tx, err = types.SignTx(
-			types.NewTransaction(nonces[index], crypto.PubkeyToAddress(faucets[index].PublicKey), new(big.Int),
+		return types.SignTx(
+			types.NewTransaction(nonces, crypto.PubkeyToAddress(faucet.PublicKey), new(big.Int),
 				21000, big.NewInt(params.GasPriceConfig), nil),
 			types.HomesteadSigner{},
-			faucets[index],
-		)
+			faucet)
 	case SmartContractMode:
-		tx, err = types.SignTx(
-			types.NewTransaction(nonces[index], *contractAddr, big.NewInt(0),
+		return types.SignTx(
+			types.NewTransaction(nonces, *contractAddr, new(big.Int),
 				40000, big.NewInt(params.GasPriceConfig),
 				[]byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")),
 			types.HomesteadSigner{},
-			faucets[index],
-		)
+			faucet)
+	default:
+		return nil, errors.Errorf("unexpected tx mode: %d", txMode)
 	}
-	return index, tx, err
 }
