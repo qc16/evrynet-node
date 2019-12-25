@@ -29,6 +29,10 @@ type Backend interface {
 	// It will call gossip and post an identical event to its EventMux().
 	Broadcast(valSet ValidatorSet, blockNumber *big.Int, payload []byte) error
 
+	// Multicast sends a message to a group of given address
+	// returns error if sending is failed, or not found the targets address
+	Multicast(targets map[common.Address]bool, payload []byte) error
+
 	// Validators returns the validator set
 	// we should only use this method when core is started.
 	Validators(blockNumber *big.Int) ValidatorSet

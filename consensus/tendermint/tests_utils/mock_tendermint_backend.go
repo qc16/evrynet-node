@@ -98,6 +98,11 @@ func (mb *MockBackend) Gossip(valSet tendermint.ValidatorSet, _ *big.Int, payloa
 	return errors.New("not implemented")
 }
 
+// Multicast implements tendermint.Backend.Multicast
+func (mb *MockBackend) Multicast(targets map[common.Address]bool, payload []byte) error {
+	panic("implement me")
+}
+
 // Validators return validator set for a block number
 // TODO: revise this function once auth vote is implemented
 func (mb *MockBackend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
