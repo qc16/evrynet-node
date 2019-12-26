@@ -139,8 +139,14 @@ func GetAddress() common.Address {
 	return common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
 }
 
-func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
-	return crypto.GenerateKey()
+// Quickcast to generate key and get public addr, panic if generate err
+func GeneratePrivateKey() (*ecdsa.PrivateKey, common.Address) {
+	priKey, err := crypto.GenerateKey()
+	if err != nil {
+		panic(err)
+	}
+	pubKey := priKey.Public().(*ecdsa.PublicKey)
+	return priKey, crypto.PubkeyToAddress(*pubKey)
 }
 
 // PrepareExtra returns a extra-data of the given header and validators

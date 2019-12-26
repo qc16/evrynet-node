@@ -26,8 +26,7 @@ import (
 )
 
 func TestSign(t *testing.T) {
-	privateKey, err := tests_utils.GeneratePrivateKey()
-	require.NoError(t, err)
+	privateKey, _ := tests_utils.GeneratePrivateKey()
 	b := &Backend{
 		privateKey: privateKey,
 	}

@@ -49,6 +49,7 @@ func (p *Proposal) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+// Vote represents a vote for a new-block
 type Vote struct {
 	BlockHash   *common.Hash
 	BlockNumber *big.Int
@@ -86,6 +87,7 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+// CatchUpMsg represents the info of current stage of a node which is stuck in prevote or precommit for a while
 type CatchUpMsg struct {
 	BlockNumber *big.Int
 	Round       int64
@@ -113,4 +115,10 @@ func (msg *CatchUpMsg) DecodeRLP(s *rlp.Stream) error {
 	msg.Round = int64(vs.Round)
 	msg.Step = vs.Step
 	return nil
+}
+
+// ResendMsg stores the data of previous message send to a stuck node
+type ResendMsg struct {
+	BlockNumber *big.Int
+	Payloads    [][]byte
 }

@@ -681,23 +681,9 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		if _, err := c.futureMessages.Get(1); err != nil {
 			logger.Warn("failed to remove from future msgs", "err", err)
 		}
-		if err := c.processFutureMessage(msg); err != nil {
+		if err := c.handleMsgLocked(msg); err != nil {
 			logger.Warn("failed to handle msg", "err", err)
 		}
 	}
 	return true, nil
-}
-
-// processFutureMessage applied msg to state
-func (c *core) processFutureMessage(msg message) error {
-	switch msg.Code {
-	case msgPropose:
-		return c.handlePropose(msg)
-	case msgPrevote:
-		return c.handlePrevote(msg)
-	case msgPrecommit:
-		return c.handlePrecommit(msg)
-	default:
-		return fmt.Errorf("unknown msg code %d", msg.Code)
-	}
 }

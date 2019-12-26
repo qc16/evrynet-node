@@ -18,6 +18,7 @@ var (
 	ErrVoteHeightMismatch          = errors.New("vote height mismatch")
 	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
 	ErrEmptyBlockProposal          = errors.New("empty block proposal")
+	ErrResendAddressMissMatch      = errors.New("address of resend msg and its child are miss match")
 	emptyBlockHash                 = common.Hash{}
 )
 
@@ -440,17 +441,60 @@ func (c *core) handleCatchup(msg message) error {
 	logger := c.getLogger().With("catchup_block", catchUpMsg.BlockNumber, "catchup_round", catchUpMsg.Round,
 		"catchup_step", catchUpMsg.Step, "from", msg.Address.Hex())
 	if catchUpMsg.BlockNumber.Cmp(blockNumber) != 0 || catchUpMsg.Round > round || (catchUpMsg.Round == round && catchUpMsg.Step > step) {
-		logger.Infow(" Ignoring timeout because we're behind or different with block")
+		logger.Debugw(" Ignoring timeout because we're behind or different with block")
 		return nil
 	}
-	logger.Infow("handle catch up msg")
-	//TODO: resend msg here
+	// re-send to from address
+	var payloads [][]byte
+	index := c.sentMsgStorage.lookup(catchUpMsg.Step, catchUpMsg.Round)
+	if index == -1 {
+		logger.Infow("no msg for catchup available")
+		return nil
+	}
+	for i := index; ; i++ {
+		data := c.sentMsgStorage.get(i)
+		if len(data) == 0 {
+			break
+		}
+		payloads = append(payloads, data)
+	}
+	c.SendResendMsg(msg.Address, payloads)
 	return nil
 }
 
-func (c *core) handleMsg(msg message) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (c *core) handleResend(msg message) error {
+	var (
+		resendMsg ResendMsg
+		state     = c.currentState
+	)
+
+	if err := rlp.DecodeBytes(msg.Msg, &resendMsg); err != nil {
+		return err
+	}
+	logger := c.getLogger().With("num_msg", len(resendMsg.Payloads), "block", resendMsg.BlockNumber, "from", msg.Address.Hex())
+	if state.BlockNumber().Cmp(resendMsg.BlockNumber) != 0 {
+		logger.Debugw("Resend msg block is different with current block, skipping")
+		return nil
+	}
+	logger.Infow("handle resend")
+	for _, payload := range resendMsg.Payloads {
+		var subMsg message
+		if err := rlp.DecodeBytes(payload, &subMsg); err != nil {
+			return err
+		}
+		if subMsg.Address != msg.Address {
+			logger.Debugw("Address of resend msg and its child are miss match, skipping", "sub_address", subMsg.Address)
+			return ErrResendAddressMissMatch
+		}
+		if err := c.handleMsgLocked(subMsg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// handleMsgLocked assume that c.mu is locked
+func (c *core) handleMsgLocked(msg message) error {
 	switch msg.Code {
 	case msgPropose:
 		return c.handlePropose(msg)
@@ -460,9 +504,17 @@ func (c *core) handleMsg(msg message) error {
 		return c.handlePrecommit(msg)
 	case msgCatchup:
 		return c.handleCatchup(msg)
+	case msgResend:
+		return c.handleResend(msg)
 	default:
 		return fmt.Errorf("unknown msg code %d", msg.Code)
 	}
+}
+
+func (c *core) handleMsg(msg message) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.handleMsgLocked(msg)
 }
 
 func (c *core) handleTimeout(ti timeoutInfo) {

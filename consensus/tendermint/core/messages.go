@@ -25,6 +25,7 @@ const (
 	msgPrevote
 	msgPrecommit
 	msgCatchup
+	msgResend
 )
 
 //message is used to store consensus information between steps

@@ -1,12 +1,14 @@
 package core
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
 	"go.uber.org/zap"
 
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
@@ -219,6 +221,32 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		return
 	}
 	logger.Infow("sent vote", "vote_round", vote.Round, "vote_block_number", vote.BlockNumber, "vote_block_hash", vote.BlockHash.Hex())
+}
+
+// SendResendMsg resend to msg to target node
+func (c *core) SendResendMsg(target common.Address, payloads [][]byte) {
+	logger := c.getLogger().With("num_msg", len(payloads), "target", target.Hex())
+	resendMsg := &ResendMsg{
+		BlockNumber: new(big.Int).Set(c.CurrentState().BlockNumber()),
+		Payloads:    payloads,
+	}
+	msgData, err := rlp.EncodeToBytes(resendMsg)
+	if err != nil {
+		logger.Errorw("Failed to encode Vote to bytes", "error", err)
+		return
+	}
+	payload, err := c.FinalizeMsg(&message{
+		Code: msgResend,
+		Msg:  msgData,
+	})
+	if err != nil {
+		logger.Errorw("Failed to Finalize Vote", "error", err)
+		return
+	}
+	if err := c.backend.Multicast(map[common.Address]bool{target: true}, payload); err != nil {
+		logger.Infow("Failed to resend msgs", "err", err)
+	}
+	logger.Infow("Resend msgs")
 }
 
 func (c *core) CurrentState() *roundState {
