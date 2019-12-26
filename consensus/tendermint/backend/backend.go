@@ -203,7 +203,7 @@ func (sb *Backend) gossipLoop() {
 		select {
 		case task = <-sb.broadcastCh:
 		case <-finalEvtSub.Chan():
-			continue
+			continue // we skip finalEvtSub to avoid block the go routine send finalEvt to backend.EventMux()
 		case <-stopEvtSub.Chan():
 			log.Info("cancel broadcast task because core is stopped")
 			return
