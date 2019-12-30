@@ -575,6 +575,7 @@ func (c *core) startNewRound() {
 		})
 
 		state.clearPreviousRoundData()
+		c.sentMsgStorage.truncateMsgStored(c.getLogger())
 		c.valSet = c.backend.Validators(state.BlockNumber())
 	}
 

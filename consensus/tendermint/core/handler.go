@@ -97,16 +97,19 @@ func (c *core) handleEvents() {
 // handleFinalCommitted is calling when received a final committed proposal
 func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 	var (
-		state = c.CurrentState()
+		state  = c.CurrentState()
+		logger = c.getLogger()
 	)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if state.BlockNumber().Cmp(newHeadNumber) > 0 {
-		log.Warn("current state block number is ahead of new Head number. Ignore updating...",
+		logger.Warnw("current state block number is ahead of new Head number. Ignore updating...",
 			"current_block_number", state.BlockNumber().String(),
 			"new_head_number", newHeadNumber.String())
 		return nil
 	}
+
+	c.sentMsgStorage.truncateMsgStored(logger)
 	c.updateStateForNewblock()
 	c.startNewRound()
 	return nil

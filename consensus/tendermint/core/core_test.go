@@ -28,9 +28,9 @@ func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -56,9 +56,9 @@ func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -84,9 +84,9 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -112,9 +112,9 @@ func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -141,9 +141,9 @@ func TestCoreFutureMessage(t *testing.T) {
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 
 	logger := zap.NewExample().Sugar()

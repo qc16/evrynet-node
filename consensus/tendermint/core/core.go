@@ -24,6 +24,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
+		sentMsgStorage: NewMsgStorage(),
 	}
 	return c
 }
@@ -59,6 +60,9 @@ type core struct {
 	config *tendermint.Config
 	//mutex mark critical section of core which should not be accessed parallel
 	mu *sync.RWMutex
+
+	// a Helper supports to store message before send proposal/ vote for every block
+	sentMsgStorage *msgStorage
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
 	proposeStart time.Time
@@ -138,6 +142,9 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		return
 	}
 
+	// store before send propose msg
+	c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPropose, propose.Round, payload)
+
 	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
 		return
@@ -197,6 +204,16 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		logger.Errorw("Failed to Finalize Vote", "error", err)
 		return
 	}
+
+	// store before send propose msg
+	switch voteType {
+	case msgPrevote:
+		c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPrevote, round, payload)
+	case msgPrecommit:
+		c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPrecommit, round, payload)
+	default:
+	}
+
 	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
 		logger.Errorw("Failed to Broadcast vote", "error", err)
 		return

@@ -13,7 +13,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
-	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/event"
@@ -21,7 +20,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
-func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *evrynetCore.TxPool) *core {
+func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
 	return &core{
 		handlerWg:      new(sync.WaitGroup),
 		backend:        backend,
@@ -30,8 +29,10 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
+		sentMsgStorage: NewMsgStorage(),
 	}
 }
+
 func TestVerifyProposal(t *testing.T) {
 	var (
 		nodePrivateKey     = tests_utils.MakeNodeKey()
@@ -44,9 +45,9 @@ func TestVerifyProposal(t *testing.T) {
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	// --------CASE 1--------
 	// Will get errMismatchTxhashes
