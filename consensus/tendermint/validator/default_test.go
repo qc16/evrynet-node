@@ -6,10 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -21,6 +23,23 @@ func TestValidatorSet(t *testing.T) {
 	testNewValidatorSet(t)
 	testNormalValSet(t)
 	testEmptyValSet(t)
+	testMajorityFormulation(t)
+}
+
+func testMajorityFormulation(t *testing.T) {
+	var expectedMajority = map[int]int{
+		1: 1, 2: 2, 3: 3, 4: 3, 5: 4, 6: 5, 7: 5,
+	}
+
+	for valSize, majority := range expectedMajority {
+		var addresses []common.Address
+		for i := 0; i < valSize; i++ {
+			key, _ := crypto.GenerateKey()
+			addresses = append(addresses, crypto.PubkeyToAddress(key.PublicKey))
+		}
+		valSet := NewSet(addresses, tendermint.RoundRobin, int64(0))
+		require.Equal(t, majority, valSet.Size()-valSet.F())
+	}
 }
 
 func testNewValidatorSet(t *testing.T) {

@@ -171,7 +171,7 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, 
 	if len(targets) > 0 {
 		task := broadcastTask{
 			Payload:     payload,
-			MinPeers:    valSet.F() * 2,
+			MinPeers:    valSet.Size() - valSet.F() - 1,
 			Targets:     targets,
 			TotalPeers:  len(targets),
 			BlockNumber: blockNumber,

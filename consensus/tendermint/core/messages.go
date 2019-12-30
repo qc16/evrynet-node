@@ -190,7 +190,7 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 		return false, err
 	}
 
-	if ms.voteByBlock[copyHash].totalReceived > 2*ms.valSet.F() {
+	if ms.voteByBlock[copyHash].totalReceived >= ms.valSet.Size()-ms.valSet.F() {
 		if ms.maj23 == nil {
 			ms.maj23 = &copyHash
 		}
@@ -232,7 +232,7 @@ func (ms *messageSet) HasTwoThirdAny() bool {
 	}
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
-	return ms.totalReceived > ms.valSet.F()*2
+	return ms.totalReceived >= ms.valSet.Size()-ms.valSet.F()
 }
 
 //TwoThirdMajority return a blockHash and a bool inidicate if this messageSet hash got a
