@@ -171,6 +171,8 @@ func TestBackend_Gossip(t *testing.T) {
 		expectedData = "aaa"
 	)
 
+	be.coreStarted = true
+	go be.gossipLoop()
 	dataCh := make(chan string)
 
 	broadcaster := &mockBroadcaster{
@@ -185,7 +187,7 @@ func TestBackend_Gossip(t *testing.T) {
 	valSet := validator.NewSet(nodeAddrs, tendermint.RoundRobin, 100)
 
 	//test basic
-	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
+	require.NoError(t, be.Gossip(valSet, big.NewInt(0), []byte(expectedData)))
 	select {
 	case <-time.After(time.Millisecond * 20):
 		t.Fatal("not receive msg to peer")
@@ -195,7 +197,7 @@ func TestBackend_Gossip(t *testing.T) {
 
 	//test retrying broadcast data
 	broadcaster.isDisconnect = true
-	err := be.Gossip(valSet, []byte(expectedData))
+	err := be.Gossip(valSet, big.NewInt(0), []byte(expectedData))
 	require.NoError(t, err)
 	select {
 	case <-time.After(time.Millisecond * 80):
@@ -211,34 +213,39 @@ func TestBackend_Gossip(t *testing.T) {
 		assert.Equal(t, expectedData, data)
 	}
 
-	//test skipping retry when having msg
-	broadcaster.isDisconnect = true
-	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
+	//test not passed when sending failed
+	broadcaster.isSendFailed = true
+	require.NoError(t, be.Gossip(valSet, big.NewInt(0), []byte(expectedData)))
+
 	select {
 	case <-time.After(time.Millisecond * 80):
 	case <-dataCh:
 		t.Fatal("expected not send to peer when disconnect")
 	}
 
-	broadcaster.isDisconnect = false
-	var expectedData2 = "bbb"
-	err = be.Gossip(valSet, []byte(expectedData2))
-	require.NoError(t, err)
-
+	broadcaster.isSendFailed = false
 	select {
 	case <-time.After(time.Millisecond * 40):
 		t.Fatal("not receive msg to peer")
 	case data := <-dataCh:
-		assert.Equal(t, expectedData2, data)
+		assert.Equal(t, expectedData, data)
 	}
 
-	//test not passed when sending failed
-	broadcaster.isSendFailed = true
-	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
-
+	// test gossip is cancelled when new head event
+	broadcaster.isDisconnect = true
+	require.NoError(t, be.Gossip(valSet, big.NewInt(1), []byte(expectedData)))
 	select {
-	case <-time.After(time.Millisecond * 20):
+	case <-time.After(time.Millisecond * 80):
 	case <-dataCh:
 		t.Fatal("expected not send to peer when disconnect")
 	}
+
+	require.NoError(t, be.HandleNewChainHead(big.NewInt(2)))
+	broadcaster.isDisconnect = false
+	select {
+	case <-time.After(time.Millisecond * 40):
+	case <-dataCh:
+		t.Fatal("broadcast task is not cancel as expected")
+	}
+
 }

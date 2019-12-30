@@ -74,9 +74,9 @@ func (mb *MockBackend) Address() common.Address {
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (mb *MockBackend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
+func (mb *MockBackend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	// send to others
-	if err := mb.Gossip(valSet, payload); err != nil {
+	if err := mb.Gossip(valSet, blockNumber, payload); err != nil {
 		return err
 	}
 	// send to self
@@ -94,7 +94,7 @@ func (mb *MockBackend) Broadcast(valSet tendermint.ValidatorSet, payload []byte)
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return MockBackend.ErrNoBroadcaster if no broadcaster is set for MockBackend
-func (mb *MockBackend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
+func (mb *MockBackend) Gossip(valSet tendermint.ValidatorSet, _ *big.Int, payload []byte) error {
 	return errors.New("not implemented")
 }
 

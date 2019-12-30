@@ -201,6 +201,11 @@ func (sb *Backend) tryStartCore() bool {
 		return false
 	}
 	sb.coreStarted = true
+	go sb.gossipLoop()
+	// trigger dequeue msg loop
+	go func() {
+		sb.dequeueMsgTriggering <- struct{}{}
+	}()
 	return true
 }
 
@@ -257,6 +262,7 @@ func (sb *Backend) Stop() error {
 		return err
 	}
 	sb.coreStarted = false
+	sb.EventMux().Post(tendermint.StopCoreEvent{})
 	return nil
 }
 

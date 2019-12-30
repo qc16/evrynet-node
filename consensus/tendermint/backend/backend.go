@@ -25,7 +25,7 @@ const (
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
 
-	maxBroadcastSleepTime        = time.Second
+	maxBroadcastSleepTime        = time.Minute * 5
 	initialBroadcastSleepTime    = time.Millisecond * 100
 	broadcastSleepTimeIncreament = time.Millisecond * 100
 )
@@ -70,7 +70,6 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		}
 	}
 
-	go be.gossipLoop()
 	go be.dequeueMsgLoop()
 	return be
 }
@@ -128,9 +127,9 @@ func (sb *Backend) Address() common.Address {
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	// send to others
-	if err := sb.Gossip(valSet, payload); err != nil {
+	if err := sb.Gossip(valSet, blockNumber, payload); err != nil {
 		return err
 	}
 	// send to self
@@ -145,17 +144,18 @@ func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 }
 
 type broadcastTask struct {
-	Payload    []byte
-	MinPeers   int
-	TotalPeers int
-	Targets    map[common.Address]bool
+	Payload     []byte
+	MinPeers    int
+	TotalPeers  int
+	Targets     map[common.Address]bool
+	BlockNumber *big.Int
 }
 
 // Gossip implements tendermint.Backend.Gossip
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return backend.ErrNoBroadcaster if no broadcaster is set for backend
-func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 
 	targets := make(map[common.Address]bool)
@@ -169,19 +169,40 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		return ErrNoBroadcaster
 	}
 	if len(targets) > 0 {
-		sb.broadcastCh <- broadcastTask{
-			Payload:    payload,
-			MinPeers:   valSet.F() * 2,
-			Targets:    targets,
-			TotalPeers: len(targets),
+		task := broadcastTask{
+			Payload:     payload,
+			MinPeers:    valSet.F() * 2,
+			Targets:     targets,
+			TotalPeers:  len(targets),
+			BlockNumber: blockNumber,
 		}
+		go func() {
+			sb.broadcastCh <- task
+		}()
 	}
 	return nil
 }
 
 func (sb *Backend) gossipLoop() {
+	var (
+		task        broadcastTask
+		finalEvtSub = sb.EventMux().Subscribe(tendermint.FinalCommittedEvent{})
+		stopEvtSub  = sb.EventMux().Subscribe(tendermint.StopCoreEvent{})
+	)
+	defer func() {
+		finalEvtSub.Unsubscribe()
+		stopEvtSub.Unsubscribe()
+	}()
 	for {
-		task := <-sb.broadcastCh
+		select {
+		case task = <-sb.broadcastCh:
+		case <-finalEvtSub.Chan():
+			continue // we skip finalEvtSub to avoid block the go routine send finalEvt to backend.EventMux()
+		case <-stopEvtSub.Chan():
+			log.Info("cancel broadcast task because core is stopped")
+			return
+		}
+
 		var (
 			timeSleep   = initialBroadcastSleepTime
 			successSent = 0
@@ -212,19 +233,23 @@ func (sb *Backend) gossipLoop() {
 			wg.Wait()
 
 			if successSent < task.MinPeers {
-				if timeSleep >= maxBroadcastSleepTime {
-					log.Warn("failed to sent msg to peer with retries", "success", successSent, "min_peers", task.MinPeers, "total_peers", task.TotalPeers)
-					break taskLoop
-				}
+				log.Info("failed to sent to peer, sleeping", "min", task.MinPeers, "success", successSent,
+					"time_sleep", timeSleep)
+				// sleep and retries until success or core stop or new block event
 				select {
-				// increase timeSleep 100ms after each epoch
-				// if receive new task then reset the timer
+				case finalEvt := <-finalEvtSub.Chan():
+					if finalEvt.Data.(tendermint.FinalCommittedEvent).BlockNumber.Cmp(task.BlockNumber) >= 0 {
+						log.Info("cancel broadcast task because of final event")
+						break taskLoop
+					}
+				case <-stopEvtSub.Chan():
+					log.Info("cancel broadcast task because core is stopped")
+					return
 				case <-time.After(timeSleep):
-					timeSleep += broadcastSleepTimeIncreament
-				case task = <-sb.broadcastCh:
-					log.Debug("receive new broadcast task, abort current task")
-					timeSleep = initialBroadcastSleepTime
-					successSent = 0
+					// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
+					if timeSleep < maxBroadcastSleepTime {
+						timeSleep += broadcastSleepTimeIncreament
+					}
 				}
 				continue taskLoop
 			}
