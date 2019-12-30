@@ -517,7 +517,7 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 		totalPrecommits = 0
 		commitSeals     = [][]byte{}
 		header          = proposal.Block.Header()
-		minMajority     = c.valSet.Size() - c.valSet.F()
+		minMajority     = c.valSet.MinMajority()
 	)
 	precommits, ok := state.GetPrecommitsByRound(round)
 	if !ok {

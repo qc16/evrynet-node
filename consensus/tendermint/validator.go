@@ -55,6 +55,10 @@ type ValidatorSet interface {
 	RemoveValidator(address common.Address) bool
 	// Copy validator set
 	Copy() ValidatorSet
+	// Get the minimum number of votes for a polka
+	MinMajority() int
+	// Get the minimum number of peers to archive consensus
+	MinPeers() int
 	// Get the maximum number of faulty nodes
 	F() int
 	// V get the minimum number of vote nodes

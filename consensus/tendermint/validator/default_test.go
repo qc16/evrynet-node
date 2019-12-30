@@ -38,7 +38,7 @@ func testMajorityFormulation(t *testing.T) {
 			addresses = append(addresses, crypto.PubkeyToAddress(key.PublicKey))
 		}
 		valSet := NewSet(addresses, tendermint.RoundRobin, int64(0))
-		require.Equal(t, majority, valSet.Size()-valSet.F())
+		require.Equal(t, majority, valSet.MinMajority())
 	}
 }
 

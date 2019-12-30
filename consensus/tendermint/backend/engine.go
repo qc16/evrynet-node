@@ -190,7 +190,7 @@ func (sb *Backend) tryStartCore() bool {
 
 	// Check enough 2f+1 peers
 	valSet := sb.Validators(sb.currentBlock().Number())
-	if len(sb.FindExistingPeers(valSet)) < valSet.Size()-valSet.F()-1 {
+	if len(sb.FindExistingPeers(valSet)) < valSet.MinPeers() {
 		log.Warn("not enough 2f+1 peers to start backend")
 		return false
 	}

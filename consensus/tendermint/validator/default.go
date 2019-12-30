@@ -188,6 +188,14 @@ func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
 	return NewSet(addresses, valSet.policy, valSet.height)
 }
 
+func (valSet *defaultSet) MinPeers() int {
+	return valSet.Size() - valSet.F() - 1
+}
+
+func (valSet *defaultSet) MinMajority() int {
+	return valSet.Size() - valSet.F()
+}
+
 // F get the maximum number of faulty nodes
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
