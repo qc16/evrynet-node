@@ -457,8 +457,14 @@ func (c *core) handleCatchup(msg message) error {
 			break
 		}
 		payloads = append(payloads, data)
+		if len(payloads) >= 3 { // send 3 votes as the number of msg to jump to next round
+			c.SendResendMsg(msg.Address, payloads)
+			payloads = make([][]byte, 0)
+		}
 	}
-	c.SendResendMsg(msg.Address, payloads)
+	if len(payloads) != 0 {
+		c.SendResendMsg(msg.Address, payloads)
+	}
 	return nil
 }
 
