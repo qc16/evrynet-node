@@ -20,6 +20,7 @@ var (
 	ErrEmptyBlockProposal           = errors.New("empty block proposal")
 	ErrCatchUpReplyAddressMissMatch = errors.New("address of catch up reply msg and its child are miss match")
 	emptyBlockHash                  = common.Hash{}
+	catchUpReplyBatchSize           = 3 // send 3 votes as the number of msg to jump to next round
 )
 
 // ----------------------------------------------------------------------------
@@ -458,7 +459,7 @@ func (c *core) handleCatchupRequest(msg message) error {
 			break
 		}
 		payloads = append(payloads, data)
-		if len(payloads) >= 3 { // send 3 votes as the number of msg to jump to next round
+		if len(payloads) >= catchUpReplyBatchSize {
 			c.SendCatchupReply(msg.Address, payloads)
 			payloads = make([][]byte, 0)
 		}
