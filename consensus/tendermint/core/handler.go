@@ -426,7 +426,7 @@ func (c *core) handlePrecommit(msg message) error {
 	return nil
 }
 
-func (c *core) handleCatchup(msg message) error {
+func (c *core) handleCatchupRequest(msg message) error {
 	var (
 		catchUpMsg  CatchUpMsg
 		state       = c.currentState
@@ -468,7 +468,7 @@ func (c *core) handleCatchup(msg message) error {
 	return nil
 }
 
-func (c *core) handleResend(msg message) error {
+func (c *core) handleCatchUpReply(msg message) error {
 	var (
 		resendMsg ResendMsg
 		state     = c.currentState
@@ -509,9 +509,9 @@ func (c *core) handleMsgLocked(msg message) error {
 	case msgPrecommit:
 		return c.handlePrecommit(msg)
 	case msgCatchup:
-		return c.handleCatchup(msg)
+		return c.handleCatchupRequest(msg)
 	case msgResend:
-		return c.handleResend(msg)
+		return c.handleCatchUpReply(msg)
 	default:
 		return fmt.Errorf("unknown msg code %d", msg.Code)
 	}
