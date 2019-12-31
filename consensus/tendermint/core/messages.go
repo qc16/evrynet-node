@@ -24,8 +24,8 @@ const (
 	msgPropose uint64 = iota
 	msgPrevote
 	msgPrecommit
-	msgCatchup
-	msgResend
+	msgCatchUpRequest
+	msgCatchUpReply
 )
 
 //message is used to store consensus information between steps

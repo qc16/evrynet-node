@@ -43,27 +43,27 @@ func (c *core) enterCatchup(tiBlock *big.Int, tiRound int64, tiStep RoundStepTyp
 		Retry:       tiRetry + 1,
 	})
 	//send catch up
-	c.sendCatchUp(logger, tiBlock, tiRound, tiStep)
+	c.sendCatchUpRequest(logger, tiBlock, tiRound, tiStep)
 }
 
-func (c *core) sendCatchUp(logger *zap.SugaredLogger, tiBlock *big.Int, tiRound int64, tiStep RoundStepType) {
+func (c *core) sendCatchUpRequest(logger *zap.SugaredLogger, tiBlock *big.Int, tiRound int64, tiStep RoundStepType) {
 	var (
 		state = c.currentState
 		addr  = c.backend.Address()
 	)
 	//send catch up
-	msg := &CatchUpMsg{
+	msg := &CatchUpRequestMsg{
 		Round:       tiRound,
 		BlockNumber: new(big.Int).Set(tiBlock),
 		Step:        tiStep,
 	}
 	msgData, err := rlp.EncodeToBytes(msg)
 	if err != nil {
-		logger.Errorw("Failed to encode CatchUpMsg to bytes", "err", err)
+		logger.Errorw("Failed to encode CatchUpRequestMsg to bytes", "err", err)
 		return
 	}
 	payload, err := c.FinalizeMsg(&message{
-		Code: msgCatchup,
+		Code: msgCatchUpRequest,
 		Msg:  msgData,
 	})
 
@@ -90,13 +90,13 @@ func (c *core) sendCatchUp(logger *zap.SugaredLogger, tiBlock *big.Int, tiRound 
 			index := c.sentMsgStorage.lookup(tiStep, tiRound)
 			missingPayload := c.sentMsgStorage.get(index)
 			if len(missingPayload) == 0 {
-				logger.Warnw("can not found self msg")
+				logger.Warnw("Failed to found self msg")
 				return
 			}
 			if err := c.backend.EventMux().Post(tendermint.MessageEvent{
 				Payload: missingPayload,
 			}); err != nil {
-				logger.Errorw("failed to resend msg from core 's storage to eventMux")
+				logger.Errorw("Failed to re-post msg from core 's storage to eventMux")
 			}
 		}()
 	}

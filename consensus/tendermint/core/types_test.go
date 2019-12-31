@@ -9,34 +9,34 @@ import (
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
-func TestCatchUpMsg_DecodeRLP(t *testing.T) {
-	msg := CatchUpMsg{
+func TestCatchUpRequestMsg_DecodeRLP(t *testing.T) {
+	msg := CatchUpRequestMsg{
 		BlockNumber: big.NewInt(5),
 		Round:       3,
 		Step:        RoundStepPrecommit,
 	}
 	data, err := rlp.EncodeToBytes(&msg)
 	require.NoError(t, err)
-	var decodedMsg CatchUpMsg
+	var decodedMsg CatchUpRequestMsg
 	require.NoError(t, rlp.DecodeBytes(data, &decodedMsg))
 	require.Equal(t, msg, decodedMsg)
 }
 
-func TestResendMsg_DecodeRLP(t *testing.T) {
+func TestCatchUpReplyMsg_DecodeRLP(t *testing.T) {
 	var (
 		payload1 = []byte("aaaaa")
 		payload2 = []byte("cc")
 	)
-	resendMsg := ResendMsg{
+	catchUpReplyMsg := CatchUpReplyMsg{
 		Payloads:    append([][]byte{}, payload1, payload2),
 		BlockNumber: big.NewInt(24),
 	}
-	bs, err := rlp.EncodeToBytes(&resendMsg)
+	bs, err := rlp.EncodeToBytes(&catchUpReplyMsg)
 	require.NoError(t, err)
-	var newResendMsg ResendMsg
-	require.NoError(t, rlp.DecodeBytes(bs, &newResendMsg))
+	var newMsg CatchUpReplyMsg
+	require.NoError(t, rlp.DecodeBytes(bs, &newMsg))
 
-	require.Equal(t, uint64(24), newResendMsg.BlockNumber.Uint64())
-	require.Equal(t, payload1, newResendMsg.Payloads[0])
-	require.Equal(t, payload2, newResendMsg.Payloads[1])
+	require.Equal(t, uint64(24), newMsg.BlockNumber.Uint64())
+	require.Equal(t, payload1, newMsg.Payloads[0])
+	require.Equal(t, payload2, newMsg.Payloads[1])
 }

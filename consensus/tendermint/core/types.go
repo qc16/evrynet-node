@@ -87,14 +87,14 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// CatchUpMsg represents the info of current stage of a node which is stuck in prevote or precommit for a while
-type CatchUpMsg struct {
+// CatchUpRequestMsg represents the info of current stage of a node which is stuck in prevote or precommit for a while
+type CatchUpRequestMsg struct {
 	BlockNumber *big.Int
 	Round       int64
 	Step        RoundStepType
 }
 
-func (msg *CatchUpMsg) EncodeRLP(w io.Writer) error {
+func (msg *CatchUpRequestMsg) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		msg.BlockNumber,
 		uint64(msg.Round),
@@ -102,7 +102,7 @@ func (msg *CatchUpMsg) EncodeRLP(w io.Writer) error {
 	})
 }
 
-func (msg *CatchUpMsg) DecodeRLP(s *rlp.Stream) error {
+func (msg *CatchUpRequestMsg) DecodeRLP(s *rlp.Stream) error {
 	var vs struct {
 		BlockNumber *big.Int
 		Round       uint64
@@ -117,8 +117,8 @@ func (msg *CatchUpMsg) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// ResendMsg stores the data of previous message send to a stuck node
-type ResendMsg struct {
+// CatchUpReplyMsg stores the data of previous message send to a stuck node
+type CatchUpReplyMsg struct {
 	BlockNumber *big.Int
 	Payloads    [][]byte
 }

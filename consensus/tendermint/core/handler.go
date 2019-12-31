@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	ErrInvalidProposalPOLRound     = errors.New("invalid proposal POL round")
-	ErrInvalidProposalSignature    = errors.New("invalid proposal signature")
-	ErrVoteHeightMismatch          = errors.New("vote height mismatch")
-	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
-	ErrEmptyBlockProposal          = errors.New("empty block proposal")
-	ErrResendAddressMissMatch      = errors.New("address of resend msg and its child are miss match")
-	emptyBlockHash                 = common.Hash{}
+	ErrInvalidProposalPOLRound      = errors.New("invalid proposal POL round")
+	ErrInvalidProposalSignature     = errors.New("invalid proposal signature")
+	ErrVoteHeightMismatch           = errors.New("vote height mismatch")
+	ErrVoteInvalidValidatorAddress  = errors.New("invalid validator address")
+	ErrEmptyBlockProposal           = errors.New("empty block proposal")
+	ErrCatchUpReplyAddressMissMatch = errors.New("address of catch up reply msg and its child are miss match")
+	emptyBlockHash                  = common.Hash{}
 )
 
 // ----------------------------------------------------------------------------
@@ -426,9 +426,10 @@ func (c *core) handlePrecommit(msg message) error {
 	return nil
 }
 
+//TODO: keep track of the CatchupRequest to stop other nodes from attacking us by sending continuous catchup request
 func (c *core) handleCatchupRequest(msg message) error {
 	var (
-		catchUpMsg  CatchUpMsg
+		catchUpMsg  CatchUpRequestMsg
 		state       = c.currentState
 		blockNumber = state.BlockNumber()
 		round       = state.Round()
@@ -448,7 +449,7 @@ func (c *core) handleCatchupRequest(msg message) error {
 	var payloads [][]byte
 	index := c.sentMsgStorage.lookup(catchUpMsg.Step, catchUpMsg.Round)
 	if index == -1 {
-		logger.Infow("no msg for catchup available")
+		logger.Infow("no msg for catchup request available")
 		return nil
 	}
 	for i := index; ; i++ {
@@ -458,39 +459,39 @@ func (c *core) handleCatchupRequest(msg message) error {
 		}
 		payloads = append(payloads, data)
 		if len(payloads) >= 3 { // send 3 votes as the number of msg to jump to next round
-			c.SendResendMsg(msg.Address, payloads)
+			c.SendCatchupReply(msg.Address, payloads)
 			payloads = make([][]byte, 0)
 		}
 	}
 	if len(payloads) != 0 {
-		c.SendResendMsg(msg.Address, payloads)
+		c.SendCatchupReply(msg.Address, payloads)
 	}
 	return nil
 }
 
 func (c *core) handleCatchUpReply(msg message) error {
 	var (
-		resendMsg ResendMsg
-		state     = c.currentState
+		catchUpReplyMsg CatchUpReplyMsg
+		state           = c.currentState
 	)
 
-	if err := rlp.DecodeBytes(msg.Msg, &resendMsg); err != nil {
+	if err := rlp.DecodeBytes(msg.Msg, &catchUpReplyMsg); err != nil {
 		return err
 	}
-	logger := c.getLogger().With("num_msg", len(resendMsg.Payloads), "block", resendMsg.BlockNumber, "from", msg.Address.Hex())
-	if state.BlockNumber().Cmp(resendMsg.BlockNumber) != 0 {
-		logger.Debugw("Resend msg block is different with current block, skipping")
+	logger := c.getLogger().With("num_msg", len(catchUpReplyMsg.Payloads), "block", catchUpReplyMsg.BlockNumber, "from", msg.Address.Hex())
+	if state.BlockNumber().Cmp(catchUpReplyMsg.BlockNumber) != 0 {
+		logger.Debugw("catchUpReplyMsg block is different with current block, skipping")
 		return nil
 	}
-	logger.Infow("handle resend")
-	for _, payload := range resendMsg.Payloads {
+	logger.Infow("Handle catchUpReplyMsg")
+	for _, payload := range catchUpReplyMsg.Payloads {
 		var subMsg message
 		if err := rlp.DecodeBytes(payload, &subMsg); err != nil {
 			return err
 		}
 		if subMsg.Address != msg.Address {
-			logger.Debugw("Address of resend msg and its child are miss match, skipping", "sub_address", subMsg.Address)
-			return ErrResendAddressMissMatch
+			logger.Debugw("Address of catch up reply msg and its child are miss match, skipping", "sub_address", subMsg.Address)
+			return ErrCatchUpReplyAddressMissMatch
 		}
 		if err := c.handleMsgLocked(subMsg); err != nil {
 			return err
@@ -508,9 +509,9 @@ func (c *core) handleMsgLocked(msg message) error {
 		return c.handlePrevote(msg)
 	case msgPrecommit:
 		return c.handlePrecommit(msg)
-	case msgCatchup:
+	case msgCatchUpRequest:
 		return c.handleCatchupRequest(msg)
-	case msgResend:
+	case msgCatchUpReply:
 		return c.handleCatchUpReply(msg)
 	default:
 		return fmt.Errorf("unknown msg code %d", msg.Code)

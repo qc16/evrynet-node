@@ -223,20 +223,20 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	logger.Infow("sent vote", "vote_round", vote.Round, "vote_block_number", vote.BlockNumber, "vote_block_hash", vote.BlockHash.Hex())
 }
 
-// SendResendMsg resend to msg to target node
-func (c *core) SendResendMsg(target common.Address, payloads [][]byte) {
+// SendCatchupReply sends catchup reply to target node
+func (c *core) SendCatchupReply(target common.Address, payloads [][]byte) {
 	logger := c.getLogger().With("num_msg", len(payloads), "target", target.Hex())
-	resendMsg := &ResendMsg{
+	catchUpReplyMsg := &CatchUpReplyMsg{
 		BlockNumber: new(big.Int).Set(c.CurrentState().BlockNumber()),
 		Payloads:    payloads,
 	}
-	msgData, err := rlp.EncodeToBytes(resendMsg)
+	msgData, err := rlp.EncodeToBytes(catchUpReplyMsg)
 	if err != nil {
 		logger.Errorw("Failed to encode Vote to bytes", "error", err)
 		return
 	}
 	payload, err := c.FinalizeMsg(&message{
-		Code: msgResend,
+		Code: msgCatchUpReply,
 		Msg:  msgData,
 	})
 	if err != nil {
@@ -244,9 +244,9 @@ func (c *core) SendResendMsg(target common.Address, payloads [][]byte) {
 		return
 	}
 	if err := c.backend.Multicast(map[common.Address]bool{target: true}, payload); err != nil {
-		logger.Infow("Failed to resend msgs", "err", err)
+		logger.Infow("Failed to send catchUpReply msgs", "err", err)
 	}
-	logger.Infow("Resend msgs")
+	logger.Infow("Reply catch up msgs")
 }
 
 func (c *core) CurrentState() *roundState {
