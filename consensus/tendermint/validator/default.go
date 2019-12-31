@@ -188,10 +188,12 @@ func (valSet *defaultSet) Copy() tendermint.ValidatorSet {
 	return NewSet(addresses, valSet.policy, valSet.height)
 }
 
+// Get the minimum number of peers to archive consensus
 func (valSet *defaultSet) MinPeers() int {
 	return valSet.Size() - valSet.F() - 1
 }
 
+// Get the minimum number of votes for a polka
 func (valSet *defaultSet) MinMajority() int {
 	return valSet.Size() - valSet.F()
 }
