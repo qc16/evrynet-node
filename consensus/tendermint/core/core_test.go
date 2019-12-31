@@ -160,7 +160,7 @@ func TestCoreFutureMessage(t *testing.T) {
 	assert.Len(t, block.Transactions(), 1)
 	assert.Equal(t, tx.Hash(), block.Transactions()[0].Hash())
 	// create fake proposal
-	proposal := tendermint.Proposal{
+	proposal := Proposal{
 		Block: block,
 		Round: 0,
 	}
@@ -174,7 +174,7 @@ func TestCoreFutureMessage(t *testing.T) {
 	require.NoError(t, core.handleMsg(msg))
 	// create a fake prevote
 	hash := block.Hash()
-	vote := tendermint.Vote{
+	vote := Vote{
 		BlockNumber: big.NewInt(2),
 		Round:       0,
 		BlockHash:   &hash,

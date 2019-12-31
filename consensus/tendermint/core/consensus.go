@@ -65,7 +65,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	c.enterPropose(blockNumber, round)
 
 }
-func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *tendermint.Proposal {
+func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *Proposal {
 	proposal := c.defaultDecideProposal(logger, round)
 
 	if err := c.checkAndFakeProposal(proposal); err != nil {
@@ -76,14 +76,14 @@ func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *tende
 
 //defaultDecideProposal is the default proposal selector
 //it will prioritize validBlock, else will get its own block from tx_pool
-func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *tendermint.Proposal {
+func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *Proposal {
 	var (
 		state = c.CurrentState()
 	)
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
 		logger.Infow("core has ValidBlock, propose it", "valid_round", state.ValidRound())
-		return &tendermint.Proposal{
+		return &Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
 			POLRound: state.ValidRound(),
@@ -96,7 +96,7 @@ func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *te
 	//TODO: remove this
 	//get the block node currently received from miner
 
-	return &tendermint.Proposal{
+	return &Proposal{
 		Block:    state.Block(),
 		Round:    round,
 		POLRound: -1,
@@ -137,7 +137,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	}()
 
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
-	timeOutBlock := big.NewInt(0).Set(blockNumber)
+	timeOutBlock := new(big.Int).Set(blockNumber)
 
 	// if timeOutPropose, it will eventually come to enterPrevote, but the timeout might interrupt the timeOutPropose
 	// to jump to a better state. Imagine that at line 91, we come to enterPrevote and a new timeout is call from there,
@@ -218,20 +218,28 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 	//TODO: write a function for this at all enter step
 	//This is strictly use with pointer for state update.
 	var (
-		state         = c.CurrentState()
-		sBlockNunmber = state.BlockNumber()
-		sRound        = state.Round()
-		sStep         = state.Step()
-		logger        = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
+		state        = c.CurrentState()
+		sBlockNumber = state.BlockNumber()
+		sRound       = state.Round()
+		sStep        = state.Step()
+		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
 	)
 
-	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
+	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
 		logger.Debugw("enterPrevote ignore: we are in a state that is ahead of the input state")
 		return
 	}
 
 	logger.Infow("enterPrevote")
 	tendermintProposalWaitTimer.UpdateSince(c.proposeStart)
+
+	c.timeout.ScheduleTimeout(timeoutInfo{
+		Duration:    c.config.PrevoteCatchupTimeout(sRound),
+		BlockNumber: new(big.Int).Set(sBlockNumber),
+		Round:       sRound,
+		Step:        RoundStepPrevote,
+		Retry:       0,
+	})
 	//eventually we'll enterPrevote
 	defer func() {
 		state.UpdateRoundStep(round, RoundStepPrevote)
@@ -341,6 +349,14 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 
 	logger.Infow("enterPrecommit")
 
+	c.timeout.ScheduleTimeout(timeoutInfo{
+		Duration:    c.config.PrecommitCatchupTimeout(sRound),
+		BlockNumber: new(big.Int).Set(sBlockNunmber),
+		Round:       sRound,
+		Step:        RoundStepPrecommit,
+		Retry:       0,
+	})
+
 	defer func() {
 		// Done enterPrecommit:
 		state.UpdateRoundStep(round, RoundStepPrecommit)
@@ -445,7 +461,7 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	//it will be cleared upon entering newHeight
 	if lockedBlock != nil && lockedBlock.Hash().Hex() == blockHash.Hex() {
 		logger.Infow("Commit is for locked block. Set ProposalBlock=LockedBlock", "blockHash", blockHash.Hex())
-		state.SetProposalReceived(&tendermint.Proposal{
+		state.SetProposalReceived(&Proposal{
 			Block:    lockedBlock,
 			Round:    commitRound,
 			POLRound: state.LockedRound(),
@@ -510,7 +526,7 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
-func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error) {
+func (c *core) FinalizeBlock(proposal *Proposal) (*types.Block, error) {
 	var (
 		state           = c.currentState
 		round           = state.commitRound
@@ -573,7 +589,6 @@ func (c *core) startNewRound() {
 			Round:       0,
 			BlockNumber: expectedBlock,
 		})
-
 		state.clearPreviousRoundData()
 		c.sentMsgStorage.truncateMsgStored(c.getLogger())
 		c.valSet = c.backend.Validators(state.BlockNumber())
@@ -585,8 +600,12 @@ func (c *core) startNewRound() {
 		duration = time.Until(state.startTime)
 	case RoundStepPropose:
 		duration = c.config.ProposeTimeout(state.Round())
+	case RoundStepPrevote:
+		duration = c.config.PrevoteCatchupTimeout(state.Round())
 	case RoundStepPrevoteWait:
 		duration = c.config.PrevoteTimeout(state.Round())
+	case RoundStepPrecommit:
+		duration = c.config.PrecommitCatchupTimeout(state.Round())
 	case RoundStepPrecommitWait:
 		duration = c.config.PrecommitTimeout(state.Round())
 	default:
@@ -600,6 +619,7 @@ func (c *core) startNewRound() {
 			BlockNumber: timeOutBlock,
 			Round:       state.Round(),
 			Step:        state.Step(),
+			Retry:       0,
 		})
 	}
 }
@@ -624,7 +644,7 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 		}
 		switch msg.Code {
 		case msgPrecommit, msgPrevote:
-			var vote tendermint.Vote
+			var vote Vote
 			if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
 				logger.Errorw("Failed to decode vote from message", "error", err)
 				return false, err
@@ -632,7 +652,7 @@ func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err 
 			msgBlockNumber = vote.BlockNumber
 			msgRound = vote.Round
 		case msgPropose:
-			var proposal tendermint.Proposal
+			var proposal Proposal
 			if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
 				logger.Errorw("Failed to decode vote from message", "error", err)
 				return false, err

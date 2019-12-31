@@ -1,4 +1,4 @@
-package tendermint
+package core
 
 import (
 	"io"
@@ -83,5 +83,34 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	v.BlockNumber = vs.BlockNumber
 	v.Round = round
 	v.Seal = vs.Seal
+	return nil
+}
+
+type CatchUpMsg struct {
+	BlockNumber *big.Int
+	Round       int64
+	Step        RoundStepType
+}
+
+func (msg *CatchUpMsg) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{
+		msg.BlockNumber,
+		uint64(msg.Round),
+		msg.Step,
+	})
+}
+
+func (msg *CatchUpMsg) DecodeRLP(s *rlp.Stream) error {
+	var vs struct {
+		BlockNumber *big.Int
+		Round       uint64
+		Step        RoundStepType
+	}
+	if err := s.Decode(&vs); err != nil {
+		return err
+	}
+	msg.BlockNumber = vs.BlockNumber
+	msg.Round = int64(vs.Round)
+	msg.Step = vs.Step
 	return nil
 }

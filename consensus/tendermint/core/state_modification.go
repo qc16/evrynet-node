@@ -27,7 +27,7 @@ func (c *core) getInitializedState() *roundState {
 		validRound       int64 = -1
 		validBlock       *types.Block
 		commitRound      int64 = -1
-		proposalReceived *tendermint.Proposal
+		proposalReceived *Proposal
 		step             = RoundStepNewHeight
 	)
 
@@ -74,7 +74,6 @@ func (c *core) updateStateForNewblock() {
 		Round:       0,
 		BlockNumber: height.Add(height, big.NewInt(1)),
 	})
-	state.UpdateRoundStep(0, RoundStepNewHeight)
 
 	if state.commitTime.IsZero() {
 		// "Now" makes it easier to sync up dev nodes.

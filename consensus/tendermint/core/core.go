@@ -124,7 +124,7 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
-func (c *core) SendPropose(propose *tendermint.Proposal) {
+func (c *core) SendPropose(propose *Proposal) {
 	logger := c.getLogger().With("propose_round", propose.Round,
 		"propose_block_number", propose.Block.Number(), "propose_block_hash", propose.Block.Hash())
 
@@ -185,7 +185,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		}
 		blockHash = block.Hash()
 	}
-	vote := &tendermint.Vote{
+	vote := &Vote{
 		BlockHash:   &blockHash,
 		Round:       round,
 		BlockNumber: c.CurrentState().BlockNumber(),

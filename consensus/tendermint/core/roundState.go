@@ -31,7 +31,7 @@ import (
 func newRoundState(view *tendermint.View, prevotesReceived, precommitsReceived map[int64]*messageSet, block *types.Block,
 	lockedRound int64, lockedBlock *types.Block,
 	validRound int64, validBlock *types.Block,
-	proposalReceived *tendermint.Proposal, step RoundStepType, commitRound int64) *roundState {
+	proposalReceived *Proposal, step RoundStepType, commitRound int64) *roundState {
 	return &roundState{
 		view:               view,
 		block:              block,
@@ -62,7 +62,7 @@ type roundState struct {
 	commitTime  time.Time // commit timestamp
 	startTime   time.Time // time to start new round
 
-	proposalReceived   *tendermint.Proposal  //
+	proposalReceived   *Proposal             //
 	PrevotesReceived   map[int64]*messageSet //This is the prevote received for each round
 	PrecommitsReceived map[int64]*messageSet //this is the precommit received for each round
 	PrecommitWaited    bool                  //we only wait for precommit once each round
@@ -93,11 +93,11 @@ func (s *roundState) UpdateRoundStep(round int64, step RoundStepType) {
 	s.step = step
 }
 
-func (s *roundState) ProposalReceived() *tendermint.Proposal {
+func (s *roundState) ProposalReceived() *Proposal {
 	return s.proposalReceived
 }
 
-func (s *roundState) SetProposalReceived(proposalReceived *tendermint.Proposal) {
+func (s *roundState) SetProposalReceived(proposalReceived *Proposal) {
 
 	s.proposalReceived = proposalReceived
 }
@@ -193,7 +193,7 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 		LockedBlock        *types.Block
 		ValidRound         int64
 		ValidBlock         *types.Block
-		proposalReceived   *tendermint.Proposal
+		proposalReceived   *Proposal
 		PrevotesReceived   map[int64]*messageSet
 		PrecommitsReceived map[int64]*messageSet
 	}
@@ -234,7 +234,7 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 	})
 }
 
-func (s *roundState) addPrevote(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+func (s *roundState) addPrevote(msg message, vote *Vote, valset tendermint.ValidatorSet) (bool, error) {
 	view := tendermint.View{
 		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
 		Round:       vote.Round,
@@ -253,7 +253,7 @@ func (s *roundState) GetPrevotesByRound(round int64) (*messageSet, bool) {
 	return msgSet, ok
 }
 
-func (s *roundState) addPrecommit(msg message, vote *tendermint.Vote, valset tendermint.ValidatorSet) (bool, error) {
+func (s *roundState) addPrecommit(msg message, vote *Vote, valset tendermint.ValidatorSet) (bool, error) {
 	view := tendermint.View{
 		BlockNumber: big.NewInt(0).Set(vote.BlockNumber),
 		Round:       vote.Round,
@@ -286,6 +286,7 @@ func (s *roundState) clearPreviousRoundData() {
 		s.SetBlock(nil)
 	}
 
+	s.UpdateRoundStep(0, RoundStepNewHeight)
 	s.SetLockedRoundAndBlock(-1, nil)
 	s.SetValidRoundAndBlock(-1, nil)
 	s.SetProposalReceived(nil)

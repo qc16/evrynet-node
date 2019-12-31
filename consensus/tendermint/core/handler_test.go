@@ -118,7 +118,7 @@ func TestVerifyProposal(t *testing.T) {
 			},
 		},
 	} {
-		proposal := tendermint.Proposal{
+		proposal := Proposal{
 			Block: testCase.block,
 			Round: 1,
 		}
