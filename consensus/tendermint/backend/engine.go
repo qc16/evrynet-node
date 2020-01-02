@@ -190,7 +190,7 @@ func (sb *Backend) tryStartCore() bool {
 
 	// Check enough 2f+1 peers
 	valSet := sb.Validators(sb.currentBlock().Number())
-	if len(sb.FindExistingPeers(valSet)) < 2*valSet.F() {
+	if len(sb.FindExistingPeers(valSet)) < valSet.MinPeers() {
 		log.Warn("not enough 2f+1 peers to start backend")
 		return false
 	}
@@ -639,8 +639,8 @@ func (sb *Backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) er
 		}
 	}
 
-	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal <= 2*snap.ValSet.F() {
+	// The length of validSeal should be larger or equal than min majority (num validator - maximum faulty)
+	if validSeal < snap.ValSet.MinMajority() {
 		return errInvalidCommittedSeals
 	}
 

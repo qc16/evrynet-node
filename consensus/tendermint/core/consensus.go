@@ -517,7 +517,7 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 		totalPrecommits = 0
 		commitSeals     = [][]byte{}
 		header          = proposal.Block.Header()
-		fx2             = c.valSet.F() * 2
+		minMajority     = c.valSet.MinMajority()
 	)
 	precommits, ok := state.GetPrecommitsByRound(round)
 	if !ok {
@@ -528,8 +528,8 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	if !ok || votes == nil {
 		c.getLogger().Panicw("no votes for the commiting block", "block_hash", header.Hash())
 	}
-	if votes.totalReceived <= fx2 {
-		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", fx2+1, totalPrecommits)
+	if votes.totalReceived < minMajority {
+		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", minMajority, totalPrecommits)
 	}
 
 	for _, vote := range votes.votes {
@@ -539,13 +539,13 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 		commitSeals = append(commitSeals, vote.Seal)
 		totalPrecommits++
 		//TODO: is it fair to always take the first 2F+1 seals?
-		if totalPrecommits > fx2 {
+		if totalPrecommits >= minMajority {
 			break
 		}
 	}
 
-	if totalPrecommits <= fx2 {
-		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", fx2+1, totalPrecommits)
+	if totalPrecommits < minMajority {
+		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", minMajority, totalPrecommits)
 	}
 	//writeCommitSeals
 	if err := utils.WriteCommittedSeals(header, commitSeals); err != nil {
