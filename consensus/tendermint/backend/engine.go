@@ -639,8 +639,8 @@ func (sb *Backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) er
 		}
 	}
 
-	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal < snap.ValSet.Size()-snap.ValSet.F() {
+	// The length of validSeal should be larger or equal than min majority (num validator - maximum faulty)
+	if validSeal < snap.ValSet.MinMajority() {
 		return errInvalidCommittedSeals
 	}
 
