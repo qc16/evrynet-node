@@ -244,7 +244,8 @@ func (c *core) SendCatchupReply(target common.Address, payloads [][]byte) {
 		return
 	}
 	if err := c.backend.Multicast(map[common.Address]bool{target: true}, payload); err != nil {
-		logger.Infow("Failed to send catchUpReply msgs", "err", err)
+		logger.Errorw("Failed to send catchUpReply msgs", "err", err)
+		return
 	}
 	logger.Infow("Reply catch up msgs")
 }

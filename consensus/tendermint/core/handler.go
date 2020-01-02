@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -454,9 +455,12 @@ func (c *core) handleCatchupRequest(msg message) error {
 		return nil
 	}
 	for i := index; ; i++ {
-		data := c.sentMsgStorage.get(i)
-		if len(data) == 0 {
-			break
+		data, err := c.sentMsgStorage.get(i)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			logger.Errorw("Failed to retrieve msg", "err", err)
 		}
 		payloads = append(payloads, data)
 		if len(payloads) >= catchUpReplyBatchSize {

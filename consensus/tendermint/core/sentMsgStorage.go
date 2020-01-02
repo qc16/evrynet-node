@@ -1,6 +1,7 @@
 package core
 
 import (
+	"io"
 	"sync"
 
 	"go.uber.org/zap"
@@ -29,6 +30,9 @@ func NewMsgStorage() *msgStorage {
 // storeSentMsg stores vote/ propose to database
 func (c *msgStorage) storeSentMsg(logger *zap.SugaredLogger, step RoundStepType, round int64, msgData []byte) {
 	logger = logger.With("msg_step", step.String(), "msg_round", round)
+	if len(msgData) == 0 {
+		logger.Panicw("length of payload data should not be zero")
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	logger.Debugw("saving a sent Msg")
@@ -64,11 +68,11 @@ func (c *msgStorage) lookup(step RoundStepType, round int64) int {
 	return -1
 }
 
-func (c *msgStorage) get(index int) []byte {
+func (c *msgStorage) get(index int) ([]byte, error) {
 	if index >= len(c.savedMsg) || index < 0 {
-		return nil
+		return nil, io.EOF
 	}
-	return c.savedMsg[index].Data
+	return c.savedMsg[index].Data, nil
 }
 
 // truncateMsgStored removes all data stored by the block's number

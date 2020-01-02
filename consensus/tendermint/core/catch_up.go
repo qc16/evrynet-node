@@ -66,15 +66,24 @@ func (c *core) sendCatchUpRequest(logger *zap.SugaredLogger, tiBlock *big.Int, t
 		Code: msgCatchUpRequest,
 		Msg:  msgData,
 	})
-
-	var msgSet *messageSet
-	var ok bool
-	if tiStep == RoundStepPrevote {
-		msgSet, ok = state.GetPrevotesByRound(tiRound)
-	} else {
-		msgSet, ok = state.GetPrecommitsByRound(tiRound)
+	if err != nil {
+		logger.Errorw("Failed to finalize CatchUpRequestMsg to bytes", "err", err)
+		return
 	}
 
+	var (
+		msgSet *messageSet
+		ok     bool
+	)
+	switch tiStep {
+	case RoundStepPrevote:
+		msgSet, ok = state.GetPrevotesByRound(tiRound)
+	case RoundStepPrecommit:
+		msgSet, ok = state.GetPrecommitsByRound(tiRound)
+	default:
+		logger.Errorw("get unexpected timeout step")
+		return
+	}
 	var missing map[common.Address]bool
 	if !ok { // not found any vote
 		missing = make(map[common.Address]bool)
@@ -88,9 +97,9 @@ func (c *core) sendCatchUpRequest(logger *zap.SugaredLogger, tiBlock *big.Int, t
 	if _, ok := missing[addr]; ok {
 		go func() {
 			index := c.sentMsgStorage.lookup(tiStep, tiRound)
-			missingPayload := c.sentMsgStorage.get(index)
-			if len(missingPayload) == 0 {
-				logger.Warnw("Failed to found self msg")
+			missingPayload, err := c.sentMsgStorage.get(index)
+			if err != nil {
+				logger.Warnw("Failed to found self msg", err, "err")
 				return
 			}
 			if err := c.backend.EventMux().Post(tendermint.MessageEvent{
