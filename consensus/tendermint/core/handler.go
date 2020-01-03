@@ -48,7 +48,6 @@ func (c *core) unsubscribeEvents() {
 
 // handleEvents will receive messages as well as timeout and is solely responsible for state change.
 func (c *core) handleEvents() {
-	var logger = c.getLogger()
 	// Clear state
 	defer func() {
 		c.handlerWg.Done()
@@ -57,6 +56,7 @@ func (c *core) handleEvents() {
 	c.handlerWg.Add(1)
 
 	for {
+		var logger = c.getLogger()
 		select {
 		case event, ok := <-c.events.Chan(): //backend sending something...
 			if !ok {
@@ -493,6 +493,7 @@ func (c *core) handleCatchUpReply(msg message) error {
 	for _, payload := range catchUpReplyMsg.Payloads {
 		var subMsg message
 		if err := rlp.DecodeBytes(payload, &subMsg); err != nil {
+			fmt.Println("xxxxx")
 			return err
 		}
 		if subMsg.Address != msg.Address {

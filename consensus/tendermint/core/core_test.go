@@ -15,6 +15,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -51,8 +52,10 @@ func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 	var (
 		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
+			nodeAddr2,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
@@ -79,8 +82,10 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 	var (
 		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
+			nodeAddr2,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
@@ -202,4 +207,22 @@ func sign(t *testing.T, msg *message, privateKey *ecdsa.PrivateKey) {
 	hashData := crypto.Keccak256(rawPayLoad)
 	msg.Signature, err = crypto.Sign(hashData, privateKey)
 	require.NoError(t, err)
+}
+
+func assertNextMsg(t *testing.T, sentMsgSub *event.TypeMuxSubscription, msgType uint64, timeout time.Duration, assertAddress func(address common.Address), assertMsg func([]byte)) {
+	select {
+	case ev := <-sentMsgSub.Chan():
+		sendMsgEvent := ev.Data.(tests_utils.SentMsgEvent)
+		if assertAddress != nil {
+			assertAddress(sendMsgEvent.Target)
+		}
+		var msg message
+		require.NoError(t, rlp.DecodeBytes(sendMsgEvent.Payload, &msg))
+		require.Equal(t, msgType, msg.Code)
+		if assertMsg != nil {
+			assertMsg(msg.Msg)
+		}
+	case <-time.After(timeout):
+		panic("timeout")
+	}
 }
