@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -48,27 +49,33 @@ func TestFinalizeBlock(t *testing.T) {
 		Round:       voteRound,
 	}
 
-	blockHasSeal := tests_utils.MakeBlockWithSeal(be, genesisHeader)
-	blockHashHasSeal := blockHasSeal.Hash()
-	seal, err := core.backend.Sign(utils.PrepareCommittedSeal(blockHasSeal.Hash()))
-	require.NoError(t, err)
-
 	for _, testCase := range []struct {
-		addWrongBlockHash map[int]bool
-		totalReceived     int
-		assertFn          func(block *types.Block, err error)
+		name           string
+		validatorVotes map[int]*big.Int
+		totalReceived  int
+		assertFn       func(block *types.Block, err error)
 	}{
 		{
-			addWrongBlockHash: map[int]bool{},
-			totalReceived:     4,
+			name: "Case 1",
+			validatorVotes: map[int]*big.Int{
+				0: big.NewInt(2),
+				1: big.NewInt(2),
+				2: big.NewInt(2),
+				3: big.NewInt(2),
+			},
+			totalReceived: 4,
 			assertFn: func(block *types.Block, err error) {
 				assert.NotNil(t, block)
 				assert.NoError(t, err)
 			},
 		},
 		{
-			addWrongBlockHash: map[int]bool{
-				3: true,
+			name: "Case 2: Validator 1,2,3 vote for block 1. Validator 4 votes for block 2",
+			validatorVotes: map[int]*big.Int{
+				0: big.NewInt(2),
+				1: big.NewInt(2),
+				2: big.NewInt(2),
+				3: big.NewInt(1),
 			},
 			totalReceived: 3,
 			assertFn: func(block *types.Block, err error) {
@@ -77,9 +84,12 @@ func TestFinalizeBlock(t *testing.T) {
 			},
 		},
 		{
-			addWrongBlockHash: map[int]bool{
-				2: true,
-				3: true,
+			name: "Case 3: Validator 1,2 will vote for block 1. Validator 3,4 will vote for block 2",
+			validatorVotes: map[int]*big.Int{
+				0: big.NewInt(2),
+				1: big.NewInt(2),
+				2: big.NewInt(1),
+				3: big.NewInt(1),
 			},
 			totalReceived: 2,
 			assertFn: func(block *types.Block, err error) {
@@ -88,52 +98,65 @@ func TestFinalizeBlock(t *testing.T) {
 			},
 		},
 	} {
-		newMsgSet := newMessageSet(core.valSet, msgPrecommit, &view)
-		newBlock := tests_utils.MakeBlockWithoutSeal(genesisHeader)
-		newBlockHash := newBlock.Hash()
-		newSeal, err := core.backend.Sign(utils.PrepareCommittedSeal(newBlockHash))
-		require.NoError(t, err)
+		t.Run(testCase.name, func(t *testing.T) {
+			newMsgSet := newMessageSet(core.valSet, msgPrecommit, &view)
 
-		//Add vote from node 1,2,3,4
-		for index, valAddr := range validators {
-			if testCase.addWrongBlockHash[index] {
-				ok, err := newMsgSet.AddVote(
-					message{
-						Code:    msgPrecommit,
-						Address: valAddr,
-					},
-					&tendermint.Vote{
-						BlockHash:   &blockHashHasSeal,
-						BlockNumber: core.CurrentState().BlockNumber(),
-						Round:       voteRound,
-						Seal:        seal,
-					})
-				require.NoError(t, err)
-				assert.True(t, ok)
-			} else {
-				ok, err := newMsgSet.AddVote(
-					message{
-						Code:    msgPrecommit,
-						Address: valAddr,
-					},
-					&tendermint.Vote{
-						BlockHash:   &newBlockHash,
-						BlockNumber: core.CurrentState().BlockNumber(),
-						Round:       voteRound,
-						Seal:        newSeal,
-					})
-				require.NoError(t, err)
-				assert.True(t, ok)
+			//Create block 1
+			genesisHeader.Number = big.NewInt(1)
+			bl1 := tests_utils.MakeBlockWithoutSeal(genesisHeader)
+			blHash1 := bl1.Hash()
+			committedSeal1, err := core.backend.Sign(utils.PrepareCommittedSeal(blHash1))
+			require.NoError(t, err)
+
+			//Create block 2
+			genesisHeader.Number = big.NewInt(2)
+			bl2 := tests_utils.MakeBlockWithoutSeal(genesisHeader)
+			blHash2 := bl2.Hash()
+			committedSeal2, err := core.backend.Sign(utils.PrepareCommittedSeal(blHash2))
+			require.NoError(t, err)
+			require.NotEqual(t, bl1.Hash().Hex(), bl2.Hash().Hex(), "Block hash of 2 blocks must be different")
+
+			//Add vote from node 1,2,3,4
+			for index, valAddr := range validators {
+				msg := message{
+					Code:    msgPrecommit,
+					Address: valAddr,
+				}
+				switch testCase.validatorVotes[index].BitLen() {
+				case 1:
+					ok, err := newMsgSet.AddVote(msg,
+						&tendermint.Vote{
+							BlockHash:   &blHash1,
+							BlockNumber: core.CurrentState().BlockNumber(),
+							Round:       voteRound,
+							Seal:        committedSeal1,
+						})
+					require.NoError(t, err)
+					assert.True(t, ok)
+				case 2:
+					ok, err := newMsgSet.AddVote(msg,
+						&tendermint.Vote{
+							BlockHash:   &blHash2,
+							BlockNumber: core.CurrentState().BlockNumber(),
+							Round:       voteRound,
+							Seal:        committedSeal2,
+						})
+					require.NoError(t, err)
+					assert.True(t, ok)
+				default:
+					fmt.Println("Not support this case")
+				}
 			}
-		}
 
-		core.currentState.PrecommitsReceived[voteRound] = newMsgSet
-		assert.Equal(t, testCase.totalReceived, core.currentState.PrecommitsReceived[voteRound].voteByBlock[newBlockHash].totalReceived)
+			assert.Equal(t, 4, newMsgSet.totalReceived)
+			core.currentState.PrecommitsReceived[voteRound] = newMsgSet
+			assert.Equal(t, testCase.totalReceived, core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2].totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
 
-		testCase.assertFn(core.FinalizeBlock(&tendermint.Proposal{
-			Block:    newBlock,
-			Round:    1,
-			POLRound: 0,
-		}))
+			testCase.assertFn(core.FinalizeBlock(&tendermint.Proposal{
+				Block:    bl2,
+				Round:    0,
+				POLRound: 0,
+			}))
+		})
 	}
 }
