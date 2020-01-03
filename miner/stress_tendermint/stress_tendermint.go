@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -54,48 +53,47 @@ type TxMode int
 const (
 	NormalTxMode TxMode = iota
 	SmartContractMode
+	defaultGenesisFile = "./genesis_testnet.json"
+	defaultConfigFile  = "./stress_config.json"
+	dataDir            = "test_data"
 )
 
 func main() {
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
+	fdlimit.Raise(2048)
 	var (
 		err         error
-		genesisFile = "./genesis_testnet.json"
-		configFile  = "stress_config.json"
+		genesisFile = defaultGenesisFile
+		configFile  = defaultConfigFile
 	)
 	if len(os.Args) == 3 {
-		fmt.Println("overwrite default config")
+		log.Info("overwrite default config")
 		genesisFile = os.Args[1]
 		configFile = os.Args[2]
 	}
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
-	fdlimit.Raise(2048)
 
 	cfg, enodes, faucets := parseTestConfig(configFile)
-
 	nodePriKey, _ := crypto.GenerateKey()
-	// Create a Clique network based off of the Rinkeby config
-	genesis, err := makeGenesis(genesisFile)
+	genesis, err := parseGenesis(genesisFile)
 	if err != nil {
 		panic(err)
 	}
-
-	//make node
-	node, err := makeNode(genesis)
+	//make testNode
+	testNode, err := makeNode(genesis)
 	if err != nil {
 		panic(err)
 	}
-	defer node.Close()
-
-	for node.Server().NodeInfo().Ports.Listener == 0 {
+	defer testNode.Close()
+	for testNode.Server().NodeInfo().Ports.Listener == 0 {
 		time.Sleep(250 * time.Millisecond)
 	}
-	// Connect the node to al the previous ones
+	// Connect the testNode to dev chain
 	for _, n := range enodes {
-		node.Server().AddPeer(n)
+		testNode.Server().AddPeer(n)
 	}
 
 	// Inject the signer key and start sealing with it
-	store := node.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	store := testNode.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	signer, err := store.ImportECDSA(nodePriKey, "")
 	if err != nil {
 		panic(err)
@@ -104,15 +102,15 @@ func main() {
 		panic(err)
 	}
 
-	// wait until node is synced
+	// wait until testNode is synced
 	time.Sleep(3 * time.Second)
 	var ethereum *eth.Ethereum
-	if err := node.Service(&ethereum); err != nil {
+	if err := testNode.Service(&ethereum); err != nil {
 		panic(err)
 	}
 	bc := ethereum.BlockChain()
 	for !ethereum.Synced() {
-		log.Warn("node is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
+		log.Warn("testNode is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
 		time.Sleep(3 * time.Second)
 	}
 
@@ -146,7 +144,7 @@ func main() {
 		nonces[0]++
 	}
 
-	maxBlockNumber := ethereum.BlockChain().CurrentHeader().Number.Uint64()
+	lastBlk := ethereum.BlockChain().CurrentHeader().Number.Uint64()
 	numTxs := 0
 	start := time.Now()
 	preNumTxs := 0
@@ -154,16 +152,13 @@ func main() {
 	// Start injecting transactions from the faucet like crazy
 	go func() {
 		for {
-			currentBlk := bc.CurrentHeader().Number.Uint64()
-			for currentBlk > maxBlockNumber {
-				maxBlockNumber++
-				numTxs += len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions)
-				log.Info("new_block", "txs", len(bc.GetBlockByNumber(maxBlockNumber).Body().Transactions), "number", maxBlockNumber)
+			for currentBlk := bc.CurrentHeader().Number.Uint64(); currentBlk > lastBlk; lastBlk++ {
+				numTxs += len(bc.GetBlockByNumber(lastBlk).Body().Transactions)
+				log.Info("new_block", "txs", len(bc.GetBlockByNumber(lastBlk).Body().Transactions), "number", lastBlk)
 			}
 			log.Warn("num tx info", "tx_mode", cfg.TxMode, "txs", numTxs, "duration", time.Since(start),
 				"avg_tps", float64(numTxs)/time.Since(start).Seconds(), "current_tps", float64(numTxs-preNumTxs)/time.Since(prevTime).Seconds(),
-				"block", currentBlk)
-
+				"block", lastBlk)
 			preNumTxs = numTxs
 			prevTime = time.Now()
 			time.Sleep(2 * time.Second)
@@ -191,7 +186,7 @@ func main() {
 		}
 
 		// Wait if we're too saturated
-		rebroardcast := false
+		rebroadcast := false
 	waitLoop:
 		for epoch := 0; ; epoch++ {
 			pend, _ := ethereum.TxPool().Stats()
@@ -199,9 +194,9 @@ func main() {
 			case pend < 40960:
 				break waitLoop
 			default:
-				if !rebroardcast {
+				if !rebroadcast {
 					forceBroadcastPendingTxs(ethereum)
-					rebroardcast = true
+					rebroadcast = true
 				}
 				log.Info("tx pool is full, sleeping", "pending", pend)
 				time.Sleep(time.Second)
@@ -210,6 +205,7 @@ func main() {
 	}
 }
 
+//forceBroadcastPendingTxs get pending from
 func forceBroadcastPendingTxs(ethereum *eth.Ethereum) {
 	// force rebroadcast
 	var txs types.Transactions
@@ -222,7 +218,7 @@ func forceBroadcastPendingTxs(ethereum *eth.Ethereum) {
 		txs = append(txs, pendingTxs...)
 	}
 	go func() {
-		ethereum.GetPm().ReBroadcastTxs(txs)
+		ethereum.GetPm().ForceBroadcastTxs(txs)
 	}()
 }
 
@@ -262,33 +258,29 @@ func parseTestConfig(fileName string) (*stressConfig, []*enode.Node, []*ecdsa.Pr
 	return &cfg, enodes, faucets
 }
 
-// makeGenesis creates a custom Clique genesis block based on some pre-defined
-// signer and faucet accounts.
-func makeGenesis(fileName string) (*core.Genesis, error) {
+// parseGenesis creates a genesis block from config file
+func parseGenesis(fileName string) (*core.Genesis, error) {
 	// Create a Clique network based off of the Rinkeby config
 	// Read file genesis generated from pupeth
 	genesisFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}
-
 	config := &core.Genesis{}
 	err = json.Unmarshal(genesisFile, config)
 	if err != nil {
 		return nil, err
 	}
-
 	return config, nil
 }
 
+// makeNode creates a node from genesis config
 func makeNode(genesis *core.Genesis) (*node.Node, error) {
 	// Define the basic configurations for the Ethereum node
-	datadir := "./test_data"
-
 	config := &node.Config{
 		Name:    "geth",
 		Version: params.Version,
-		DataDir: datadir,
+		DataDir: dataDir,
 
 		P2P: p2p.Config{
 			ListenAddr:  "0.0.0.0:0",
@@ -296,7 +288,7 @@ func makeNode(genesis *core.Genesis) (*node.Node, error) {
 			MaxPeers:    25,
 		},
 		NoUSB:    true,
-		HTTPHost: "127.0.0.1",
+		HTTPHost: "127.0.0.1", //add an rpc for debug
 		HTTPPort: 22001,
 		HTTPModules: []string{"admin", "db", "eth", "debug", "miner", "net", "shh", "txpool",
 			"personal", "web3", "tendermint"},
@@ -315,18 +307,15 @@ func makeNode(genesis *core.Genesis) (*node.Node, error) {
 			DatabaseCache:   256,
 			DatabaseHandles: 256,
 			TxPool: core.TxPoolConfig{
-				Journal:   "transactions.rlp",
-				Rejournal: time.Hour,
-
-				PriceLimit: 1,
-				PriceBump:  10,
-
+				Journal:      "transactions.rlp",
+				Rejournal:    time.Hour,
+				PriceLimit:   1,
+				PriceBump:    10,
 				AccountSlots: 16,
 				GlobalSlots:  40960,
 				AccountQueue: 64,
 				GlobalQueue:  10240,
-
-				Lifetime: 3 * time.Hour,
+				Lifetime:     3 * time.Hour,
 			},
 			GPO: eth.DefaultConfig.GPO,
 			Miner: miner.Config{
@@ -382,8 +371,7 @@ func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64)
 
 	// Wait to get SC address
 	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = evrClient.TransactionReceipt(context.Background(), tx.Hash())
+		receipt, err := evrClient.TransactionReceipt(context.Background(), tx.Hash())
 		if err == nil && receipt.Status == uint64(1) {
 			log.Info("Creating Smart Contract successfully!")
 			return &receipt.ContractAddress, nil

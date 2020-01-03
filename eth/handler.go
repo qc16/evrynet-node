@@ -811,8 +811,10 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	}
 }
 
-func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
-	log.Info("rebroardcast transaction", "len", pm.peers.Len(), "txs", len(txs))
+// ForceBroadcastTxs broadcast txs to all peer
+// this function is for testing only
+func (pm *ProtocolManager) ForceBroadcastTxs(txs types.Transactions) {
+	log.Info("force broadcast transaction", "len", pm.peers.Len(), "txs", len(txs))
 	for _, peer := range pm.peers.Peers() {
 		if err := peer.SendTransactions(txs); err != nil {
 			log.Error("failed to rebroadcast txs", "err", err, "peer", peer.head)
