@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 	"time"
@@ -171,6 +172,7 @@ func TestCoreFutureMessage(t *testing.T) {
 		Msg:     msgData,
 		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
 	}
+	sign(t, &msg, nodePrivateKey)
 	require.NoError(t, core.handleMsg(msg))
 	// create a fake prevote
 	hash := block.Hash()
@@ -187,8 +189,17 @@ func TestCoreFutureMessage(t *testing.T) {
 		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
 		Msg:     msgData,
 	}
+	sign(t, &prevoteMsg, nodePrivateKey)
 	require.NoError(t, core.handleMsg(prevoteMsg))
 
 	_, err = core.processFutureMessages(logger)
+	require.NoError(t, err)
+}
+
+func sign(t *testing.T, msg *message, privateKey *ecdsa.PrivateKey) {
+	rawPayLoad, err := msg.PayLoadWithoutSignature()
+	require.NoError(t, err)
+	hashData := crypto.Keccak256(rawPayLoad)
+	msg.Signature, err = crypto.Sign(hashData, privateKey)
 	require.NoError(t, err)
 }

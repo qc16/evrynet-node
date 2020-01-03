@@ -148,3 +148,35 @@ func TestVerifyProposal(t *testing.T) {
 		testCase.assertFn(core.VerifyProposal(proposal, msg))
 	}
 }
+
+func TestCore_HandleMsg(t *testing.T) {
+	var (
+		nodePrivateKey     = tests_utils.MakeNodeKey()
+		nodeFakePrivateKey = tests_utils.MakeNodeKey()
+		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators         = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		err           error
+	)
+	//create New test backend and newMockChain
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+
+	core := newTestCore(be, tendermint.DefaultConfig)
+	msg := message{
+		Msg:     []byte("aaaa"),
+		Address: nodeAddr,
+		Code:    msgPrevote,
+	}
+	err = core.handleMsg(msg)
+	require.Error(t, err, msg)
+
+	rawPayload, err := msg.PayLoadWithoutSignature()
+	require.NoError(t, err)
+	hashData := crypto.Keccak256(rawPayload)
+	signature, err := crypto.Sign(hashData, nodeFakePrivateKey)
+	msg.Signature = signature
+	err = core.handleMsg(msg)
+	require.EqualError(t, err, ErrSignerMessageMissMatch.Error())
+}

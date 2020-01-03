@@ -19,6 +19,7 @@ var (
 	ErrVoteHeightMismatch           = errors.New("vote height mismatch")
 	ErrVoteInvalidValidatorAddress  = errors.New("invalid validator address")
 	ErrEmptyBlockProposal           = errors.New("empty block proposal")
+	ErrSignerMessageMissMatch       = errors.New("deprived signer and address field of msg are miss-match")
 	ErrCatchUpReplyAddressMissMatch = errors.New("address of catch up reply msg and its child are miss match")
 	emptyBlockHash                  = common.Hash{}
 	catchUpReplyBatchSize           = 3 // send 3 votes as the number of msg to jump to next round
@@ -507,6 +508,18 @@ func (c *core) handleCatchUpReply(msg message) error {
 
 // handleMsgLocked assume that c.mu is locked
 func (c *core) handleMsgLocked(msg message) error {
+	logger := c.getLogger()
+	signer, err := msg.GetAddressFromSignature()
+	if err != nil {
+		logger.Debugw("Failed to get signer from msg", "err", err)
+		return err
+	}
+	if signer != msg.Address {
+		logger.Debugw("Deprived signer and address field of msg are miss-match",
+			"signer", signer, "from", msg.Address)
+		return ErrSignerMessageMissMatch
+	}
+
 	switch msg.Code {
 	case msgPropose:
 		return c.handlePropose(msg)

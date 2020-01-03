@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,12 +29,18 @@ func TestCore_StoreAndLookupSentMsg(t *testing.T) {
 	sentMsgStorage.storeSentMsg(zap.S(), RoundStepPrecommit, 3, payload)
 
 	assert.Equal(t, 0, sentMsgStorage.lookup(RoundStepPropose, 1))
-	assert.Equal(t, sentMsgStorage.get(0), payload)
+	data, err := sentMsgStorage.get(0)
+	require.NoError(t, err)
+	assert.Equal(t, data, payload)
 	assert.Equal(t, 2, sentMsgStorage.lookup(RoundStepPrecommit, 1))
-	assert.Equal(t, sentMsgStorage.get(2), payload)
+	data, err = sentMsgStorage.get(2)
+	require.NoError(t, err)
+	assert.Equal(t, data, payload)
 	assert.Equal(t, 2, sentMsgStorage.lookup(RoundStepPropose, 2))
 	assert.Equal(t, 3, sentMsgStorage.lookup(RoundStepPrevote, 2))
-	assert.Equal(t, sentMsgStorage.get(3), payload2)
+	data, err = sentMsgStorage.get(3)
+	require.NoError(t, err)
+	assert.Equal(t, data, payload2)
 	assert.Equal(t, -1, sentMsgStorage.lookup(RoundStepPrevote, 4))
 }
 
