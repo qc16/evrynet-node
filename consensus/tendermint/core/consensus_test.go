@@ -43,6 +43,7 @@ func TestFinalizeBlock(t *testing.T) {
 		voteBlockNumber = big.NewInt(1)
 	)
 	core.currentState = core.getInitializedState()
+	core.currentState.commitRound = voteRound
 
 	view := tendermint.View{
 		BlockNumber: voteBlockNumber,
