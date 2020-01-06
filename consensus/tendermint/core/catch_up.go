@@ -112,6 +112,6 @@ func (c *core) sendCatchUpRequest(logger *zap.SugaredLogger, tiBlock *big.Int, t
 	delete(missing, addr)
 
 	if err := c.backend.Multicast(missing, payload); err != nil {
-		logger.Infow("Failed to multicast msg", "err", err)
+		logger.Debugw("Failed to multicast msg", "err", err.Error())
 	}
 }
