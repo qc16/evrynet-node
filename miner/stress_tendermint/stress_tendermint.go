@@ -56,11 +56,13 @@ const (
 	defaultGenesisFile = "./genesis_testnet.json"
 	defaultConfigFile  = "./stress_config.json"
 	dataDir            = "test_data"
+	txsBatchSize       = 1024
+	maxTxPoolSize      = 40960
 )
 
 func main() {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stderr, log.TerminalFormat(true))))
-	fdlimit.Raise(2048)
+	_, _ = fdlimit.Raise(2048)
 	var (
 		err         error
 		genesisFile = defaultGenesisFile
@@ -73,70 +75,29 @@ func main() {
 	}
 
 	cfg, enodes, faucets := parseTestConfig(configFile)
-	nodePriKey, _ := crypto.GenerateKey()
 	genesis, err := parseGenesis(genesisFile)
 	if err != nil {
 		panic(err)
 	}
-	//make testNode
-	testNode, err := makeNode(genesis)
+	testNode, err := makeNode(genesis, enodes)
 	if err != nil {
 		panic(err)
 	}
-	defer testNode.Close()
-	for testNode.Server().NodeInfo().Ports.Listener == 0 {
-		time.Sleep(250 * time.Millisecond)
-	}
-	// Connect the testNode to dev chain
-	for _, n := range enodes {
-		testNode.Server().AddPeer(n)
-	}
+	defer func() {
+		if err := testNode.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
-	// Inject the signer key and start sealing with it
-	store := testNode.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	signer, err := store.ImportECDSA(nodePriKey, "")
-	if err != nil {
-		panic(err)
-	}
-	if err := store.Unlock(signer, ""); err != nil {
-		panic(err)
-	}
-
-	// wait until testNode is synced
-	time.Sleep(3 * time.Second)
-	var ethereum *eth.Ethereum
+	var (
+		ethereum     *eth.Ethereum
+		contractAddr *common.Address
+	)
 	if err := testNode.Service(&ethereum); err != nil {
 		panic(err)
 	}
-	bc := ethereum.BlockChain()
-	for !ethereum.Synced() {
-		log.Warn("testNode is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
-		time.Sleep(3 * time.Second)
-	}
-
-	nonces := make([]uint64, len(faucets))
-	// wait for nonce is not change
-	for {
-		for i, faucet := range faucets {
-			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
-			log.Info("faucet addr", "addr", addr)
-			nonces[i] = ethereum.TxPool().State().GetNonce(addr)
-		}
-		time.Sleep(time.Second * 10)
-		var diff = false
-		for i, faucet := range faucets {
-			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
-			tmp := ethereum.TxPool().State().GetNonce(addr)
-			if tmp != nonces[i] {
-				diff = true
-			}
-		}
-		if !diff {
-			break
-		}
-	}
-
-	var contractAddr *common.Address
+	// wait until testNode is synced
+	nonces := waitForSyncingAndStableNonces(ethereum, faucets)
 	if TxMode(cfg.TxMode) == SmartContractMode {
 		if contractAddr, err = prepareNewContract(cfg.RPCEndpoint, faucets[0], nonces[0]); err != nil {
 			panic(err)
@@ -144,34 +105,15 @@ func main() {
 		nonces[0]++
 	}
 
-	lastBlk := ethereum.BlockChain().CurrentHeader().Number.Uint64()
-	numTxs := 0
-	start := time.Now()
-	preNumTxs := 0
-	prevTime := time.Now()
+	go reportLoop(ethereum.BlockChain(), cfg.TxMode)
 	// Start injecting transactions from the faucet like crazy
-	go func() {
-		for {
-			for currentBlk := bc.CurrentHeader().Number.Uint64(); currentBlk > lastBlk; lastBlk++ {
-				numTxs += len(bc.GetBlockByNumber(lastBlk).Body().Transactions)
-				log.Info("new_block", "txs", len(bc.GetBlockByNumber(lastBlk).Body().Transactions), "number", lastBlk)
-			}
-			log.Warn("num tx info", "tx_mode", cfg.TxMode, "txs", numTxs, "duration", time.Since(start),
-				"avg_tps", float64(numTxs)/time.Since(start).Seconds(), "current_tps", float64(numTxs-preNumTxs)/time.Since(prevTime).Seconds(),
-				"block", lastBlk)
-			preNumTxs = numTxs
-			prevTime = time.Now()
-			time.Sleep(2 * time.Second)
-		}
-	}()
-
 	for {
 		var txs types.Transactions
 		// Create a batch of transaction and inject into the pool
 		// Note: if we add a single transaction one by one, the queue for broadcast txs might be full
-		for i := 0; i < 1024; i++ {
+		for i := 0; i < txsBatchSize; i++ {
 			index := rand.Intn(len(faucets))
-			tx, err := createTx(TxMode(cfg.TxMode), faucets[index], nonces[index], contractAddr)
+			tx, err := createTx(cfg.TxMode, faucets[index], nonces[index], contractAddr)
 			if err != nil {
 				panic(err)
 			}
@@ -191,7 +133,7 @@ func main() {
 		for epoch := 0; ; epoch++ {
 			pend, _ := ethereum.TxPool().Stats()
 			switch {
-			case pend < 40960:
+			case pend < maxTxPoolSize:
 				break waitLoop
 			default:
 				if !rebroadcast {
@@ -225,7 +167,7 @@ func forceBroadcastPendingTxs(ethereum *eth.Ethereum) {
 type stressConfig struct {
 	EnodeStrings  []string `json:"enodes"`
 	FaucetStrings []string `json:"faucets"`
-	TxMode        int      `json:"tx_mode"`
+	TxMode        TxMode   `json:"tx_mode"`
 	RPCEndpoint   string   `json:"rpc_endpoint"`
 }
 
@@ -275,7 +217,7 @@ func parseGenesis(fileName string) (*core.Genesis, error) {
 }
 
 // makeNode creates a node from genesis config
-func makeNode(genesis *core.Genesis) (*node.Node, error) {
+func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 	// Define the basic configurations for the Ethereum node
 	config := &node.Config{
 		Name:    "geth",
@@ -289,7 +231,7 @@ func makeNode(genesis *core.Genesis) (*node.Node, error) {
 		},
 		NoUSB:    true,
 		HTTPHost: "127.0.0.1", //add an rpc for debug
-		HTTPPort: 22001,
+		HTTPPort: 22005,
 		HTTPModules: []string{"admin", "db", "eth", "debug", "miner", "net", "shh", "txpool",
 			"personal", "web3", "tendermint"},
 	}
@@ -329,7 +271,61 @@ func makeNode(genesis *core.Genesis) (*node.Node, error) {
 		return nil, err
 	}
 	// Start the node and return if successful
-	return stack, stack.Start()
+	if err = stack.Start(); err != nil {
+		return nil, err
+	}
+
+	for stack.Server().NodeInfo().Ports.Listener == 0 {
+		time.Sleep(250 * time.Millisecond)
+	}
+	// Connect the testNode to dev chain
+	for _, n := range enodes {
+		stack.Server().AddPeer(n)
+	}
+
+	//Inject the signer key and start sealing with it
+	store := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	nodePriKey, _ := crypto.GenerateKey()
+	signer, err := store.ImportECDSA(nodePriKey, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := store.Unlock(signer, ""); err != nil {
+		return nil, err
+	}
+	return stack, nil
+}
+
+// waitForSyncingAndStableNonces wait util the node is syncing and the nonces of given addresses are not change, also returns stable nonces
+func waitForSyncingAndStableNonces(ethereum *eth.Ethereum, faucets []*ecdsa.PrivateKey) []uint64 {
+	bc := ethereum.BlockChain()
+	for !ethereum.Synced() {
+		log.Warn("testNode is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
+		time.Sleep(3 * time.Second)
+	}
+
+	nonces := make([]uint64, len(faucets))
+	// wait for nonce is not change
+	for {
+		for i, faucet := range faucets {
+			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
+			log.Info("faucet addr", "addr", addr)
+			nonces[i] = ethereum.TxPool().State().GetNonce(addr)
+		}
+		time.Sleep(time.Second * 10)
+		var diff = false
+		for i, faucet := range faucets {
+			addr := crypto.PubkeyToAddress(*(faucet.Public().(*ecdsa.PublicKey)))
+			tmp := ethereum.TxPool().State().GetNonce(addr)
+			if tmp != nonces[i] {
+				diff = true
+			}
+		}
+		if !diff {
+			break
+		}
+	}
+	return nonces
 }
 
 func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64) (*common.Address, error) {
@@ -398,5 +394,25 @@ func createTx(txMode TxMode, faucet *ecdsa.PrivateKey, nonces uint64, contractAd
 			faucet)
 	default:
 		return nil, errors.Errorf("unexpected tx mode: %d", txMode)
+	}
+}
+
+func reportLoop(bc *core.BlockChain, mode TxMode) {
+	lastBlk := bc.CurrentHeader().Number.Uint64()
+	numTxs := 0
+	start := time.Now()
+	preNumTxs := 0
+	prevTime := time.Now()
+	for {
+		for currentBlk := bc.CurrentHeader().Number.Uint64(); currentBlk > lastBlk; lastBlk++ {
+			numTxs += len(bc.GetBlockByNumber(lastBlk).Body().Transactions)
+			log.Info("new_block", "txs", len(bc.GetBlockByNumber(lastBlk).Body().Transactions), "number", lastBlk)
+		}
+		log.Warn("num tx info", "tx_mode", mode, "txs", numTxs, "duration", time.Since(start),
+			"avg_tps", float64(numTxs)/time.Since(start).Seconds(), "current_tps", float64(numTxs-preNumTxs)/time.Since(prevTime).Seconds(),
+			"block", lastBlk)
+		preNumTxs = numTxs
+		prevTime = time.Now()
+		time.Sleep(2 * time.Second)
 	}
 }
