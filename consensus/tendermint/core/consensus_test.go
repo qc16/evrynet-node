@@ -5,15 +5,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
-	"github.com/evrynet-official/evrynet-client/core/types"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
+	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
+	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 )
 
@@ -50,19 +49,19 @@ func TestFinalizeBlock(t *testing.T) {
 		Round:       voteRound,
 	}
 
-	for _, testCase := range []struct {
+	testCases := []struct {
 		name           string
-		validatorVotes map[int]*big.Int
+		validatorVotes map[int]int
 		totalReceived  int
 		assertFn       func(block *types.Block, err error)
 	}{
 		{
 			name: "Case 1",
-			validatorVotes: map[int]*big.Int{
-				0: big.NewInt(2),
-				1: big.NewInt(2),
-				2: big.NewInt(2),
-				3: big.NewInt(2),
+			validatorVotes: map[int]int{
+				0: 2,
+				1: 2,
+				2: 2,
+				3: 2,
 			},
 			totalReceived: 4,
 			assertFn: func(block *types.Block, err error) {
@@ -71,12 +70,12 @@ func TestFinalizeBlock(t *testing.T) {
 			},
 		},
 		{
-			name: "Case 2: Validator 1,2,3 vote for block 1. Validator 4 votes for block 2",
-			validatorVotes: map[int]*big.Int{
-				0: big.NewInt(2),
-				1: big.NewInt(2),
-				2: big.NewInt(2),
-				3: big.NewInt(1),
+			name: "Case 2: Validator 0,2,3 vote for block 2. Validator 2 votes for block 1",
+			validatorVotes: map[int]int{
+				0: 2,
+				1: 1,
+				2: 2,
+				3: 2,
 			},
 			totalReceived: 3,
 			assertFn: func(block *types.Block, err error) {
@@ -85,12 +84,12 @@ func TestFinalizeBlock(t *testing.T) {
 			},
 		},
 		{
-			name: "Case 3: Validator 1,2 will vote for block 1. Validator 3,4 will vote for block 2",
-			validatorVotes: map[int]*big.Int{
-				0: big.NewInt(2),
-				1: big.NewInt(2),
-				2: big.NewInt(1),
-				3: big.NewInt(1),
+			name: "Case 3: Validator 0,1 will vote for block 2. Validator 2,3 will vote for block 1",
+			validatorVotes: map[int]int{
+				0: 2,
+				1: 2,
+				2: 1,
+				3: 1,
 			},
 			totalReceived: 2,
 			assertFn: func(block *types.Block, err error) {
@@ -98,8 +97,10 @@ func TestFinalizeBlock(t *testing.T) {
 				assert.Error(t, err) // Get error "not enough precommits received expect at least 3 received 2"
 			},
 		},
-	} {
-		t.Run(testCase.name, func(t *testing.T) {
+	}
+
+	for _, tc := range testCases {
+		validateVote := func(t *testing.T) {
 			newMsgSet := newMessageSet(core.valSet, msgPrecommit, &view)
 
 			//Create block 1
@@ -123,7 +124,7 @@ func TestFinalizeBlock(t *testing.T) {
 					Code:    msgPrecommit,
 					Address: valAddr,
 				}
-				switch testCase.validatorVotes[index].BitLen() {
+				switch tc.validatorVotes[index] {
 				case 1:
 					ok, err := newMsgSet.AddVote(msg,
 						&tendermint.Vote{
@@ -151,13 +152,15 @@ func TestFinalizeBlock(t *testing.T) {
 
 			assert.Equal(t, 4, newMsgSet.totalReceived)
 			core.currentState.PrecommitsReceived[voteRound] = newMsgSet
-			assert.Equal(t, testCase.totalReceived, core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2].totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
+			assert.Equal(t, tc.totalReceived, core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2].totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
 
-			testCase.assertFn(core.FinalizeBlock(&tendermint.Proposal{
+			tc.assertFn(core.FinalizeBlock(&tendermint.Proposal{
 				Block:    bl2,
 				Round:    0,
 				POLRound: 0,
 			}))
-		})
+		}
+
+		t.Run(tc.name, validateVote)
 	}
 }
