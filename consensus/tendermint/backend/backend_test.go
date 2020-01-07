@@ -249,3 +249,57 @@ func TestBackend_Gossip(t *testing.T) {
 	}
 
 }
+
+func TestBackend_Multicast(t *testing.T) {
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+	var (
+		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators     = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
+
+		//nodeAddrs = []common.Address{
+		//	common.HexToAddress("1"),
+		//	common.HexToAddress("2"),
+		//	common.HexToAddress("3"),
+		//	nodeAddr,
+		//}
+		sentAddrs = map[common.Address]bool{
+			common.HexToAddress("1"): true,
+			common.HexToAddress("2"): true,
+		}
+		expectedData = "aaa"
+	)
+
+	dataCh := make(chan string)
+
+	broadcaster := &mockBroadcaster{
+		handleFn: func(data interface{}) error {
+			dataCh <- string(data.([]byte))
+			return nil
+		},
+		isDisconnect: false,
+		isSendFailed: false,
+	}
+	be.SetBroadcaster(broadcaster)
+	go func() {
+		require.NoError(t, be.Multicast(sentAddrs, []byte(expectedData)))
+	}()
+
+	select {
+	case <-time.After(time.Millisecond * 20):
+		t.Fatal("not receive msg to peer")
+	case data := <-dataCh:
+		assert.Equal(t, expectedData, data)
+	}
+
+	broadcaster.isDisconnect = true
+	require.EqualError(t, be.Multicast(sentAddrs, []byte(expectedData)), "failed to multicast: failed to send 0 address, not found 2 address")
+
+	broadcaster.isDisconnect = false
+	broadcaster.isSendFailed = true
+	require.EqualError(t, be.Multicast(sentAddrs, []byte(expectedData)), "failed to multicast: failed to send 2 address, not found 0 address")
+}

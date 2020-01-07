@@ -13,7 +13,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
-	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/event"
@@ -21,7 +20,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
-func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *evrynetCore.TxPool) *core {
+func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
 	return &core{
 		handlerWg:      new(sync.WaitGroup),
 		backend:        backend,
@@ -30,8 +29,10 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config, txPool *
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
+		sentMsgStorage: NewMsgStorage(),
 	}
 }
+
 func TestVerifyProposal(t *testing.T) {
 	var (
 		nodePrivateKey     = tests_utils.MakeNodeKey()
@@ -44,9 +45,9 @@ func TestVerifyProposal(t *testing.T) {
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	// --------CASE 1--------
 	// Will get errMismatchTxhashes
@@ -117,7 +118,7 @@ func TestVerifyProposal(t *testing.T) {
 			},
 		},
 	} {
-		proposal := tendermint.Proposal{
+		proposal := Proposal{
 			Block: testCase.block,
 			Round: 1,
 		}
@@ -146,4 +147,36 @@ func TestVerifyProposal(t *testing.T) {
 		msg.Signature = signature
 		testCase.assertFn(core.VerifyProposal(proposal, msg))
 	}
+}
+
+func TestCore_HandleMsg(t *testing.T) {
+	var (
+		nodePrivateKey     = tests_utils.MakeNodeKey()
+		nodeFakePrivateKey = tests_utils.MakeNodeKey()
+		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators         = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		err           error
+	)
+	//create New test backend and newMockChain
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+
+	core := newTestCore(be, tendermint.DefaultConfig)
+	msg := message{
+		Msg:     []byte("aaaa"),
+		Address: nodeAddr,
+		Code:    msgPrevote,
+	}
+	err = core.handleMsg(msg)
+	require.Error(t, err, msg)
+
+	rawPayload, err := msg.PayLoadWithoutSignature()
+	require.NoError(t, err)
+	hashData := crypto.Keccak256(rawPayload)
+	signature, err := crypto.Sign(hashData, nodeFakePrivateKey)
+	msg.Signature = signature
+	err = core.handleMsg(msg)
+	require.EqualError(t, err, ErrSignerMessageMissMatch.Error())
 }

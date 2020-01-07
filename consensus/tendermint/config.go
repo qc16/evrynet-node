@@ -70,11 +70,27 @@ func (cfg *Config) PrevoteTimeout(round int64) time.Duration {
 	) * time.Nanosecond
 }
 
+//PrevoteCatchupTimeout returns the amount of time to wait for prevote msgs before sending catchup msg
+//Notes: if node 1 did not receive propose msg, it will delay max = proposeTimeout before sending prevote
+// So node 2 received propose msg, it will entered prevote earlier than node 1 by proposeTimeout
+// In here, node 2 sleep about 2 times of proposeTimeout before assuming that sending prevote message of node 1 has problem
+func (cfg *Config) PrevoteCatchupTimeout(round int64) time.Duration {
+	return time.Duration(cfg.ProposeTimeout(round).Nanoseconds() * int64(2))
+}
+
 // PrecommitTimeout returns the amount of time to wait for straggler votes after receiving any +2/3 precommits
 func (cfg *Config) PrecommitTimeout(round int64) time.Duration {
 	return time.Duration(
 		cfg.TimeoutPrecommit.Nanoseconds()+cfg.TimeoutPrecommitDelta.Nanoseconds()*int64(round),
 	) * time.Nanosecond
+}
+
+//PrecommitCatchupTimeout returns the amount of time to wait for precommit msgs before sending catchup msg
+//Notes: if node 1 did not receive a polka of prevote msg, it will delay max = prevoteWaitTimeout before sending precommit
+// So node 2 received a polka of prevote msg, it will entered precommit earlier than node 1 by prevoteWaitTimeout
+// In here, node 2 sleep about 2 times of prevoteWaitTimeout before assuming that sending precommit message of node 1 has problem
+func (cfg *Config) PrecommitCatchupTimeout(round int64) time.Duration {
+	return time.Duration(cfg.PrevoteTimeout(round).Nanoseconds() * int64(2))
 }
 
 // Commit returns the amount of time to wait for straggler votes after receiving +2/3 precommits for a single block (ie. a commit).

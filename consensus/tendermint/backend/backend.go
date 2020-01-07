@@ -2,12 +2,12 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"math/big"
 	"sync"
 	"time"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
+	"github.com/pkg/errors"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
@@ -256,6 +256,34 @@ func (sb *Backend) gossipLoop() {
 			break taskLoop
 		}
 	}
+}
+
+// Multicast implements tendermint.Backend.Multicast
+// Send msgs to peers in a set of address
+// return err if not found peer with address or sending failed
+func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) error {
+	if sb.broadcaster == nil {
+		return ErrNoBroadcaster
+	}
+	if len(targets) == 0 {
+		return nil
+	}
+	var (
+		failed   = 0
+		ps       = sb.broadcaster.FindPeers(targets)
+		notFound = len(targets) - len(ps)
+	)
+	log.Trace("multicast", "targets", len(targets), "found", len(ps))
+	for addr, peer := range ps {
+		if err := peer.Send(consensus.TendermintMsg, payload); err != nil {
+			failed++
+			log.Debug("failed to send when multicast", "err", err, "addr", addr)
+		}
+	}
+	if failed != 0 || notFound != 0 {
+		return errors.Errorf("failed to multicast: failed to send %d address, not found %d address", failed, notFound)
+	}
+	return nil
 }
 
 // Validators return validator set for a block number

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/event"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
@@ -28,9 +30,9 @@ func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -50,15 +52,17 @@ func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 	var (
 		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
+			nodeAddr2,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -78,15 +82,17 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 	var (
 		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
+			nodeAddr2,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -112,9 +118,9 @@ func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -141,9 +147,9 @@ func TestCoreFutureMessage(t *testing.T) {
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 
 	logger := zap.NewExample().Sugar()
@@ -160,7 +166,7 @@ func TestCoreFutureMessage(t *testing.T) {
 	assert.Len(t, block.Transactions(), 1)
 	assert.Equal(t, tx.Hash(), block.Transactions()[0].Hash())
 	// create fake proposal
-	proposal := tendermint.Proposal{
+	proposal := Proposal{
 		Block: block,
 		Round: 0,
 	}
@@ -171,10 +177,11 @@ func TestCoreFutureMessage(t *testing.T) {
 		Msg:     msgData,
 		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
 	}
+	sign(t, &msg, nodePrivateKey)
 	require.NoError(t, core.handleMsg(msg))
 	// create a fake prevote
 	hash := block.Hash()
-	vote := tendermint.Vote{
+	vote := Vote{
 		BlockNumber: big.NewInt(2),
 		Round:       0,
 		BlockHash:   &hash,
@@ -187,8 +194,35 @@ func TestCoreFutureMessage(t *testing.T) {
 		Address: crypto.PubkeyToAddress(nodePrivateKey.PublicKey),
 		Msg:     msgData,
 	}
+	sign(t, &prevoteMsg, nodePrivateKey)
 	require.NoError(t, core.handleMsg(prevoteMsg))
 
 	_, err = core.processFutureMessages(logger)
 	require.NoError(t, err)
+}
+
+func sign(t *testing.T, msg *message, privateKey *ecdsa.PrivateKey) {
+	rawPayLoad, err := msg.PayLoadWithoutSignature()
+	require.NoError(t, err)
+	hashData := crypto.Keccak256(rawPayLoad)
+	msg.Signature, err = crypto.Sign(hashData, privateKey)
+	require.NoError(t, err)
+}
+
+func assertNextMsg(t *testing.T, sentMsgSub *event.TypeMuxSubscription, msgType uint64, timeout time.Duration, assertAddress func(address common.Address), assertMsg func([]byte)) {
+	select {
+	case ev := <-sentMsgSub.Chan():
+		sendMsgEvent := ev.Data.(tests_utils.SentMsgEvent)
+		if assertAddress != nil {
+			assertAddress(sendMsgEvent.Target)
+		}
+		var msg message
+		require.NoError(t, rlp.DecodeBytes(sendMsgEvent.Payload, &msg))
+		require.Equal(t, msgType, msg.Code)
+		if assertMsg != nil {
+			assertMsg(msg.Msg)
+		}
+	case <-time.After(timeout):
+		panic("timeout")
+	}
 }

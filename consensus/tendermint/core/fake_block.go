@@ -17,7 +17,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/params"
 )
 
-func (c *core) checkAndFakeProposal(proposal *tendermint.Proposal) error {
+func (c *core) checkAndFakeProposal(proposal *Proposal) error {
 	// Check faulty mode to inject fake block
 	if c.config.FaultyMode == tendermint.SendFakeProposal.Uint64() {
 		fakeHeader := *proposal.Block.Header()
@@ -41,7 +41,7 @@ func (c *core) checkAndFakeProposal(proposal *tendermint.Proposal) error {
 	return nil
 }
 
-func fakeTxsForProposalBlock(header *types.Header, proposal *tendermint.Proposal) error {
+func fakeTxsForProposalBlock(header *types.Header, proposal *Proposal) error {
 	var (
 		fakePrivateKey, _ = crypto.GenerateKey()
 		nodeAddr          = crypto.PubkeyToAddress(fakePrivateKey.PublicKey)

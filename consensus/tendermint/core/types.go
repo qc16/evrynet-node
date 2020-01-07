@@ -1,4 +1,4 @@
-package tendermint
+package core
 
 import (
 	"io"
@@ -49,6 +49,7 @@ func (p *Proposal) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+// Vote represents a vote for a new-block
 type Vote struct {
 	BlockHash   *common.Hash
 	BlockNumber *big.Int
@@ -84,4 +85,40 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	v.Round = round
 	v.Seal = vs.Seal
 	return nil
+}
+
+// CatchUpRequestMsg represents the info of current stage of a node which is stuck in prevote or precommit for a while
+type CatchUpRequestMsg struct {
+	BlockNumber *big.Int
+	Round       int64
+	Step        RoundStepType
+}
+
+func (msg *CatchUpRequestMsg) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{
+		msg.BlockNumber,
+		uint64(msg.Round),
+		msg.Step,
+	})
+}
+
+func (msg *CatchUpRequestMsg) DecodeRLP(s *rlp.Stream) error {
+	var vs struct {
+		BlockNumber *big.Int
+		Round       uint64
+		Step        RoundStepType
+	}
+	if err := s.Decode(&vs); err != nil {
+		return err
+	}
+	msg.BlockNumber = vs.BlockNumber
+	msg.Round = int64(vs.Round)
+	msg.Step = vs.Step
+	return nil
+}
+
+// CatchUpReplyMsg stores the data of previous message send to a stuck node
+type CatchUpReplyMsg struct {
+	BlockNumber *big.Int
+	Payloads    [][]byte
 }

@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/hex"
 	"fmt"
+
 	"math/big"
 	"os"
 	"testing"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/backend"
+	core2 "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
@@ -97,7 +99,7 @@ func TestStartingTendermint(t *testing.T) {
 	//This is unsafe (it might send new block after core get into propose
 	//but repeated run will get a correct case. It is the easiest way to inject a valid block for proposal
 	//nolint:errcheck
-	go be.EventMux().Post(tendermint.Proposal{
+	go be.EventMux().Post(core2.Proposal{
 		Block: block,
 	})
 

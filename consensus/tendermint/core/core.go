@@ -1,12 +1,14 @@
 package core
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/Workiva/go-datastructures/queue"
 	"go.uber.org/zap"
 
+	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
@@ -24,6 +26,7 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		mu:             &sync.RWMutex{},
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
+		sentMsgStorage: NewMsgStorage(),
 	}
 	return c
 }
@@ -59,6 +62,9 @@ type core struct {
 	config *tendermint.Config
 	//mutex mark critical section of core which should not be accessed parallel
 	mu *sync.RWMutex
+
+	// a Helper supports to store message before send proposal/ vote for every block
+	sentMsgStorage *msgStorage
 
 	//proposeStart mark the time core enter propose. This is purely use for metrics
 	proposeStart time.Time
@@ -120,7 +126,7 @@ func (c *core) FinalizeMsg(msg *message) ([]byte, error) {
 
 //SendPropose will Finalize the Proposal in term of signature and
 //Gossip it to other nodes
-func (c *core) SendPropose(propose *tendermint.Proposal) {
+func (c *core) SendPropose(propose *Proposal) {
 	logger := c.getLogger().With("propose_round", propose.Round,
 		"propose_block_number", propose.Block.Number(), "propose_block_hash", propose.Block.Hash())
 
@@ -137,6 +143,9 @@ func (c *core) SendPropose(propose *tendermint.Proposal) {
 		logger.Errorw("Failed to Finalize Proposal", "error", err)
 		return
 	}
+
+	// store before send propose msg
+	c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPropose, propose.Round, payload)
 
 	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
@@ -178,7 +187,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		}
 		blockHash = block.Hash()
 	}
-	vote := &tendermint.Vote{
+	vote := &Vote{
 		BlockHash:   &blockHash,
 		Round:       round,
 		BlockNumber: c.CurrentState().BlockNumber(),
@@ -197,11 +206,48 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 		logger.Errorw("Failed to Finalize Vote", "error", err)
 		return
 	}
+
+	// store before send propose msg
+	switch voteType {
+	case msgPrevote:
+		c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPrevote, round, payload)
+	case msgPrecommit:
+		c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPrecommit, round, payload)
+	default:
+	}
+
 	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
 		logger.Errorw("Failed to Broadcast vote", "error", err)
 		return
 	}
 	logger.Infow("sent vote", "vote_round", vote.Round, "vote_block_number", vote.BlockNumber, "vote_block_hash", vote.BlockHash.Hex())
+}
+
+// SendCatchupReply sends catchup reply to target node
+func (c *core) SendCatchupReply(target common.Address, payloads [][]byte) {
+	logger := c.getLogger().With("num_msg", len(payloads), "target", target.Hex())
+	catchUpReplyMsg := &CatchUpReplyMsg{
+		BlockNumber: new(big.Int).Set(c.CurrentState().BlockNumber()),
+		Payloads:    payloads,
+	}
+	msgData, err := rlp.EncodeToBytes(catchUpReplyMsg)
+	if err != nil {
+		logger.Errorw("Failed to encode Vote to bytes", "error", err)
+		return
+	}
+	payload, err := c.FinalizeMsg(&message{
+		Code: msgCatchUpReply,
+		Msg:  msgData,
+	})
+	if err != nil {
+		logger.Errorw("Failed to Finalize Vote", "error", err)
+		return
+	}
+	if err := c.backend.Multicast(map[common.Address]bool{target: true}, payload); err != nil {
+		logger.Errorw("Failed to send catchUpReply msgs", "err", err)
+		return
+	}
+	logger.Infow("Reply catch up msgs")
 }
 
 func (c *core) CurrentState() *roundState {
