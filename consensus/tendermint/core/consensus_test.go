@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/evrynet-official/evrynet-client/crypto"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -13,18 +15,17 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
 )
 
 func TestFinalizeBlock(t *testing.T) {
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
-		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
-		validators     = []common.Address{
-			nodeAddr,
-			common.HexToAddress("0x954e4BF2C68F13D97C45db0e02645D145dB6911f"),
+		nodePrivateKey, _ = crypto.HexToECDSA("ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1")
+		nodeAddr          = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators        = []common.Address{
 			common.HexToAddress("0x45F8B547A7f16730c0C8961A21b56c31d84DdB49"),
+			nodeAddr,
 			common.HexToAddress("0x5be60024b3b7EF2f6e4db97641e8942b85a5124e"),
+			common.HexToAddress("0x954e4BF2C68F13D97C45db0e02645D145dB6911f"),
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
@@ -50,10 +51,11 @@ func TestFinalizeBlock(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name           string
-		validatorVotes map[int]int
-		totalReceived  int
-		assertFn       func(block *types.Block, err error)
+		name             string
+		validatorVotes   map[int]int
+		validatorVoteNil []int
+		totalReceived    int
+		assertFn         func(block *types.Block, err error)
 	}{
 		{
 			name: "Case 1",
@@ -84,7 +86,22 @@ func TestFinalizeBlock(t *testing.T) {
 			},
 		},
 		{
-			name: "Case 3: Validator 0,1 will vote for block 2. Validator 2,3 will vote for block 1",
+			name: "Case 3: Validator 0,2,3 vote for block 2 (node 3 vote is nil). Validator 2 votes for block 1",
+			validatorVotes: map[int]int{
+				0: 2,
+				1: 1,
+				2: 2,
+				3: 2,
+			},
+			validatorVoteNil: []int{3},
+			totalReceived:    3,
+			assertFn: func(block *types.Block, err error) {
+				assert.Nil(t, block)
+				assert.Error(t, err) // Get error "not enough precommits received expect at least 3 received 2"
+			},
+		},
+		{
+			name: "Case 4: Validator 0,1 will vote for block 2. Validator 2,3 will vote for block 1",
 			validatorVotes: map[int]int{
 				0: 2,
 				1: 2,
@@ -152,7 +169,13 @@ func TestFinalizeBlock(t *testing.T) {
 
 			assert.Equal(t, 4, newMsgSet.totalReceived)
 			core.currentState.PrecommitsReceived[voteRound] = newMsgSet
-			assert.Equal(t, tc.totalReceived, core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2].totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
+			votesByBlock2 := core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2]
+			assert.Equal(t, tc.totalReceived, votesByBlock2.totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
+
+			//Set vote to nil
+			for _, valId := range tc.validatorVoteNil {
+				votesByBlock2.votes[valId] = nil
+			}
 
 			tc.assertFn(core.FinalizeBlock(&tendermint.Proposal{
 				Block:    bl2,
