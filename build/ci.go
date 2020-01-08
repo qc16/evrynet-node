@@ -209,11 +209,10 @@ func doTest(cmdline []string) {
 	env := build.Env()
 
 	// TODO: fix all remaining tests so this could be ./...
-	packageSource := "./consensus/..."
+	packages := []string{"./consensus/...", "./cmd/...", "./internal/..."}
 	if *integration {
-		packageSource = "./tests/provider_logic_test/..."
+		packages = []string{"./tests/provider_logic_test/..."}
 	}
-	packages := []string{packageSource}
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}

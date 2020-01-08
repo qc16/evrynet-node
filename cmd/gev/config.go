@@ -25,7 +25,7 @@ import (
 	"reflect"
 	"unicode"
 
-	cli "github.com/urfave/cli"
+	"github.com/urfave/cli"
 
 	"github.com/evrynet-official/evrynet-client/cmd/utils"
 	"github.com/evrynet-official/evrynet-client/dashboard"
@@ -102,7 +102,7 @@ func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit, gitDate)
-	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "shh")
+	cfg.HTTPModules = append(cfg.HTTPModules, "evr", "shh")
 	cfg.WSModules = append(cfg.WSModules, "eth", "shh")
 	cfg.IPCPath = "geth.ipc"
 	return cfg
