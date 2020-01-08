@@ -335,3 +335,5 @@ func TestChainID(t *testing.T) {
 		t.Fatalf("ChainID returned wrong number: %+v", id)
 	}
 }
+
+//TODO: add a test for ProviderSignTx
