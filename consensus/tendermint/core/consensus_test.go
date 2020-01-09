@@ -6,10 +6,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/rlp"
-
-	"github.com/evrynet-official/evrynet-client/crypto"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,6 +14,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/tests_utils"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
 	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
 func TestFinalizeBlock(t *testing.T) {
