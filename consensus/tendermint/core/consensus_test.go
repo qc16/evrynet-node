@@ -1,9 +1,12 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/evrynet-official/evrynet-client/rlp"
 
 	"github.com/evrynet-official/evrynet-client/crypto"
 
@@ -51,11 +54,10 @@ func TestFinalizeBlock(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name             string
-		validatorVotes   map[int]int
-		validatorVoteNil []int
-		totalReceived    int
-		assertFn         func(block *types.Block, err error)
+		name           string
+		validatorVotes map[int]int
+		totalReceived  int
+		assertFn       func(block *types.Block, err error)
 	}{
 		{
 			name: "Case 1",
@@ -72,7 +74,7 @@ func TestFinalizeBlock(t *testing.T) {
 			},
 		},
 		{
-			name: "Case 2: Validator 0,2,3 vote for block 2. Validator 2 votes for block 1",
+			name: "Case 2: Validator 0,2,3 vote for block 2 (voting of validator 1 is nil in block 2). Validator 1 votes for block 1",
 			validatorVotes: map[int]int{
 				0: 2,
 				1: 1,
@@ -86,22 +88,7 @@ func TestFinalizeBlock(t *testing.T) {
 			},
 		},
 		{
-			name: "Case 3: Validator 0,2,3 vote for block 2 (node 3 vote is nil). Validator 2 votes for block 1",
-			validatorVotes: map[int]int{
-				0: 2,
-				1: 1,
-				2: 2,
-				3: 2,
-			},
-			validatorVoteNil: []int{3},
-			totalReceived:    3,
-			assertFn: func(block *types.Block, err error) {
-				assert.Nil(t, block)
-				assert.Error(t, err) // Get error "not enough precommits received expect at least 3 received 2"
-			},
-		},
-		{
-			name: "Case 4: Validator 0,1 will vote for block 2. Validator 2,3 will vote for block 1",
+			name: "Case 3: Validator 0,1 will vote for block 2 (voting of validator 2,3 is nil in block 2). Validator 2,3 will vote for block 1",
 			validatorVotes: map[int]int{
 				0: 2,
 				1: 2,
@@ -135,13 +122,16 @@ func TestFinalizeBlock(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, bl1.Hash().Hex(), bl2.Hash().Hex(), "Block hash of 2 blocks must be different")
 
+			var block2ExpectCommittedSeals [][]byte //It stores what commit seals were appended to block 2
 			//Add vote from node 1,2,3,4
-			for index, valAddr := range validators {
+			for i := 0; i < len(validators); i++ {
 				msg := message{
 					Code:    msgPrecommit,
-					Address: valAddr,
+					Address: validators[i],
 				}
-				switch tc.validatorVotes[index] {
+
+				assert.Equal(t, validators[i].Hex(), core.valSet.GetByIndex(int64(i)).String(), "The order voting must be the same")
+				switch tc.validatorVotes[i] {
 				case 1:
 					ok, err := newMsgSet.AddVote(msg,
 						&tendermint.Vote{
@@ -153,35 +143,47 @@ func TestFinalizeBlock(t *testing.T) {
 					require.NoError(t, err)
 					assert.True(t, ok)
 				case 2:
-					ok, err := newMsgSet.AddVote(msg,
-						&tendermint.Vote{
-							BlockHash:   &blHash2,
-							BlockNumber: core.CurrentState().BlockNumber(),
-							Round:       voteRound,
-							Seal:        committedSeal2,
-						})
+					vote := &tendermint.Vote{
+						BlockHash:   &blHash2,
+						BlockNumber: core.CurrentState().BlockNumber(),
+						Round:       voteRound,
+						Seal:        committedSeal2,
+					}
+					ok, err := newMsgSet.AddVote(msg, vote)
 					require.NoError(t, err)
 					assert.True(t, ok)
+
+					//Add committed seals will be added to block 2 to compare after finalizing
+					if len(block2ExpectCommittedSeals) < core.valSet.MinMajority() {
+						block2ExpectCommittedSeals = append(block2ExpectCommittedSeals, vote.Seal)
+					}
 				default:
 					fmt.Println("Not support this case")
 				}
 			}
 
+			//Check total received
 			assert.Equal(t, 4, newMsgSet.totalReceived)
 			core.currentState.PrecommitsReceived[voteRound] = newMsgSet
-			votesByBlock2 := core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2]
-			assert.Equal(t, tc.totalReceived, votesByBlock2.totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
+			assert.Equal(t, tc.totalReceived, core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2].totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
 
-			//Set vote to nil
-			for _, valId := range tc.validatorVoteNil {
-				votesByBlock2.votes[valId] = nil
-			}
-
-			tc.assertFn(core.FinalizeBlock(&tendermint.Proposal{
+			//Check error after finalizing block
+			finalizedBlock, err := core.FinalizeBlock(&tendermint.Proposal{
 				Block:    bl2,
 				Round:    0,
 				POLRound: 0,
-			}))
+			})
+			tc.assertFn(finalizedBlock, err)
+
+			if err == nil {
+				//Check committed seals in header extra block after finalizing
+				expectExtra, err := rlp.EncodeToBytes(&types.TendermintExtra{
+					CommittedSeal: block2ExpectCommittedSeals,
+				})
+				require.Nil(t, err)
+				expectCommittedSeals := append(bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity), expectExtra...)
+				assert.Equal(t, expectCommittedSeals, finalizedBlock.Header().Extra, "Make sure the committed seals is enough after finalizing")
+			}
 		}
 
 		t.Run(tc.name, validateVote)
