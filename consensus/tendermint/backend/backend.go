@@ -15,8 +15,8 @@ import (
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
@@ -39,7 +39,7 @@ var (
 type Option func(b *Backend) error
 
 //WithDB return an option to set backend's db
-func WithDB(db ethdb.Database) Option {
+func WithDB(db evrdb.Database) Option {
 	return func(b *Backend) error {
 		b.db = db
 		return nil
@@ -85,7 +85,7 @@ type Backend struct {
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
 	core               tendermintCore.Engine
-	db                 ethdb.Database
+	db                 evrdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
 

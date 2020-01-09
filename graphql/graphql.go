@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package graphql provides a GraphQL interface to Ethereum node data.
+// Package graphql provides a GraphQL interface to Evrynet node data.
 package graphql
 
 import (
@@ -32,8 +32,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/core/vm"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/filters"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/filters"
 	"github.com/evrynet-official/evrynet-client/internal/ethapi"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/node"
@@ -47,9 +47,9 @@ import (
 var OnlyOnMainChainError = errors.New("This operation is only available for blocks on the canonical chain.")
 var BlockInvariantError = errors.New("Block objects must be instantiated with at least one of num or hash.")
 
-// Account represents an Ethereum account at a particular block.
+// Account represents an Evrynet account at a particular block.
 type Account struct {
-	backend     *eth.EthAPIBackend
+	backend     *evr.EthAPIBackend
 	address     common.Address
 	blockNumber rpc.BlockNumber
 }
@@ -102,7 +102,7 @@ func (a *Account) Storage(ctx context.Context, args struct{ Slot common.Hash }) 
 
 // Log represents an individual log message. All arguments are mandatory.
 type Log struct {
-	backend     *eth.EthAPIBackend
+	backend     *evr.EthAPIBackend
 	transaction *Transaction
 	log         *types.Log
 }
@@ -131,10 +131,10 @@ func (l *Log) Data(ctx context.Context) hexutil.Bytes {
 	return hexutil.Bytes(l.log.Data)
 }
 
-// Transaction represents an Ethereum transaction.
+// Transaction represents an Evrynet transaction.
 // backend and hash are mandatory; all others will be fetched when required.
 type Transaction struct {
-	backend *eth.EthAPIBackend
+	backend *evr.EthAPIBackend
 	hash    common.Hash
 	tx      *types.Transaction
 	block   *Block
@@ -345,11 +345,11 @@ const (
 	notCanonical
 )
 
-// Block represents an Ethereum block.
+// Block represents an Evrynet block.
 // backend, and either num or hash are mandatory. All other fields are lazily fetched
 // when required.
 type Block struct {
-	backend   *eth.EthAPIBackend
+	backend   *evr.EthAPIBackend
 	num       *rpc.BlockNumber
 	hash      common.Hash
 	header    *types.Header
@@ -745,7 +745,7 @@ type BlockFilterCriteria struct {
 
 // runFilter accepts a filter and executes it, returning all its results as
 // `Log` objects.
-func runFilter(ctx context.Context, be *eth.EthAPIBackend, filter *filters.Filter) ([]*Log, error) {
+func runFilter(ctx context.Context, be *evr.EthAPIBackend, filter *filters.Filter) ([]*Log, error) {
 	logs, err := filter.Logs(ctx)
 	if err != nil || logs == nil {
 		return nil, err
@@ -814,8 +814,8 @@ func (b *Block) Account(ctx context.Context, args struct {
 // CallData encapsulates arguments to `call` or `estimateGas`.
 // All arguments are optional.
 type CallData struct {
-	From     *common.Address // The Ethereum address the call is from.
-	To       *common.Address // The Ethereum address the call is to.
+	From     *common.Address // The Evrynet address the call is from.
+	To       *common.Address // The Evrynet address the call is to.
 	Gas      *hexutil.Uint64 // The amount of gas provided for the call.
 	GasPrice *hexutil.Big    // The price of each unit of gas, in wei.
 	Value    *hexutil.Big    // The value sent along with the call.
@@ -888,7 +888,7 @@ func (b *Block) EstimateGas(ctx context.Context, args struct {
 }
 
 type Pending struct {
-	backend *eth.EthAPIBackend
+	backend *evr.EthAPIBackend
 }
 
 func (p *Pending) TransactionCount(ctx context.Context) (int32, error) {
@@ -947,7 +947,7 @@ func (p *Pending) EstimateGas(ctx context.Context, args struct {
 
 // Resolver is the top-level object in the GraphQL hierarchy.
 type Resolver struct {
-	backend *eth.EthAPIBackend
+	backend *evr.EthAPIBackend
 }
 
 func (r *Resolver) Block(ctx context.Context, args struct {
@@ -1148,7 +1148,7 @@ func (r *Resolver) Syncing() (*SyncState, error) {
 
 // NewHandler returns a new `http.Handler` that will answer GraphQL queries.
 // It additionally exports an interactive query browser on the / endpoint.
-func NewHandler(be *eth.EthAPIBackend) (http.Handler, error) {
+func NewHandler(be *evr.EthAPIBackend) (http.Handler, error) {
 	q := Resolver{be}
 
 	s, err := graphqlgo.ParseSchema(schema, &q)
@@ -1170,7 +1170,7 @@ type Service struct {
 	cors     []string           // Allowed CORS domains
 	vhosts   []string           // Recognised vhosts
 	timeouts rpc.HTTPTimeouts   // Timeout settings for HTTP requests.
-	backend  *eth.EthAPIBackend // The backend that queries will operate onn.
+	backend  *evr.EthAPIBackend // The backend that queries will operate onn.
 	handler  http.Handler       // The `http.Handler` used to answer queries.
 	listener net.Listener       // The listening socket.
 }
@@ -1211,7 +1211,7 @@ func (s *Service) Stop() error {
 }
 
 // NewService constructs a new service instance.
-func NewService(backend *eth.EthAPIBackend, endpoint string, cors, vhosts []string, timeouts rpc.HTTPTimeouts) (*Service, error) {
+func NewService(backend *evr.EthAPIBackend, endpoint string, cors, vhosts []string, timeouts rpc.HTTPTimeouts) (*Service, error) {
 	return &Service{
 		endpoint: endpoint,
 		cors:     cors,
@@ -1224,7 +1224,7 @@ func NewService(backend *eth.EthAPIBackend, endpoint string, cors, vhosts []stri
 // RegisterGraphQLService is a utility function to construct a new service and register it against a node.
 func RegisterGraphQLService(stack *node.Node, endpoint string, cors, vhosts []string, timeouts rpc.HTTPTimeouts) error {
 	return stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		var ethereum *eth.Ethereum
+		var ethereum *evr.Evrynet
 		if err := ctx.Service(&ethereum); err != nil {
 			return nil, err
 		}

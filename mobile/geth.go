@@ -25,10 +25,10 @@ import (
 	"path/filepath"
 
 	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
-	"github.com/evrynet-official/evrynet-client/ethclient"
 	"github.com/evrynet-official/evrynet-client/ethstats"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 	"github.com/evrynet-official/evrynet-client/internal/debug"
 	"github.com/evrynet-official/evrynet-client/les"
 	"github.com/evrynet-official/evrynet-client/node"
@@ -50,10 +50,10 @@ type NodeConfig struct {
 	// set to zero, then only the configured static and trusted peers can connect.
 	MaxPeers int
 
-	// EthereumEnabled specifies whether the node should run the Ethereum protocol.
+	// EthereumEnabled specifies whether the node should run the Evrynet protocol.
 	EthereumEnabled bool
 
-	// EthereumNetworkID is the network identifier used by the Ethereum protocol to
+	// EthereumNetworkID is the network identifier used by the Evrynet protocol to
 	// decide if remote peers should be accepted or not.
 	EthereumNetworkID int64 // uint64 in truth, but Java can't handle that...
 
@@ -78,7 +78,7 @@ type NodeConfig struct {
 	PprofAddress string
 
 	// Ultra Light client options
-	ULC *eth.ULCConfig
+	ULC *evr.ULCConfig
 }
 
 // defaultNodeConfig contains the default node configuration values to use if all
@@ -97,7 +97,7 @@ func NewNodeConfig() *NodeConfig {
 	return &config
 }
 
-// Node represents a Geth Ethereum node instance.
+// Node represents a Geth Evrynet node instance.
 type Node struct {
 	node *node.Node
 }
@@ -157,9 +157,9 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 			}
 		}
 	}
-	// Register the Ethereum protocol if requested
+	// Register the Evrynet protocol if requested
 	if config.EthereumEnabled {
-		ethConf := eth.DefaultConfig
+		ethConf := evr.DefaultConfig
 		ethConf.Genesis = genesis
 		ethConf.SyncMode = downloader.LightSync
 		ethConf.NetworkId = uint64(config.EthereumNetworkID)
@@ -209,13 +209,13 @@ func (n *Node) Stop() error {
 	return n.node.Stop()
 }
 
-// GetEthereumClient retrieves a client to access the Ethereum subsystem.
+// GetEthereumClient retrieves a client to access the Evrynet subsystem.
 func (n *Node) GetEthereumClient() (client *EthereumClient, _ error) {
 	rpc, err := n.node.Attach()
 	if err != nil {
 		return nil, err
 	}
-	return &EthereumClient{ethclient.NewClient(rpc)}, nil
+	return &EthereumClient{evrclient.NewClient(rpc)}, nil
 }
 
 // GetNodeInfo gathers and returns a collection of metadata known about the host.

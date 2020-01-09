@@ -32,10 +32,10 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/les/csvlogger"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -103,7 +103,7 @@ type ProtocolManager struct {
 	txpool       txPool
 	txrelay      *LesTxRelay
 	blockchain   BlockChain
-	chainDb      ethdb.Database
+	chainDb      evrdb.Database
 	odr          *LesOdr
 	server       *LesServer
 	serverPool   *serverPool
@@ -129,7 +129,7 @@ type ProtocolManager struct {
 	synced func() bool
 }
 
-// NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
+// NewProtocolManager returns a new ethereum sub protocol manager. The Evrynet sub protocol manages peers capable
 // with the ethereum network.
 func NewProtocolManager(
 	chainConfig *params.ChainConfig,
@@ -141,13 +141,13 @@ func NewProtocolManager(
 	peers *peerSet,
 	blockchain BlockChain,
 	txpool txPool,
-	chainDb ethdb.Database,
+	chainDb evrdb.Database,
 	odr *LesOdr,
 	txrelay *LesTxRelay,
 	serverPool *serverPool,
 	quitSync chan struct{},
 	wg *sync.WaitGroup,
-	ulcConfig *eth.ULCConfig, synced func() bool) (*ProtocolManager, error) {
+	ulcConfig *evr.ULCConfig, synced func() bool) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		client:      client,
@@ -213,7 +213,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 func (pm *ProtocolManager) Stop() {
 	// Showing a log message. During download / process this could actually
 	// take between 5 to 10 seconds and therefor feedback is required.
-	log.Info("Stopping light Ethereum protocol")
+	log.Info("Stopping light Evrynet protocol")
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -234,7 +234,7 @@ func (pm *ProtocolManager) Stop() {
 	// Wait for any process action
 	pm.wg.Wait()
 
-	log.Info("Light Ethereum protocol stopped")
+	log.Info("Light Evrynet protocol stopped")
 }
 
 // runPeer is the p2p protocol run function for the given version.
@@ -283,7 +283,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	if !pm.client && !pm.synced() {
 		return p2p.DiscRequested
 	}
-	p.Log().Debug("Light Ethereum peer connected", "name", p.Name())
+	p.Log().Debug("Light Evrynet peer connected", "name", p.Name())
 
 	// Execute the LES handshake
 	var (
@@ -294,7 +294,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		td      = pm.blockchain.GetTd(hash, number)
 	)
 	if err := p.Handshake(td, hash, number, genesis.Hash(), pm.server); err != nil {
-		p.Log().Debug("Light Ethereum handshake failed", "err", err)
+		p.Log().Debug("Light Evrynet handshake failed", "err", err)
 		pm.logger.Event("Handshake error: " + err.Error() + ", " + p.id)
 		return err
 	}
@@ -308,7 +308,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 
 	// Register the peer locally
 	if err := pm.peers.Register(p); err != nil {
-		p.Log().Error("Light Ethereum peer registration failed", "err", err)
+		p.Log().Error("Light Evrynet peer registration failed", "err", err)
 		pm.logger.Event("Peer registration error: " + err.Error() + ", " + p.id)
 		return err
 	}
@@ -336,7 +336,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	for {
 		if err := pm.handleMsg(p); err != nil {
 			pm.logger.Event("Message handling error: " + err.Error() + ", " + p.id)
-			p.Log().Debug("Light Ethereum message handling failed", "err", err)
+			p.Log().Debug("Light Evrynet message handling failed", "err", err)
 			if p.fcServer != nil {
 				p.fcServer.DumpLogs()
 			}
@@ -358,7 +358,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	if err != nil {
 		return err
 	}
-	p.Log().Trace("Light Ethereum message arrived", "code", msg.Code, "bytes", msg.Size)
+	p.Log().Trace("Light Evrynet message arrived", "code", msg.Code, "bytes", msg.Size)
 
 	p.responseCount++
 	responseCount := p.responseCount

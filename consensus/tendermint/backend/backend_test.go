@@ -19,8 +19,8 @@ import (
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 )
@@ -100,7 +100,7 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 			Trigger: &trigger,
 		}
 		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
-		memDB  = ethdb.NewMemDatabase()
+		memDB  = evrdb.NewMemDatabase()
 		config = tendermint.DefaultConfig
 		be     = New(config, nodePrivateKey, WithDB(memDB)).(*Backend)
 	)

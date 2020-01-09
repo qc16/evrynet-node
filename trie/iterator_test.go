@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
+	"github.com/evrynet-official/evrynet-client/evrdb/memorydb"
 )
 
 func TestIterator(t *testing.T) {

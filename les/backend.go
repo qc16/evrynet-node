@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package les implements the Light Ethereum Subprotocol.
+// Package les implements the Light Evrynet Subprotocol.
 package les
 
 import (
@@ -31,11 +31,11 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/bloombits"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
-	"github.com/evrynet-official/evrynet-client/eth/filters"
-	"github.com/evrynet-official/evrynet-client/eth/gasprice"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
+	"github.com/evrynet-official/evrynet-client/evr/filters"
+	"github.com/evrynet-official/evrynet-client/evr/gasprice"
 	"github.com/evrynet-official/evrynet-client/internal/ethapi"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -78,8 +78,8 @@ type LightEthereum struct {
 	wg sync.WaitGroup
 }
 
-func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
-	chainDb, err := ctx.OpenDatabase("lightchaindata", config.DatabaseCache, config.DatabaseHandles, "eth/db/chaindata/")
+func New(ctx *node.ServiceContext, config *evr.Config) (*LightEthereum, error) {
+	chainDb, err := ctx.OpenDatabase("lightchaindata", config.DatabaseCache, config.DatabaseHandles, "evr/db/chaindata/")
 	if err != nil {
 		return nil, err
 	}
@@ -103,11 +103,11 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 		peers:          peers,
 		reqDist:        newRequestDistributor(peers, quitSync, &mclock.System{}),
 		accountManager: ctx.AccountManager,
-		engine:         eth.CreateConsensusEngine(ctx, chainConfig, config, nil, false, chainDb),
+		engine:         evr.CreateConsensusEngine(ctx, chainConfig, config, nil, false, chainDb),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   eth.NewBloomIndexer(chainDb, params.BloomBitsBlocksClient, params.HelperTrieConfirmations),
+		bloomIndexer:   evr.NewBloomIndexer(chainDb, params.BloomBitsBlocksClient, params.HelperTrieConfirmations),
 	}
 
 	var trustedNodes []string
@@ -256,7 +256,7 @@ func (s *LightEthereum) Protocols() []p2p.Protocol {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Ethereum protocol implementation.
+// Evrynet protocol implementation.
 func (s *LightEthereum) Start(srvr *p2p.Server) error {
 	log.Warn("Light client mode is an experimental feature")
 	s.startBloomHandlers(params.BloomBitsBlocksClient)
@@ -269,7 +269,7 @@ func (s *LightEthereum) Start(srvr *p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Ethereum protocol.
+// Evrynet protocol.
 func (s *LightEthereum) Stop() error {
 	s.odr.Stop()
 	s.relay.Stop()

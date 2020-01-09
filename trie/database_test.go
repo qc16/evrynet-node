@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
+	"github.com/evrynet-official/evrynet-client/evrdb/memorydb"
 )
 
 // Tests that the trie database returns a missing trie node error if attempting

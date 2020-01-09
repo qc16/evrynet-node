@@ -15,7 +15,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 )
 
 /* These tests are done on a chain with already setup account/ contracts.
@@ -37,7 +37,7 @@ func TestCreateContractWithProviderAddress(t *testing.T) {
 	var option types.CreateAccountOption
 	option.ProviderAddress = &provideraddr
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
 	assert.NoError(t, err)
@@ -59,7 +59,7 @@ func TestCreateContractWithProviderAndOwner(t *testing.T) {
 	option.OwnerAddress = &sender
 	option.ProviderAddress = &provideraddr
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.NonceAt(context.Background(), sender, nil)
 	assert.NoError(t, err)
@@ -76,7 +76,7 @@ func TestCreateContractWithoutProviderAddress(t *testing.T) {
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
@@ -106,7 +106,7 @@ func TestCreateContractWithProviderSignature(t *testing.T) {
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
@@ -129,7 +129,7 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
@@ -150,7 +150,7 @@ func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
 	option.ProviderAddress = &provideraddr
 	option.OwnerAddress = &sender
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)
@@ -168,7 +168,7 @@ func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), sender)
 	assert.NoError(t, err)

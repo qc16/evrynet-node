@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
+	"github.com/evrynet-official/evrynet-client/evrdb/memorydb"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.

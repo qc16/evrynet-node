@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/urfave/cli"
+
 	"github.com/evrynet-official/evrynet-client/cmd/utils"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
@@ -39,15 +41,13 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/node"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
 	"github.com/evrynet-official/evrynet-client/trie"
-
-	cli "github.com/urfave/cli"
 )
 
 var (
@@ -102,7 +102,7 @@ type RetestWeb3API interface {
 }
 
 type RetestethAPI struct {
-	ethDb         ethdb.Database
+	ethDb         evrdb.Database
 	db            state.Database
 	chainConfig   *params.ChainConfig
 	author        common.Address

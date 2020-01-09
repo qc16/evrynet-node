@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	tendermintRoundMeter        = metrics.NewRegisteredMeter("eth/consensus/tendermint/rounds", nil)
-	tendermintProposalWaitTimer = metrics.NewRegisteredTimer("eth/consensus/tendermint/proposalwait", nil)
+	tendermintRoundMeter        = metrics.NewRegisteredMeter("evr/consensus/tendermint/rounds", nil)
+	tendermintProposalWaitTimer = metrics.NewRegisteredTimer("evr/consensus/tendermint/proposalwait", nil)
 )
 
 //enterNewRound switch the core state to new round,

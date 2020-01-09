@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// TendermintMsg is the new message belong to eth/64.
+	// TendermintMsg is the new message belong to evr/64.
 	// it notify the protocol handler that this is a message for tendermint consensus purpose
 	TendermintMsg = 0x11
 )

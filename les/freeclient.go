@@ -25,7 +25,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common/mclock"
 	"github.com/evrynet-official/evrynet-client/common/prque"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/les/csvlogger"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -45,7 +45,7 @@ import (
 // value for the client. Currently the LES protocol manager uses IP addresses
 // (without port address) to identify clients.
 type freeClientPool struct {
-	db         ethdb.Database
+	db         evrdb.Database
 	lock       sync.Mutex
 	clock      mclock.Clock
 	closed     bool
@@ -69,7 +69,7 @@ const (
 )
 
 // newFreeClientPool creates a new free client pool
-func newFreeClientPool(db ethdb.Database, freeClientCap uint64, totalLimit int, clock mclock.Clock, removePeer func(string), metricsLogger, eventLogger *csvlogger.Logger) *freeClientPool {
+func newFreeClientPool(db evrdb.Database, freeClientCap uint64, totalLimit int, clock mclock.Clock, removePeer func(string), metricsLogger, eventLogger *csvlogger.Logger) *freeClientPool {
 	pool := &freeClientPool{
 		db:               db,
 		clock:            clock,

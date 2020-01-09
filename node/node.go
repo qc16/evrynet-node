@@ -28,8 +28,8 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/accounts"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/internal/debug"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/p2p"
@@ -607,7 +607,7 @@ func (n *Node) EventMux() *event.TypeMux {
 // OpenDatabase opens an existing database with the given name (or creates one if no
 // previous can be found) from within the node's instance directory. If the node is
 // ephemeral, a memory database is returned.
-func (n *Node) OpenDatabase(name string, cache, handles int, namespace string) (ethdb.Database, error) {
+func (n *Node) OpenDatabase(name string, cache, handles int, namespace string) (evrdb.Database, error) {
 	if n.config.DataDir == "" {
 		return rawdb.NewMemoryDatabase(), nil
 	}
@@ -619,7 +619,7 @@ func (n *Node) OpenDatabase(name string, cache, handles int, namespace string) (
 // also attaching a chain freezer to it that moves ancient chain data from the
 // database to immutable append-only files. If the node is an ephemeral one, a
 // memory database is returned.
-func (n *Node) OpenDatabaseWithFreezer(name string, cache, handles int, freezer, namespace string) (ethdb.Database, error) {
+func (n *Node) OpenDatabaseWithFreezer(name string, cache, handles int, freezer, namespace string) (evrdb.Database, error) {
 	if n.config.DataDir == "" {
 		return rawdb.NewMemoryDatabase(), nil
 	}

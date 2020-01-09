@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/urfave/cli"
+
 	"github.com/evrynet-official/evrynet-client/accounts"
 	"github.com/evrynet-official/evrynet-client/accounts/keystore"
 	"github.com/evrynet-official/evrynet-client/common"
@@ -42,11 +44,11 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/dashboard"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
-	"github.com/evrynet-official/evrynet-client/eth/gasprice"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/ethstats"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
+	"github.com/evrynet-official/evrynet-client/evr/gasprice"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/les"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/metrics"
@@ -61,7 +63,6 @@ import (
 	"github.com/evrynet-official/evrynet-client/params"
 	whisper "github.com/evrynet-official/evrynet-client/whisper/whisperv6"
 	pcsclite "github.com/gballet/go-libpcsclite"
-	cli "github.com/urfave/cli"
 )
 
 var (
@@ -140,12 +141,12 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
-		Value: eth.DefaultConfig.NetworkId,
+		Value: evr.DefaultConfig.NetworkId,
 	}
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "GasPrice for every transaction in the network",
-		Value: eth.DefaultConfig.GasPrice,
+		Value: evr.DefaultConfig.GasPrice,
 	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
@@ -200,7 +201,7 @@ var (
 		Name:  "ulc.trusted",
 		Usage: "List of trusted ULC servers",
 	}
-	defaultSyncMode = eth.DefaultConfig.SyncMode
+	defaultSyncMode = evr.DefaultConfig.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
@@ -229,7 +230,7 @@ var (
 	LightPeersFlag = cli.IntFlag{
 		Name:  "lightpeers",
 		Usage: "Maximum number of LES client peers",
-		Value: eth.DefaultConfig.LightPeers,
+		Value: evr.DefaultConfig.LightPeers,
 	}
 	LightKDFFlag = cli.BoolFlag{
 		Name:  "lightkdf",
@@ -267,27 +268,27 @@ var (
 	EthashCachesInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.cachesinmem",
 		Usage: "Number of recent ethash caches to keep in memory (16MB each)",
-		Value: eth.DefaultConfig.Ethash.CachesInMem,
+		Value: evr.DefaultConfig.Ethash.CachesInMem,
 	}
 	EthashCachesOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.cachesondisk",
 		Usage: "Number of recent ethash caches to keep on disk (16MB each)",
-		Value: eth.DefaultConfig.Ethash.CachesOnDisk,
+		Value: evr.DefaultConfig.Ethash.CachesOnDisk,
 	}
 	EthashDatasetDirFlag = DirectoryFlag{
 		Name:  "ethash.dagdir",
 		Usage: "Directory to store the ethash mining DAGs (default = inside home folder)",
-		Value: DirectoryString{eth.DefaultConfig.Ethash.DatasetDir},
+		Value: DirectoryString{evr.DefaultConfig.Ethash.DatasetDir},
 	}
 	EthashDatasetsInMemoryFlag = cli.IntFlag{
 		Name:  "ethash.dagsinmem",
 		Usage: "Number of recent ethash mining DAGs to keep in memory (1+GB each)",
-		Value: eth.DefaultConfig.Ethash.DatasetsInMem,
+		Value: evr.DefaultConfig.Ethash.DatasetsInMem,
 	}
 	EthashDatasetsOnDiskFlag = cli.IntFlag{
 		Name:  "ethash.dagsondisk",
 		Usage: "Number of recent ethash mining DAGs to keep on disk (1+GB each)",
-		Value: eth.DefaultConfig.Ethash.DatasetsOnDisk,
+		Value: evr.DefaultConfig.Ethash.DatasetsOnDisk,
 	}
 	// Transaction pool settings
 	TxPoolLocalsFlag = cli.StringFlag{
@@ -311,37 +312,37 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: eth.DefaultConfig.TxPool.PriceLimit,
+		Value: evr.DefaultConfig.TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: eth.DefaultConfig.TxPool.PriceBump,
+		Value: evr.DefaultConfig.TxPool.PriceBump,
 	}
 	TxPoolAccountSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.accountslots",
 		Usage: "Minimum number of executable transaction slots guaranteed per account",
-		Value: eth.DefaultConfig.TxPool.AccountSlots,
+		Value: evr.DefaultConfig.TxPool.AccountSlots,
 	}
 	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
 		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalSlots,
+		Value: evr.DefaultConfig.TxPool.GlobalSlots,
 	}
 	TxPoolAccountQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: eth.DefaultConfig.TxPool.AccountQueue,
+		Value: evr.DefaultConfig.TxPool.AccountQueue,
 	}
 	TxPoolGlobalQueueFlag = cli.Uint64Flag{
 		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: eth.DefaultConfig.TxPool.GlobalQueue,
+		Value: evr.DefaultConfig.TxPool.GlobalQueue,
 	}
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: eth.DefaultConfig.TxPool.Lifetime,
+		Value: evr.DefaultConfig.TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	CacheFlag = cli.IntFlag{
@@ -390,27 +391,27 @@ var (
 	MinerGasTargetFlag = cli.Uint64Flag{
 		Name:  "miner.gastarget",
 		Usage: "Target gas floor for mined blocks",
-		Value: eth.DefaultConfig.Miner.GasFloor,
+		Value: evr.DefaultConfig.Miner.GasFloor,
 	}
 	MinerLegacyGasTargetFlag = cli.Uint64Flag{
 		Name:  "targetgaslimit",
 		Usage: "Target gas floor for mined blocks (deprecated, use --miner.gastarget)",
-		Value: eth.DefaultConfig.Miner.GasFloor,
+		Value: evr.DefaultConfig.Miner.GasFloor,
 	}
 	MinerGasLimitFlag = cli.Uint64Flag{
 		Name:  "miner.gaslimit",
 		Usage: "Target gas ceiling for mined blocks",
-		Value: eth.DefaultConfig.Miner.GasCeil,
+		Value: evr.DefaultConfig.Miner.GasCeil,
 	}
 	MinerGasPriceFlag = BigFlag{
 		Name:  "miner.gasprice",
 		Usage: "Minimum gas price for mining a transaction",
-		Value: eth.DefaultConfig.Miner.GasPrice,
+		Value: evr.DefaultConfig.Miner.GasPrice,
 	}
 	MinerLegacyGasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "Minimum gas price for mining a transaction (deprecated, use --miner.gasprice)",
-		Value: eth.DefaultConfig.Miner.GasPrice,
+		Value: evr.DefaultConfig.Miner.GasPrice,
 	}
 	MinerEtherbaseFlag = cli.StringFlag{
 		Name:  "miner.etherbase",
@@ -433,7 +434,7 @@ var (
 	MinerRecommitIntervalFlag = cli.DurationFlag{
 		Name:  "miner.recommit",
 		Usage: "Time interval to recreate the block being mined",
-		Value: eth.DefaultConfig.Miner.Recommit,
+		Value: evr.DefaultConfig.Miner.Recommit,
 	}
 	MinerNoVerfiyFlag = cli.BoolFlag{
 		Name:  "miner.noverify",
@@ -643,12 +644,12 @@ var (
 	GpoBlocksFlag = cli.IntFlag{
 		Name:  "gpoblocks",
 		Usage: "Number of recent blocks to check for gas prices",
-		Value: eth.DefaultConfig.GPO.Blocks,
+		Value: evr.DefaultConfig.GPO.Blocks,
 	}
 	GpoPercentileFlag = cli.IntFlag{
 		Name:  "gpopercentile",
 		Usage: "Suggested gas price is the given percentile of a set of recent transaction gas prices",
-		Value: eth.DefaultConfig.GPO.Percentile,
+		Value: evr.DefaultConfig.GPO.Percentile,
 	}
 	WhisperEnabledFlag = cli.BoolFlag{
 		Name:  "shh",
@@ -673,47 +674,47 @@ var (
 	TendermintBlockPeriodFlag = cli.Uint64Flag{
 		Name:  "tendermint.blockperiod",
 		Usage: "Default minimum difference between two consecutive block's timestamps in seconds",
-		Value: eth.DefaultConfig.Tendermint.BlockPeriod,
+		Value: evr.DefaultConfig.Tendermint.BlockPeriod,
 	}
 	TendermintFaultyModeFlag = cli.Uint64Flag{
 		Name:  "tendermint.faultymode",
 		Usage: "0: not faulty, 1: send fake proposal",
-		Value: eth.DefaultConfig.Tendermint.FaultyMode,
+		Value: evr.DefaultConfig.Tendermint.FaultyMode,
 	}
 	TendermintTimeoutProposeFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-propose",
 		Usage: "Duration waiting a propose",
-		Value: eth.DefaultConfig.Tendermint.TimeoutPropose,
+		Value: evr.DefaultConfig.Tendermint.TimeoutPropose,
 	}
 	TendermintTimeoutProposeDeltaFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-propose-delta",
 		Usage: "Increment if timeout happens at propose step to reach eventually synchronous",
-		Value: eth.DefaultConfig.Tendermint.TimeoutProposeDelta,
+		Value: evr.DefaultConfig.Tendermint.TimeoutProposeDelta,
 	}
 	TendermintTimeoutPrevoteFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-prevote",
 		Usage: "Duration waiting for more prevote after 2/3 received",
-		Value: eth.DefaultConfig.Tendermint.TimeoutPrevote,
+		Value: evr.DefaultConfig.Tendermint.TimeoutPrevote,
 	}
 	TendermintTimeoutPrevoteDeltaFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-prevote-delta",
 		Usage: "Increment if timeout happens at prevoteWait to reach eventually synchronous",
-		Value: eth.DefaultConfig.Tendermint.TimeoutPrevoteDelta,
+		Value: evr.DefaultConfig.Tendermint.TimeoutPrevoteDelta,
 	}
 	TendermintTimeoutPrecommitFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-precommit",
 		Usage: "Duration waiting for more precommit after 2/3 received",
-		Value: eth.DefaultConfig.Tendermint.TimeoutPrecommit,
+		Value: evr.DefaultConfig.Tendermint.TimeoutPrecommit,
 	}
 	TendermintTimeoutPrecommitDeltaFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-precommit-delta",
 		Usage: "Duration waiting to increase if precommit wait expired to reach eventually synchronous",
-		Value: eth.DefaultConfig.Tendermint.TimeoutPrecommitDelta,
+		Value: evr.DefaultConfig.Tendermint.TimeoutPrecommitDelta,
 	}
 	TendermintTimeoutCommitFlag = cli.DurationFlag{
 		Name:  "tendermint.timeout-commit",
 		Usage: "Duration waiting to start round with new height",
-		Value: eth.DefaultConfig.Tendermint.TimeoutCommit,
+		Value: evr.DefaultConfig.Tendermint.TimeoutCommit,
 	}
 
 	// Metrics flags
@@ -995,12 +996,12 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 }
 
 // SetULC setup ULC config from file if given.
-func SetULC(ctx *cli.Context, cfg *eth.Config) {
+func SetULC(ctx *cli.Context, cfg *evr.Config) {
 	// ULC config isn't loaded from global config and ULC config and ULC trusted nodes are not defined.
 	if cfg.ULC == nil && !(ctx.GlobalIsSet(ULCModeConfigFlag.Name) || ctx.GlobalIsSet(ULCTrustedNodesFlag.Name)) {
 		return
 	}
-	cfg.ULC = &eth.ULCConfig{}
+	cfg.ULC = &evr.ULCConfig{}
 
 	path := ctx.GlobalString(ULCModeConfigFlag.Name)
 	if path != "" {
@@ -1023,8 +1024,8 @@ func SetULC(ctx *cli.Context, cfg *eth.Config) {
 		cfg.ULC.MinTrustedFraction = trustedFraction
 	}
 	if cfg.ULC.MinTrustedFraction <= 0 && cfg.ULC.MinTrustedFraction > 100 {
-		log.Error("MinTrustedFraction is invalid", "MinTrustedFraction", cfg.ULC.MinTrustedFraction, "Changed to default", eth.DefaultULCMinTrustedFraction)
-		cfg.ULC.MinTrustedFraction = eth.DefaultULCMinTrustedFraction
+		log.Error("MinTrustedFraction is invalid", "MinTrustedFraction", cfg.ULC.MinTrustedFraction, "Changed to default", evr.DefaultULCMinTrustedFraction)
+		cfg.ULC.MinTrustedFraction = evr.DefaultULCMinTrustedFraction
 	}
 }
 
@@ -1069,7 +1070,7 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 
 // setEtherbase retrieves the etherbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
-func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *eth.Config) {
+func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *evr.Config) {
 	// Extract the current etherbase, new flag overriding legacy one
 	var etherbase string
 	if ctx.GlobalIsSet(MinerLegacyEtherbaseFlag.Name) {
@@ -1293,7 +1294,7 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
-func setEthash(ctx *cli.Context, cfg *eth.Config) {
+func setEthash(ctx *cli.Context, cfg *evr.Config) {
 	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
 		cfg.Ethash.CacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
 	}
@@ -1344,7 +1345,7 @@ func setMiner(ctx *cli.Context, cfg *miner.Config) {
 	}
 }
 
-func setWhitelist(ctx *cli.Context, cfg *eth.Config) {
+func setWhitelist(ctx *cli.Context, cfg *evr.Config) {
 	whitelist := ctx.GlobalString(WhitelistFlag.Name)
 	if whitelist == "" {
 		return
@@ -1481,8 +1482,8 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 	}
 }
 
-// SetEthConfig applies eth-related command line flags to the config.
-func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
+// SetEvrConfig applies evr-related command line flags to the config.
+func SetEvrConfig(ctx *cli.Context, stack *node.Node, cfg *evr.Config) {
 	// Avoid conflicting network flags
 	checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag, GoerliFlag)
 	checkExclusive(ctx, LightServFlag, SyncModeFlag, "light")
@@ -1612,8 +1613,8 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
 }
 
-// RegisterEthService adds an Ethereum client to the stack.
-func RegisterEthService(stack *node.Node, cfg *eth.Config) {
+// RegisterEthService adds an Evrynet client to the stack.
+func RegisterEthService(stack *node.Node, cfg *evr.Config) {
 	var err error
 	if cfg.SyncMode == downloader.LightSync {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
@@ -1621,7 +1622,7 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 		})
 	} else {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			fullNode, err := eth.New(ctx, cfg)
+			fullNode, err := evr.New(ctx, cfg)
 			if fullNode != nil && cfg.LightServ > 0 {
 				ls, _ := les.NewLesServer(fullNode, cfg)
 				fullNode.AddLesServer(ls)
@@ -1630,7 +1631,7 @@ func RegisterEthService(stack *node.Node, cfg *eth.Config) {
 		})
 	}
 	if err != nil {
-		Fatalf("Failed to register the Ethereum service: %v", err)
+		Fatalf("Failed to register the Evrynet service: %v", err)
 	}
 }
 
@@ -1650,12 +1651,12 @@ func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
 	}
 }
 
-// RegisterEthStatsService configures the Ethereum Stats daemon and adds it to
+// RegisterEthStatsService configures the Evrynet Stats daemon and adds it to
 // the given node.
 func RegisterEthStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		// Retrieve both eth and les services
-		var ethServ *eth.Ethereum
+		// Retrieve both evr and les services
+		var ethServ *evr.Evrynet
 		ctx.Service(&ethServ)
 
 		var lesServ *les.LightEthereum
@@ -1663,7 +1664,7 @@ func RegisterEthStatsService(stack *node.Node, url string) {
 
 		return ethstats.New(url, ethServ, lesServ)
 	}); err != nil {
-		Fatalf("Failed to register the Ethereum Stats service: %v", err)
+		Fatalf("Failed to register the Evrynet Stats service: %v", err)
 	}
 }
 
@@ -1706,7 +1707,7 @@ func SplitTagsFlag(tagsFlag string) map[string]string {
 }
 
 // MakeChainDatabase open an LevelDB using the flags passed to the client and will hard crash if it fails.
-func MakeChainDatabase(ctx *cli.Context, stack *node.Node) ethdb.Database {
+func MakeChainDatabase(ctx *cli.Context, stack *node.Node) evrdb.Database {
 	var (
 		cache   = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 		handles = makeDatabaseHandles()
@@ -1738,7 +1739,7 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 }
 
 // MakeChain creates a chain manager from set command line flags.
-func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb ethdb.Database) {
+func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chainDb evrdb.Database) {
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
@@ -1758,12 +1759,12 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
 			engine = ethash.New(ethash.Config{
-				CacheDir:       stack.ResolvePath(eth.DefaultConfig.Ethash.CacheDir),
-				CachesInMem:    eth.DefaultConfig.Ethash.CachesInMem,
-				CachesOnDisk:   eth.DefaultConfig.Ethash.CachesOnDisk,
-				DatasetDir:     stack.ResolvePath(eth.DefaultConfig.Ethash.DatasetDir),
-				DatasetsInMem:  eth.DefaultConfig.Ethash.DatasetsInMem,
-				DatasetsOnDisk: eth.DefaultConfig.Ethash.DatasetsOnDisk,
+				CacheDir:       stack.ResolvePath(evr.DefaultConfig.Ethash.CacheDir),
+				CachesInMem:    evr.DefaultConfig.Ethash.CachesInMem,
+				CachesOnDisk:   evr.DefaultConfig.Ethash.CachesOnDisk,
+				DatasetDir:     stack.ResolvePath(evr.DefaultConfig.Ethash.DatasetDir),
+				DatasetsInMem:  evr.DefaultConfig.Ethash.DatasetsInMem,
+				DatasetsOnDisk: evr.DefaultConfig.Ethash.DatasetsOnDisk,
 			}, nil, false)
 		}
 	}
@@ -1771,11 +1772,11 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
 	cache := &core.CacheConfig{
-		TrieCleanLimit:      eth.DefaultConfig.TrieCleanCache,
+		TrieCleanLimit:      evr.DefaultConfig.TrieCleanCache,
 		TrieCleanNoPrefetch: ctx.GlobalBool(CacheNoPrefetchFlag.Name),
-		TrieDirtyLimit:      eth.DefaultConfig.TrieDirtyCache,
+		TrieDirtyLimit:      evr.DefaultConfig.TrieDirtyCache,
 		TrieDirtyDisabled:   ctx.GlobalString(GCModeFlag.Name) == "archive",
-		TrieTimeLimit:       eth.DefaultConfig.TrieTimeout,
+		TrieTimeLimit:       evr.DefaultConfig.TrieTimeout,
 	}
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheTrieFlag.Name) {
 		cache.TrieCleanLimit = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheTrieFlag.Name) / 100

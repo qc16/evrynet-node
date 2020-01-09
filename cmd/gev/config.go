@@ -29,7 +29,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/cmd/utils"
 	"github.com/evrynet-official/evrynet-client/dashboard"
-	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/evr"
 	"github.com/evrynet-official/evrynet-client/graphql"
 	"github.com/evrynet-official/evrynet-client/node"
 	"github.com/evrynet-official/evrynet-client/params"
@@ -76,7 +76,7 @@ type ethstatsConfig struct {
 }
 
 type gethConfig struct {
-	Eth       eth.Config
+	Eth       evr.Config
 	Shh       whisper.Config
 	Node      node.Config
 	Ethstats  ethstatsConfig
@@ -111,7 +111,7 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	// Load defaults.
 	cfg := gethConfig{
-		Eth:       eth.DefaultConfig,
+		Eth:       evr.DefaultConfig,
 		Shh:       whisper.DefaultConfig,
 		Node:      defaultNodeConfig(),
 		Dashboard: dashboard.DefaultConfig,
@@ -131,7 +131,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetEthConfig(ctx, stack, &cfg.Eth)
+	utils.SetEvrConfig(ctx, stack, &cfg.Eth)
 	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
@@ -181,11 +181,11 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	// Configure GraphQL if required
 	if ctx.GlobalIsSet(utils.GraphQLEnabledFlag.Name) {
 		if err := graphql.RegisterGraphQLService(stack, cfg.Node.GraphQLEndpoint(), cfg.Node.GraphQLCors, cfg.Node.GraphQLVirtualHosts, cfg.Node.HTTPTimeouts); err != nil {
-			utils.Fatalf("Failed to register the Ethereum service: %v", err)
+			utils.Fatalf("Failed to register the Evrynet service: %v", err)
 		}
 	}
 
-	// Add the Ethereum Stats daemon if requested.
+	// Add the Evrynet Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
 	}

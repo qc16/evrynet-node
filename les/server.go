@@ -26,7 +26,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/evr"
 	"github.com/evrynet-official/evrynet-client/les/csvlogger"
 	"github.com/evrynet-official/evrynet-client/les/flowcontrol"
 	"github.com/evrynet-official/evrynet-client/light"
@@ -72,7 +72,7 @@ type LesServer struct {
 	priorityClientPool         *priorityClientPool
 }
 
-func NewLesServer(eth *eth.Ethereum, config *eth.Config) (*LesServer, error) {
+func NewLesServer(eth *evr.Evrynet, config *evr.Config) (*LesServer, error) {
 	var csvLogger *csvlogger.Logger
 	if logFileName != "" {
 		csvLogger = csvlogger.NewLogger(logFileName, time.Second*10, "event, peerId")

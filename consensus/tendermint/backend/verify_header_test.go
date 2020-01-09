@@ -13,7 +13,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/crypto/secp256k1"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 )
 
 func TestBackend_VerifyHeader(t *testing.T) {
@@ -60,7 +60,7 @@ func TestBackend_VerifyHeader(t *testing.T) {
 }
 
 func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header) (*tests_utils.MockChainReader, *Backend) {
-	memDB := ethdb.NewMemDatabase()
+	memDB := evrdb.NewMemDatabase()
 	config := tendermint.DefaultConfig
 	b, ok := New(config, nodePK, WithDB(memDB)).(*Backend)
 	b.SetBroadcaster(&tests_utils.MockProtocolManager{})

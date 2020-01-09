@@ -22,17 +22,17 @@ import (
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 )
 
 // EthereumClient provides access to the Ethereum APIs.
 type EthereumClient struct {
-	client *ethclient.Client
+	client *evrclient.Client
 }
 
 // NewEthereumClient connects a client to the given URL.
 func NewEthereumClient(rawurl string) (client *EthereumClient, _ error) {
-	rawClient, err := ethclient.Dial(rawurl)
+	rawClient, err := evrclient.Dial(rawurl)
 	return &EthereumClient{rawClient}, err
 }
 
