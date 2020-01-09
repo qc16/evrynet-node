@@ -18,6 +18,11 @@ import (
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
+const (
+	Block1 = 1
+	Block2 = 2
+)
+
 func TestFinalizeBlock(t *testing.T) {
 	var (
 		nodePrivateKey, _ = crypto.HexToECDSA("ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1")
@@ -130,7 +135,7 @@ func TestFinalizeBlock(t *testing.T) {
 
 				assert.Equal(t, validators[i].Hex(), core.valSet.GetByIndex(int64(i)).String(), "The order voting must be the same")
 				switch tc.validatorVotes[i] {
-				case 1:
+				case Block1:
 					ok, err := newMsgSet.AddVote(msg,
 						&tendermint.Vote{
 							BlockHash:   &blHash1,
@@ -140,7 +145,7 @@ func TestFinalizeBlock(t *testing.T) {
 						})
 					require.NoError(t, err)
 					assert.True(t, ok)
-				case 2:
+				case Block2:
 					vote := &tendermint.Vote{
 						BlockHash:   &blHash2,
 						BlockNumber: core.CurrentState().BlockNumber(),
