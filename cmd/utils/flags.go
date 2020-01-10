@@ -1659,7 +1659,7 @@ func RegisterEthStatsService(stack *node.Node, url string) {
 		var ethServ *evr.Evrynet
 		ctx.Service(&ethServ)
 
-		var lesServ *les.LightEthereum
+		var lesServ *les.LightEvrynet
 		ctx.Service(&lesServ)
 
 		return ethstats.New(url, ethServ, lesServ)

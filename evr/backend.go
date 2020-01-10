@@ -106,7 +106,7 @@ func (s *Evrynet) AddLesServer(ls LesServer) {
 func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 	// Ensure configuration values are compatible and sane
 	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run eth.Evrynet in light sync mode, use les.LightEthereum")
+		return nil, errors.New("can't run eth.Evrynet in light sync mode, use les.LightEvrynet")
 	}
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
@@ -288,7 +288,7 @@ func (s *Evrynet) APIs() []rpc.API {
 		{
 			Namespace: "evr",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(s),
+			Service:   NewPublicEvrynetAPI(s),
 			Public:    true,
 		},
 		{
@@ -545,7 +545,7 @@ func (s *Evrynet) Start(srvr *p2p.Server) error {
 	return nil
 }
 
-func (s *Ethereum) GetPm() *ProtocolManager {
+func (s *Evrynet) GetPm() *ProtocolManager {
 	return s.protocolManager
 }
 

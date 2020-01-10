@@ -90,7 +90,7 @@ func main() {
 	}()
 
 	var (
-		ethereum     *eth.Ethereum
+		ethereum     *eth.Evrynet
 		contractAddr *common.Address
 	)
 	if err := testNode.Service(&ethereum); err != nil {
@@ -148,7 +148,7 @@ func main() {
 }
 
 //forceBroadcastPendingTxs get pending from
-func forceBroadcastPendingTxs(ethereum *eth.Ethereum) {
+func forceBroadcastPendingTxs(ethereum *eth.Evrynet) {
 	// force rebroadcast
 	var txs types.Transactions
 	pendings, err := ethereum.TxPool().Pending()
@@ -218,7 +218,7 @@ func parseGenesis(fileName string) (*core.Genesis, error) {
 
 // makeNode creates a node from genesis config
 func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
-	// Define the basic configurations for the Ethereum node
+	// Define the basic configurations for the Evrynet node
 	config := &node.Config{
 		Name:    "geth",
 		Version: params.Version,
@@ -235,7 +235,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 		HTTPModules: []string{"admin", "db", "eth", "debug", "miner", "net", "shh", "txpool",
 			"personal", "web3", "tendermint"},
 	}
-	// Start the node and configure a full Ethereum node on it
+	// Start the node and configure a full Evrynet node on it
 	stack, err := node.New(config)
 	if err != nil {
 		return nil, err
@@ -297,7 +297,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 }
 
 // waitForSyncingAndStableNonces wait util the node is syncing and the nonces of given addresses are not change, also returns stable nonces
-func waitForSyncingAndStableNonces(ethereum *eth.Ethereum, faucets []*ecdsa.PrivateKey) []uint64 {
+func waitForSyncingAndStableNonces(ethereum *eth.Evrynet, faucets []*ecdsa.PrivateKey) []uint64 {
 	bc := ethereum.BlockChain()
 	for !ethereum.Synced() {
 		log.Warn("testNode is not synced, sleeping", "current_block", bc.CurrentHeader().Number)

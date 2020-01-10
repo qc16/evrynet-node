@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package bind generates Ethereum contract Go bindings.
+// Package bind generates Evrynet contract Go bindings.
 //
 // Detailed usage document and tutorial available on the go-ethereum Wiki page:
-// https://github.com/evrynet-official/evrynet-client/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
+// https://github.com/evrynet-official/evrynet-client/wiki/Native-DApps:-Go-bindings-to-Evrynet-contracts
 package bind
 
 import (

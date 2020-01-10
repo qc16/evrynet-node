@@ -24,9 +24,9 @@ const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 //*
 // Request: Ask device for public key corresponding to address_n path
 // @start
-// @next EthereumPublicKey
+// @next EvrynetPublicKey
 // @next Failure
-type EthereumGetPublicKey struct {
+type EvrynetGetPublicKey struct {
 	AddressN             []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
 	ShowDisplay          *bool    `protobuf:"varint,2,opt,name=show_display,json=showDisplay" json:"show_display,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -34,39 +34,39 @@ type EthereumGetPublicKey struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumGetPublicKey) Reset()         { *m = EthereumGetPublicKey{} }
-func (m *EthereumGetPublicKey) String() string { return proto.CompactTextString(m) }
-func (*EthereumGetPublicKey) ProtoMessage()    {}
-func (*EthereumGetPublicKey) Descriptor() ([]byte, []int) {
+func (m *EvrynetGetPublicKey) Reset()         { *m = EvrynetGetPublicKey{} }
+func (m *EvrynetGetPublicKey) String() string { return proto.CompactTextString(m) }
+func (*EvrynetGetPublicKey) ProtoMessage()    {}
+func (*EvrynetGetPublicKey) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{0}
 }
 
-func (m *EthereumGetPublicKey) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumGetPublicKey.Unmarshal(m, b)
+func (m *EvrynetGetPublicKey) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetGetPublicKey.Unmarshal(m, b)
 }
-func (m *EthereumGetPublicKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumGetPublicKey.Marshal(b, m, deterministic)
+func (m *EvrynetGetPublicKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetGetPublicKey.Marshal(b, m, deterministic)
 }
-func (m *EthereumGetPublicKey) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumGetPublicKey.Merge(m, src)
+func (m *EvrynetGetPublicKey) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetGetPublicKey.Merge(m, src)
 }
-func (m *EthereumGetPublicKey) XXX_Size() int {
-	return xxx_messageInfo_EthereumGetPublicKey.Size(m)
+func (m *EvrynetGetPublicKey) XXX_Size() int {
+	return xxx_messageInfo_EvrynetGetPublicKey.Size(m)
 }
-func (m *EthereumGetPublicKey) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumGetPublicKey.DiscardUnknown(m)
+func (m *EvrynetGetPublicKey) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetGetPublicKey.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumGetPublicKey proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetGetPublicKey proto.InternalMessageInfo
 
-func (m *EthereumGetPublicKey) GetAddressN() []uint32 {
+func (m *EvrynetGetPublicKey) GetAddressN() []uint32 {
 	if m != nil {
 		return m.AddressN
 	}
 	return nil
 }
 
-func (m *EthereumGetPublicKey) GetShowDisplay() bool {
+func (m *EvrynetGetPublicKey) GetShowDisplay() bool {
 	if m != nil && m.ShowDisplay != nil {
 		return *m.ShowDisplay
 	}
@@ -76,7 +76,7 @@ func (m *EthereumGetPublicKey) GetShowDisplay() bool {
 //*
 // Response: Contains public key derived from device private seed
 // @end
-type EthereumPublicKey struct {
+type EvrynetPublicKey struct {
 	Node                 *HDNodeType `protobuf:"bytes,1,opt,name=node" json:"node,omitempty"`
 	Xpub                 *string     `protobuf:"bytes,2,opt,name=xpub" json:"xpub,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
@@ -84,39 +84,39 @@ type EthereumPublicKey struct {
 	XXX_sizecache        int32       `json:"-"`
 }
 
-func (m *EthereumPublicKey) Reset()         { *m = EthereumPublicKey{} }
-func (m *EthereumPublicKey) String() string { return proto.CompactTextString(m) }
-func (*EthereumPublicKey) ProtoMessage()    {}
-func (*EthereumPublicKey) Descriptor() ([]byte, []int) {
+func (m *EvrynetPublicKey) Reset()         { *m = EvrynetPublicKey{} }
+func (m *EvrynetPublicKey) String() string { return proto.CompactTextString(m) }
+func (*EvrynetPublicKey) ProtoMessage()    {}
+func (*EvrynetPublicKey) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{1}
 }
 
-func (m *EthereumPublicKey) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumPublicKey.Unmarshal(m, b)
+func (m *EvrynetPublicKey) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetPublicKey.Unmarshal(m, b)
 }
-func (m *EthereumPublicKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumPublicKey.Marshal(b, m, deterministic)
+func (m *EvrynetPublicKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetPublicKey.Marshal(b, m, deterministic)
 }
-func (m *EthereumPublicKey) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumPublicKey.Merge(m, src)
+func (m *EvrynetPublicKey) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetPublicKey.Merge(m, src)
 }
-func (m *EthereumPublicKey) XXX_Size() int {
-	return xxx_messageInfo_EthereumPublicKey.Size(m)
+func (m *EvrynetPublicKey) XXX_Size() int {
+	return xxx_messageInfo_EvrynetPublicKey.Size(m)
 }
-func (m *EthereumPublicKey) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumPublicKey.DiscardUnknown(m)
+func (m *EvrynetPublicKey) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetPublicKey.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumPublicKey proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetPublicKey proto.InternalMessageInfo
 
-func (m *EthereumPublicKey) GetNode() *HDNodeType {
+func (m *EvrynetPublicKey) GetNode() *HDNodeType {
 	if m != nil {
 		return m.Node
 	}
 	return nil
 }
 
-func (m *EthereumPublicKey) GetXpub() string {
+func (m *EvrynetPublicKey) GetXpub() string {
 	if m != nil && m.Xpub != nil {
 		return *m.Xpub
 	}
@@ -124,11 +124,11 @@ func (m *EthereumPublicKey) GetXpub() string {
 }
 
 //*
-// Request: Ask device for Ethereum address corresponding to address_n path
+// Request: Ask device for Evrynet address corresponding to address_n path
 // @start
-// @next EthereumAddress
+// @next EvrynetAddress
 // @next Failure
-type EthereumGetAddress struct {
+type EvrynetGetAddress struct {
 	AddressN             []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
 	ShowDisplay          *bool    `protobuf:"varint,2,opt,name=show_display,json=showDisplay" json:"show_display,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -136,39 +136,39 @@ type EthereumGetAddress struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumGetAddress) Reset()         { *m = EthereumGetAddress{} }
-func (m *EthereumGetAddress) String() string { return proto.CompactTextString(m) }
-func (*EthereumGetAddress) ProtoMessage()    {}
-func (*EthereumGetAddress) Descriptor() ([]byte, []int) {
+func (m *EvrynetGetAddress) Reset()         { *m = EvrynetGetAddress{} }
+func (m *EvrynetGetAddress) String() string { return proto.CompactTextString(m) }
+func (*EvrynetGetAddress) ProtoMessage()    {}
+func (*EvrynetGetAddress) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{2}
 }
 
-func (m *EthereumGetAddress) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumGetAddress.Unmarshal(m, b)
+func (m *EvrynetGetAddress) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetGetAddress.Unmarshal(m, b)
 }
-func (m *EthereumGetAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumGetAddress.Marshal(b, m, deterministic)
+func (m *EvrynetGetAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetGetAddress.Marshal(b, m, deterministic)
 }
-func (m *EthereumGetAddress) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumGetAddress.Merge(m, src)
+func (m *EvrynetGetAddress) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetGetAddress.Merge(m, src)
 }
-func (m *EthereumGetAddress) XXX_Size() int {
-	return xxx_messageInfo_EthereumGetAddress.Size(m)
+func (m *EvrynetGetAddress) XXX_Size() int {
+	return xxx_messageInfo_EvrynetGetAddress.Size(m)
 }
-func (m *EthereumGetAddress) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumGetAddress.DiscardUnknown(m)
+func (m *EvrynetGetAddress) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetGetAddress.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumGetAddress proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetGetAddress proto.InternalMessageInfo
 
-func (m *EthereumGetAddress) GetAddressN() []uint32 {
+func (m *EvrynetGetAddress) GetAddressN() []uint32 {
 	if m != nil {
 		return m.AddressN
 	}
 	return nil
 }
 
-func (m *EthereumGetAddress) GetShowDisplay() bool {
+func (m *EvrynetGetAddress) GetShowDisplay() bool {
 	if m != nil && m.ShowDisplay != nil {
 		return *m.ShowDisplay
 	}
@@ -176,9 +176,9 @@ func (m *EthereumGetAddress) GetShowDisplay() bool {
 }
 
 //*
-// Response: Contains an Ethereum address derived from device private seed
+// Response: Contains an Evrynet address derived from device private seed
 // @end
-type EthereumAddress struct {
+type EvrynetAddress struct {
 	AddressBin           []byte   `protobuf:"bytes,1,opt,name=addressBin" json:"addressBin,omitempty"`
 	AddressHex           *string  `protobuf:"bytes,2,opt,name=addressHex" json:"addressHex,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -186,39 +186,39 @@ type EthereumAddress struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumAddress) Reset()         { *m = EthereumAddress{} }
-func (m *EthereumAddress) String() string { return proto.CompactTextString(m) }
-func (*EthereumAddress) ProtoMessage()    {}
-func (*EthereumAddress) Descriptor() ([]byte, []int) {
+func (m *EvrynetAddress) Reset()         { *m = EvrynetAddress{} }
+func (m *EvrynetAddress) String() string { return proto.CompactTextString(m) }
+func (*EvrynetAddress) ProtoMessage()    {}
+func (*EvrynetAddress) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{3}
 }
 
-func (m *EthereumAddress) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumAddress.Unmarshal(m, b)
+func (m *EvrynetAddress) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetAddress.Unmarshal(m, b)
 }
-func (m *EthereumAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumAddress.Marshal(b, m, deterministic)
+func (m *EvrynetAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetAddress.Marshal(b, m, deterministic)
 }
-func (m *EthereumAddress) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumAddress.Merge(m, src)
+func (m *EvrynetAddress) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetAddress.Merge(m, src)
 }
-func (m *EthereumAddress) XXX_Size() int {
-	return xxx_messageInfo_EthereumAddress.Size(m)
+func (m *EvrynetAddress) XXX_Size() int {
+	return xxx_messageInfo_EvrynetAddress.Size(m)
 }
-func (m *EthereumAddress) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumAddress.DiscardUnknown(m)
+func (m *EvrynetAddress) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetAddress.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumAddress proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetAddress proto.InternalMessageInfo
 
-func (m *EthereumAddress) GetAddressBin() []byte {
+func (m *EvrynetAddress) GetAddressBin() []byte {
 	if m != nil {
 		return m.AddressBin
 	}
 	return nil
 }
 
-func (m *EthereumAddress) GetAddressHex() string {
+func (m *EvrynetAddress) GetAddressHex() string {
 	if m != nil && m.AddressHex != nil {
 		return *m.AddressHex
 	}
@@ -230,9 +230,9 @@ func (m *EthereumAddress) GetAddressHex() string {
 // All fields are optional from the protocol's point of view. Each field defaults to value `0` if missing.
 // Note: the first at most 1024 bytes of data MUST be transmitted as part of this message.
 // @start
-// @next EthereumTxRequest
+// @next EvrynetTxRequest
 // @next Failure
-type EthereumSignTx struct {
+type EvrynetSignTx struct {
 	AddressN             []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
 	Nonce                []byte   `protobuf:"bytes,2,opt,name=nonce" json:"nonce,omitempty"`
 	GasPrice             []byte   `protobuf:"bytes,3,opt,name=gas_price,json=gasPrice" json:"gas_price,omitempty"`
@@ -249,102 +249,102 @@ type EthereumSignTx struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumSignTx) Reset()         { *m = EthereumSignTx{} }
-func (m *EthereumSignTx) String() string { return proto.CompactTextString(m) }
-func (*EthereumSignTx) ProtoMessage()    {}
-func (*EthereumSignTx) Descriptor() ([]byte, []int) {
+func (m *EvrynetSignTx) Reset()         { *m = EvrynetSignTx{} }
+func (m *EvrynetSignTx) String() string { return proto.CompactTextString(m) }
+func (*EvrynetSignTx) ProtoMessage()    {}
+func (*EvrynetSignTx) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{4}
 }
 
-func (m *EthereumSignTx) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumSignTx.Unmarshal(m, b)
+func (m *EvrynetSignTx) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetSignTx.Unmarshal(m, b)
 }
-func (m *EthereumSignTx) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumSignTx.Marshal(b, m, deterministic)
+func (m *EvrynetSignTx) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetSignTx.Marshal(b, m, deterministic)
 }
-func (m *EthereumSignTx) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumSignTx.Merge(m, src)
+func (m *EvrynetSignTx) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetSignTx.Merge(m, src)
 }
-func (m *EthereumSignTx) XXX_Size() int {
-	return xxx_messageInfo_EthereumSignTx.Size(m)
+func (m *EvrynetSignTx) XXX_Size() int {
+	return xxx_messageInfo_EvrynetSignTx.Size(m)
 }
-func (m *EthereumSignTx) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumSignTx.DiscardUnknown(m)
+func (m *EvrynetSignTx) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetSignTx.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumSignTx proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetSignTx proto.InternalMessageInfo
 
-func (m *EthereumSignTx) GetAddressN() []uint32 {
+func (m *EvrynetSignTx) GetAddressN() []uint32 {
 	if m != nil {
 		return m.AddressN
 	}
 	return nil
 }
 
-func (m *EthereumSignTx) GetNonce() []byte {
+func (m *EvrynetSignTx) GetNonce() []byte {
 	if m != nil {
 		return m.Nonce
 	}
 	return nil
 }
 
-func (m *EthereumSignTx) GetGasPrice() []byte {
+func (m *EvrynetSignTx) GetGasPrice() []byte {
 	if m != nil {
 		return m.GasPrice
 	}
 	return nil
 }
 
-func (m *EthereumSignTx) GetGasLimit() []byte {
+func (m *EvrynetSignTx) GetGasLimit() []byte {
 	if m != nil {
 		return m.GasLimit
 	}
 	return nil
 }
 
-func (m *EthereumSignTx) GetToBin() []byte {
+func (m *EvrynetSignTx) GetToBin() []byte {
 	if m != nil {
 		return m.ToBin
 	}
 	return nil
 }
 
-func (m *EthereumSignTx) GetToHex() string {
+func (m *EvrynetSignTx) GetToHex() string {
 	if m != nil && m.ToHex != nil {
 		return *m.ToHex
 	}
 	return ""
 }
 
-func (m *EthereumSignTx) GetValue() []byte {
+func (m *EvrynetSignTx) GetValue() []byte {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-func (m *EthereumSignTx) GetDataInitialChunk() []byte {
+func (m *EvrynetSignTx) GetDataInitialChunk() []byte {
 	if m != nil {
 		return m.DataInitialChunk
 	}
 	return nil
 }
 
-func (m *EthereumSignTx) GetDataLength() uint32 {
+func (m *EvrynetSignTx) GetDataLength() uint32 {
 	if m != nil && m.DataLength != nil {
 		return *m.DataLength
 	}
 	return 0
 }
 
-func (m *EthereumSignTx) GetChainId() uint32 {
+func (m *EvrynetSignTx) GetChainId() uint32 {
 	if m != nil && m.ChainId != nil {
 		return *m.ChainId
 	}
 	return 0
 }
 
-func (m *EthereumSignTx) GetTxType() uint32 {
+func (m *EvrynetSignTx) GetTxType() uint32 {
 	if m != nil && m.TxType != nil {
 		return *m.TxType
 	}
@@ -356,8 +356,8 @@ func (m *EthereumSignTx) GetTxType() uint32 {
 // If data_length is set, device awaits that many more bytes of payload.
 // Otherwise, the signature_* fields contain the computed transaction signature. All three fields will be present.
 // @end
-// @next EthereumTxAck
-type EthereumTxRequest struct {
+// @next EvrynetTxAck
+type EvrynetTxRequest struct {
 	DataLength           *uint32  `protobuf:"varint,1,opt,name=data_length,json=dataLength" json:"data_length,omitempty"`
 	SignatureV           *uint32  `protobuf:"varint,2,opt,name=signature_v,json=signatureV" json:"signature_v,omitempty"`
 	SignatureR           []byte   `protobuf:"bytes,3,opt,name=signature_r,json=signatureR" json:"signature_r,omitempty"`
@@ -367,53 +367,53 @@ type EthereumTxRequest struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumTxRequest) Reset()         { *m = EthereumTxRequest{} }
-func (m *EthereumTxRequest) String() string { return proto.CompactTextString(m) }
-func (*EthereumTxRequest) ProtoMessage()    {}
-func (*EthereumTxRequest) Descriptor() ([]byte, []int) {
+func (m *EvrynetTxRequest) Reset()         { *m = EvrynetTxRequest{} }
+func (m *EvrynetTxRequest) String() string { return proto.CompactTextString(m) }
+func (*EvrynetTxRequest) ProtoMessage()    {}
+func (*EvrynetTxRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{5}
 }
 
-func (m *EthereumTxRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumTxRequest.Unmarshal(m, b)
+func (m *EvrynetTxRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetTxRequest.Unmarshal(m, b)
 }
-func (m *EthereumTxRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumTxRequest.Marshal(b, m, deterministic)
+func (m *EvrynetTxRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetTxRequest.Marshal(b, m, deterministic)
 }
-func (m *EthereumTxRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumTxRequest.Merge(m, src)
+func (m *EvrynetTxRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetTxRequest.Merge(m, src)
 }
-func (m *EthereumTxRequest) XXX_Size() int {
-	return xxx_messageInfo_EthereumTxRequest.Size(m)
+func (m *EvrynetTxRequest) XXX_Size() int {
+	return xxx_messageInfo_EvrynetTxRequest.Size(m)
 }
-func (m *EthereumTxRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumTxRequest.DiscardUnknown(m)
+func (m *EvrynetTxRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetTxRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumTxRequest proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetTxRequest proto.InternalMessageInfo
 
-func (m *EthereumTxRequest) GetDataLength() uint32 {
+func (m *EvrynetTxRequest) GetDataLength() uint32 {
 	if m != nil && m.DataLength != nil {
 		return *m.DataLength
 	}
 	return 0
 }
 
-func (m *EthereumTxRequest) GetSignatureV() uint32 {
+func (m *EvrynetTxRequest) GetSignatureV() uint32 {
 	if m != nil && m.SignatureV != nil {
 		return *m.SignatureV
 	}
 	return 0
 }
 
-func (m *EthereumTxRequest) GetSignatureR() []byte {
+func (m *EvrynetTxRequest) GetSignatureR() []byte {
 	if m != nil {
 		return m.SignatureR
 	}
 	return nil
 }
 
-func (m *EthereumTxRequest) GetSignatureS() []byte {
+func (m *EvrynetTxRequest) GetSignatureS() []byte {
 	if m != nil {
 		return m.SignatureS
 	}
@@ -422,40 +422,40 @@ func (m *EthereumTxRequest) GetSignatureS() []byte {
 
 //*
 // Request: Transaction payload data.
-// @next EthereumTxRequest
-type EthereumTxAck struct {
+// @next EvrynetTxRequest
+type EvrynetTxAck struct {
 	DataChunk            []byte   `protobuf:"bytes,1,opt,name=data_chunk,json=dataChunk" json:"data_chunk,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumTxAck) Reset()         { *m = EthereumTxAck{} }
-func (m *EthereumTxAck) String() string { return proto.CompactTextString(m) }
-func (*EthereumTxAck) ProtoMessage()    {}
-func (*EthereumTxAck) Descriptor() ([]byte, []int) {
+func (m *EvrynetTxAck) Reset()         { *m = EvrynetTxAck{} }
+func (m *EvrynetTxAck) String() string { return proto.CompactTextString(m) }
+func (*EvrynetTxAck) ProtoMessage()    {}
+func (*EvrynetTxAck) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{6}
 }
 
-func (m *EthereumTxAck) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumTxAck.Unmarshal(m, b)
+func (m *EvrynetTxAck) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetTxAck.Unmarshal(m, b)
 }
-func (m *EthereumTxAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumTxAck.Marshal(b, m, deterministic)
+func (m *EvrynetTxAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetTxAck.Marshal(b, m, deterministic)
 }
-func (m *EthereumTxAck) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumTxAck.Merge(m, src)
+func (m *EvrynetTxAck) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetTxAck.Merge(m, src)
 }
-func (m *EthereumTxAck) XXX_Size() int {
-	return xxx_messageInfo_EthereumTxAck.Size(m)
+func (m *EvrynetTxAck) XXX_Size() int {
+	return xxx_messageInfo_EvrynetTxAck.Size(m)
 }
-func (m *EthereumTxAck) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumTxAck.DiscardUnknown(m)
+func (m *EvrynetTxAck) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetTxAck.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumTxAck proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetTxAck proto.InternalMessageInfo
 
-func (m *EthereumTxAck) GetDataChunk() []byte {
+func (m *EvrynetTxAck) GetDataChunk() []byte {
 	if m != nil {
 		return m.DataChunk
 	}
@@ -465,9 +465,9 @@ func (m *EthereumTxAck) GetDataChunk() []byte {
 //*
 // Request: Ask device to sign message
 // @start
-// @next EthereumMessageSignature
+// @next EvrynetMessageSignature
 // @next Failure
-type EthereumSignMessage struct {
+type EvrynetSignMessage struct {
 	AddressN             []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
 	Message              []byte   `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -475,39 +475,39 @@ type EthereumSignMessage struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumSignMessage) Reset()         { *m = EthereumSignMessage{} }
-func (m *EthereumSignMessage) String() string { return proto.CompactTextString(m) }
-func (*EthereumSignMessage) ProtoMessage()    {}
-func (*EthereumSignMessage) Descriptor() ([]byte, []int) {
+func (m *EvrynetSignMessage) Reset()         { *m = EvrynetSignMessage{} }
+func (m *EvrynetSignMessage) String() string { return proto.CompactTextString(m) }
+func (*EvrynetSignMessage) ProtoMessage()    {}
+func (*EvrynetSignMessage) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{7}
 }
 
-func (m *EthereumSignMessage) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumSignMessage.Unmarshal(m, b)
+func (m *EvrynetSignMessage) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetSignMessage.Unmarshal(m, b)
 }
-func (m *EthereumSignMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumSignMessage.Marshal(b, m, deterministic)
+func (m *EvrynetSignMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetSignMessage.Marshal(b, m, deterministic)
 }
-func (m *EthereumSignMessage) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumSignMessage.Merge(m, src)
+func (m *EvrynetSignMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetSignMessage.Merge(m, src)
 }
-func (m *EthereumSignMessage) XXX_Size() int {
-	return xxx_messageInfo_EthereumSignMessage.Size(m)
+func (m *EvrynetSignMessage) XXX_Size() int {
+	return xxx_messageInfo_EvrynetSignMessage.Size(m)
 }
-func (m *EthereumSignMessage) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumSignMessage.DiscardUnknown(m)
+func (m *EvrynetSignMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetSignMessage.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumSignMessage proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetSignMessage proto.InternalMessageInfo
 
-func (m *EthereumSignMessage) GetAddressN() []uint32 {
+func (m *EvrynetSignMessage) GetAddressN() []uint32 {
 	if m != nil {
 		return m.AddressN
 	}
 	return nil
 }
 
-func (m *EthereumSignMessage) GetMessage() []byte {
+func (m *EvrynetSignMessage) GetMessage() []byte {
 	if m != nil {
 		return m.Message
 	}
@@ -517,7 +517,7 @@ func (m *EthereumSignMessage) GetMessage() []byte {
 //*
 // Response: Signed message
 // @end
-type EthereumMessageSignature struct {
+type EvrynetMessageSignature struct {
 	AddressBin           []byte   `protobuf:"bytes,1,opt,name=addressBin" json:"addressBin,omitempty"`
 	Signature            []byte   `protobuf:"bytes,2,opt,name=signature" json:"signature,omitempty"`
 	AddressHex           *string  `protobuf:"bytes,3,opt,name=addressHex" json:"addressHex,omitempty"`
@@ -526,46 +526,46 @@ type EthereumMessageSignature struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumMessageSignature) Reset()         { *m = EthereumMessageSignature{} }
-func (m *EthereumMessageSignature) String() string { return proto.CompactTextString(m) }
-func (*EthereumMessageSignature) ProtoMessage()    {}
-func (*EthereumMessageSignature) Descriptor() ([]byte, []int) {
+func (m *EvrynetMessageSignature) Reset()         { *m = EvrynetMessageSignature{} }
+func (m *EvrynetMessageSignature) String() string { return proto.CompactTextString(m) }
+func (*EvrynetMessageSignature) ProtoMessage()    {}
+func (*EvrynetMessageSignature) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{8}
 }
 
-func (m *EthereumMessageSignature) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumMessageSignature.Unmarshal(m, b)
+func (m *EvrynetMessageSignature) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetMessageSignature.Unmarshal(m, b)
 }
-func (m *EthereumMessageSignature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumMessageSignature.Marshal(b, m, deterministic)
+func (m *EvrynetMessageSignature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetMessageSignature.Marshal(b, m, deterministic)
 }
-func (m *EthereumMessageSignature) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumMessageSignature.Merge(m, src)
+func (m *EvrynetMessageSignature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetMessageSignature.Merge(m, src)
 }
-func (m *EthereumMessageSignature) XXX_Size() int {
-	return xxx_messageInfo_EthereumMessageSignature.Size(m)
+func (m *EvrynetMessageSignature) XXX_Size() int {
+	return xxx_messageInfo_EvrynetMessageSignature.Size(m)
 }
-func (m *EthereumMessageSignature) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumMessageSignature.DiscardUnknown(m)
+func (m *EvrynetMessageSignature) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetMessageSignature.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumMessageSignature proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetMessageSignature proto.InternalMessageInfo
 
-func (m *EthereumMessageSignature) GetAddressBin() []byte {
+func (m *EvrynetMessageSignature) GetAddressBin() []byte {
 	if m != nil {
 		return m.AddressBin
 	}
 	return nil
 }
 
-func (m *EthereumMessageSignature) GetSignature() []byte {
+func (m *EvrynetMessageSignature) GetSignature() []byte {
 	if m != nil {
 		return m.Signature
 	}
 	return nil
 }
 
-func (m *EthereumMessageSignature) GetAddressHex() string {
+func (m *EvrynetMessageSignature) GetAddressHex() string {
 	if m != nil && m.AddressHex != nil {
 		return *m.AddressHex
 	}
@@ -577,7 +577,7 @@ func (m *EthereumMessageSignature) GetAddressHex() string {
 // @start
 // @next Success
 // @next Failure
-type EthereumVerifyMessage struct {
+type EvrynetVerifyMessage struct {
 	AddressBin           []byte   `protobuf:"bytes,1,opt,name=addressBin" json:"addressBin,omitempty"`
 	Signature            []byte   `protobuf:"bytes,2,opt,name=signature" json:"signature,omitempty"`
 	Message              []byte   `protobuf:"bytes,3,opt,name=message" json:"message,omitempty"`
@@ -587,53 +587,53 @@ type EthereumVerifyMessage struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *EthereumVerifyMessage) Reset()         { *m = EthereumVerifyMessage{} }
-func (m *EthereumVerifyMessage) String() string { return proto.CompactTextString(m) }
-func (*EthereumVerifyMessage) ProtoMessage()    {}
-func (*EthereumVerifyMessage) Descriptor() ([]byte, []int) {
+func (m *EvrynetVerifyMessage) Reset()         { *m = EvrynetVerifyMessage{} }
+func (m *EvrynetVerifyMessage) String() string { return proto.CompactTextString(m) }
+func (*EvrynetVerifyMessage) ProtoMessage()    {}
+func (*EvrynetVerifyMessage) Descriptor() ([]byte, []int) {
 	return fileDescriptor_cb33f46ba915f15c, []int{9}
 }
 
-func (m *EthereumVerifyMessage) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_EthereumVerifyMessage.Unmarshal(m, b)
+func (m *EvrynetVerifyMessage) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EvrynetVerifyMessage.Unmarshal(m, b)
 }
-func (m *EthereumVerifyMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_EthereumVerifyMessage.Marshal(b, m, deterministic)
+func (m *EvrynetVerifyMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EvrynetVerifyMessage.Marshal(b, m, deterministic)
 }
-func (m *EthereumVerifyMessage) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EthereumVerifyMessage.Merge(m, src)
+func (m *EvrynetVerifyMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EvrynetVerifyMessage.Merge(m, src)
 }
-func (m *EthereumVerifyMessage) XXX_Size() int {
-	return xxx_messageInfo_EthereumVerifyMessage.Size(m)
+func (m *EvrynetVerifyMessage) XXX_Size() int {
+	return xxx_messageInfo_EvrynetVerifyMessage.Size(m)
 }
-func (m *EthereumVerifyMessage) XXX_DiscardUnknown() {
-	xxx_messageInfo_EthereumVerifyMessage.DiscardUnknown(m)
+func (m *EvrynetVerifyMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_EvrynetVerifyMessage.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_EthereumVerifyMessage proto.InternalMessageInfo
+var xxx_messageInfo_EvrynetVerifyMessage proto.InternalMessageInfo
 
-func (m *EthereumVerifyMessage) GetAddressBin() []byte {
+func (m *EvrynetVerifyMessage) GetAddressBin() []byte {
 	if m != nil {
 		return m.AddressBin
 	}
 	return nil
 }
 
-func (m *EthereumVerifyMessage) GetSignature() []byte {
+func (m *EvrynetVerifyMessage) GetSignature() []byte {
 	if m != nil {
 		return m.Signature
 	}
 	return nil
 }
 
-func (m *EthereumVerifyMessage) GetMessage() []byte {
+func (m *EvrynetVerifyMessage) GetMessage() []byte {
 	if m != nil {
 		return m.Message
 	}
 	return nil
 }
 
-func (m *EthereumVerifyMessage) GetAddressHex() string {
+func (m *EvrynetVerifyMessage) GetAddressHex() string {
 	if m != nil && m.AddressHex != nil {
 		return *m.AddressHex
 	}
@@ -641,16 +641,16 @@ func (m *EthereumVerifyMessage) GetAddressHex() string {
 }
 
 func init() {
-	proto.RegisterType((*EthereumGetPublicKey)(nil), "hw.trezor.messages.ethereum.EthereumGetPublicKey")
-	proto.RegisterType((*EthereumPublicKey)(nil), "hw.trezor.messages.ethereum.EthereumPublicKey")
-	proto.RegisterType((*EthereumGetAddress)(nil), "hw.trezor.messages.ethereum.EthereumGetAddress")
-	proto.RegisterType((*EthereumAddress)(nil), "hw.trezor.messages.ethereum.EthereumAddress")
-	proto.RegisterType((*EthereumSignTx)(nil), "hw.trezor.messages.ethereum.EthereumSignTx")
-	proto.RegisterType((*EthereumTxRequest)(nil), "hw.trezor.messages.ethereum.EthereumTxRequest")
-	proto.RegisterType((*EthereumTxAck)(nil), "hw.trezor.messages.ethereum.EthereumTxAck")
-	proto.RegisterType((*EthereumSignMessage)(nil), "hw.trezor.messages.ethereum.EthereumSignMessage")
-	proto.RegisterType((*EthereumMessageSignature)(nil), "hw.trezor.messages.ethereum.EthereumMessageSignature")
-	proto.RegisterType((*EthereumVerifyMessage)(nil), "hw.trezor.messages.ethereum.EthereumVerifyMessage")
+	proto.RegisterType((*EvrynetGetPublicKey)(nil), "hw.trezor.messages.ethereum.EvrynetGetPublicKey")
+	proto.RegisterType((*EvrynetPublicKey)(nil), "hw.trezor.messages.ethereum.EvrynetPublicKey")
+	proto.RegisterType((*EvrynetGetAddress)(nil), "hw.trezor.messages.ethereum.EvrynetGetAddress")
+	proto.RegisterType((*EvrynetAddress)(nil), "hw.trezor.messages.ethereum.EvrynetAddress")
+	proto.RegisterType((*EvrynetSignTx)(nil), "hw.trezor.messages.ethereum.EvrynetSignTx")
+	proto.RegisterType((*EvrynetTxRequest)(nil), "hw.trezor.messages.ethereum.EvrynetTxRequest")
+	proto.RegisterType((*EvrynetTxAck)(nil), "hw.trezor.messages.ethereum.EvrynetTxAck")
+	proto.RegisterType((*EvrynetSignMessage)(nil), "hw.trezor.messages.ethereum.EvrynetSignMessage")
+	proto.RegisterType((*EvrynetMessageSignature)(nil), "hw.trezor.messages.ethereum.EvrynetMessageSignature")
+	proto.RegisterType((*EvrynetVerifyMessage)(nil), "hw.trezor.messages.ethereum.EvrynetVerifyMessage")
 }
 
 func init() { proto.RegisterFile("messages-ethereum.proto", fileDescriptor_cb33f46ba915f15c) }

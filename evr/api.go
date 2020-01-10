@@ -40,34 +40,34 @@ import (
 	"github.com/evrynet-official/evrynet-client/trie"
 )
 
-// PublicEthereumAPI provides an API to access Evrynet full node-related
+// PublicEvrynetAPI provides an API to access Evrynet full node-related
 // information.
-type PublicEthereumAPI struct {
+type PublicEvrynetAPI struct {
 	e *Evrynet
 }
 
-// NewPublicEthereumAPI creates a new Evrynet protocol API for full nodes.
-func NewPublicEthereumAPI(e *Evrynet) *PublicEthereumAPI {
-	return &PublicEthereumAPI{e}
+// NewPublicEvrynetAPI creates a new Evrynet protocol API for full nodes.
+func NewPublicEvrynetAPI(e *Evrynet) *PublicEvrynetAPI {
+	return &PublicEvrynetAPI{e}
 }
 
 // Etherbase is the address that mining rewards will be send to
-func (api *PublicEthereumAPI) Etherbase() (common.Address, error) {
+func (api *PublicEvrynetAPI) Etherbase() (common.Address, error) {
 	return api.e.Etherbase()
 }
 
 // Coinbase is the address that mining rewards will be send to (alias for Etherbase)
-func (api *PublicEthereumAPI) Coinbase() (common.Address, error) {
+func (api *PublicEvrynetAPI) Coinbase() (common.Address, error) {
 	return api.Etherbase()
 }
 
 // Hashrate returns the POW hashrate
-func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
+func (api *PublicEvrynetAPI) Hashrate() hexutil.Uint64 {
 	return hexutil.Uint64(api.e.Miner().HashRate())
 }
 
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
-func (api *PublicEthereumAPI) ChainId() hexutil.Uint64 {
+func (api *PublicEvrynetAPI) ChainId() hexutil.Uint64 {
 	chainID := new(big.Int)
 	if config := api.e.blockchain.Config(); config.IsEIP155(api.e.blockchain.CurrentBlock().Number()) {
 		chainID = config.ChainID

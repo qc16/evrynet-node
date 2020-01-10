@@ -186,7 +186,7 @@ The gendoc generates example structures of the json-rpc communication types.
 
 func init() {
 	app.Name = "Clef"
-	app.Usage = "Manage Ethereum account operations"
+	app.Usage = "Manage Evrynet account operations"
 	app.Flags = []cli.Flag{
 		logLevelFlag,
 		keystoreFlag,

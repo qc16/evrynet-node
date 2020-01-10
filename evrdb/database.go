@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package evrdb defines the interfaces for an Ethereum data store.
+// Package evrdb defines the interfaces for an Evrynet data store.
 package evrdb
 
 import "io"

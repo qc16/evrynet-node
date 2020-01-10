@@ -52,7 +52,7 @@ type TendermintExtra struct {
 	CommittedSeal [][]byte
 }
 
-// EncodeRLP serializes ist into the Ethereum RLP format.
+// EncodeRLP serializes ist into the Evrynet RLP format.
 func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		te.Validators,
