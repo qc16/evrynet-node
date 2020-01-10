@@ -545,6 +545,10 @@ func (s *Ethereum) Start(srvr *p2p.Server) error {
 	return nil
 }
 
+func (s *Ethereum) GetPm() *ProtocolManager {
+	return s.protocolManager
+}
+
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Ethereum protocol.
 func (s *Ethereum) Stop() error {
