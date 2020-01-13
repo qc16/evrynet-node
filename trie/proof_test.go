@@ -25,7 +25,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
+	"github.com/evrynet-official/evrynet-client/evrdb/memorydb"
 )
 
 func init() {

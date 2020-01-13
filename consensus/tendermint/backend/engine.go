@@ -692,7 +692,7 @@ func (sb *Backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) er
 	return nil
 }
 
-// blockProposer extracts the Ethereum account address from a signed header.
+// blockProposer extracts the Evrynet account address from a signed header.
 func blockProposer(header *types.Header) (common.Address, error) {
 	//TODO: check if existed in the cached
 

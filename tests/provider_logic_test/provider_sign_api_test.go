@@ -10,7 +10,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +26,7 @@ func TestProviderSignTransaction(t *testing.T) {
 	assert.NoError(t, err)
 	senderAddr := common.HexToAddress(senderAddrStr)
 	providerAddr := common.HexToAddress(providerAddrStr)
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	id, err := ethClient.ChainID(context.Background())
 	signer := types.NewEIP155Signer(id)
@@ -81,7 +81,7 @@ func prepareNewContract(hasProvider bool) *common.Address {
 	if err != nil {
 		return nil
 	}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	if err != nil {
 		return nil
 	}

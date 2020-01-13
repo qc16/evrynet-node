@@ -13,7 +13,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
 
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 )
 
 /* These tests are done on a chain with already setup account/ contracts.
@@ -37,7 +37,7 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -78,7 +78,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -110,7 +110,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -151,7 +151,7 @@ func TestInteractEnterpriseSmartContractWithValidProviderSignatureWithoutGas(t *
 	ppk, err := crypto.HexToECDSA(providerWithoutGasPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)

@@ -17,7 +17,7 @@
 package les
 
 import (
-	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/evr"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/p2p/enode"
 )
@@ -28,7 +28,7 @@ type ulc struct {
 }
 
 // newULC creates and returns a ultra light client instance.
-func newULC(ulcConfig *eth.ULCConfig) *ulc {
+func newULC(ulcConfig *evr.ULCConfig) *ulc {
 	if ulcConfig == nil {
 		return nil
 	}

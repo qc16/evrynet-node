@@ -23,7 +23,7 @@ import (
 	whisper "github.com/evrynet-official/evrynet-client/whisper/whisperv6"
 )
 
-// WhisperClient provides access to the Ethereum APIs.
+// WhisperClient provides access to the Evrynet APIs.
 type WhisperClient struct {
 	client *shhclient.Client
 }

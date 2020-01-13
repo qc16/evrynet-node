@@ -31,9 +31,9 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
-	"github.com/evrynet-official/evrynet-client/ethdb/leveldb"
-	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
+	"github.com/evrynet-official/evrynet-client/evrdb/leveldb"
+	"github.com/evrynet-official/evrynet-client/evrdb/memorydb"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
@@ -318,7 +318,7 @@ func TestLargeValue(t *testing.T) {
 }
 
 type countingDB struct {
-	ethdb.KeyValueStore
+	evrdb.KeyValueStore
 	gets map[string]int
 }
 

@@ -13,7 +13,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
 
@@ -27,7 +27,7 @@ func TestSaveAndLoad(t *testing.T) {
 		snap = newSnapshot(5, 10, hash, valSet)
 	)
 
-	db := ethdb.NewMemDatabase()
+	db := evrdb.NewMemDatabase()
 	assert.NoError(t, snap.store(db))
 
 	snap1, err := loadSnapshot(snap.Epoch, db, snap.Hash)
@@ -86,7 +86,7 @@ func TestApplyHeaders(t *testing.T) {
 	}
 
 	// test save and load after that apply headers
-	db := ethdb.NewMemDatabase()
+	db := evrdb.NewMemDatabase()
 	assert.NoError(t, snap.store(db))
 	snap4, err := loadSnapshot(snap.Epoch, db, snap.Hash)
 	require.NoError(t, err)

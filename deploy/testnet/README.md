@@ -79,7 +79,7 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
     
     Sweet, you can set this via --network=testnet next time!
     
-    INFO [11-27|18:06:28.498] Administering Ethereum network           name=testnet
+    INFO [11-27|18:06:28.498] Administering Evrynet network           name=testnet
     INFO [11-27|18:06:28.501] No remote machines to gather stats from
     
     What would you like to do? (default = stats)

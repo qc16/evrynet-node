@@ -38,7 +38,7 @@ type message struct {
 	CommittedSeal []byte
 }
 
-// EncodeRLP serializes m into the Ethereum RLP format.
+// EncodeRLP serializes m into the Evrynet RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }

@@ -24,12 +24,12 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	checker "gopkg.in/check.v1"
 )
 
 type StateSuite struct {
-	db    ethdb.Database
+	db    evrdb.Database
 	state *StateDB
 }
 

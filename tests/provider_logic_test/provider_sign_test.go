@@ -12,7 +12,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 )
 
 /* These tests are done on a chain with already setup account/ contracts.
@@ -31,7 +31,7 @@ func TestSendToNormalAddress(t *testing.T) {
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -66,7 +66,7 @@ func TestSendToNormalAddressWithProviderSignature(t *testing.T) {
 	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -92,7 +92,7 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -128,7 +128,7 @@ func TestSendToNonEnterpriseSmartContractWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -156,7 +156,7 @@ func TestInteractWithNonEnterpriseSmartContractWithoutProviderSignature(t *testi
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -184,7 +184,7 @@ func TestSendToEnterPriseSmartContractWithInvalidProviderSignature(t *testing.T)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -213,7 +213,7 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -254,7 +254,7 @@ func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testin
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -284,7 +284,7 @@ func TestInteractToEnterpriseSmartContractWithoutProviderSignature(t *testing.T)
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -315,7 +315,7 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 	assert.NoError(t, err)
 
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)

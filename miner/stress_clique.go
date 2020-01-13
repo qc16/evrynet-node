@@ -34,8 +34,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/node"
 	"github.com/evrynet-official/evrynet-client/p2p"
@@ -96,7 +96,7 @@ func main() {
 	time.Sleep(3 * time.Second)
 
 	for _, node := range nodes {
-		var ethereum *eth.Ethereum
+		var ethereum *evr.Evrynet
 		if err := node.Service(&ethereum); err != nil {
 			panic(err)
 		}
@@ -112,7 +112,7 @@ func main() {
 		index := rand.Intn(len(faucets))
 
 		// Fetch the accessor for the relevant signer
-		var ethereum *eth.Ethereum
+		var ethereum *evr.Evrynet
 		if err := nodes[index%len(nodes)].Service(&ethereum); err != nil {
 			panic(err)
 		}
@@ -172,7 +172,7 @@ func makeGenesis(faucets []*ecdsa.PrivateKey, sealers []*ecdsa.PrivateKey) *core
 }
 
 func makeSealer(genesis *core.Genesis) (*node.Node, error) {
-	// Define the basic configurations for the Ethereum node
+	// Define the basic configurations for the Evrynet node
 	datadir, _ := ioutil.TempDir("", "")
 
 	config := &node.Config{
@@ -186,13 +186,13 @@ func makeSealer(genesis *core.Genesis) (*node.Node, error) {
 		},
 		NoUSB: true,
 	}
-	// Start the node and configure a full Ethereum node on it
+	// Start the node and configure a full Evrynet node on it
 	stack, err := node.New(config)
 	if err != nil {
 		return nil, err
 	}
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		return eth.New(ctx, &eth.Config{
+		return evr.New(ctx, &evr.Config{
 			Genesis:         genesis,
 			NetworkId:       genesis.Config.ChainID.Uint64(),
 			GasLimit:        genesis.GasLimit,
@@ -200,7 +200,7 @@ func makeSealer(genesis *core.Genesis) (*node.Node, error) {
 			DatabaseCache:   256,
 			DatabaseHandles: 256,
 			TxPool:          core.DefaultTxPoolConfig,
-			GPO:             eth.DefaultConfig.GPO,
+			GPO:             evr.DefaultConfig.GPO,
 			Miner: Config{
 				GasFloor: genesis.GasLimit * 9 / 10,
 				GasCeil:  genesis.GasLimit * 11 / 10,
