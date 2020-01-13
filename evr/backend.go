@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package eth implements the Evrynet protocol.
+// Package evr implements the Evrynet protocol.
 package evr
 
 import (
@@ -43,7 +43,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/evr/filters"
 	"github.com/evrynet-official/evrynet-client/evr/gasprice"
 	"github.com/evrynet-official/evrynet-client/evrdb"
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/miner"
 	"github.com/evrynet-official/evrynet-client/node"
@@ -84,14 +84,14 @@ type Evrynet struct {
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
-	APIBackend *EthAPIBackend
+	APIBackend *EvrAPIBackend
 
 	miner     *miner.Miner
 	gasPrice  *big.Int
 	etherbase common.Address
 
 	networkID     uint64
-	netRPCService *ethapi.PublicNetAPI
+	netRPCService *evrapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -106,7 +106,7 @@ func (s *Evrynet) AddLesServer(ls LesServer) {
 func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 	// Ensure configuration values are compatible and sane
 	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run eth.Evrynet in light sync mode, use les.LightEvrynet")
+		return nil, errors.New("can't run evr.Evrynet in light sync mode, use les.LightEvrynet")
 	}
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
@@ -137,7 +137,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 	config.GPO.GasPrice = config.GasPrice
 	config.Miner.GasPrice = config.GasPrice
 
-	eth := &Evrynet{
+	evr := &Evrynet{
 		config:         config,
 		chainDb:        chainDb,
 		eventMux:       ctx.EventMux,
@@ -180,39 +180,39 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 			TrieTimeLimit:       config.TrieTimeout,
 		}
 	)
-	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, eth.engine, vmConfig, eth.shouldPreserve)
+	evr.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, evr.engine, vmConfig, evr.shouldPreserve)
 	if err != nil {
 		return nil, err
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-		eth.blockchain.SetHead(compat.RewindTo)
+		evr.blockchain.SetHead(compat.RewindTo)
 		rawdb.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
-	eth.bloomIndexer.Start(eth.blockchain)
+	evr.bloomIndexer.Start(evr.blockchain)
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	eth.txPool = core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
+	evr.txPool = core.NewTxPool(config.TxPool, chainConfig, evr.blockchain)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieCleanLimit + cacheConfig.TrieDirtyLimit
-	if eth.protocolManager, err = NewProtocolManager(chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, cacheLimit, config.Whitelist); err != nil {
+	if evr.protocolManager, err = NewProtocolManager(chainConfig, config.SyncMode, config.NetworkId, evr.eventMux, evr.txPool, evr.engine, evr.blockchain, chainDb, cacheLimit, config.Whitelist); err != nil {
 		return nil, err
 	}
-	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
-	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
+	evr.miner = miner.New(evr, &config.Miner, chainConfig, evr.EventMux(), evr.engine, evr.isLocalBlock)
+	evr.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	eth.APIBackend = &EthAPIBackend{ctx.ExtRPCEnabled(), eth, nil}
+	evr.APIBackend = &EvrAPIBackend{ctx.ExtRPCEnabled(), evr, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.Miner.GasPrice
 	}
-	eth.APIBackend.gpo = gasprice.NewOracle(eth.APIBackend, gpoParams)
+	evr.APIBackend.gpo = gasprice.NewOracle(evr.APIBackend, gpoParams)
 
-	return eth, nil
+	return evr, nil
 }
 
 func makeExtraData(extra []byte) []byte {
@@ -274,7 +274,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 // APIs return the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Evrynet) APIs() []rpc.API {
-	apis := ethapi.GetAPIs(s.APIBackend)
+	apis := evrapi.GetAPIs(s.APIBackend)
 
 	// Append any APIs exposed explicitly by the les server
 	if s.lesServer != nil {
@@ -527,7 +527,7 @@ func (s *Evrynet) Start(srvr *p2p.Server) error {
 	s.startBloomHandlers(params.BloomBitsBlocks)
 
 	// Start the RPC service
-	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.NetVersion())
+	s.netRPCService = evrapi.NewPublicNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers

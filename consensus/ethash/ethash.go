@@ -693,7 +693,7 @@ func (ethash *Ethash) Hashrate() float64 {
 // APIs implements consensus.Engine, returning the user facing RPC APIs.
 func (ethash *Ethash) APIs(chain consensus.ChainReader) []rpc.API {
 	// In order to ensure backward compatibility, we exposes ethash RPC APIs
-	// to both eth and ethash namespaces.
+	// to both evr and ethash namespaces.
 	return []rpc.API{
 		{
 			Namespace: "evr",

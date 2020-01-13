@@ -76,7 +76,7 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 	return pm, db, nil
 }
 
-//NewTestProtocolManagerWithConsensus return an eth.ProtocolManager with specific consensusEngine
+//NewTestProtocolManagerWithConsensus return an evr.ProtocolManager with specific consensusEngine
 func NewTestProtocolManagerWithConsensus(engine consensus.Engine) (*ProtocolManager, error) {
 	var (
 		mode   = downloader.FullSync

@@ -72,7 +72,7 @@ type LesServer struct {
 	priorityClientPool         *priorityClientPool
 }
 
-func NewLesServer(eth *evr.Evrynet, config *evr.Config) (*LesServer, error) {
+func NewLesServer(evr *evr.Evrynet, config *evr.Config) (*LesServer, error) {
 	var csvLogger *csvlogger.Logger
 	if logFileName != "" {
 		csvLogger = csvlogger.NewLogger(logFileName, time.Second*10, "event, peerId")
@@ -80,23 +80,23 @@ func NewLesServer(eth *evr.Evrynet, config *evr.Config) (*LesServer, error) {
 
 	quitSync := make(chan struct{})
 	pm, err := NewProtocolManager(
-		eth.BlockChain().Config(),
+		evr.BlockChain().Config(),
 		light.DefaultServerIndexerConfig,
 		false,
 		config.NetworkId,
-		eth.EventMux(),
-		eth.Engine(),
+		evr.EventMux(),
+		evr.Engine(),
 		newPeerSet(),
-		eth.BlockChain(),
-		eth.TxPool(),
-		eth.ChainDb(),
+		evr.BlockChain(),
+		evr.TxPool(),
+		evr.ChainDb(),
 		nil,
 		nil,
 		nil,
 		quitSync,
 		new(sync.WaitGroup),
 		config.ULC,
-		eth.Synced)
+		evr.Synced)
 	if err != nil {
 		return nil, err
 	}
@@ -111,26 +111,26 @@ func NewLesServer(eth *evr.Evrynet, config *evr.Config) (*LesServer, error) {
 
 	lesTopics := make([]discv5.Topic, len(AdvertiseProtocolVersions))
 	for i, pv := range AdvertiseProtocolVersions {
-		lesTopics[i] = lesTopic(eth.BlockChain().Genesis().Hash(), pv)
+		lesTopics[i] = lesTopic(evr.BlockChain().Genesis().Hash(), pv)
 	}
 
 	srv := &LesServer{
 		lesCommons: lesCommons{
 			config:           config,
-			chainDb:          eth.ChainDb(),
+			chainDb:          evr.ChainDb(),
 			iConfig:          light.DefaultServerIndexerConfig,
-			chtIndexer:       light.NewChtIndexer(eth.ChainDb(), nil, params.CHTFrequency, params.HelperTrieProcessConfirmations),
-			bloomTrieIndexer: light.NewBloomTrieIndexer(eth.ChainDb(), nil, params.BloomBitsBlocks, params.BloomTrieFrequency),
+			chtIndexer:       light.NewChtIndexer(evr.ChainDb(), nil, params.CHTFrequency, params.HelperTrieProcessConfirmations),
+			bloomTrieIndexer: light.NewBloomTrieIndexer(evr.ChainDb(), nil, params.BloomBitsBlocks, params.BloomTrieFrequency),
 			protocolManager:  pm,
 		},
-		archiveMode:  eth.ArchiveMode(),
+		archiveMode:  evr.ArchiveMode(),
 		quitSync:     quitSync,
 		lesTopics:    lesTopics,
 		onlyAnnounce: config.OnlyAnnounce,
 		csvLogger:    csvLogger,
 		logTotalCap:  requestLogger.NewChannel("totalCapacity", 0.01),
 	}
-	srv.costTracker, srv.minCapacity = newCostTracker(eth.ChainDb(), config, requestLogger)
+	srv.costTracker, srv.minCapacity = newCostTracker(evr.ChainDb(), config, requestLogger)
 
 	logger := log.New()
 	pm.server = srv
@@ -156,7 +156,7 @@ func NewLesServer(eth *evr.Evrynet, config *evr.Config) (*LesServer, error) {
 		logger.Info("Loaded bloom trie", "section", bloomTrieLastSection, "head", bloomTrieSectionHead, "root", bloomTrieRoot)
 	}
 
-	srv.chtIndexer.Start(eth.BlockChain())
+	srv.chtIndexer.Start(evr.BlockChain())
 	return srv, nil
 }
 

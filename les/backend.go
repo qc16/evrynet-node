@@ -36,7 +36,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/evr/downloader"
 	"github.com/evrynet-official/evrynet-client/evr/filters"
 	"github.com/evrynet-official/evrynet-client/evr/gasprice"
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/node"
@@ -73,7 +73,7 @@ type LightEvrynet struct {
 	accountManager *accounts.Manager
 
 	networkId     uint64
-	netRPCService *ethapi.PublicNetAPI
+	netRPCService *evrapi.PublicNetAPI
 
 	wg sync.WaitGroup
 }
@@ -213,7 +213,7 @@ func (s *LightDummyAPI) Mining() bool {
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *LightEvrynet) APIs() []rpc.API {
-	return append(ethapi.GetAPIs(s.ApiBackend), []rpc.API{
+	return append(evrapi.GetAPIs(s.ApiBackend), []rpc.API{
 		{
 			Namespace: "evr",
 			Version:   "1.0",
@@ -260,7 +260,7 @@ func (s *LightEvrynet) Protocols() []p2p.Protocol {
 func (s *LightEvrynet) Start(srvr *p2p.Server) error {
 	log.Warn("Light client mode is an experimental feature")
 	s.startBloomHandlers(params.BloomBitsBlocksClient)
-	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.networkId)
+	s.netRPCService = evrapi.NewPublicNetAPI(srvr, s.networkId)
 	// clients are searching for the first advertised protocol in the list
 	protocolVersion := AdvertiseProtocolVersions[0]
 	s.serverPool.start(srvr, lesTopic(s.blockchain.Genesis().Hash(), protocolVersion))

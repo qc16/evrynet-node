@@ -291,7 +291,7 @@ func (pm *ProtocolManager) NewPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *P
 	return newPeer(pv, p, newMeteredMsgWriter(rw))
 }
 
-// handle is the callback invoked to manage the life cycle of an eth Peer. When
+// handle is the callback invoked to manage the life cycle of an evr Peer. When
 // this function terminates, the Peer is disconnected.
 func (pm *ProtocolManager) handle(p *Peer) error {
 	// Ignore maxPeers if this is a trusted Peer

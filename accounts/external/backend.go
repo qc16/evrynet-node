@@ -27,7 +27,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/event"
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/rpc"
@@ -182,7 +182,7 @@ func (api *ExternalSigner) SignText(account accounts.Account, text []byte) ([]by
 }
 
 func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
-	res := ethapi.SignTransactionResult{}
+	res := evrapi.SignTransactionResult{}
 	to := common.NewMixedcaseAddress(*tx.To())
 	data := hexutil.Bytes(tx.Data())
 	args := &core.SendTxArgs{
@@ -207,7 +207,7 @@ func (api *ExternalSigner) ProviderSignTx(account accounts.Account, tx *types.Tr
 	if err != nil {
 		return nil, err
 	}
-	res := ethapi.SignTransactionResult{}
+	res := evrapi.SignTransactionResult{}
 	if err := api.client.Call(&res, "account_providerSignTransaction", common.ToHex(data), account.Address.Hex()); err != nil {
 		return nil, err
 	}

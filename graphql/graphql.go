@@ -34,7 +34,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/evr"
 	"github.com/evrynet-official/evrynet-client/evr/filters"
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/node"
 	"github.com/evrynet-official/evrynet-client/p2p"
@@ -49,7 +49,7 @@ var BlockInvariantError = errors.New("Block objects must be instantiated with at
 
 // Account represents an Evrynet account at a particular block.
 type Account struct {
-	backend     *evr.EthAPIBackend
+	backend     *evr.EvrAPIBackend
 	address     common.Address
 	blockNumber rpc.BlockNumber
 }
@@ -102,7 +102,7 @@ func (a *Account) Storage(ctx context.Context, args struct{ Slot common.Hash }) 
 
 // Log represents an individual log message. All arguments are mandatory.
 type Log struct {
-	backend     *evr.EthAPIBackend
+	backend     *evr.EvrAPIBackend
 	transaction *Transaction
 	log         *types.Log
 }
@@ -134,7 +134,7 @@ func (l *Log) Data(ctx context.Context) hexutil.Bytes {
 // Transaction represents an Evrynet transaction.
 // backend and hash are mandatory; all others will be fetched when required.
 type Transaction struct {
-	backend *evr.EthAPIBackend
+	backend *evr.EvrAPIBackend
 	hash    common.Hash
 	tx      *types.Transaction
 	block   *Block
@@ -349,7 +349,7 @@ const (
 // backend, and either num or hash are mandatory. All other fields are lazily fetched
 // when required.
 type Block struct {
-	backend   *evr.EthAPIBackend
+	backend   *evr.EvrAPIBackend
 	num       *rpc.BlockNumber
 	hash      common.Hash
 	header    *types.Header
@@ -745,7 +745,7 @@ type BlockFilterCriteria struct {
 
 // runFilter accepts a filter and executes it, returning all its results as
 // `Log` objects.
-func runFilter(ctx context.Context, be *evr.EthAPIBackend, filter *filters.Filter) ([]*Log, error) {
+func runFilter(ctx context.Context, be *evr.EvrAPIBackend, filter *filters.Filter) ([]*Log, error) {
 	logs, err := filter.Logs(ctx)
 	if err != nil || logs == nil {
 		return nil, err
@@ -842,7 +842,7 @@ func (c *CallResult) Status() hexutil.Uint64 {
 }
 
 func (b *Block) Call(ctx context.Context, args struct {
-	Data ethapi.CallArgs
+	Data evrapi.CallArgs
 }) (*CallResult, error) {
 	err := b.onMainChain(ctx)
 	if err != nil {
@@ -856,7 +856,7 @@ func (b *Block) Call(ctx context.Context, args struct {
 		}
 	}
 
-	result, gas, failed, err := ethapi.DoCall(ctx, b.backend, args.Data, *b.num, vm.Config{}, 5*time.Second, b.backend.RPCGasCap())
+	result, gas, failed, err := evrapi.DoCall(ctx, b.backend, args.Data, *b.num, vm.Config{}, 5*time.Second, b.backend.RPCGasCap())
 	status := hexutil.Uint64(1)
 	if failed {
 		status = 0
@@ -869,7 +869,7 @@ func (b *Block) Call(ctx context.Context, args struct {
 }
 
 func (b *Block) EstimateGas(ctx context.Context, args struct {
-	Data ethapi.CallArgs
+	Data evrapi.CallArgs
 }) (hexutil.Uint64, error) {
 	err := b.onMainChain(ctx)
 	if err != nil {
@@ -883,12 +883,12 @@ func (b *Block) EstimateGas(ctx context.Context, args struct {
 		}
 	}
 
-	gas, err := ethapi.DoEstimateGas(ctx, b.backend, args.Data, *b.num, b.backend.RPCGasCap())
+	gas, err := evrapi.DoEstimateGas(ctx, b.backend, args.Data, *b.num, b.backend.RPCGasCap())
 	return gas, err
 }
 
 type Pending struct {
-	backend *evr.EthAPIBackend
+	backend *evr.EvrAPIBackend
 }
 
 func (p *Pending) TransactionCount(ctx context.Context) (int32, error) {
@@ -925,9 +925,9 @@ func (p *Pending) Account(ctx context.Context, args struct {
 }
 
 func (p *Pending) Call(ctx context.Context, args struct {
-	Data ethapi.CallArgs
+	Data evrapi.CallArgs
 }) (*CallResult, error) {
-	result, gas, failed, err := ethapi.DoCall(ctx, p.backend, args.Data, rpc.PendingBlockNumber, vm.Config{}, 5*time.Second, p.backend.RPCGasCap())
+	result, gas, failed, err := evrapi.DoCall(ctx, p.backend, args.Data, rpc.PendingBlockNumber, vm.Config{}, 5*time.Second, p.backend.RPCGasCap())
 	status := hexutil.Uint64(1)
 	if failed {
 		status = 0
@@ -940,14 +940,14 @@ func (p *Pending) Call(ctx context.Context, args struct {
 }
 
 func (p *Pending) EstimateGas(ctx context.Context, args struct {
-	Data ethapi.CallArgs
+	Data evrapi.CallArgs
 }) (hexutil.Uint64, error) {
-	return ethapi.DoEstimateGas(ctx, p.backend, args.Data, rpc.PendingBlockNumber, p.backend.RPCGasCap())
+	return evrapi.DoEstimateGas(ctx, p.backend, args.Data, rpc.PendingBlockNumber, p.backend.RPCGasCap())
 }
 
 // Resolver is the top-level object in the GraphQL hierarchy.
 type Resolver struct {
-	backend *evr.EthAPIBackend
+	backend *evr.EvrAPIBackend
 }
 
 func (r *Resolver) Block(ctx context.Context, args struct {
@@ -1041,7 +1041,7 @@ func (r *Resolver) SendRawTransaction(ctx context.Context, args struct{ Data hex
 	if err := rlp.DecodeBytes(args.Data, tx); err != nil {
 		return common.Hash{}, err
 	}
-	hash, err := ethapi.SubmitTransaction(ctx, r.backend, tx)
+	hash, err := evrapi.SubmitTransaction(ctx, r.backend, tx)
 	return hash, err
 }
 
@@ -1148,7 +1148,7 @@ func (r *Resolver) Syncing() (*SyncState, error) {
 
 // NewHandler returns a new `http.Handler` that will answer GraphQL queries.
 // It additionally exports an interactive query browser on the / endpoint.
-func NewHandler(be *evr.EthAPIBackend) (http.Handler, error) {
+func NewHandler(be *evr.EvrAPIBackend) (http.Handler, error) {
 	q := Resolver{be}
 
 	s, err := graphqlgo.ParseSchema(schema, &q)
@@ -1170,7 +1170,7 @@ type Service struct {
 	cors     []string           // Allowed CORS domains
 	vhosts   []string           // Recognised vhosts
 	timeouts rpc.HTTPTimeouts   // Timeout settings for HTTP requests.
-	backend  *evr.EthAPIBackend // The backend that queries will operate onn.
+	backend  *evr.EvrAPIBackend // The backend that queries will operate onn.
 	handler  http.Handler       // The `http.Handler` used to answer queries.
 	listener net.Listener       // The listening socket.
 }
@@ -1211,7 +1211,7 @@ func (s *Service) Stop() error {
 }
 
 // NewService constructs a new service instance.
-func NewService(backend *evr.EthAPIBackend, endpoint string, cors, vhosts []string, timeouts rpc.HTTPTimeouts) (*Service, error) {
+func NewService(backend *evr.EvrAPIBackend, endpoint string, cors, vhosts []string, timeouts rpc.HTTPTimeouts) (*Service, error) {
 	return &Service{
 		endpoint: endpoint,
 		cors:     cors,

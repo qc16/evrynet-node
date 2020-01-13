@@ -37,9 +37,9 @@ import (
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/miner"
 	"github.com/evrynet-official/evrynet-client/node"
@@ -90,7 +90,7 @@ func main() {
 	}()
 
 	var (
-		ethereum     *eth.Evrynet
+		ethereum     *evr.Evrynet
 		contractAddr *common.Address
 	)
 	if err := testNode.Service(&ethereum); err != nil {
@@ -148,7 +148,7 @@ func main() {
 }
 
 //forceBroadcastPendingTxs get pending from
-func forceBroadcastPendingTxs(ethereum *eth.Evrynet) {
+func forceBroadcastPendingTxs(ethereum *evr.Evrynet) {
 	// force rebroadcast
 	var txs types.Transactions
 	pendings, err := ethereum.TxPool().Pending()
@@ -241,7 +241,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 		return nil, err
 	}
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		return eth.New(ctx, &eth.Config{
+		return evr.New(ctx, &evr.Config{
 			Genesis:         genesis,
 			NetworkId:       genesis.Config.ChainID.Uint64(),
 			GasPrice:        big.NewInt(params.GasPriceConfig),
@@ -259,7 +259,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 				GlobalQueue:  10240,
 				Lifetime:     3 * time.Hour,
 			},
-			GPO: eth.DefaultConfig.GPO,
+			GPO: evr.DefaultConfig.GPO,
 			Miner: miner.Config{
 				GasFloor: genesis.GasLimit * 9 / 10,
 				GasCeil:  genesis.GasLimit * 11 / 10,
@@ -297,7 +297,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 }
 
 // waitForSyncingAndStableNonces wait util the node is syncing and the nonces of given addresses are not change, also returns stable nonces
-func waitForSyncingAndStableNonces(ethereum *eth.Evrynet, faucets []*ecdsa.PrivateKey) []uint64 {
+func waitForSyncingAndStableNonces(ethereum *evr.Evrynet, faucets []*ecdsa.PrivateKey) []uint64 {
 	bc := ethereum.BlockChain()
 	for !ethereum.Synced() {
 		log.Warn("testNode is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
@@ -331,7 +331,7 @@ func waitForSyncingAndStableNonces(ethereum *eth.Evrynet, faucets []*ecdsa.Priva
 func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64) (*common.Address, error) {
 	log.Info("Creating Smart Contract ...")
 
-	evrClient, err := ethclient.Dial(rpcEndpoint)
+	evrClient, err := evrclient.Dial(rpcEndpoint)
 	if err != nil {
 		return nil, err
 	}

@@ -39,9 +39,9 @@ const (
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
-var ProtocolName = "eth"
+var ProtocolName = "evr"
 
-// ProtocolVersions are the supported versions of the eth protocol (first is primary).
+// ProtocolVersions are the supported versions of the evr protocol (first is primary).
 var ProtocolVersions = []uint{eth64, eth63, eth62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
@@ -49,7 +49,7 @@ var ProtocolLengths = []uint64{18, 17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
-// eth protocol message codes
+// evr protocol message codes
 const (
 	// Protocol messages belonging to evr/62
 	StatusMsg          = 0x00
