@@ -23,10 +23,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/evrynet-official/evrynet-client/core/state"
-	"github.com/evrynet-official/evrynet-client/core/vm"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/tests"
+	"github.com/Evrynetlabs/evrynet-client/core/state"
+	"github.com/Evrynetlabs/evrynet-client/core/vm"
+	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/tests"
 
 	cli "github.com/urfave/cli"
 )

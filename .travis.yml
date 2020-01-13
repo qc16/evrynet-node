@@ -1,5 +1,5 @@
 language: go
-go_import_path: github.com/evrynet-official/evrynet-client
+go_import_path: github.com/Evrynetlabs/evrynet-client
 sudo: false
 env:
   global:

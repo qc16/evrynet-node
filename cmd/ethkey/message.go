@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/evrynet-official/evrynet-client/accounts/keystore"
-	"github.com/evrynet-official/evrynet-client/cmd/utils"
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
 	"github.com/urfave/cli"
 )
 

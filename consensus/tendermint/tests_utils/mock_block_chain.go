@@ -1,11 +1,11 @@
 package tests_utils
 
 import (
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/core/state"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/core"
+	"github.com/Evrynetlabs/evrynet-client/core/state"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/event"
 )
 
 //MockBlockChain is mock struct for block chain

@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/accounts/keystore"
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 // deployNode creates a new node configuration based on some user input.

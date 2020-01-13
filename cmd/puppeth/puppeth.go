@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/log"
 	"github.com/urfave/cli"
 )
 

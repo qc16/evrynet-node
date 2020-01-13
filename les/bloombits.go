@@ -19,8 +19,8 @@ package les
 import (
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/bitutil"
-	"github.com/evrynet-official/evrynet-client/light"
+	"github.com/Evrynetlabs/evrynet-client/common/bitutil"
+	"github.com/Evrynetlabs/evrynet-client/light"
 )
 
 const (

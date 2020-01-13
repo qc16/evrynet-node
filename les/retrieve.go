@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/mclock"
-	"github.com/evrynet-official/evrynet-client/light"
+	"github.com/Evrynetlabs/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-client/light"
 )
 
 var (

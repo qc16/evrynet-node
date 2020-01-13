@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/accounts/scwallet"
-	"github.com/evrynet-official/evrynet-client/accounts/usbwallet"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-client/accounts/scwallet"
+	"github.com/Evrynetlabs/evrynet-client/accounts/usbwallet"
+	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/rpc"
 	"github.com/robertkrimen/otto"
 )
 

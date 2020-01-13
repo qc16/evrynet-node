@@ -21,11 +21,11 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/common/math"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/crypto/bn256"
-	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/common/math"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/crypto/bn256"
+	"github.com/Evrynetlabs/evrynet-client/params"
 	"golang.org/x/crypto/ripemd160"
 )
 

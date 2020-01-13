@@ -1,7 +1,7 @@
 package core
 
 import (
-	evrynetCore "github.com/evrynet-official/evrynet-client/core"
+	evrynetCore "github.com/Evrynetlabs/evrynet-client/core"
 )
 
 //Engine abstract the core's functions

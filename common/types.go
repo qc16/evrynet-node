@@ -26,7 +26,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
 	"golang.org/x/crypto/sha3"
 )
 

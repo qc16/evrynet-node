@@ -27,10 +27,10 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
-	"github.com/evrynet-official/evrynet-client/p2p/enr"
-	"github.com/evrynet-official/evrynet-client/p2p/netutil"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-client/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-client/p2p/netutil"
 )
 
 func TestTable_pingReplace(t *testing.T) {

@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/evrynet-official/evrynet-client/node"
-	"github.com/evrynet-official/evrynet-client/p2p"
-	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-client/node"
+	"github.com/Evrynetlabs/evrynet-client/p2p"
+	"github.com/Evrynetlabs/evrynet-client/rpc"
 )
 
 // SampleService is a trivial network service that can be attached to a node for

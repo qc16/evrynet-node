@@ -29,12 +29,12 @@ import (
 	"testing/quick"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
-	"github.com/evrynet-official/evrynet-client/ethdb/leveldb"
-	"github.com/evrynet-official/evrynet-client/ethdb/memorydb"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/ethdb"
+	"github.com/Evrynetlabs/evrynet-client/ethdb/leveldb"
+	"github.com/Evrynetlabs/evrynet-client/ethdb/memorydb"
+	"github.com/Evrynetlabs/evrynet-client/rlp"
 )
 
 func init() {

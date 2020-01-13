@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-client/params"
 )
 
 // Gas costs

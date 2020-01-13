@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/ethclient"
 )
 
 /* These tests are done on a chain with already setup account/ contracts.

@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/ethdb"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.

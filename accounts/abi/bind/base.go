@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"math/big"
 
-	ethereum "github.com/evrynet-official/evrynet-client"
-	"github.com/evrynet-official/evrynet-client/accounts/abi"
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/event"
+	ethereum "github.com/Evrynetlabs/evrynet-client"
+	"github.com/Evrynetlabs/evrynet-client/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/event"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

@@ -19,10 +19,10 @@ package keystore
 import (
 	"math/big"
 
-	ethereum "github.com/evrynet-official/evrynet-client"
-	"github.com/evrynet-official/evrynet-client/accounts"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
+	ethereum "github.com/Evrynetlabs/evrynet-client"
+	"github.com/Evrynetlabs/evrynet-client/accounts"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

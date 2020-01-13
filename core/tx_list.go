@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for

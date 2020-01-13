@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 // deployWallet creates a new web wallet based on some user input.

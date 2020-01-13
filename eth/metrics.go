@@ -17,9 +17,9 @@
 package eth
 
 import (
-	"github.com/evrynet-official/evrynet-client/consensus"
-	"github.com/evrynet-official/evrynet-client/metrics"
-	"github.com/evrynet-official/evrynet-client/p2p"
+	"github.com/Evrynetlabs/evrynet-client/consensus"
+	"github.com/Evrynetlabs/evrynet-client/metrics"
+	"github.com/Evrynetlabs/evrynet-client/p2p"
 )
 
 var (

@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/log"
 )
 
 // faucetDockerfile is the Dockerfile required to build a faucet container to

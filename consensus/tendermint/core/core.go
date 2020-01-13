@@ -7,12 +7,12 @@ import (
 	queue "github.com/enriquebris/goconcurrentqueue"
 	"go.uber.org/zap"
 
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint/utils"
-	evrynetCore "github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/event"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/utils"
+	evrynetCore "github.com/Evrynetlabs/evrynet-client/core"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/event"
+	"github.com/Evrynetlabs/evrynet-client/rlp"
 )
 
 // New creates an Tendermint consensus core

@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/common"
 )
 
 type Validator interface {

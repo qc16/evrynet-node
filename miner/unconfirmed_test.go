@@ -19,8 +19,8 @@ package miner
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
 )
 
 // noopChainRetriever is an implementation of headerRetriever that always

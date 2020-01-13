@@ -28,12 +28,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
-	"github.com/evrynet-official/evrynet-client/p2p/enr"
-	"github.com/evrynet-official/evrynet-client/p2p/netutil"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-client/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-client/p2p/netutil"
+	"github.com/Evrynetlabs/evrynet-client/rlp"
 )
 
 // Errors

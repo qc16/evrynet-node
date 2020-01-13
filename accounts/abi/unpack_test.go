@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/common"
 	"github.com/stretchr/testify/require"
 )
 

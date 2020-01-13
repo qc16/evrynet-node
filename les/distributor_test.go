@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-client/common/mclock"
 )
 
 type testDistReq struct {

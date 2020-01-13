@@ -22,7 +22,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
 )
 
 // API describes the set of methods offered over the RPC interface

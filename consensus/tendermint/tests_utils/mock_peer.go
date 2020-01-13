@@ -1,7 +1,7 @@
 package tests_utils
 
 import (
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-client/common"
 )
 
 // MockPeer implements consensus/protocol/Peers

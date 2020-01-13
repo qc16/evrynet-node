@@ -19,7 +19,7 @@ package downloader
 import (
 	"fmt"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

@@ -3,8 +3,8 @@ package core
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-client/core/types"
 )
 
 //getStoredState init core with the last known roundState

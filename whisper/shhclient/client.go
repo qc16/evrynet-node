@@ -19,10 +19,10 @@ package shhclient
 import (
 	"context"
 
-	ethereum "github.com/evrynet-official/evrynet-client"
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
-	"github.com/evrynet-official/evrynet-client/rpc"
-	whisper "github.com/evrynet-official/evrynet-client/whisper/whisperv6"
+	ethereum "github.com/Evrynetlabs/evrynet-client"
+	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-client/rpc"
+	whisper "github.com/Evrynetlabs/evrynet-client/whisper/whisperv6"
 )
 
 // Client defines typed wrappers for the Whisper v6 RPC API.
