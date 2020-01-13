@@ -41,10 +41,10 @@
       "balance": "0x200000000000000000000000000"
     },
     "FB755bA8cD68B1C43AbDb201a2c530d23AEDB129": {
-      "balance": "D3C21BCECCEDA0FFFFFF"
+      "balance": "0xD3C21BCECCEDA0FFFFFF"
     },
-    "0x9993B01f1BBAF72f3B8f5fee269f15e483655e43": {
-      "balance": "D3C21BCECCEDA0FFFFFF"
+    "9993B01f1BBAF72f3B8f5fee269f15e483655e43": {
+      "balance": "0xD3C21BCECCEDA0FFFFFF"
     }
   },
   "number": "0x0",
