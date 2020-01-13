@@ -11,7 +11,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 )
 
 /* These tests are done on a chain with already setup account/ contracts.
@@ -39,7 +39,7 @@ func TestSendNormalTxWithFixedFee(t *testing.T) {
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial("http://localhost:22001")
+	ethClient, err := evrclient.Dial("http://localhost:22001")
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)

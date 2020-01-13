@@ -2,22 +2,21 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"math/big"
 	"sync"
 	"time"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
+	"github.com/pkg/errors"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	tendermintCore "github.com/evrynet-official/evrynet-client/consensus/tendermint/core"
-	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
@@ -26,7 +25,7 @@ const (
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
 
-	maxBroadcastSleepTime        = time.Second
+	maxBroadcastSleepTime        = time.Minute * 5
 	initialBroadcastSleepTime    = time.Millisecond * 100
 	broadcastSleepTimeIncreament = time.Millisecond * 100
 )
@@ -40,7 +39,7 @@ var (
 type Option func(b *Backend) error
 
 //WithDB return an option to set backend's db
-func WithDB(db ethdb.Database) Option {
+func WithDB(db evrdb.Database) Option {
 	return func(b *Backend) error {
 		b.db = db
 		return nil
@@ -71,7 +70,6 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		}
 	}
 
-	go be.gossipLoop()
 	go be.dequeueMsgLoop()
 	return be
 }
@@ -87,7 +85,7 @@ type Backend struct {
 	tendermintEventMux *event.TypeMux
 	privateKey         *ecdsa.PrivateKey
 	core               tendermintCore.Engine
-	db                 ethdb.Database
+	db                 evrdb.Database
 	broadcaster        consensus.Broadcaster
 	address            common.Address
 
@@ -127,16 +125,11 @@ func (sb *Backend) Address() common.Address {
 	return sb.address
 }
 
-// SetTxPool define a method to allow Injecting a txpool
-func (sb *Backend) SetTxPool(txpool *core.TxPool) {
-	sb.core.SetTxPool(txpool)
-}
-
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	// send to others
-	if err := sb.Gossip(valSet, payload); err != nil {
+	if err := sb.Gossip(valSet, blockNumber, payload); err != nil {
 		return err
 	}
 	// send to self
@@ -151,17 +144,18 @@ func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) err
 }
 
 type broadcastTask struct {
-	Payload    []byte
-	MinPeers   int
-	TotalPeers int
-	Targets    map[common.Address]bool
+	Payload     []byte
+	MinPeers    int
+	TotalPeers  int
+	Targets     map[common.Address]bool
+	BlockNumber *big.Int
 }
 
 // Gossip implements tendermint.Backend.Gossip
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return backend.ErrNoBroadcaster if no broadcaster is set for backend
-func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
+func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 
 	targets := make(map[common.Address]bool)
@@ -175,19 +169,40 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error 
 		return ErrNoBroadcaster
 	}
 	if len(targets) > 0 {
-		sb.broadcastCh <- broadcastTask{
-			Payload:    payload,
-			MinPeers:   valSet.F() * 2,
-			Targets:    targets,
-			TotalPeers: len(targets),
+		task := broadcastTask{
+			Payload:     payload,
+			MinPeers:    valSet.MinPeers(),
+			Targets:     targets,
+			TotalPeers:  len(targets),
+			BlockNumber: blockNumber,
 		}
+		go func() {
+			sb.broadcastCh <- task
+		}()
 	}
 	return nil
 }
 
 func (sb *Backend) gossipLoop() {
+	var (
+		task        broadcastTask
+		finalEvtSub = sb.EventMux().Subscribe(tendermint.FinalCommittedEvent{})
+		stopEvtSub  = sb.EventMux().Subscribe(tendermint.StopCoreEvent{})
+	)
+	defer func() {
+		finalEvtSub.Unsubscribe()
+		stopEvtSub.Unsubscribe()
+	}()
 	for {
-		task := <-sb.broadcastCh
+		select {
+		case task = <-sb.broadcastCh:
+		case <-finalEvtSub.Chan():
+			continue // we skip finalEvtSub to avoid block the go routine send finalEvt to backend.EventMux()
+		case <-stopEvtSub.Chan():
+			log.Info("cancel broadcast task because core is stopped")
+			return
+		}
+
 		var (
 			timeSleep   = initialBroadcastSleepTime
 			successSent = 0
@@ -218,25 +233,57 @@ func (sb *Backend) gossipLoop() {
 			wg.Wait()
 
 			if successSent < task.MinPeers {
-				if timeSleep >= maxBroadcastSleepTime {
-					log.Warn("failed to sent msg to peer with retries", "success", successSent, "min_peers", task.MinPeers, "total_peers", task.TotalPeers)
-					break taskLoop
-				}
+				log.Info("failed to sent to peer, sleeping", "min", task.MinPeers, "success", successSent,
+					"time_sleep", timeSleep)
+				// sleep and retries until success or core stop or new block event
 				select {
-				// increase timeSleep 100ms after each epoch
-				// if receive new task then reset the timer
+				case finalEvt := <-finalEvtSub.Chan():
+					if finalEvt.Data.(tendermint.FinalCommittedEvent).BlockNumber.Cmp(task.BlockNumber) >= 0 {
+						log.Info("cancel broadcast task because of final event")
+						break taskLoop
+					}
+				case <-stopEvtSub.Chan():
+					log.Info("cancel broadcast task because core is stopped")
+					return
 				case <-time.After(timeSleep):
-					timeSleep += broadcastSleepTimeIncreament
-				case task = <-sb.broadcastCh:
-					log.Debug("receive new broadcast task, abort current task")
-					timeSleep = initialBroadcastSleepTime
-					successSent = 0
+					// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
+					if timeSleep < maxBroadcastSleepTime {
+						timeSleep += broadcastSleepTimeIncreament
+					}
 				}
 				continue taskLoop
 			}
 			break taskLoop
 		}
 	}
+}
+
+// Multicast implements tendermint.Backend.Multicast
+// Send msgs to peers in a set of address
+// return err if not found peer with address or sending failed
+func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) error {
+	if sb.broadcaster == nil {
+		return ErrNoBroadcaster
+	}
+	if len(targets) == 0 {
+		return nil
+	}
+	var (
+		failed   = 0
+		ps       = sb.broadcaster.FindPeers(targets)
+		notFound = len(targets) - len(ps)
+	)
+	log.Trace("multicast", "targets", len(targets), "found", len(ps))
+	for addr, peer := range ps {
+		if err := peer.Send(consensus.TendermintMsg, payload); err != nil {
+			failed++
+			log.Debug("failed to send when multicast", "err", err, "addr", addr)
+		}
+	}
+	if failed != 0 || notFound != 0 {
+		return errors.Errorf("failed to multicast: failed to send %d address, not found %d address", failed, notFound)
+	}
+	return nil
 }
 
 // Validators return validator set for a block number

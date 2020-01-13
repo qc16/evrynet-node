@@ -29,7 +29,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common/mclock"
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/evr"
 	"github.com/evrynet-official/evrynet-client/les/flowcontrol"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/p2p"
@@ -204,8 +204,8 @@ func (p *peer) queueSend(f func()) {
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
-func (p *peer) Info() *eth.PeerInfo {
-	return &eth.PeerInfo{
+func (p *peer) Info() *evr.PeerInfo {
+	return &evr.PeerInfo{
 		Version:    p.version,
 		Difficulty: p.Td(),
 		Head:       fmt.Sprintf("%x", p.Head()),
@@ -726,7 +726,7 @@ type peerSetNotify interface {
 }
 
 // peerSet represents the collection of active peers currently participating in
-// the Light Ethereum sub-protocol.
+// the Light Evrynet sub-protocol.
 type peerSet struct {
 	peers      map[string]*peer
 	lock       sync.RWMutex

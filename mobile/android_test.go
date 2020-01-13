@@ -106,7 +106,7 @@ public class AndroidTest extends InstrumentationTestCase {
 			info.getProtocols();
 
 			// Retrieve some data via the APIs (we don't really care about the results)
-			EthereumClient ec = node.getEthereumClient();
+			EvrynetClient ec = node.getEvrynetClient();
 			ec.getBlockByNumber(ctx, -1).getNumber();
 
 			NewHeadHandler handler = new NewHeadHandler() {

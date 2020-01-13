@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/signer/core"
 	"github.com/evrynet-official/evrynet-client/signer/rules/deps"
@@ -216,7 +216,7 @@ func (r *rulesetUI) OnSignerStartup(info core.StartupInfo) {
 	}
 }
 
-func (r *rulesetUI) OnApprovedTx(tx ethapi.SignTransactionResult) {
+func (r *rulesetUI) OnApprovedTx(tx evrapi.SignTransactionResult) {
 	jsonTx, err := json.Marshal(tx)
 	if err != nil {
 		log.Warn("failed marshalling transaction", "tx", tx)

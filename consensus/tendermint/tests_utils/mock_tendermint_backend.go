@@ -1,7 +1,6 @@
 package tests_utils
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/evrynet-official/evrynet-client/core"
@@ -34,8 +33,15 @@ type MockBackend struct {
 	chain consensus.ChainReader
 
 	//storingMsgs is used to store msg to handler when core stopped
-
 	currentBlock func() *types.Block
+	// SendEventMux is used for receiving output msg from core
+	SendEventMux *event.TypeMux
+}
+
+//SentMsgEvent represents an action send to an peer
+type SentMsgEvent struct {
+	Target  common.Address
+	Payload []byte
 }
 
 func NewMockBackend(privateKey *ecdsa.PrivateKey, blockchain *MockChainReader, validators []common.Address) tendermint.Backend {
@@ -48,6 +54,7 @@ func NewMockBackend(privateKey *ecdsa.PrivateKey, blockchain *MockChainReader, v
 		chain:              blockchain,
 		currentBlock:       blockchain.CurrentBlock,
 		validators:         validators,
+		SendEventMux:       new(event.TypeMux),
 	}
 }
 
@@ -74,9 +81,9 @@ func (mb *MockBackend) Address() common.Address {
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (mb *MockBackend) Broadcast(valSet tendermint.ValidatorSet, payload []byte) error {
+func (mb *MockBackend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
 	// send to others
-	if err := mb.Gossip(valSet, payload); err != nil {
+	if err := mb.Gossip(valSet, blockNumber, payload); err != nil {
 		return err
 	}
 	// send to self
@@ -94,8 +101,29 @@ func (mb *MockBackend) Broadcast(valSet tendermint.ValidatorSet, payload []byte)
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return MockBackend.ErrNoBroadcaster if no broadcaster is set for MockBackend
-func (mb *MockBackend) Gossip(valSet tendermint.ValidatorSet, payload []byte) error {
-	return errors.New("not implemented")
+func (mb *MockBackend) Gossip(valSet tendermint.ValidatorSet, _ *big.Int, payload []byte) error {
+	for _, validator := range valSet.List() {
+		if validator.Address() == mb.address {
+			continue
+		}
+		if err := mb.SendEventMux.Post(SentMsgEvent{Target: validator.Address(), Payload: payload}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Multicast implements tendermint.Backend.Multicast
+func (mb *MockBackend) Multicast(targets map[common.Address]bool, payload []byte) error {
+	for addr := range targets {
+		if addr == mb.address {
+			continue
+		}
+		if err := mb.SendEventMux.Post(SentMsgEvent{Target: addr, Payload: payload}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Validators return validator set for a block number

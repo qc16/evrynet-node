@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -107,8 +106,6 @@ func (m *mockCore) Stop() error {
 func (m *mockCore) SetBlockForProposal(block *types.Block) {
 	panic("implement me")
 }
-
-func (m *mockCore) SetTxPool(txPool *core.TxPool) {}
 
 // This test case is when user start miner then stop it before core handles all msg in storingMsgs
 func TestBackend_HandleMsg(t *testing.T) {

@@ -190,7 +190,7 @@ func (sb *Backend) tryStartCore() bool {
 
 	// Check enough 2f+1 peers
 	valSet := sb.Validators(sb.currentBlock().Number())
-	if len(sb.FindExistingPeers(valSet)) < 2*valSet.F() {
+	if len(sb.FindExistingPeers(valSet)) < valSet.MinPeers() {
 		log.Warn("not enough 2f+1 peers to start backend")
 		return false
 	}
@@ -201,6 +201,11 @@ func (sb *Backend) tryStartCore() bool {
 		return false
 	}
 	sb.coreStarted = true
+	go sb.gossipLoop()
+	// trigger dequeue msg loop
+	go func() {
+		sb.dequeueMsgTriggering <- struct{}{}
+	}()
 	return true
 }
 
@@ -257,6 +262,7 @@ func (sb *Backend) Stop() error {
 		return err
 	}
 	sb.coreStarted = false
+	sb.EventMux().Post(tendermint.StopCoreEvent{})
 	return nil
 }
 
@@ -516,7 +522,12 @@ func (sb *Backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		if number%checkpointInterval == 0 {
 			s, err := loadSnapshot(sb.config.Epoch, sb.db, hash)
 			if err != nil {
-				log.Warn("cannot load snapshot from db", "error", err)
+				log.Warn("cannot load snapshot from db", "hash", hash, "error", err)
+				// check if the snapshot is corrupted
+				genesis := chain.GetHeaderByNumber(0)
+				if _, err := loadSnapshot(sb.config.Epoch, sb.db, genesis.Hash()); err != nil {
+					break
+				}
 			} else {
 				log.Debug("Loaded voting snapshot form disk", "number", number, "hash", hash)
 				snap = s
@@ -559,6 +570,46 @@ func (sb *Backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		headers = append(headers, header)
 		number, hash = number-1, header.ParentHash
+	}
+
+	if snap == nil {
+		for i := uint64(0); i <= number; i += checkpointInterval {
+			header := chain.GetHeaderByNumber(i)
+			s, err := loadSnapshot(sb.config.Epoch, sb.db, header.Hash())
+			if err == nil {
+				snap = s
+				continue
+			}
+			log.Debug("can not find snapshot, create new snapshot by apply a batch of headers", "block", i, "hash", header.Hash())
+			if i == 0 {
+				log.Debug("creating snapshot at block 0")
+				genesis := chain.GetHeaderByNumber(0)
+				if err := sb.VerifyHeader(chain, genesis, false); err != nil {
+					return nil, err
+				}
+				extra, err := types.ExtractTendermintExtra(genesis)
+				if err != nil {
+					return nil, err
+				}
+				snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(extra.Validators, sb.config.ProposerPolicy, int64(0)))
+			} else {
+				var batch []*types.Header
+				for j := i - checkpointInterval + 1; j <= i; j++ {
+					header := chain.GetHeaderByNumber(j)
+					//if err := sb.VerifyHeader(chain, header, false); err != nil {
+					//	return nil, err
+					//}
+					batch = append(batch, header)
+				}
+				if snap, err = snap.apply(batch); err != nil {
+					return nil, err
+				}
+			}
+			if err := snap.store(sb.db); err != nil {
+				return nil, err
+			}
+			log.Trace("Stored genesis voting snapshot to disk")
+		}
 	}
 	//revert the headers's array index , i.e, block n..1 become 1..n
 	for i := 0; i < len(headers)/2; i++ {
@@ -633,15 +684,15 @@ func (sb *Backend) verifyCommittedSeals(header *types.Header, snap *Snapshot) er
 		}
 	}
 
-	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal <= 2*snap.ValSet.F() {
+	// The length of validSeal should be larger or equal than min majority (num validator - maximum faulty)
+	if validSeal < snap.ValSet.MinMajority() {
 		return errInvalidCommittedSeals
 	}
 
 	return nil
 }
 
-// blockProposer extracts the Ethereum account address from a signed header.
+// blockProposer extracts the Evrynet account address from a signed header.
 func blockProposer(header *types.Header) (common.Address, error) {
 	//TODO: check if existed in the cached
 

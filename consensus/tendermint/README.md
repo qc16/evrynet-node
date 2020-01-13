@@ -22,7 +22,7 @@ geth.eth/consensus/tendermint/proposalwait.timer
 geth.eth/consensus/tendermint/rounds.meter
 ```
 
-The other metrics (tx/blocks per second etc...) are available in normal Ethereum metrics
+The other metrics (tx/blocks per second etc...) are available in normal Evrynet metrics
 
 
 

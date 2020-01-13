@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/metrics"
 	"github.com/evrynet-official/evrynet-client/params"
@@ -251,7 +251,7 @@ func (f *freezer) Sync() error {
 //
 // This functionality is deliberately broken off from block importing to avoid
 // incurring additional data shuffling delays on block propagation.
-func (f *freezer) freeze(db ethdb.KeyValueStore) {
+func (f *freezer) freeze(db evrdb.KeyValueStore) {
 	nfdb := &nofreezedb{KeyValueStore: db}
 
 	for {

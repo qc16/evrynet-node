@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/common/mclock"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/les/csvlogger"
 	"github.com/evrynet-official/evrynet-client/les/flowcontrol"
 	"github.com/evrynet-official/evrynet-client/log"
@@ -101,7 +101,7 @@ const (
 // is more convenient because the changes in the cost factor can be applied immediately
 // without always notifying the clients about the changed cost tables.
 type costTracker struct {
-	db     ethdb.Database
+	db     evrdb.Database
 	stopCh chan chan struct{}
 
 	inSizeFactor, outSizeFactor float64
@@ -119,7 +119,7 @@ type costTracker struct {
 
 // newCostTracker creates a cost tracker and loads the cost factor statistics from the database.
 // It also returns the minimum capacity that can be assigned to any peer.
-func newCostTracker(db ethdb.Database, config *eth.Config, logger *csvlogger.Logger) (*costTracker, uint64) {
+func newCostTracker(db evrdb.Database, config *evr.Config, logger *csvlogger.Logger) (*costTracker, uint64) {
 	utilTarget := float64(config.LightServ) * flowcontrol.FixedPointMultiplier / 100
 	ct := &costTracker{
 		db:               db,

@@ -4,6 +4,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/pkg/errors"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -23,6 +24,8 @@ const (
 	msgPropose uint64 = iota
 	msgPrevote
 	msgPrecommit
+	msgCatchUpRequest
+	msgCatchUpReply
 )
 
 //message is used to store consensus information between steps
@@ -35,7 +38,7 @@ type message struct {
 	CommittedSeal []byte
 }
 
-// EncodeRLP serializes m into the Ethereum RLP format.
+// EncodeRLP serializes m into the Evrynet RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }
@@ -83,9 +86,30 @@ func (m *message) GetAddressFromSignature() (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
+type msgItem struct {
+	message interface{}
+	height  uint64
+}
+
+func (item *msgItem) Compare(other queue.Item) int {
+	var (
+		otherItem *msgItem
+		ok        bool
+	)
+	if otherItem, ok = other.(*msgItem); !ok {
+		panic("can not compare msgItem with other types")
+	}
+	if item.height > otherItem.height {
+		return 1
+	} else if item.height == otherItem.height {
+		return 0
+	}
+	return -1
+}
+
 //blockVotes store the voting received for a particular block
 type blockVotes struct {
-	votes         []*tendermint.Vote // validatorIndex -> *Vote
+	votes         []*Vote // validatorIndex -> *Vote
 	totalReceived int
 }
 
@@ -95,7 +119,7 @@ type messageSet struct {
 	msgCode       uint64
 	messagesMu    *sync.Mutex
 	messages      map[common.Address]*message
-	voteByAddress map[common.Address]*tendermint.Vote
+	voteByAddress map[common.Address]*Vote
 	voteByBlock   map[common.Hash]*blockVotes
 	maj23         *common.Hash
 	totalReceived int
@@ -110,16 +134,16 @@ func newMessageSet(valSet tendermint.ValidatorSet, code uint64, view *tendermint
 		messagesMu:    new(sync.Mutex),
 		messages:      make(map[common.Address]*message),
 		voteByBlock:   make(map[common.Hash]*blockVotes),
-		voteByAddress: make(map[common.Address]*tendermint.Vote),
+		voteByAddress: make(map[common.Address]*Vote),
 		valSet:        valSet,
 	}
 }
 
-func (ms *messageSet) VotesByAddress() map[common.Address]*tendermint.Vote {
+func (ms *messageSet) VotesByAddress() map[common.Address]*Vote {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 	var (
-		ret = make(map[common.Address]*tendermint.Vote)
+		ret = make(map[common.Address]*Vote)
 	)
 	for addr, vote := range ms.voteByAddress {
 		ret[addr] = vote
@@ -127,7 +151,7 @@ func (ms *messageSet) VotesByAddress() map[common.Address]*tendermint.Vote {
 	return ret
 }
 
-func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) {
+func (ms *messageSet) AddVote(msg message, vote *Vote) (bool, error) {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 	copyHash := common.HexToHash(vote.BlockHash.Hex())
@@ -150,7 +174,7 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 	// if this message set already got this msg, check if the vote is duplicate or double voting
 	current, existed := ms.messages[msg.Address]
 	if existed {
-		var currentVote tendermint.Vote
+		var currentVote Vote
 		if err := rlp.DecodeBytes(current.Msg, &currentVote); err != nil {
 			return false, err
 		}
@@ -164,9 +188,11 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 	ms.messages[msg.Address] = &msg
 	ms.voteByAddress[msg.Address] = vote
 	ms.totalReceived++
-	_ = ms.addVoteToBlockVote(vote, index)
+	if err := ms.addVoteToBlockVote(vote, index); err != nil {
+		return false, err
+	}
 
-	if ms.voteByBlock[copyHash].totalReceived > 2*ms.valSet.F() {
+	if ms.voteByBlock[copyHash].totalReceived >= ms.valSet.MinMajority() {
 		if ms.maj23 == nil {
 			ms.maj23 = &copyHash
 		}
@@ -175,11 +201,11 @@ func (ms *messageSet) AddVote(msg message, vote *tendermint.Vote) (bool, error) 
 	return true, nil
 }
 
-func (ms *messageSet) addVoteToBlockVote(vote *tendermint.Vote, index int) error {
+func (ms *messageSet) addVoteToBlockVote(vote *Vote, index int) error {
 	bvotes, exist := ms.voteByBlock[*(vote.BlockHash)]
 	if !exist {
 		bvotes = &blockVotes{
-			votes:         make([]*tendermint.Vote, ms.valSet.Size()),
+			votes:         make([]*Vote, ms.valSet.Size()),
 			totalReceived: 0,
 		}
 	}
@@ -208,7 +234,7 @@ func (ms *messageSet) HasTwoThirdAny() bool {
 	}
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
-	return ms.totalReceived > ms.valSet.F()*2
+	return ms.totalReceived >= ms.valSet.MinMajority()
 }
 
 //TwoThirdMajority return a blockHash and a bool inidicate if this messageSet hash got a
@@ -223,4 +249,15 @@ func (ms *messageSet) TwoThirdMajority() (common.Hash, bool) {
 		return common.HexToHash(ms.maj23.Hex()), true
 	}
 	return common.Hash{}, false
+}
+
+//MissingVotes returns a set of address not sending vote
+func (ms *messageSet) MissingVotes() map[common.Address]bool {
+	missing := make(map[common.Address]bool)
+	for _, val := range ms.valSet.List() {
+		if _, ok := ms.voteByAddress[val.Address()]; !ok {
+			missing[val.Address()] = true
+		}
+	}
+	return missing
 }

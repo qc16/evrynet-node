@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package core implements the Ethereum consensus protocol.
+// Package core implements the Evrynet consensus protocol.
 package core
 
 import (
@@ -35,8 +35,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/core/vm"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/metrics"
 	"github.com/evrynet-official/evrynet-client/params"
@@ -131,7 +131,7 @@ type BlockChain struct {
 	chainConfig *params.ChainConfig // Chain & network configuration
 	cacheConfig *CacheConfig        // Cache configuration for pruning
 
-	db     ethdb.Database // Low level persistent database to store final content in
+	db     evrdb.Database // Low level persistent database to store final content in
 	triegc *prque.Prque   // Priority queue mapping block numbers to tries to gc
 	gcproc time.Duration  // Accumulates canonical block processing for trie dumping
 
@@ -175,9 +175,9 @@ type BlockChain struct {
 }
 
 // NewBlockChain returns a fully initialised block chain using information
-// available in the database. It initialises the default Ethereum Validator and
+// available in the database. It initialises the default Evrynet Validator and
 // Processor.
-func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, shouldPreserve func(block *types.Block) bool) (*BlockChain, error) {
+func NewBlockChain(db evrdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, shouldPreserve func(block *types.Block) bool) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			TrieCleanLimit: 256,
@@ -381,7 +381,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 	bc.chainmu.Lock()
 	defer bc.chainmu.Unlock()
 
-	updateFn := func(db ethdb.KeyValueWriter, header *types.Header) {
+	updateFn := func(db evrdb.KeyValueWriter, header *types.Header) {
 		// Rewind the block chain, ensuring we don't end up with a stateless head block
 		if currentBlock := bc.CurrentBlock(); currentBlock != nil && header.Number.Uint64() < currentBlock.NumberU64() {
 			newHeadBlock := bc.GetBlock(header.Hash(), header.Number.Uint64())
@@ -412,7 +412,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 	}
 
 	// Rewind the header chain, deleting all block bodies until then
-	delFn := func(db ethdb.KeyValueWriter, hash common.Hash, num uint64) {
+	delFn := func(db evrdb.KeyValueWriter, hash common.Hash, num uint64) {
 		// Ignore the error here since light client won't hit this path
 		frozen, _ := bc.db.Ancients()
 		if num+1 <= frozen {
@@ -1110,7 +1110,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 			rawdb.WriteTxLookupEntries(batch, block)
 
 			stats.processed++
-			if batch.ValueSize() >= ethdb.IdealBatchSize {
+			if batch.ValueSize() >= evrdb.IdealBatchSize {
 				if err := batch.Write(); err != nil {
 					return 0, err
 				}
@@ -1249,7 +1249,7 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 				limit       = common.StorageSize(bc.cacheConfig.TrieDirtyLimit) * 1024 * 1024
 			)
 			if nodes > limit || imgs > 4*1024*1024 {
-				triedb.Cap(limit - ethdb.IdealBatchSize)
+				triedb.Cap(limit - evrdb.IdealBatchSize)
 			}
 			// Find the next state trie we need to commit
 			chosen := current - TriesInMemory

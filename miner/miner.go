@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package miner implements Ethereum block creation and mining.
+// Package miner implements Evrynet block creation and mining.
 package miner
 
 import (
@@ -29,8 +29,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 )
@@ -58,7 +58,7 @@ type Miner struct {
 	mux      *event.TypeMux
 	worker   *worker
 	coinbase common.Address
-	eth      Backend
+	evr      Backend
 	engine   consensus.Engine
 	exitCh   chan struct{}
 
@@ -66,13 +66,13 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, isLocalBlock func(block *types.Block) bool) *Miner {
+func New(evr Backend, config *Config, chainConfig *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, isLocalBlock func(block *types.Block) bool) *Miner {
 	miner := &Miner{
-		eth:      eth,
+		evr:      evr,
 		mux:      mux,
 		engine:   engine,
 		exitCh:   make(chan struct{}),
-		worker:   newWorker(config, chainConfig, engine, eth, mux, isLocalBlock),
+		worker:   newWorker(config, chainConfig, engine, evr, mux, isLocalBlock),
 		canStart: 1,
 	}
 	go miner.update()

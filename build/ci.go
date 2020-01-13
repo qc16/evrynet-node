@@ -204,11 +204,15 @@ func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd
 
 func doTest(cmdline []string) {
 	coverage := flag.Bool("coverage", false, "Whether to record code coverage")
+	integration := flag.Bool("integration", false, "The flag to decide run integration test or not")
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
 	// TODO: fix all remaining tests so this could be ./...
-	packages := []string{"./consensus/..."}
+	packages := []string{"./consensus/...", "./cmd/...", "./internal/...", "./evrclient/..."}
+	if *integration {
+		packages = []string{"./tests/provider_logic_test/..."}
+	}
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}

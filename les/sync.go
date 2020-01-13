@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
 	"github.com/evrynet-official/evrynet-client/light"
 )
 

@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
@@ -16,6 +17,21 @@ import (
 	"github.com/evrynet-official/evrynet-client/crypto"
 	"github.com/evrynet-official/evrynet-client/rlp"
 )
+
+// DefaultTestConfig with time is smaller than DefaultConfig for speed-up
+var DefaultTestConfig = &tendermint.Config{
+	ProposerPolicy:        tendermint.RoundRobin,
+	Epoch:                 30000,
+	BlockPeriod:           1,
+	TimeoutPropose:        30 * time.Millisecond,
+	TimeoutProposeDelta:   50 * time.Millisecond,
+	TimeoutPrevote:        100 * time.Millisecond,
+	TimeoutPrevoteDelta:   50 * time.Millisecond,
+	TimeoutPrecommit:      100 * time.Millisecond,
+	TimeoutPrecommitDelta: 50 * time.Millisecond,
+	TimeoutCommit:         100 * time.Millisecond,
+	FaultyMode:            tendermint.Disabled.Uint64(),
+}
 
 func MustGeneratePrivateKey(key string) *ecdsa.PrivateKey {
 	privateKey, err := crypto.HexToECDSA(key)

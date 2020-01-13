@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 
 	"github.com/evrynet-official/evrynet-client/common"
@@ -13,12 +14,15 @@ import (
 )
 
 var (
-	ErrInvalidProposalPOLRound     = errors.New("invalid proposal POL round")
-	ErrInvalidProposalSignature    = errors.New("invalid proposal signature")
-	ErrVoteHeightMismatch          = errors.New("vote height mismatch")
-	ErrVoteInvalidValidatorAddress = errors.New("invalid validator address")
-	ErrEmptyBlockProposal          = errors.New("empty block proposal")
-	emptyBlockHash                 = common.Hash{}
+	ErrInvalidProposalPOLRound      = errors.New("invalid proposal POL round")
+	ErrInvalidProposalSignature     = errors.New("invalid proposal signature")
+	ErrVoteHeightMismatch           = errors.New("vote height mismatch")
+	ErrVoteInvalidValidatorAddress  = errors.New("invalid validator address")
+	ErrEmptyBlockProposal           = errors.New("empty block proposal")
+	ErrSignerMessageMissMatch       = errors.New("deprived signer and address field of msg are miss-match")
+	ErrCatchUpReplyAddressMissMatch = errors.New("address of catch up reply msg and its child are miss match")
+	emptyBlockHash                  = common.Hash{}
+	catchUpReplyBatchSize           = 3 // send 3 votes as the number of msg to jump to next round
 )
 
 // ----------------------------------------------------------------------------
@@ -29,7 +33,6 @@ func (c *core) subscribeEvents() {
 		// external events
 		tendermint.NewBlockEvent{},
 		tendermint.MessageEvent{},
-		tendermint.Proposal{},
 	)
 
 	c.finalCommitted = c.backend.EventMux().Subscribe(
@@ -45,7 +48,6 @@ func (c *core) unsubscribeEvents() {
 
 // handleEvents will receive messages as well as timeout and is solely responsible for state change.
 func (c *core) handleEvents() {
-	var logger = c.getLogger()
 	// Clear state
 	defer func() {
 		c.handlerWg.Done()
@@ -54,6 +56,7 @@ func (c *core) handleEvents() {
 	c.handlerWg.Add(1)
 
 	for {
+		var logger = c.getLogger()
 		select {
 		case event, ok := <-c.events.Chan(): //backend sending something...
 			if !ok {
@@ -97,18 +100,21 @@ func (c *core) handleEvents() {
 // handleFinalCommitted is calling when received a final committed proposal
 func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 	var (
-		state = c.CurrentState()
+		state  = c.CurrentState()
+		logger = c.getLogger()
 	)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if state.BlockNumber().Cmp(newHeadNumber) > 0 {
-		log.Warn("current state block number is ahead of new Head number. Ignore updating...",
+		logger.Warnw("current state block number is ahead of new Head number. Ignore updating...",
 			"current_block_number", state.BlockNumber().String(),
 			"new_head_number", newHeadNumber.String())
 		return nil
 	}
+
+	c.sentMsgStorage.truncateMsgStored(logger)
 	c.updateStateForNewblock()
-	c.startRoundZero()
+	c.startNewRound()
 	return nil
 }
 
@@ -133,7 +139,7 @@ func (c *core) handleNewBlock(block *types.Block) {
 }
 
 //VerifyProposal validate msg & proposal when get from other nodes
-func (c *core) VerifyProposal(proposal tendermint.Proposal, msg message) error {
+func (c *core) VerifyProposal(proposal Proposal, msg message) error {
 	// Verify POLRound, which must be -1 or in range [0, proposal.Round).
 	if proposal.POLRound < -1 ||
 		((proposal.POLRound >= 0) && proposal.POLRound >= proposal.Round) {
@@ -169,7 +175,7 @@ func (c *core) VerifyProposal(proposal tendermint.Proposal, msg message) error {
 	return nil
 }
 
-func (c *core) verifyTxs(proposal tendermint.Proposal) error {
+func (c *core) verifyTxs(proposal Proposal) error {
 	var (
 		block   = proposal.Block
 		txs     = block.Transactions()
@@ -181,21 +187,13 @@ func (c *core) verifyTxs(proposal tendermint.Proposal) error {
 		return tendermint.ErrMismatchTxhashes
 	}
 
-	// Verify transaction for CoreTxPool
-	if c.txPool != nil {
-		for _, tx := range txs {
-			if err := c.txPool.ValidateTx(tx, false); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 
 func (c *core) handlePropose(msg message) error {
 	var (
 		state    = c.CurrentState()
-		proposal tendermint.Proposal
+		proposal Proposal
 	)
 
 	if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
@@ -213,11 +211,11 @@ func (c *core) handlePropose(msg message) error {
 
 	// Does not apply, this is not an error but may happen due to network lattency
 	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		logger.Warnw("received proposal with different height/round. Skip processing it")
+		logger.Warnw("received proposal with different height/round.")
 		if proposal.Block.Number().Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
 			logger.Infow("store prevote vote from future block", "from", msg.Address)
-			if err := c.futureMessages.Enqueue(msg); err != nil {
+			if err := c.futureMessages.Put(&msgItem{message: msg, height: proposal.Block.Number().Uint64()}); err != nil {
 				logger.Errorw("failed to store future prevote message to queue", "err", err, "from", msg.Address)
 			}
 		}
@@ -245,7 +243,7 @@ func (c *core) handlePropose(msg message) error {
 
 func (c *core) handlePrevote(msg message) error {
 	var (
-		vote  tendermint.Vote
+		vote  Vote
 		state = c.CurrentState()
 	)
 	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
@@ -262,7 +260,7 @@ func (c *core) handlePrevote(msg message) error {
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
 			logger.Infow("store prevote vote from future block")
-			if err := c.futureMessages.Enqueue(msg); err != nil {
+			if err := c.futureMessages.Put(&msgItem{message: msg, height: vote.BlockNumber.Uint64()}); err != nil {
 				logger.Errorw("failed to store future prevote message to queue", "err", err)
 			}
 		}
@@ -346,7 +344,7 @@ func (c *core) handlePrevote(msg message) error {
 
 func (c *core) handlePrecommit(msg message) error {
 	var (
-		vote  tendermint.Vote
+		vote  Vote
 		state = c.CurrentState()
 	)
 	if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
@@ -363,7 +361,7 @@ func (c *core) handlePrecommit(msg message) error {
 		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
 			logger.Infow("store precommit vote from future block")
-			if err := c.futureMessages.Enqueue(msg); err != nil {
+			if err := c.futureMessages.Put(&msgItem{message: msg, height: vote.BlockNumber.Uint64()}); err != nil {
 				logger.Errorw("failed to store future prevote message to queue", "err", err)
 			}
 		}
@@ -431,9 +429,98 @@ func (c *core) handlePrecommit(msg message) error {
 	return nil
 }
 
-func (c *core) handleMsg(msg message) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+//TODO: keep track of the CatchupRequest to stop other nodes from attacking us by sending continuous catchup request
+func (c *core) handleCatchupRequest(msg message) error {
+	var (
+		catchUpMsg  CatchUpRequestMsg
+		state       = c.currentState
+		blockNumber = state.BlockNumber()
+		round       = state.Round()
+		step        = state.Step()
+	)
+	if err := rlp.DecodeBytes(msg.Msg, &catchUpMsg); err != nil {
+		return err
+	}
+
+	logger := c.getLogger().With("catchup_block", catchUpMsg.BlockNumber, "catchup_round", catchUpMsg.Round,
+		"catchup_step", catchUpMsg.Step, "from", msg.Address.Hex())
+	if catchUpMsg.BlockNumber.Cmp(blockNumber) != 0 || catchUpMsg.Round > round || (catchUpMsg.Round == round && catchUpMsg.Step > step) {
+		logger.Debugw(" Ignoring timeout because we're behind or different with block")
+		return nil
+	}
+	// re-send to from address
+	var payloads [][]byte
+	index := c.sentMsgStorage.lookup(catchUpMsg.Step, catchUpMsg.Round)
+	if index == -1 {
+		logger.Infow("no msg for catchup request available")
+		return nil
+	}
+	for i := index; ; i++ {
+		data, err := c.sentMsgStorage.get(i)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			logger.Errorw("Failed to retrieve msg", "err", err)
+		}
+		payloads = append(payloads, data)
+		if len(payloads) >= catchUpReplyBatchSize {
+			c.SendCatchupReply(msg.Address, payloads)
+			payloads = make([][]byte, 0)
+		}
+	}
+	if len(payloads) != 0 {
+		c.SendCatchupReply(msg.Address, payloads)
+	}
+	return nil
+}
+
+func (c *core) handleCatchUpReply(msg message) error {
+	var (
+		catchUpReplyMsg CatchUpReplyMsg
+		state           = c.currentState
+	)
+
+	if err := rlp.DecodeBytes(msg.Msg, &catchUpReplyMsg); err != nil {
+		return err
+	}
+	logger := c.getLogger().With("num_msg", len(catchUpReplyMsg.Payloads), "block", catchUpReplyMsg.BlockNumber, "from", msg.Address.Hex())
+	if state.BlockNumber().Cmp(catchUpReplyMsg.BlockNumber) != 0 {
+		logger.Debugw("catchUpReplyMsg block is different with current block, skipping")
+		return nil
+	}
+	logger.Infow("Handle catchUpReplyMsg")
+	for _, payload := range catchUpReplyMsg.Payloads {
+		var subMsg message
+		if err := rlp.DecodeBytes(payload, &subMsg); err != nil {
+			fmt.Println("xxxxx")
+			return err
+		}
+		if subMsg.Address != msg.Address {
+			logger.Debugw("Address of catch up reply msg and its child are miss match, skipping", "sub_address", subMsg.Address)
+			return ErrCatchUpReplyAddressMissMatch
+		}
+		if err := c.handleMsgLocked(subMsg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// handleMsgLocked assume that c.mu is locked
+func (c *core) handleMsgLocked(msg message) error {
+	logger := c.getLogger()
+	signer, err := msg.GetAddressFromSignature()
+	if err != nil {
+		logger.Debugw("Failed to get signer from msg", "err", err)
+		return err
+	}
+	if signer != msg.Address {
+		logger.Debugw("Deprived signer and address field of msg are miss-match",
+			"signer", signer, "from", msg.Address)
+		return ErrSignerMessageMissMatch
+	}
+
 	switch msg.Code {
 	case msgPropose:
 		return c.handlePropose(msg)
@@ -441,9 +528,19 @@ func (c *core) handleMsg(msg message) error {
 		return c.handlePrevote(msg)
 	case msgPrecommit:
 		return c.handlePrecommit(msg)
+	case msgCatchUpRequest:
+		return c.handleCatchupRequest(msg)
+	case msgCatchUpReply:
+		return c.handleCatchUpReply(msg)
 	default:
 		return fmt.Errorf("unknown msg code %d", msg.Code)
 	}
+}
+
+func (c *core) handleMsg(msg message) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.handleMsgLocked(msg)
 }
 
 func (c *core) handleTimeout(ti timeoutInfo) {
@@ -471,6 +568,8 @@ func (c *core) handleTimeout(ti timeoutInfo) {
 		c.enterPropose(ti.BlockNumber, 0)
 	case RoundStepPropose:
 		c.enterPrevote(ti.BlockNumber, ti.Round)
+	case RoundStepPrevote, RoundStepPrecommit:
+		c.enterCatchup(ti.BlockNumber, ti.Round, ti.Step, ti.Retry)
 	case RoundStepPrevoteWait:
 		c.enterPrecommit(ti.BlockNumber, ti.Round)
 	case RoundStepPrecommitWait:

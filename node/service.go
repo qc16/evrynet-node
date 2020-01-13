@@ -23,8 +23,8 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/accounts"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/rpc"
 )
@@ -42,7 +42,7 @@ type ServiceContext struct {
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.
-func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int, namespace string) (ethdb.Database, error) {
+func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int, namespace string) (evrdb.Database, error) {
 	if ctx.config.DataDir == "" {
 		return rawdb.NewMemoryDatabase(), nil
 	}
@@ -54,7 +54,7 @@ func (ctx *ServiceContext) OpenDatabase(name string, cache int, handles int, nam
 // also attaching a chain freezer to it that moves ancient chain data from the
 // database to immutable append-only files. If the node is an ephemeral one, a
 // memory database is returned.
-func (ctx *ServiceContext) OpenDatabaseWithFreezer(name string, cache int, handles int, freezer string, namespace string) (ethdb.Database, error) {
+func (ctx *ServiceContext) OpenDatabaseWithFreezer(name string, cache int, handles int, freezer string, namespace string) (evrdb.Database, error) {
 	if ctx.config.DataDir == "" {
 		return rawdb.NewMemoryDatabase(), nil
 	}

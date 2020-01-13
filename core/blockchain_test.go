@@ -34,7 +34,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/core/vm"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/params"
 )
 
@@ -47,7 +47,7 @@ var (
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a
 // header only chain.
-func newCanonical(engine consensus.Engine, n int, full bool) (ethdb.Database, *BlockChain, error) {
+func newCanonical(engine consensus.Engine, n int, full bool) (evrdb.Database, *BlockChain, error) {
 	var (
 		db      = rawdb.NewMemoryDatabase()
 		genesis = new(Genesis).MustCommit(db)
@@ -717,7 +717,7 @@ func TestLightVsFastVsFullChainHeads(t *testing.T) {
 	blocks, receipts := GenerateChain(gspec.Config, genesis, ethash.NewFaker(), gendb, int(height), nil)
 
 	// makeDb creates a db instance for testing.
-	makeDb := func() (ethdb.Database, func()) {
+	makeDb := func() (evrdb.Database, func()) {
 		dir, err := ioutil.TempDir("", "")
 		if err != nil {
 			t.Fatalf("failed to create temp freezer dir: %v", err)

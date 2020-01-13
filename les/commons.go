@@ -22,8 +22,8 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/p2p/enode"
@@ -32,17 +32,17 @@ import (
 
 // lesCommons contains fields needed by both server and client.
 type lesCommons struct {
-	config                       *eth.Config
+	config                       *evr.Config
 	iConfig                      *light.IndexerConfig
-	chainDb                      ethdb.Database
+	chainDb                      evrdb.Database
 	protocolManager              *ProtocolManager
 	chtIndexer, bloomTrieIndexer *core.ChainIndexer
 }
 
-// NodeInfo represents a short summary of the Ethereum sub-protocol metadata
+// NodeInfo represents a short summary of the Evrynet sub-protocol metadata
 // known about the host peer.
 type NodeInfo struct {
-	Network    uint64                   `json:"network"`    // Ethereum network ID (1=Frontier, 2=Morden, Ropsten=3, Rinkeby=4)
+	Network    uint64                   `json:"network"`    // Evrynet network ID (1=Frontier, 2=Morden, Ropsten=3, Rinkeby=4)
 	Difficulty *big.Int                 `json:"difficulty"` // Total difficulty of the host's blockchain
 	Genesis    common.Hash              `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig      `json:"config"`     // Chain configuration for the fork rules

@@ -27,12 +27,14 @@ type timeoutInfo struct {
 	BlockNumber *big.Int      `json:"block_number"`
 	Round       int64         `json:"round"`
 	Step        RoundStepType `json:"step"`
+	Retry       uint64        `json:"retry"` // number of retry in prevote or precommit timeout
 }
 
 // earlierOrEqual return true if timeoutInfo A is earlier or equal than timeoutInfo B
 // otherwise it return false
 // a timeoutInfo A is said to be earlier Or Equal than timeoutInfo B if:
-// A.BlockNumber < B.BlockNumber || (A.BlockNumber == B.BlockNumber && A.Round< B.Round)  || (A.BlockNumber == B.BlockNumber && A.Round == B.Round && A.Step<= B.Step)
+// A.BlockNumber < B.BlockNumber || (A.BlockNumber == B.BlockNumber && A.Round< B.Round)  || (A.BlockNumber == B.BlockNumber && A.Round == B.Round && A.Step< B.Step)
+// (A.BlockNumber == B.BlockNumber && A.Round == B.Round && A.Step =  B.Step && A.Retry <= B.Retry
 func (A timeoutInfo) earlierOrEqual(B timeoutInfo) bool {
 	if A.BlockNumber.Cmp(B.BlockNumber) < 0 {
 		return true
@@ -42,11 +44,15 @@ func (A timeoutInfo) earlierOrEqual(B timeoutInfo) bool {
 		if A.Round < B.Round {
 			return true
 		}
-		if A.Round == B.Round && (A.Step > 0 && A.Step <= B.Step) {
-			return true
+		if A.Round == B.Round {
+			if A.Step > 0 && A.Step < B.Step {
+				return true
+			}
+			if A.Step == B.Step && A.Retry <= B.Retry {
+				return true
+			}
 		}
 	}
-
 	return false
 }
 
@@ -125,7 +131,7 @@ func (tt *timeoutTicker) timeoutRoutine() {
 		case newti := <-tt.tickChan:
 			// ignore tickers for old height/round/step
 			if newti.earlierOrEqual(ti) {
-				log.Info("timeout ignore: New ticker is not earlier or equal to current ticker",
+				log.Info("timeout ignore: New ticker is earlier or equal to current ticker",
 					"new_ticker_block_number", newti.BlockNumber, "current_ticker_block_number", ti.BlockNumber,
 					"new_ticker_round", newti.Round, "current_ticker_round", ti.Round,
 					"new_ticker_step", newti.Step.String(), "current_ticker_step", ti.Step)

@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	tendermintRoundMeter        = metrics.NewRegisteredMeter("eth/consensus/tendermint/rounds", nil)
-	tendermintProposalWaitTimer = metrics.NewRegisteredTimer("eth/consensus/tendermint/proposalwait", nil)
+	tendermintRoundMeter        = metrics.NewRegisteredMeter("evr/consensus/tendermint/rounds", nil)
+	tendermintProposalWaitTimer = metrics.NewRegisteredTimer("evr/consensus/tendermint/proposalwait", nil)
 )
 
 //enterNewRound switch the core state to new round,
@@ -65,7 +65,7 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 	c.enterPropose(blockNumber, round)
 
 }
-func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *tendermint.Proposal {
+func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *Proposal {
 	proposal := c.defaultDecideProposal(logger, round)
 
 	if err := c.checkAndFakeProposal(proposal); err != nil {
@@ -76,14 +76,14 @@ func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *tende
 
 //defaultDecideProposal is the default proposal selector
 //it will prioritize validBlock, else will get its own block from tx_pool
-func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *tendermint.Proposal {
+func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *Proposal {
 	var (
 		state = c.CurrentState()
 	)
 	// if there is validBlock, propose it.
 	if state.ValidRound() != -1 {
 		logger.Infow("core has ValidBlock, propose it", "valid_round", state.ValidRound())
-		return &tendermint.Proposal{
+		return &Proposal{
 			Block:    state.ValidBlock(),
 			Round:    round,
 			POLRound: state.ValidRound(),
@@ -96,7 +96,7 @@ func (c *core) defaultDecideProposal(logger *zap.SugaredLogger, round int64) *te
 	//TODO: remove this
 	//get the block node currently received from miner
 
-	return &tendermint.Proposal{
+	return &Proposal{
 		Block:    state.Block(),
 		Round:    round,
 		POLRound: -1,
@@ -137,7 +137,7 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 	}()
 
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
-	timeOutBlock := big.NewInt(0).Set(blockNumber)
+	timeOutBlock := new(big.Int).Set(blockNumber)
 
 	// if timeOutPropose, it will eventually come to enterPrevote, but the timeout might interrupt the timeOutPropose
 	// to jump to a better state. Imagine that at line 91, we come to enterPrevote and a new timeout is call from there,
@@ -218,20 +218,28 @@ func (c *core) enterPrevote(blockNumber *big.Int, round int64) {
 	//TODO: write a function for this at all enter step
 	//This is strictly use with pointer for state update.
 	var (
-		state         = c.CurrentState()
-		sBlockNunmber = state.BlockNumber()
-		sRound        = state.Round()
-		sStep         = state.Step()
-		logger        = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
+		state        = c.CurrentState()
+		sBlockNumber = state.BlockNumber()
+		sRound       = state.Round()
+		sStep        = state.Step()
+		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
 	)
 
-	if sBlockNunmber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
+	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && sStep >= RoundStepPrevote) {
 		logger.Debugw("enterPrevote ignore: we are in a state that is ahead of the input state")
 		return
 	}
 
 	logger.Infow("enterPrevote")
 	tendermintProposalWaitTimer.UpdateSince(c.proposeStart)
+
+	c.timeout.ScheduleTimeout(timeoutInfo{
+		Duration:    c.config.PrevoteCatchupTimeout(sRound),
+		BlockNumber: new(big.Int).Set(sBlockNumber),
+		Round:       sRound,
+		Step:        RoundStepPrevote,
+		Retry:       0,
+	})
 	//eventually we'll enterPrevote
 	defer func() {
 		state.UpdateRoundStep(round, RoundStepPrevote)
@@ -305,6 +313,7 @@ func (c *core) enterPrecommitWait(blockNumber *big.Int, round int64) {
 
 	//after this we setPrecommitWaited to true to make sure that the wait happens only once each round
 	defer func() {
+		state.UpdateRoundStep(round, RoundStepPrecommitWait)
 		state.setPrecommitWaited(true)
 	}()
 	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
@@ -339,6 +348,14 @@ func (c *core) enterPrecommit(blockNumber *big.Int, round int64) {
 	}
 
 	logger.Infow("enterPrecommit")
+
+	c.timeout.ScheduleTimeout(timeoutInfo{
+		Duration:    c.config.PrecommitCatchupTimeout(sRound),
+		BlockNumber: new(big.Int).Set(sBlockNunmber),
+		Round:       sRound,
+		Step:        RoundStepPrecommit,
+		Retry:       0,
+	})
 
 	defer func() {
 		// Done enterPrecommit:
@@ -444,7 +461,7 @@ func (c *core) enterCommit(blockNumber *big.Int, commitRound int64) {
 	//it will be cleared upon entering newHeight
 	if lockedBlock != nil && lockedBlock.Hash().Hex() == blockHash.Hex() {
 		logger.Infow("Commit is for locked block. Set ProposalBlock=LockedBlock", "blockHash", blockHash.Hex())
-		state.SetProposalReceived(&tendermint.Proposal{
+		state.SetProposalReceived(&Proposal{
 			Block:    lockedBlock,
 			Round:    commitRound,
 			POLRound: state.LockedRound(),
@@ -502,37 +519,49 @@ func (c *core) finalizeCommit(blockNumber *big.Int) {
 
 	block, err := c.FinalizeBlock(state.ProposalReceived())
 	if err != nil {
-		logger.Errorw("block committing failed", "error", err)
+		logger.Panicw("block committing failed", "error", err)
 	}
 
 	c.backend.Commit(block)
 }
 
 //FinalizeBlock will fill extradata with signature and return the ready to store block
-func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error) {
+func (c *core) FinalizeBlock(proposal *Proposal) (*types.Block, error) {
 	var (
 		state           = c.currentState
 		round           = state.commitRound
 		totalPrecommits = 0
 		commitSeals     = [][]byte{}
 		header          = proposal.Block.Header()
-		fx2             = c.valSet.F() * 2
+		minMajority     = c.valSet.MinMajority()
 	)
 	precommits, ok := state.GetPrecommitsByRound(round)
 	if !ok {
 		c.getLogger().Panicw("no precommits at commitRound")
 	}
-	//commitVotes := precommits.VoteByAddress()
-	for _, vote := range precommits.VotesByAddress() {
+
+	votes, ok := precommits.voteByBlock[header.Hash()]
+	if !ok || votes == nil {
+		c.getLogger().Panicw("no votes for the commiting block", "block_hash", header.Hash())
+	}
+	if votes.totalReceived < minMajority {
+		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", minMajority, totalPrecommits)
+	}
+
+	for _, vote := range votes.votes {
+		if vote == nil {
+			continue
+		}
 		commitSeals = append(commitSeals, vote.Seal)
 		totalPrecommits++
-		if totalPrecommits > fx2 {
+		//TODO: is it fair to always take the first 2F+1 seals?
+		if totalPrecommits >= minMajority {
 			break
 		}
 	}
 
-	if totalPrecommits <= fx2 {
-		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", fx2+1, totalPrecommits)
+	if totalPrecommits < minMajority {
+		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", minMajority, totalPrecommits)
 	}
 	//writeCommitSeals
 	if err := utils.WriteCommittedSeals(header, commitSeals); err != nil {
@@ -541,157 +570,120 @@ func (c *core) FinalizeBlock(proposal *tendermint.Proposal) (*types.Block, error
 	return proposal.Block.WithSeal(header), nil
 }
 
-func (c *core) startRoundZero() {
+func (c *core) startNewRound() {
 	var (
-		state           = c.CurrentState()
-		lastBlockNumber = c.backend.CurrentHeadBlock().Number()
-		expectedBlock   = big.NewInt(0).Add(lastBlockNumber, big.NewInt(1))
+		state                 = c.CurrentState()
+		lastBlockNumber       = c.backend.CurrentHeadBlock().Number()
+		expectedBlock         = big.NewInt(0).Add(lastBlockNumber, big.NewInt(1))
+		needInitializeTimeout = true
+		duration              time.Duration
 	)
 
 	if state.BlockNumber().Cmp(expectedBlock) == 0 {
 		c.getLogger().Infow("Catch up with the latest block")
 	} else {
+		//special case:core is stopped and the network has already consensus newer block
 		// update new round with lastKnownHeight
 		c.getLogger().Infow("New height is not catch up with the latest block, update height to lastest block + 1")
 		state.SetView(&tendermint.View{
 			Round:       0,
 			BlockNumber: expectedBlock,
 		})
-	}
-	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
-
-	sleepDuration := time.Until(state.startTime)
-
-	//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
-	timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
-	c.timeout.ScheduleTimeout(timeoutInfo{
-		Duration:    sleepDuration,
-		BlockNumber: timeOutBlock,
-		Round:       0,
-		Step:        RoundStepNewHeight,
-	})
-}
-
-func (c *core) updateStateForNewblock() {
-	var (
-		state  = c.CurrentState()
-		logger = c.getLogger()
-	)
-
-	if state.commitRound > -1 {
-		// having commit round, should have seen +2/3 precommits
-		precommits, ok := state.GetPrecommitsByRound(state.commitRound)
-		if !ok {
-			logger.Errorw("updateStateForNewblock(): Can not found the message set")
-			return
-		}
-		_, ok = precommits.TwoThirdMajority()
-		if !ok {
-			logger.Errorw("updateStateForNewblock(): Having commitRound with no +2/3 precommits")
-			return
-		}
+		state.clearPreviousRoundData()
+		c.sentMsgStorage.truncateMsgStored(c.getLogger())
+		c.valSet = c.backend.Validators(state.BlockNumber())
 	}
 
-	// Update all roundState's fields
-	height := state.BlockNumber()
-	state.SetView(&tendermint.View{
-		Round:       0,
-		BlockNumber: height.Add(height, big.NewInt(1)),
-	})
-	state.UpdateRoundStep(0, RoundStepNewHeight)
-
-	if state.commitTime.IsZero() {
-		// "Now" makes it easier to sync up dev nodes.
-		// We add timeoutCommit to allow transactions
-		// to be gathered for the first block.
-		// And alternative solution that relies on clocks:
-		state.startTime = c.config.Commit(time.Now())
-	} else {
-		state.startTime = c.config.Commit(state.commitTime)
+	//TODO: the timeout must account for the stopped time that core wasn't
+	switch state.Step() {
+	case RoundStepNewHeight:
+		duration = time.Until(state.startTime)
+	case RoundStepPropose:
+		duration = c.config.ProposeTimeout(state.Round())
+	case RoundStepPrevote:
+		duration = c.config.PrevoteCatchupTimeout(state.Round())
+	case RoundStepPrevoteWait:
+		duration = c.config.PrevoteTimeout(state.Round())
+	case RoundStepPrecommit:
+		duration = c.config.PrecommitCatchupTimeout(state.Round())
+	case RoundStepPrecommitWait:
+		duration = c.config.PrecommitTimeout(state.Round())
+	default:
+		needInitializeTimeout = false
 	}
-	//this is to safeguard the case where miner send a newer block, which should not be discarded.
-	//
-	if state.Block() != nil && state.Block().Number().Cmp(state.BlockNumber()) < 0 {
-		state.SetBlock(nil)
+	if needInitializeTimeout {
+		//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
+		timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
+		c.timeout.ScheduleTimeout(timeoutInfo{
+			Duration:    duration,
+			BlockNumber: timeOutBlock,
+			Round:       state.Round(),
+			Step:        state.Step(),
+			Retry:       0,
+		})
 	}
-	state.SetLockedRoundAndBlock(-1, nil)
-	state.SetValidRoundAndBlock(-1, nil)
-	state.SetProposalReceived(nil)
-
-	state.commitRound = -1
-	state.PrevotesReceived = make(map[int64]*messageSet)
-	state.PrecommitsReceived = make(map[int64]*messageSet)
-	state.PrecommitWaited = false
-
-	c.currentState = state
-	logger.Infow("updated to new block", "new_block_number", state.BlockNumber())
-
-	if _, err := c.processFutureMessages(logger); err != nil {
-		logger.Errorw("failed to process future msg", "err", err)
-	}
-
 }
 
 // processFutureMessages dequeue and runs all msgs for the next block (caller should lock the mutex to ensure thread-safe)
 func (c *core) processFutureMessages(logger *zap.SugaredLogger) (done bool, err error) {
 	var (
-		vote  tendermint.Vote
-		state = c.CurrentState()
+		state          = c.CurrentState()
+		msgBlockNumber *big.Int
+		msgRound       int64
 	)
 	for {
-		if c.futureMessages.GetLen() == 0 {
+		if c.futureMessages.Len() == 0 {
 			return true, nil
 		}
 		// get at position 0, check if it is current block number
-		data, err := c.futureMessages.Get(0)
-		if err != nil {
-			logger.Errorw("Failed to get message from future message queue", "error", err)
-			return false, err
-		}
-		msg, ok := data.(message)
+		data := c.futureMessages.Peek()
+		msg, ok := data.(*msgItem).message.(message)
 		if !ok {
 			logger.Errorw("Failed to decode data to message")
 			return false, err
 		}
-		if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
-			logger.Errorw("Failed to decode vote from message", "error", err)
-			return false, err
+		switch msg.Code {
+		case msgPrecommit, msgPrevote:
+			var vote Vote
+			if err := rlp.DecodeBytes(msg.Msg, &vote); err != nil {
+				logger.Errorw("Failed to decode vote from message", "error", err)
+				return false, err
+			}
+			msgBlockNumber = vote.BlockNumber
+			msgRound = vote.Round
+		case msgPropose:
+			var proposal Proposal
+			if err := rlp.DecodeBytes(msg.Msg, &proposal); err != nil {
+				logger.Errorw("Failed to decode vote from message", "error", err)
+				return false, err
+			}
+			msgBlockNumber = proposal.Block.Number()
+			msgRound = proposal.Round
+		default:
+			return false, fmt.Errorf("unknown msg code %d", msg.Code)
 		}
-		if vote.BlockNumber.Cmp(state.BlockNumber()) < 0 {
+		if msgBlockNumber.Cmp(state.BlockNumber()) < 0 {
 			logger.Infow("vote from older block number, ignore")
 			// Ignore vote from older block, remove element at position 0 and continue
-			if err := c.futureMessages.Remove(0); err != nil {
+			if _, err := c.futureMessages.Get(1); err != nil {
 				logger.Warn("failed to remove from future msgs", "err", err)
 			}
 			continue
 		}
-		if vote.BlockNumber.Cmp(state.BlockNumber()) > 0 {
+		if msgBlockNumber.Cmp(state.BlockNumber()) > 0 {
 			// It is future block, stop processing
 			break
 		}
 		// at here vote block number should be equal state block number
 		// remove message and handle it
-		logger.Infow("handle vote message in future message queue", "blockNumber", vote.BlockNumber, "round", vote.Round, "from", msg.Address)
-		if err := c.futureMessages.Remove(0); err != nil {
+		logger.Infow("handle vote message in future message queue",
+			"msg_block", msgBlockNumber, "msg_round", msgRound, "from", msg.Address)
+		if _, err := c.futureMessages.Get(1); err != nil {
 			logger.Warn("failed to remove from future msgs", "err", err)
 		}
-		if err := c.processFutureMessage(msg); err != nil {
+		if err := c.handleMsgLocked(msg); err != nil {
 			logger.Warn("failed to handle msg", "err", err)
 		}
 	}
 	return true, nil
-}
-
-// processFutureMessage applied msg to state
-func (c *core) processFutureMessage(msg message) error {
-	switch msg.Code {
-	case msgPropose:
-		return c.handlePropose(msg)
-	case msgPrevote:
-		return c.handlePrevote(msg)
-	case msgPrecommit:
-		return c.handlePrecommit(msg)
-	default:
-		return fmt.Errorf("unknown msg code %d", msg.Code)
-	}
 }

@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/crypto"
+
+	"github.com/evrynet-official/evrynet-client/evrclient"
 )
 
 /* These tests are done on a chain with already setup account/ contracts.
@@ -25,15 +26,18 @@ To run these test, please deploy your own account/ contract and extract privatek
 // The balance of provider should be check prior and after the transaction is mined to
 // assure the correctness of the program.
 func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountWithoutGas(t *testing.T) {
-	senderAddr := common.HexToAddress(senderWithoutGasAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
+	var (
+		senderAddr   = common.HexToAddress(senderWithoutGasAddrStr)
+		contractAddr = prepareNewContract(true)
+	)
+
 	spk, err := crypto.HexToECDSA(senderWithoutGasPK)
 	assert.NoError(t, err)
 
 	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -42,16 +46,13 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 
 	// data to interact with a function of this contract
 	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(0), testGasLimit, gasPrice, dataBytes)
+	transaction := types.NewTransaction(nonce, *contractAddr, big.NewInt(0), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
-
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	for {
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -68,14 +69,16 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 // expected to get revert as sender's balance is not enough for transaction amount
 func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFromAccountWithoutGas(t *testing.T) {
 	senderAddr := common.HexToAddress(senderWithoutGasAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
+	contractAddr := prepareNewContract(false)
+	assert.NotNil(t, contractAddr)
+
 	spk, err := crypto.HexToECDSA(senderWithoutGasPK)
 	assert.NoError(t, err)
 
 	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -84,7 +87,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 
 	// data to interact with a function of this contract
 	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
+	transaction := types.NewTransaction(nonce, *contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
@@ -98,14 +101,16 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 // expected to get passed as sender's balance is enough for transaction amount
 func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFromAccountWithEnoughBalance(t *testing.T) {
 	senderAddr := common.HexToAddress(senderAddrStr)
-	contractAddr := common.HexToAddress(contractAddrStrWithProvider)
+	contractAddr := prepareNewContract(true)
+	assert.NotNil(t, contractAddr)
+
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 
 	ppk, err := crypto.HexToECDSA(providerPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)
@@ -114,16 +119,14 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 
 	// data to interact with a function of this contract
 	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
-	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
+	transaction := types.NewTransaction(nonce, *contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
-
-	for {
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
 		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
 		if err == nil {
@@ -148,7 +151,7 @@ func TestInteractEnterpriseSmartContractWithValidProviderSignatureWithoutGas(t *
 	ppk, err := crypto.HexToECDSA(providerWithoutGasPK)
 	assert.NoError(t, err)
 	signer := types.HomesteadSigner{}
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), senderAddr)
 	assert.NoError(t, err)

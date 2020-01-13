@@ -30,7 +30,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/params"

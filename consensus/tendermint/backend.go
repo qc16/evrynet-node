@@ -11,7 +11,7 @@ import (
 
 // Backend provides application specific functions for Tendermint core
 type Backend interface {
-	// Address returns the Ethereum address of the node running this backend
+	// Address returns the Evrynet address of the node running this backend
 	Address() common.Address
 
 	// EventMux returns the event mux used for Core to subscribe/ send events back to Backend.
@@ -23,11 +23,15 @@ type Backend interface {
 
 	// Gossip sends a message to all validators (exclude self)
 	// these message are send via p2p network interface.
-	Gossip(valSet ValidatorSet, payload []byte) error
+	Gossip(valSet ValidatorSet, blockNumber *big.Int, payload []byte) error
 
 	// Broadcast sends a message to all validators (including self)
 	// It will call gossip and post an identical event to its EventMux().
-	Broadcast(valSet ValidatorSet, payload []byte) error
+	Broadcast(valSet ValidatorSet, blockNumber *big.Int, payload []byte) error
+
+	// Multicast sends a message to a group of given address
+	// returns error if sending is failed, or not found the targets address
+	Multicast(targets map[common.Address]bool, payload []byte) error
 
 	// Validators returns the validator set
 	// we should only use this method when core is started.

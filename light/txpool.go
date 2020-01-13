@@ -27,8 +27,8 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/state"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/evrynet-official/evrynet-client/rlp"
@@ -59,7 +59,7 @@ type TxPool struct {
 	mu           sync.RWMutex
 	chain        *LightChain
 	odr          OdrBackend
-	chainDb      ethdb.Database
+	chainDb      evrdb.Database
 	relay        TxRelayBackend
 	head         common.Hash
 	nonce        map[common.Address]uint64            // "pending" nonce

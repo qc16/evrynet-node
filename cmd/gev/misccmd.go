@@ -25,7 +25,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/cmd/utils"
 	"github.com/evrynet-official/evrynet-client/consensus/ethash"
-	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/evr"
 	"github.com/evrynet-official/evrynet-client/params"
 	"github.com/urfave/cli"
 )
@@ -116,8 +116,8 @@ func version(ctx *cli.Context) error {
 		fmt.Println("Git Commit Date:", gitDate)
 	}
 	fmt.Println("Architecture:", runtime.GOARCH)
-	fmt.Println("Protocol Versions:", eth.ProtocolVersions)
-	fmt.Println("Network Id:", eth.DefaultConfig.NetworkId)
+	fmt.Println("Protocol Versions:", evr.ProtocolVersions)
+	fmt.Println("Network Id:", evr.DefaultConfig.NetworkId)
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("Operating System:", runtime.GOOS)
 	fmt.Printf("GOPATH=%s\n", os.Getenv("GOPATH"))

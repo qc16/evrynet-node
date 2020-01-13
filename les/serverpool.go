@@ -29,7 +29,7 @@ import (
 
 	"github.com/evrynet-official/evrynet-client/common/mclock"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/p2p/discv5"
@@ -112,7 +112,7 @@ type registerReq struct {
 // known light server nodes. It received discovered nodes, stores statistics about
 // known nodes and takes care of always having enough good quality servers connected.
 type serverPool struct {
-	db     ethdb.Database
+	db     evrdb.Database
 	dbKey  []byte
 	server *p2p.Server
 	quit   chan struct{}
@@ -140,7 +140,7 @@ type serverPool struct {
 }
 
 // newServerPool creates a new serverPool instance
-func newServerPool(db ethdb.Database, quit chan struct{}, wg *sync.WaitGroup, trustedNodes []string) *serverPool {
+func newServerPool(db evrdb.Database, quit chan struct{}, wg *sync.WaitGroup, trustedNodes []string) *serverPool {
 	pool := &serverPool{
 		db:           db,
 		quit:         quit,

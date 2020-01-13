@@ -19,8 +19,8 @@ import (
 	evrynetCore "github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/types"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/ethdb"
 	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/params"
 )
@@ -100,7 +100,7 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 			Trigger: &trigger,
 		}
 		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
-		memDB  = ethdb.NewMemDatabase()
+		memDB  = evrdb.NewMemDatabase()
 		config = tendermint.DefaultConfig
 		be     = New(config, nodePrivateKey, WithDB(memDB)).(*Backend)
 	)
@@ -171,6 +171,8 @@ func TestBackend_Gossip(t *testing.T) {
 		expectedData = "aaa"
 	)
 
+	be.coreStarted = true
+	go be.gossipLoop()
 	dataCh := make(chan string)
 
 	broadcaster := &mockBroadcaster{
@@ -185,7 +187,7 @@ func TestBackend_Gossip(t *testing.T) {
 	valSet := validator.NewSet(nodeAddrs, tendermint.RoundRobin, 100)
 
 	//test basic
-	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
+	require.NoError(t, be.Gossip(valSet, big.NewInt(0), []byte(expectedData)))
 	select {
 	case <-time.After(time.Millisecond * 20):
 		t.Fatal("not receive msg to peer")
@@ -195,7 +197,7 @@ func TestBackend_Gossip(t *testing.T) {
 
 	//test retrying broadcast data
 	broadcaster.isDisconnect = true
-	err := be.Gossip(valSet, []byte(expectedData))
+	err := be.Gossip(valSet, big.NewInt(0), []byte(expectedData))
 	require.NoError(t, err)
 	select {
 	case <-time.After(time.Millisecond * 80):
@@ -211,34 +213,93 @@ func TestBackend_Gossip(t *testing.T) {
 		assert.Equal(t, expectedData, data)
 	}
 
-	//test skipping retry when having msg
-	broadcaster.isDisconnect = true
-	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
+	//test not passed when sending failed
+	broadcaster.isSendFailed = true
+	require.NoError(t, be.Gossip(valSet, big.NewInt(0), []byte(expectedData)))
+
 	select {
 	case <-time.After(time.Millisecond * 80):
 	case <-dataCh:
 		t.Fatal("expected not send to peer when disconnect")
 	}
 
-	broadcaster.isDisconnect = false
-	var expectedData2 = "bbb"
-	err = be.Gossip(valSet, []byte(expectedData2))
-	require.NoError(t, err)
-
+	broadcaster.isSendFailed = false
 	select {
 	case <-time.After(time.Millisecond * 40):
 		t.Fatal("not receive msg to peer")
 	case data := <-dataCh:
-		assert.Equal(t, expectedData2, data)
+		assert.Equal(t, expectedData, data)
 	}
 
-	//test not passed when sending failed
-	broadcaster.isSendFailed = true
-	require.NoError(t, be.Gossip(valSet, []byte(expectedData)))
-
+	// test gossip is cancelled when new head event
+	broadcaster.isDisconnect = true
+	require.NoError(t, be.Gossip(valSet, big.NewInt(1), []byte(expectedData)))
 	select {
-	case <-time.After(time.Millisecond * 20):
+	case <-time.After(time.Millisecond * 80):
 	case <-dataCh:
 		t.Fatal("expected not send to peer when disconnect")
 	}
+
+	require.NoError(t, be.HandleNewChainHead(big.NewInt(2)))
+	broadcaster.isDisconnect = false
+	select {
+	case <-time.After(time.Millisecond * 40):
+	case <-dataCh:
+		t.Fatal("broadcast task is not cancel as expected")
+	}
+
+}
+
+func TestBackend_Multicast(t *testing.T) {
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+	var (
+		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators     = []common.Address{
+			nodeAddr,
+		}
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
+
+		//nodeAddrs = []common.Address{
+		//	common.HexToAddress("1"),
+		//	common.HexToAddress("2"),
+		//	common.HexToAddress("3"),
+		//	nodeAddr,
+		//}
+		sentAddrs = map[common.Address]bool{
+			common.HexToAddress("1"): true,
+			common.HexToAddress("2"): true,
+		}
+		expectedData = "aaa"
+	)
+
+	dataCh := make(chan string)
+
+	broadcaster := &mockBroadcaster{
+		handleFn: func(data interface{}) error {
+			dataCh <- string(data.([]byte))
+			return nil
+		},
+		isDisconnect: false,
+		isSendFailed: false,
+	}
+	be.SetBroadcaster(broadcaster)
+	go func() {
+		require.NoError(t, be.Multicast(sentAddrs, []byte(expectedData)))
+	}()
+
+	select {
+	case <-time.After(time.Millisecond * 20):
+		t.Fatal("not receive msg to peer")
+	case data := <-dataCh:
+		assert.Equal(t, expectedData, data)
+	}
+
+	broadcaster.isDisconnect = true
+	require.EqualError(t, be.Multicast(sentAddrs, []byte(expectedData)), "failed to multicast: failed to send 0 address, not found 2 address")
+
+	broadcaster.isDisconnect = false
+	broadcaster.isSendFailed = true
+	require.EqualError(t, be.Multicast(sentAddrs, []byte(expectedData)), "failed to multicast: failed to send 2 address, not found 0 address")
 }

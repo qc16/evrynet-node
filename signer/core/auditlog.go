@@ -23,7 +23,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
@@ -44,7 +44,7 @@ func (l *AuditLogger) New(ctx context.Context) (common.Address, error) {
 	return l.api.New(ctx)
 }
 
-func (l *AuditLogger) SignTransaction(ctx context.Context, args SendTxArgs, methodSelector *string) (*ethapi.SignTransactionResult, error) {
+func (l *AuditLogger) SignTransaction(ctx context.Context, args SendTxArgs, methodSelector *string) (*evrapi.SignTransactionResult, error) {
 	sel := "<nil>"
 	if methodSelector != nil {
 		sel = *methodSelector
@@ -63,7 +63,7 @@ func (l *AuditLogger) SignTransaction(ctx context.Context, args SendTxArgs, meth
 }
 
 // ProviderSignTransaction auditLogger function
-func (l *AuditLogger) ProviderSignTransaction(ctx context.Context, tx *types.Transaction, providerAddr common.Address, methodSelector *string) (*ethapi.SignTransactionResult, error) {
+func (l *AuditLogger) ProviderSignTransaction(ctx context.Context, tx *types.Transaction, providerAddr common.Address, methodSelector *string) (*evrapi.SignTransactionResult, error) {
 	sel := "<nil>"
 	if methodSelector != nil {
 		sel = *methodSelector

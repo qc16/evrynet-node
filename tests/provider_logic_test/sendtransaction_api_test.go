@@ -12,7 +12,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethclient"
+	"github.com/evrynet-official/evrynet-client/evrclient"
 )
 
 //TestSendTxCreateContractWithProviderAndOwner test send tx to create a contract with provider attached.
@@ -24,7 +24,7 @@ func TestSendTxCreateContractWithProviderAndOwner(t *testing.T) {
 	provideraddr := common.HexToAddress(providerAddrStr)
 	data := hexutil.Bytes(payload)
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
 	assert.NoError(t, err)
@@ -63,7 +63,7 @@ func TestSendTxCreateContractNormal(t *testing.T) {
 	sender := common.HexToAddress(senderAddrStr)
 	data := hexutil.Bytes(payload)
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
 	assert.NoError(t, err)
@@ -85,7 +85,7 @@ func TestSendTxCreateContractNormal(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, emptyHash, hash)
 	if hash != emptyHash {
-		for {
+		for i := 0; i < 10; i++ {
 			var receipt *types.Receipt
 			receipt, err = ethClient.TransactionReceipt(context.Background(), hash)
 			if err == nil {
@@ -105,7 +105,7 @@ func TestSendTxNormal(t *testing.T) {
 	sender := common.HexToAddress(senderAddrStr)
 	data := hexutil.Bytes(payload)
 
-	ethClient, err := ethclient.Dial(ethRPCEndpoint)
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
 	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
 	assert.NoError(t, err)
@@ -127,7 +127,7 @@ func TestSendTxNormal(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, emptyHash, hash)
 	if hash != emptyHash {
-		for {
+		for i := 0; i < 10; i++ {
 			var receipt *types.Receipt
 			receipt, err = ethClient.TransactionReceipt(context.Background(), hash)
 			if err == nil {

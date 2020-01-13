@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package les implements the Light Ethereum Subprotocol.
+// Package les implements the Light Evrynet Subprotocol.
 package les
 
 import (
@@ -31,12 +31,12 @@ import (
 	"github.com/evrynet-official/evrynet-client/core/bloombits"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/eth"
-	"github.com/evrynet-official/evrynet-client/eth/downloader"
-	"github.com/evrynet-official/evrynet-client/eth/filters"
-	"github.com/evrynet-official/evrynet-client/eth/gasprice"
 	"github.com/evrynet-official/evrynet-client/event"
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/evr"
+	"github.com/evrynet-official/evrynet-client/evr/downloader"
+	"github.com/evrynet-official/evrynet-client/evr/filters"
+	"github.com/evrynet-official/evrynet-client/evr/gasprice"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/node"
@@ -46,7 +46,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/rpc"
 )
 
-type LightEthereum struct {
+type LightEvrynet struct {
 	lesCommons
 
 	odr         *LesOdr
@@ -73,13 +73,13 @@ type LightEthereum struct {
 	accountManager *accounts.Manager
 
 	networkId     uint64
-	netRPCService *ethapi.PublicNetAPI
+	netRPCService *evrapi.PublicNetAPI
 
 	wg sync.WaitGroup
 }
 
-func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
-	chainDb, err := ctx.OpenDatabase("lightchaindata", config.DatabaseCache, config.DatabaseHandles, "eth/db/chaindata/")
+func New(ctx *node.ServiceContext, config *evr.Config) (*LightEvrynet, error) {
+	chainDb, err := ctx.OpenDatabase("lightchaindata", config.DatabaseCache, config.DatabaseHandles, "evr/db/chaindata/")
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	peers := newPeerSet()
 	quitSync := make(chan struct{})
 
-	leth := &LightEthereum{
+	leth := &LightEvrynet{
 		lesCommons: lesCommons{
 			chainDb: chainDb,
 			config:  config,
@@ -103,11 +103,11 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 		peers:          peers,
 		reqDist:        newRequestDistributor(peers, quitSync, &mclock.System{}),
 		accountManager: ctx.AccountManager,
-		engine:         eth.CreateConsensusEngine(ctx, chainConfig, config, nil, false, chainDb),
+		engine:         evr.CreateConsensusEngine(ctx, chainConfig, config, nil, false, chainDb),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   eth.NewBloomIndexer(chainDb, params.BloomBitsBlocksClient, params.HelperTrieConfirmations),
+		bloomIndexer:   evr.NewBloomIndexer(chainDb, params.BloomBitsBlocksClient, params.HelperTrieConfirmations),
 	}
 
 	var trustedNodes []string
@@ -212,20 +212,20 @@ func (s *LightDummyAPI) Mining() bool {
 
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *LightEthereum) APIs() []rpc.API {
-	return append(ethapi.GetAPIs(s.ApiBackend), []rpc.API{
+func (s *LightEvrynet) APIs() []rpc.API {
+	return append(evrapi.GetAPIs(s.ApiBackend), []rpc.API{
 		{
-			Namespace: "eth",
+			Namespace: "evr",
 			Version:   "1.0",
 			Service:   &LightDummyAPI{},
 			Public:    true,
 		}, {
-			Namespace: "eth",
+			Namespace: "evr",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
 		}, {
-			Namespace: "eth",
+			Namespace: "evr",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, true),
 			Public:    true,
@@ -238,29 +238,29 @@ func (s *LightEthereum) APIs() []rpc.API {
 	}...)
 }
 
-func (s *LightEthereum) ResetWithGenesisBlock(gb *types.Block) {
+func (s *LightEvrynet) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *LightEthereum) BlockChain() *light.LightChain      { return s.blockchain }
-func (s *LightEthereum) TxPool() *light.TxPool              { return s.txPool }
-func (s *LightEthereum) Engine() consensus.Engine           { return s.engine }
-func (s *LightEthereum) LesVersion() int                    { return int(ClientProtocolVersions[0]) }
-func (s *LightEthereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-func (s *LightEthereum) EventMux() *event.TypeMux           { return s.eventMux }
+func (s *LightEvrynet) BlockChain() *light.LightChain      { return s.blockchain }
+func (s *LightEvrynet) TxPool() *light.TxPool              { return s.txPool }
+func (s *LightEvrynet) Engine() consensus.Engine           { return s.engine }
+func (s *LightEvrynet) LesVersion() int                    { return int(ClientProtocolVersions[0]) }
+func (s *LightEvrynet) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *LightEvrynet) EventMux() *event.TypeMux           { return s.eventMux }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *LightEthereum) Protocols() []p2p.Protocol {
+func (s *LightEvrynet) Protocols() []p2p.Protocol {
 	return s.makeProtocols(ClientProtocolVersions)
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Ethereum protocol implementation.
-func (s *LightEthereum) Start(srvr *p2p.Server) error {
+// Evrynet protocol implementation.
+func (s *LightEvrynet) Start(srvr *p2p.Server) error {
 	log.Warn("Light client mode is an experimental feature")
 	s.startBloomHandlers(params.BloomBitsBlocksClient)
-	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.networkId)
+	s.netRPCService = evrapi.NewPublicNetAPI(srvr, s.networkId)
 	// clients are searching for the first advertised protocol in the list
 	protocolVersion := AdvertiseProtocolVersions[0]
 	s.serverPool.start(srvr, lesTopic(s.blockchain.Genesis().Hash(), protocolVersion))
@@ -269,8 +269,8 @@ func (s *LightEthereum) Start(srvr *p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Ethereum protocol.
-func (s *LightEthereum) Stop() error {
+// Evrynet protocol.
+func (s *LightEvrynet) Stop() error {
 	s.odr.Stop()
 	s.relay.Stop()
 	s.bloomIndexer.Close()

@@ -72,8 +72,8 @@ then
     echo "Cloning explorer from master branch ..."
     git clone git@github.com:evrynet-official/explorer.git "$BASEDIR"/explorer/web
 
-    docker rmi -f img_explorer
-    docker rm -f gev-explorer
+    sudo docker rmi -f img_explorer
+    sudo docker rm -f gev-explorer
     yes | gevRPCPort=22001 docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-explorer
     rm -rf "$BASEDIR"/explorer/web
   fi

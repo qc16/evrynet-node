@@ -9,7 +9,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
 	"github.com/evrynet-official/evrynet-client/consensus/tendermint/validator"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethdb"
+	"github.com/evrynet-official/evrynet-client/evrdb"
 	"github.com/evrynet-official/evrynet-client/log"
 )
 
@@ -238,7 +238,7 @@ func (s *Snapshot) validators() []common.Address {
 }
 
 // store inserts the snapshot into the database.
-func (s *Snapshot) store(db ethdb.Database) error {
+func (s *Snapshot) store(db evrdb.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -304,7 +304,7 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet tendermin
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(epoch uint64, db evrdb.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
 	if err != nil {
 		return nil, err

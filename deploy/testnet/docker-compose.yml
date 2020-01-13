@@ -36,7 +36,8 @@ services:
       UNLOCK_PASS: 123
       RPC_CORSDOMAIN: $rpccorsdomain
     ports:
-      - 22001:22001
+      - 22001:8545
+      - 6061:6060
     volumes:
       - $shareVolumes/node_1/data:/node/data
       - $shareVolumes/node_1/log:/node/log
@@ -59,7 +60,8 @@ services:
       UNLOCK_PASS: 123
       RPC_CORSDOMAIN: $rpccorsdomain
     ports:
-      - 22002:22002
+      - 22002:8545
+      - 6062:6060
     volumes:
       - $shareVolumes/node_2/data:/node/data
       - $shareVolumes/node_2/log:/node/log
@@ -86,7 +88,8 @@ services:
       METRICS_USER: test # Only use if HAS_METRIC is 1
       METRICS_PASS: test # Only use if HAS_METRIC is 1
     ports:
-      - 22003:22003
+      - 22003:8545
+      - 6063:6060
     volumes:
       - $shareVolumes/node_3/data:/node/data
       - $shareVolumes/node_3/log:/node/log
@@ -107,6 +110,37 @@ services:
     networks:
       chainnet:
         ipv4_address: 172.25.0.125
+
+#  geth-grafana:
+#    image: grafana/grafana
+#    container_name: geth-grafana
+#    restart: always
+#    ports:
+#      - 3001:3000
+#    networks:
+#      chainnet:
+#        ipv4_address: 172.25.0.169
+#    volumes:
+#      - grafana-volume:/var/lib/grafana
+#
+#  geth-influxdb:
+#    image: influxdb
+#    container_name: geth-influxdb
+#    restart: always
+#    ports:
+#      - 8086:8086
+#    environment:
+#      - INFLUXDB_DB=geth
+#      - INFLUXDB_ADMIN_ENABLED=true
+#      - INFLUXDB_ADMIN_USER=admin
+#      - INFLUXDB_ADMIN_PASSWORD=admin
+#      - INFLUXDB_USER=test
+#      - INFLUXDB_USER_PASSWORD=test
+#    networks:
+#      chainnet:
+#        ipv4_address: 172.25.0.196
+#    volumes:
+#      - influxdb-volume:/var/lib/influxdb
 
 networks:
   chainnet:

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package consensus implements different Ethereum consensus engines.
+// Package consensus implements different Evrynet consensus engines.
 package consensus
 
 import (
@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// TendermintMsg is the new message belong to eth/64.
+	// TendermintMsg is the new message belong to evr/64.
 	// it notify the protocol handler that this is a message for tendermint consensus purpose
 	TendermintMsg = 0x11
 )

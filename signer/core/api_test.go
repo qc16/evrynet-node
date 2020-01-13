@@ -32,7 +32,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/common"
 	"github.com/evrynet-official/evrynet-client/common/hexutil"
 	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/internal/ethapi"
+	"github.com/evrynet-official/evrynet-client/internal/evrapi"
 	"github.com/evrynet-official/evrynet-client/log"
 	"github.com/evrynet-official/evrynet-client/rlp"
 	"github.com/evrynet-official/evrynet-client/signer/core"
@@ -53,7 +53,7 @@ func (ui *headlessUi) OnInputRequired(info core.UserInputRequest) (core.UserInpu
 
 func (ui *headlessUi) OnSignerStartup(info core.StartupInfo)        {}
 func (ui *headlessUi) RegisterUIServer(api *core.UIServerAPI)       {}
-func (ui *headlessUi) OnApprovedTx(tx ethapi.SignTransactionResult) {}
+func (ui *headlessUi) OnApprovedTx(tx evrapi.SignTransactionResult) {}
 
 func (ui *headlessUi) ApproveTx(request *core.SignTxRequest) (core.SignTxResponse, error) {
 
@@ -245,7 +245,7 @@ func mkTestTx(from common.MixedcaseAddress) core.SendTxArgs {
 func TestSignTx(t *testing.T) {
 	var (
 		list      []common.Address
-		res, res2 *ethapi.SignTransactionResult
+		res, res2 *evrapi.SignTransactionResult
 		err       error
 	)
 
@@ -328,7 +328,7 @@ func TestSignTx(t *testing.T) {
 func TestProviderSignTx(t *testing.T) {
 	var (
 		list      []common.Address
-		res, res2 *ethapi.SignTransactionResult
+		res, res2 *evrapi.SignTransactionResult
 		err       error
 	)
 

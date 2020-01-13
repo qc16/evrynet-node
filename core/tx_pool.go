@@ -671,34 +671,28 @@ func (pool *TxPool) ValidateTx(tx *types.Transaction, local bool) error {
 		to := tx.To()
 		contractHash := pool.currentState.GetCodeHash(*to)
 		if (contractHash != common.Hash{}) && (contractHash != emptyCodeHash) {
-			log.Info("destination is a contract, must check its providers")
 			expectedProviders := pool.currentState.GetProviders(*to)
-			if len(expectedProviders) == 0 {
-				log.Info("destination is a non-enteprise contract, should not have provider's signature")
-			} else {
+			if len(expectedProviders) > 0 {
 				isEnterpriseContract = true
 				if providerRetrieveErr != nil {
-					log.Info("invalid provider address", "error", providerRetrieveErr)
+					log.Error("invalid provider address", "error", providerRetrieveErr)
 					return ErrInvalidProvider
 				}
 				if signedProvider == nil {
-					log.Info("invalid provider address", "provider address is nil")
+					log.Error("invalid provider address", "provider address is nil")
 					return ErrInvalidProvider
 				}
 				if !signedProvider.InList(expectedProviders) {
-					log.Info("invalid provider address", "provider address", signedProvider.String())
+					log.Error("invalid provider address", "provider address", signedProvider.String())
 					return ErrInvalidProvider
 				}
 			}
-		} else {
-			log.Info("destination is a normal address, should not have any provider's signature")
 		}
 	} else {
-		log.Info("the transaction to create SC")
 		emptyAddress := common.Address{}
-		if tx.Provider() != nil && tx.Provider() != &emptyAddress {
-			if tx.Owner() == nil || tx.Owner() == &emptyAddress {
-				log.Info("owner address is required")
+		if tx.Provider() != nil && tx.Provider().Hex() != emptyAddress.Hex() {
+			if tx.Owner() == nil || (tx.Owner() != nil && tx.Owner().Hex() == emptyAddress.Hex()) {
+				log.Error("owner address is required")
 				return ErrOwnerReqired
 			}
 		}

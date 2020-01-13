@@ -29,7 +29,7 @@ import (
 	"github.com/evrynet-official/evrynet-client/core"
 	"github.com/evrynet-official/evrynet-client/core/rawdb"
 	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/eth"
+	"github.com/evrynet-official/evrynet-client/evr"
 	"github.com/evrynet-official/evrynet-client/light"
 	"github.com/evrynet-official/evrynet-client/p2p"
 	"github.com/evrynet-official/evrynet-client/p2p/enode"
@@ -37,7 +37,7 @@ import (
 
 func TestULCSyncWithOnePeer(t *testing.T) {
 	f := newFullPeerPair(t, 1, 4, testChainGen)
-	ulcConfig := &eth.ULCConfig{
+	ulcConfig := &evr.ULCConfig{
 		MinTrustedFraction: 100,
 		TrustedServers:     []string{f.Node.String()},
 	}
@@ -64,7 +64,7 @@ func TestULCSyncWithOnePeer(t *testing.T) {
 
 func TestULCReceiveAnnounce(t *testing.T) {
 	f := newFullPeerPair(t, 1, 4, testChainGen)
-	ulcConfig := &eth.ULCConfig{
+	ulcConfig := &evr.ULCConfig{
 		MinTrustedFraction: 100,
 		TrustedServers:     []string{f.Node.String()},
 	}
@@ -105,7 +105,7 @@ func TestULCShouldNotSyncWithTwoPeersOneHaveEmptyChain(t *testing.T) {
 	ulcConf := &ulc{minTrustedFraction: 100, trustedKeys: make(map[string]struct{})}
 	ulcConf.trustedKeys[f1.Node.ID().String()] = struct{}{}
 	ulcConf.trustedKeys[f2.Node.ID().String()] = struct{}{}
-	ulcConfig := &eth.ULCConfig{
+	ulcConfig := &evr.ULCConfig{
 		MinTrustedFraction: 100,
 		TrustedServers:     []string{f1.Node.String(), f2.Node.String()},
 	}
@@ -135,7 +135,7 @@ func TestULCShouldNotSyncWithThreePeersOneHaveEmptyChain(t *testing.T) {
 	f2 := newFullPeerPair(t, 2, 4, testChainGen)
 	f3 := newFullPeerPair(t, 3, 0, nil)
 
-	ulcConfig := &eth.ULCConfig{
+	ulcConfig := &evr.ULCConfig{
 		MinTrustedFraction: 60,
 		TrustedServers:     []string{f1.Node.String(), f2.Node.String(), f3.Node.String()},
 	}
@@ -230,7 +230,7 @@ func newFullPeerPair(t *testing.T, index int, numberOfblocks int, chainGen func(
 }
 
 // newLightPeer creates node with light sync mode
-func newLightPeer(t *testing.T, ulcConfig *eth.ULCConfig) pairPeer {
+func newLightPeer(t *testing.T, ulcConfig *evr.ULCConfig) pairPeer {
 	peers := newPeerSet()
 	dist := newRequestDistributor(peers, make(chan struct{}), &mclock.System{})
 	rm := newRetrieveManager(peers, dist, nil)
