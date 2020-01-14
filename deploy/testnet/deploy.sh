@@ -74,7 +74,7 @@ then
 
     sudo docker rmi -f img_explorer
     sudo docker rm -f gev-explorer
-    yes | gevRPCPort=22001 docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-explorer
+    yes | sudo gevRPCPort=22001 docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-explorer
     rm -rf "$BASEDIR"/explorer/web
   fi
 
