@@ -18,6 +18,7 @@ package bind
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -45,15 +46,16 @@ type CallOpts struct {
 // TransactOpts is the collection of authorization data required to create a
 // valid Evrynet transaction.
 type TransactOpts struct {
-	From   common.Address // Evrynet account to send the transaction from
-	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
-	Signer SignerFn       // Method to use for signing the transaction (mandatory)
+	From             common.Address    // Evrynet account to send the transaction from
+	Nonce            *big.Int          // Nonce to use for the transaction execution (nil = use pending state)
+	Signer           SignerFn          // Method to use for signing the transaction (mandatory)
+	EnterpriseSigner *ecdsa.PrivateKey // Method to use for signing the Enterprise transaction (optional)
 
 	Value    *big.Int // Funds to transfer along along the transaction (nil = 0 = no funds)
 	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
 	GasLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
 
-	Enterprise *types.CreateAccountOption // Evrynet account option for enterprise contract feature (optional)
+	Enterprise *types.EnterpriseOption
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
@@ -244,6 +246,12 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
 	if err != nil {
 		return nil, err
+	}
+	if opts.EnterpriseSigner != nil {
+		signedTx, err = types.ProviderSignTx(signedTx, types.HomesteadSigner{}, opts.EnterpriseSigner)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err := c.transactor.SendTransaction(ensureContext(opts.Context), signedTx); err != nil {
 		return nil, err

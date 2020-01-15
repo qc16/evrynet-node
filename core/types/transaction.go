@@ -35,8 +35,8 @@ var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
 )
 
-// CreateAccountOption contain extra parameter for Account creation
-type CreateAccountOption struct {
+// EnterpriseOption defines the option for the enterprise transaction
+type EnterpriseOption struct {
 	OwnerAddress    *common.Address
 	ProviderAddress *common.Address
 }
@@ -126,7 +126,7 @@ func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit u
 }
 
 // NewContractCreation create new instance of the tx with contract creation
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, opts ...CreateAccountOption) *Transaction {
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, opts ...EnterpriseOption) *Transaction {
 	tx := newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
 	if len(opts) > 0 {
 		tx.data.Owner = opts[0].OwnerAddress
