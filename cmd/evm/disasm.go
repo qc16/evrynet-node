@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/core/asm"
+	"github.com/Evrynetlabs/evrynet-node/core/asm"
 	cli "github.com/urfave/cli"
 )
 

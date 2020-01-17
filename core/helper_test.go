@@ -19,10 +19,10 @@ package core
 import (
 	"container/list"
 
-	"github.com/evrynet-official/evrynet-client/core/rawdb"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/event"
-	"github.com/evrynet-official/evrynet-client/evrdb"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/event"
+	"github.com/Evrynetlabs/evrynet-node/evrdb"
 )
 
 // Implement our EthTest Manager

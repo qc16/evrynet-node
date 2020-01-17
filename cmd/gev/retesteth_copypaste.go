@@ -19,9 +19,9 @@ package main
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction

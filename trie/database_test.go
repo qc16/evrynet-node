@@ -19,8 +19,8 @@ package trie
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/evrdb/memorydb"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/evrdb/memorydb"
 )
 
 // Tests that the trie database returns a missing trie node error if attempting

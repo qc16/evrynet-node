@@ -19,7 +19,7 @@ package vm
 import (
 	"errors"
 
-	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 type (

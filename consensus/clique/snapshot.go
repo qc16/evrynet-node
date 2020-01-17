@@ -22,11 +22,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/evrdb"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/evrdb"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/params"
 	lru "github.com/hashicorp/golang-lru"
 )
 

@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 func TestPack(t *testing.T) {

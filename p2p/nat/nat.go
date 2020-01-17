@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	natpmp "github.com/jackpal/go-nat-pmp"
 )
 

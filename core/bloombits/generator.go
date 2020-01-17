@@ -19,7 +19,7 @@ package bloombits
 import (
 	"errors"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 var (

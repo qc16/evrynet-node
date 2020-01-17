@@ -16,7 +16,7 @@
 
 package downloader
 
-import "github.com/evrynet-official/evrynet-client/core/types"
+import "github.com/Evrynetlabs/evrynet-node/core/types"
 
 type DoneEvent struct {
 	Latest *types.Header

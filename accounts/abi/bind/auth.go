@@ -22,11 +22,11 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/evrynet-official/evrynet-client/accounts"
-	"github.com/evrynet-official/evrynet-client/accounts/keystore"
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
 // NewTransactor is a utility method to easily create a transaction signer from

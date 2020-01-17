@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 // Tests whether remote HTTP servers are correctly notified of new work.

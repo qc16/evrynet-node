@@ -20,10 +20,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/evrdb"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/evrdb"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 // NodeSet stores a set of trie nodes. It implements trie.Database and can also

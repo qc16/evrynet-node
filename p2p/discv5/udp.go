@@ -24,12 +24,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/p2p/nat"
-	"github.com/evrynet-official/evrynet-client/p2p/netutil"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/p2p/nat"
+	"github.com/Evrynetlabs/evrynet-node/p2p/netutil"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 const Version = 4

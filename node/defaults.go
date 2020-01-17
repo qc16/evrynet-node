@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/evrynet-official/evrynet-client/p2p"
-	"github.com/evrynet-official/evrynet-client/p2p/nat"
-	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/p2p/nat"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
 
 const (

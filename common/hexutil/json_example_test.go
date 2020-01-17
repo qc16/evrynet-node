@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 )
 
 type MyType [5]byte

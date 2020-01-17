@@ -28,16 +28,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
-	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/core/rawdb"
-	"github.com/evrynet-official/evrynet-client/core/state"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/internal/evrapi"
-	"github.com/evrynet-official/evrynet-client/rlp"
-	"github.com/evrynet-official/evrynet-client/rpc"
-	"github.com/evrynet-official/evrynet-client/trie"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/internal/evrapi"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
+	"github.com/Evrynetlabs/evrynet-node/trie"
 )
 
 // PublicEvrynetAPI provides an API to access Evrynet full node-related

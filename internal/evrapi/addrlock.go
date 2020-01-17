@@ -19,7 +19,7 @@ package evrapi
 import (
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 type AddrLocker struct {

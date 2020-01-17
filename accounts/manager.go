@@ -21,7 +21,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/event"
+	"github.com/Evrynetlabs/evrynet-node/event"
 )
 
 // Config contains the settings of the global account manager.

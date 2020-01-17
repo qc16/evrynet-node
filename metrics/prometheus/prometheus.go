@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/metrics"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/metrics"
 )
 
 // Handler returns an HTTP handler which dump metrics in Prometheus format.

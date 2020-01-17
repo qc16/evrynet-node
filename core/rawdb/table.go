@@ -17,7 +17,7 @@
 package rawdb
 
 import (
-	"github.com/evrynet-official/evrynet-client/evrdb"
+	"github.com/Evrynetlabs/evrynet-node/evrdb"
 )
 
 // table is a wrapper around a database that prefixes each key access with a pre-

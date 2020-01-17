@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 var (

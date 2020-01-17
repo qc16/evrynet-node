@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 )
 
 var _ = (*headerMarshaling)(nil)

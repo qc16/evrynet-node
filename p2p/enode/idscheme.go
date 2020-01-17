@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/evrynet-official/evrynet-client/common/math"
-	"github.com/evrynet-official/evrynet-client/crypto"
-	"github.com/evrynet-official/evrynet-client/p2p/enr"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

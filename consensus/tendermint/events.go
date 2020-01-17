@@ -3,7 +3,7 @@ package tendermint
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 // NewBlockEvent is the event sent from Backend to Core after engine.Seal() is called.

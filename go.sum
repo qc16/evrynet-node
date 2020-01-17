@@ -43,11 +43,11 @@ github.com/elastic/gosigar v0.10.4 h1:6jfw75dsoflhBMRdO6QPzQUgLqUYTsQQQRkkcsHsuP
 github.com/elastic/gosigar v0.10.4/go.mod h1:cdorVVzy1fhmEqmtgqkoE3bYtCfSCkVyjTyCIo22xvs=
 github.com/enriquebris/goconcurrentqueue v0.0.0-20190719205347-3e5689c24f05 h1:qiqZNItjRijX/MSnM+I+fW14fWL/h8TyrbetmRVmuHA=
 github.com/enriquebris/goconcurrentqueue v0.0.0-20190719205347-3e5689c24f05/go.mod h1:wGJhQNFI4wLNHleZLo5ehk1puj8M6OIl0tOjs3kwJus=
-github.com/evrynet-official/evrynet-client v0.0.0-20191112032156-e0b655381971/go.mod h1:ErxsH/RB2Zjdbmb+UP0e4u+WvbrrM58armXAMeDbgkM=
-github.com/evrynet-official/evrynet-tools v0.0.0-20191108105429-4200e6a2ddd0 h1:QIuVdp15i9DPQZbohw+kVAdDTS+VBVB5P/0B7liFxXQ=
-github.com/evrynet-official/evrynet-tools v0.0.0-20191108105429-4200e6a2ddd0/go.mod h1:Wx3Ajgp6CZcDPyDMAAJ4H7IiXwKzhWQCX863XZs7fEc=
-github.com/evrynet-official/evrynet-tools v0.0.0-20191212094911-8afc936e90ac h1:GsuEa5pFrXZ3vxwMt+KGjTKLAOpjs/wfWb5xql+wOQ8=
-github.com/evrynet-official/evrynet-tools v0.0.0-20191212094911-8afc936e90ac/go.mod h1:BPEbQP3AgP/Y7DSYmHn2Yw7wzbY401aTXpV2Uyp568Q=
+github.com/Evrynetlabs/evrynet-node v0.0.0-20191112032156-e0b655381971/go.mod h1:ErxsH/RB2Zjdbmb+UP0e4u+WvbrrM58armXAMeDbgkM=
+github.com/Evrynetlabs/evrynet-tools v0.0.0-20191108105429-4200e6a2ddd0 h1:QIuVdp15i9DPQZbohw+kVAdDTS+VBVB5P/0B7liFxXQ=
+github.com/Evrynetlabs/evrynet-tools v0.0.0-20191108105429-4200e6a2ddd0/go.mod h1:Wx3Ajgp6CZcDPyDMAAJ4H7IiXwKzhWQCX863XZs7fEc=
+github.com/Evrynetlabs/evrynet-tools v0.0.0-20191212094911-8afc936e90ac h1:GsuEa5pFrXZ3vxwMt+KGjTKLAOpjs/wfWb5xql+wOQ8=
+github.com/Evrynetlabs/evrynet-tools v0.0.0-20191212094911-8afc936e90ac/go.mod h1:BPEbQP3AgP/Y7DSYmHn2Yw7wzbY401aTXpV2Uyp568Q=
 github.com/fatih/color v1.7.0 h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=

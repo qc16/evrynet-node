@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/mclock"
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/common/mclock"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // Logger is a metrics/events logger that writes logged values and events into a comma separated file
