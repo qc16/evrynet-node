@@ -1,11 +1,15 @@
 # How to use Testsnet Docker  
 
 ## 1. Using Existing Config
+### Before building Docker image
+- To allow docker can run `go get` for private repository when building evrynet-client. You must change the `login` & `password` (is your token) in `deploy/testnet/builder/token` to yours.  
+- [Here](https://github.com/settings/tokens) setup your token.  
+
 ### Run Testnet Docker
-Everything was setup. You only need to run this script  
+Everything was setup. After updating Github token, running this script to deploy:  
 `./deploy/testnet/deploy.sh <path_to_share_volumes> <rpc_corsdomain> <wanna_to_deploy_explorer>`    
 
-Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-node/deploy/testnet/nodes/data localhost y`
+Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-client/deploy/testnet/nodes/data localhost y`
 - `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
 - `wanna_to_deploy_explorer` if you wanna deploy explorer, input is `y`
@@ -17,7 +21,7 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
 ### Webs
 - Explorer: http://localhost:8080
 
-### NOTICE!
+### **NOTICE!
 - If you want to stop nodes, DON'T USE `docker stop ...`. It can make a crash to DB of nodes => can not run for next time!
 - To stop nodes gracefully, USE this file `deploy/testnet/stop_dockers.sh`. It will interact with node in docker to stop gracefully.
 
@@ -143,3 +147,4 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
     INFO [11-27|18:09:06.981] Saved genesis chain spec                 client=harmony path=testnet-harmony.json
     ```
 8. Replace all content of `deploy/testnet/nodes/bin/genesis.json` with `testnet.json` (new genesis file just created)
+9. Repeat steps at session **1. Using Existing Config**
