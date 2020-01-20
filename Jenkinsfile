@@ -7,7 +7,7 @@ pipeline {
         ).trim()
         dockerTag="${env.branchName}-${env.BUILD_NUMBER}"
         dockerImage="${env.CONTAINER_IMAGE}:${env.dockerTag}"
-        appName="evrynet-client"
+        appName="evrynet-node"
         githubUsername="Evrynetlabs"
 
         CONTAINER_IMAGE="registry.gitlab.com/evry/${appName}"
