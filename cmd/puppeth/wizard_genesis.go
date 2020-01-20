@@ -29,7 +29,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-tools/accounts"
+	"github.com/evrynet-official/evrynet-tools/accounts"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/core"
