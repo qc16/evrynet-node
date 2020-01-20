@@ -21,9 +21,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/internal/evrapi"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-node/internal/evrapi"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
 
 type StdIOUI struct {

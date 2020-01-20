@@ -27,7 +27,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/common/math"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
 	"github.com/urfave/cli"
 )
 

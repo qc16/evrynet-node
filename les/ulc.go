@@ -17,9 +17,9 @@
 package les
 
 import (
-	"github.com/evrynet-official/evrynet-client/evr"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/evr"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 )
 
 type ulc struct {

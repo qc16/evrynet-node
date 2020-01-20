@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 )
 
 type TestPeer interface {

@@ -41,23 +41,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/accounts"
-	"github.com/evrynet-official/evrynet-client/accounts/keystore"
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/ethstats"
-	"github.com/evrynet-official/evrynet-client/evr"
-	"github.com/evrynet-official/evrynet-client/evr/downloader"
-	"github.com/evrynet-official/evrynet-client/evrclient"
-	"github.com/evrynet-official/evrynet-client/les"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/node"
-	"github.com/evrynet-official/evrynet-client/p2p"
-	"github.com/evrynet-official/evrynet-client/p2p/discv5"
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
-	"github.com/evrynet-official/evrynet-client/p2p/nat"
-	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/ethstats"
+	"github.com/Evrynetlabs/evrynet-node/evr"
+	"github.com/Evrynetlabs/evrynet-node/evr/downloader"
+	"github.com/Evrynetlabs/evrynet-node/evrclient"
+	"github.com/Evrynetlabs/evrynet-node/les"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/node"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/p2p/discv5"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/p2p/nat"
+	"github.com/Evrynetlabs/evrynet-node/params"
 	"golang.org/x/net/websocket"
 )
 
@@ -458,7 +458,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		case *noauthFlag:
 			username, avatar, address, err = authNoAuth(msg.URL)
 		default:
-			err = errors.New("Something funky happened, please open an issue at https://github.com/evrynet-official/evrynet-client/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/Evrynetlabs/evrynet-node/issues")
 		}
 		if err != nil {
 			if err = sendError(conn, err); err != nil {

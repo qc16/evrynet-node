@@ -27,9 +27,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
-	"github.com/evrynet-official/evrynet-client/p2p/enr"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/urfave/cli"
 )
 

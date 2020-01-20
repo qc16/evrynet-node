@@ -3,7 +3,7 @@ package backend
 import (
 	"sync"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 // ProposalValidator store imformation (about address and vote true/false)

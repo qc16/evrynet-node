@@ -1,4 +1,4 @@
-module github.com/evrynet-official/evrynet-client
+module github.com/Evrynetlabs/evrynet-node
 
 go 1.12
 
@@ -15,7 +15,6 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/elastic/gosigar v0.10.4
 	github.com/enriquebris/goconcurrentqueue v0.0.0-20190719205347-3e5689c24f05
-	github.com/evrynet-official/evrynet-tools v0.0.0-20191212094911-8afc936e90ac
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff
@@ -24,6 +23,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/graph-gophers/graphql-go v0.0.0-20190724201507-010347b5f9e6
 	github.com/hashicorp/golang-lru v0.5.3
+	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0
 	github.com/influxdata/influxdb v1.7.7
 	github.com/jackpal/go-nat-pmp v1.0.1
@@ -32,6 +32,7 @@ require (
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mattn/go-isatty v0.0.9
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
+	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/oschwald/maxminddb-golang v1.6.0 // indirect
@@ -44,6 +45,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570
+	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tyler-smith/go-bip39 v1.0.2
@@ -60,4 +62,7 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff
+	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 )
+
+replace github.com/Evrynetlabs/evrynet-node => ../evrynet-node

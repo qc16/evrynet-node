@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 func TestCatchUpRequestMsg_DecodeRLP(t *testing.T) {

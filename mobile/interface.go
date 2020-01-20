@@ -22,7 +22,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 // Interface represents a wrapped version of Go's interface{}, with the capacity

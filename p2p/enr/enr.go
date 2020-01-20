@@ -40,7 +40,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 const SizeLimit = 300 // maximum encoded size of a node record in bytes

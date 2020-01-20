@@ -25,11 +25,11 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/evrynet-official/evrynet-client/internal/testlog"
-	"github.com/evrynet-official/evrynet-client/log"
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
-	"github.com/evrynet-official/evrynet-client/p2p/enr"
-	"github.com/evrynet-official/evrynet-client/p2p/netutil"
+	"github.com/Evrynetlabs/evrynet-node/internal/testlog"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-node/p2p/netutil"
 )
 
 func init() {

@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/evr/downloader"
-	"github.com/evrynet-official/evrynet-client/p2p"
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/evr/downloader"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 )
 
 // Tests that fast sync gets disabled as soon as a real block is successfully

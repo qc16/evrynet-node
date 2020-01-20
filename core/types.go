@@ -17,9 +17,9 @@
 package core
 
 import (
-	"github.com/evrynet-official/evrynet-client/core/state"
-	"github.com/evrynet-official/evrynet-client/core/types"
-	"github.com/evrynet-official/evrynet-client/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 )
 
 // Validator is an interface which defines the standard for block validation. It

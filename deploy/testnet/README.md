@@ -5,7 +5,7 @@
 Everything was setup. You only need to run this script  
 `./deploy/testnet/deploy.sh <path_to_share_volumes> <rpc_corsdomain> <wanna_to_deploy_explorer>`    
 
-Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-client/deploy/testnet/nodes/data localhost y`
+Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-node/deploy/testnet/nodes/data localhost y`
 - `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
 - `wanna_to_deploy_explorer` if you wanna deploy explorer, input is `y`

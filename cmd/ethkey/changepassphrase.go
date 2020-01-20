@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/evrynet-official/evrynet-client/accounts/keystore"
-	"github.com/evrynet-official/evrynet-client/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
 	"github.com/urfave/cli"
 )
 

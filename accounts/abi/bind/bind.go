@@ -17,7 +17,7 @@
 // Package bind generates Evrynet contract Go bindings.
 //
 // Detailed usage document and tutorial available on the go-ethereum Wiki page:
-// https://github.com/evrynet-official/evrynet-client/wiki/Native-DApps:-Go-bindings-to-Evrynet-contracts
+// https://github.com/Evrynetlabs/evrynet-node/wiki/Native-DApps:-Go-bindings-to-Evrynet-contracts
 package bind
 
 import (
@@ -29,7 +29,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/evrynet-official/evrynet-client/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
 )
 
 // Lang is a target programming language selector to generate bindings for.

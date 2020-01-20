@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // deployDashboard queries the user for various input on deploying a web-service

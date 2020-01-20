@@ -22,7 +22,7 @@ import (
 	mrand "math/rand"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
 func TestPoWCalculationsWithNoLeadingZeros(t *testing.T) {

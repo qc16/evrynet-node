@@ -19,7 +19,7 @@ package params
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 // DAOForkBlockExtra is the block header extra-data field to set for the DAO fork

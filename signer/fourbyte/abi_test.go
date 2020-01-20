@@ -22,8 +22,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/accounts/abi"
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 func verify(t *testing.T, jsondata, calldata string, exp []interface{}) {

@@ -25,7 +25,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // ethstatsDockerfile is the Dockerfile required to build an ethstats backend

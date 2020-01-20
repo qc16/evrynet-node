@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 //getInitializedState init core with the last known roundState
