@@ -19,7 +19,7 @@ package state
 import (
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 // journalEntry is a modification entry in the state change journal that can be

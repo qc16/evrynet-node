@@ -20,7 +20,7 @@ package testlog
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // Logger returns a logger which logs to the unit test log of t.

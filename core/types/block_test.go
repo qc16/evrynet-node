@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 // from bcValidBlockTest.json, "SimpleTx"

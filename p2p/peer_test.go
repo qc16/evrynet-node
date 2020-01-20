@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 var discard = Protocol{

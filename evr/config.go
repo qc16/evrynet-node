@@ -24,14 +24,14 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/consensus/ethash"
-	"github.com/evrynet-official/evrynet-client/consensus/tendermint"
-	"github.com/evrynet-official/evrynet-client/core"
-	"github.com/evrynet-official/evrynet-client/evr/downloader"
-	"github.com/evrynet-official/evrynet-client/evr/gasprice"
-	"github.com/evrynet-official/evrynet-client/miner"
-	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus/ethash"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/evr/downloader"
+	"github.com/Evrynetlabs/evrynet-node/evr/gasprice"
+	"github.com/Evrynetlabs/evrynet-node/miner"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 // DefaultConfig contains default settings for use on the Evrynet main net.

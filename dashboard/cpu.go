@@ -21,7 +21,7 @@ package dashboard
 import (
 	"syscall"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // getProcessCPUTime retrieves the process' CPU time since program startup.

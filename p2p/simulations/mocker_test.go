@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 )
 
 func TestMocker(t *testing.T) {

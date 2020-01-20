@@ -24,12 +24,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common/mclock"
-	"github.com/evrynet-official/evrynet-client/evr"
-	"github.com/evrynet-official/evrynet-client/evrdb"
-	"github.com/evrynet-official/evrynet-client/les/csvlogger"
-	"github.com/evrynet-official/evrynet-client/les/flowcontrol"
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/common/mclock"
+	"github.com/Evrynetlabs/evrynet-node/evr"
+	"github.com/Evrynetlabs/evrynet-node/evrdb"
+	"github.com/Evrynetlabs/evrynet-node/les/csvlogger"
+	"github.com/Evrynetlabs/evrynet-node/les/flowcontrol"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 const makeCostStats = false // make request cost statistics during operation

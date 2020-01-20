@@ -19,7 +19,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
 func TestJumpDestAnalysis(t *testing.T) {

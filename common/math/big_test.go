@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 func TestHexOrDecimal256(t *testing.T) {

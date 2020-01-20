@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/accounts/keystore"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 // Tests that the account management snippets work correctly.

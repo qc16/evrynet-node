@@ -19,7 +19,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 func TestTransaction(t *testing.T) {

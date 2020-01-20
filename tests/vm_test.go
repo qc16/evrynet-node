@@ -19,7 +19,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/evrynet-official/evrynet-client/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 )
 
 func TestVM(t *testing.T) {

@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 	"golang.org/x/crypto/pbkdf2"
 )
 

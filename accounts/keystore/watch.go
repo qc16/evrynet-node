@@ -21,7 +21,7 @@ package keystore
 import (
 	"time"
 
-	"github.com/evrynet-official/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/rjeczalik/notify"
 )
 

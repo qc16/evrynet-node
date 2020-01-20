@@ -20,8 +20,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/evrynet-official/evrynet-client/common"
-	"github.com/evrynet-official/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 // senderFromServer is a types.Signer that remembers the sender address returned by the RPC
