@@ -24,11 +24,11 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/p2p"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 var (

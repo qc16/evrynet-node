@@ -17,7 +17,7 @@
 package vm
 
 import (
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 func minSwapStack(n int) int {

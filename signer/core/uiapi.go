@@ -25,11 +25,11 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/accounts/keystore"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/math"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
 // SignerUIAPI implements methods Clef provides for a UI to query, in the bidirectional communication

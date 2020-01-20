@@ -23,11 +23,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/ethdb"
-	"github.com/Evrynetlabs/evrynet-client/ethdb/leveldb"
-	"github.com/Evrynetlabs/evrynet-client/ethdb/memorydb"
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/ethdb"
+	"github.com/Evrynetlabs/evrynet-node/ethdb/leveldb"
+	"github.com/Evrynetlabs/evrynet-node/ethdb/memorydb"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/olekukonko/tablewriter"
 )
 

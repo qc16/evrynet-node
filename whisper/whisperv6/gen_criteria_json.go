@@ -5,7 +5,7 @@ package whisperv6
 import (
 	"encoding/json"
 
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 )
 
 var _ = (*criteriaOverride)(nil)

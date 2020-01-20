@@ -22,15 +22,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
-	"github.com/Evrynetlabs/evrynet-client/common/math"
-	"github.com/Evrynetlabs/evrynet-client/core"
-	"github.com/Evrynetlabs/evrynet-client/core/rawdb"
-	"github.com/Evrynetlabs/evrynet-client/core/state"
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 // VMTest checks EVM execution without block or transaction context.

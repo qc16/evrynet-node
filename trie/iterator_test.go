@@ -22,8 +22,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/ethdb/memorydb"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/ethdb/memorydb"
 )
 
 func TestIterator(t *testing.T) {

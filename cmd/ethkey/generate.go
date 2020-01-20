@@ -23,9 +23,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts/keystore"
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/pborman/uuid"
 	"github.com/urfave/cli"
 )

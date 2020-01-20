@@ -41,10 +41,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/event"
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/event"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	pcsc "github.com/gballet/go-libpcsclite"
 )
 

@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/Evrynetlabs/evrynet-client/internal/cmdtest"
+	"github.com/Evrynetlabs/evrynet-node/internal/cmdtest"
 )
 
 func tmpdir(t *testing.T) string {

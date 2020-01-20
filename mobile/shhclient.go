@@ -19,8 +19,8 @@
 package geth
 
 import (
-	"github.com/Evrynetlabs/evrynet-client/whisper/shhclient"
-	whisper "github.com/Evrynetlabs/evrynet-client/whisper/whisperv6"
+	"github.com/Evrynetlabs/evrynet-node/whisper/shhclient"
+	whisper "github.com/Evrynetlabs/evrynet-node/whisper/whisperv6"
 )
 
 // WhisperClient provides access to the Ethereum APIs.

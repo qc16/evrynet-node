@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/accounts/keystore"
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
-	"github.com/Evrynetlabs/evrynet-client/console"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/console"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/urfave/cli"
 )
 

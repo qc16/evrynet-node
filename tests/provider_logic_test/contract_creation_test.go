@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/ethclient"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/ethclient"
 )
 
 /* These tests are done on a chain with already setup account/ contracts.

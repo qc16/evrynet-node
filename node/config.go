@@ -26,17 +26,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/accounts/external"
-	"github.com/Evrynetlabs/evrynet-client/accounts/keystore"
-	"github.com/Evrynetlabs/evrynet-client/accounts/scwallet"
-	"github.com/Evrynetlabs/evrynet-client/accounts/usbwallet"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/p2p"
-	"github.com/Evrynetlabs/evrynet-client/p2p/enode"
-	"github.com/Evrynetlabs/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/accounts/external"
+	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
+	"github.com/Evrynetlabs/evrynet-node/accounts/scwallet"
+	"github.com/Evrynetlabs/evrynet-node/accounts/usbwallet"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
 
 const (

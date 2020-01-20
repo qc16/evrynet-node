@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus"
 )
 
 // TendermintAPI is a user facing RPC API to dump tendermint state

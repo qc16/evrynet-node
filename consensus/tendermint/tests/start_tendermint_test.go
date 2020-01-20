@@ -10,16 +10,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/backend"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/tests_utils"
-	"github.com/Evrynetlabs/evrynet-client/core"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/eth"
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/p2p"
-	"github.com/Evrynetlabs/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/eth"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 )
 
 const (

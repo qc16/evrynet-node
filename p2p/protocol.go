@@ -19,8 +19,8 @@ package p2p
 import (
 	"fmt"
 
-	"github.com/Evrynetlabs/evrynet-client/p2p/enode"
-	"github.com/Evrynetlabs/evrynet-client/p2p/enr"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enr"
 )
 
 // Protocol represents a P2P subprotocol implementation.

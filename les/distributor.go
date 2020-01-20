@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-node/common/mclock"
 )
 
 // requestDistributor implements a mechanism that distributes requests to

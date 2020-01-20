@@ -24,9 +24,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
-	"github.com/Evrynetlabs/evrynet-client/internal/ethapi"
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/internal/ethapi"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/metrics"
+	"github.com/Evrynetlabs/evrynet-node/metrics"
 )
 
 func init() {

@@ -21,7 +21,7 @@ package metrics
 import (
 	"syscall"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // getProcessCPUTime retrieves the process' CPU time since program startup.

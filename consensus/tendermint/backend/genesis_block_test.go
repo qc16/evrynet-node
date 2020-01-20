@@ -12,16 +12,16 @@ import (
 
 	queue "github.com/enriquebris/goconcurrentqueue"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
-	tendermintCore "github.com/Evrynetlabs/evrynet-client/consensus/tendermint/core"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/tests_utils"
-	"github.com/Evrynetlabs/evrynet-client/core"
-	"github.com/Evrynetlabs/evrynet-client/core/rawdb"
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/event"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/stretchr/testify/assert"
 )
 

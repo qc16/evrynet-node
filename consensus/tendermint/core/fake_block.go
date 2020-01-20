@@ -6,15 +6,15 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/random"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/tests_utils"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/utils"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/random"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 func (c *core) checkAndFakeProposal(proposal *tendermint.Proposal) error {

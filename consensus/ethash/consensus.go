@@ -25,14 +25,14 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/math"
-	"github.com/Evrynetlabs/evrynet-client/consensus"
-	"github.com/Evrynetlabs/evrynet-client/consensus/misc"
-	"github.com/Evrynetlabs/evrynet-client/core/state"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/params"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
+	"github.com/Evrynetlabs/evrynet-node/consensus"
+	"github.com/Evrynetlabs/evrynet-node/consensus/misc"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/params"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

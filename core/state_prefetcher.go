@@ -19,12 +19,12 @@ package core
 import (
 	"sync/atomic"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus"
-	"github.com/Evrynetlabs/evrynet-client/core/state"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 // statePrefetcher is a basic Prefetcher, which blindly executes a block on top

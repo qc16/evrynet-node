@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/Evrynetlabs/evrynet-client/core"
+	"github.com/Evrynetlabs/evrynet-node/core"
 )
 
 // Tests the go-ethereum to Aleth chainspec conversion for the Stureby testnet.

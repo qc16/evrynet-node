@@ -23,10 +23,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
-	"github.com/Evrynetlabs/evrynet-client/consensus/ethash"
-	"github.com/Evrynetlabs/evrynet-client/eth"
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/ethash"
+	"github.com/Evrynetlabs/evrynet-node/eth"
+	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/urfave/cli"
 )
 

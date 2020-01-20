@@ -18,8 +18,8 @@
 package consensus
 
 import (
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 const (

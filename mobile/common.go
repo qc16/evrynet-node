@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.

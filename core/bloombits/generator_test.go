@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 // Tests that batched bloom bits are correctly rotated from the input bloom

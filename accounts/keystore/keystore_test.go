@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/event"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/event"
 )
 
 var testSigData = make([]byte, 32)

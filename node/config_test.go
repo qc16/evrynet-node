@@ -24,8 +24,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/p2p"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
 )
 
 // Tests that datadirs can be successfully created, be them manually configured

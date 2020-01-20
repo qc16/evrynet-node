@@ -21,17 +21,17 @@ import (
 	"math/big"
 	"sync"
 
-	ethereum "github.com/Evrynetlabs/evrynet-client"
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/event"
-	"github.com/Evrynetlabs/evrynet-client/internal/ethapi"
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
-	"github.com/Evrynetlabs/evrynet-client/rpc"
-	"github.com/Evrynetlabs/evrynet-client/signer/core"
+	ethereum "github.com/Evrynetlabs/evrynet-node"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/event"
+	"github.com/Evrynetlabs/evrynet-node/internal/ethapi"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
+	"github.com/Evrynetlabs/evrynet-node/signer/core"
 )
 
 type ExternalBackend struct {

@@ -23,14 +23,14 @@ import (
 	"strings"
 	"testing"
 
-	ethereum "github.com/Evrynetlabs/evrynet-client"
-	"github.com/Evrynetlabs/evrynet-client/accounts/abi"
-	"github.com/Evrynetlabs/evrynet-client/accounts/abi/bind"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
+	ethereum "github.com/Evrynetlabs/evrynet-node"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 type mockCaller struct {

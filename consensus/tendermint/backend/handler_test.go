@@ -8,19 +8,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/core"
+	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/tests_utils"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/event"
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/p2p"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/event"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 func TestHandleMsg(t *testing.T) {

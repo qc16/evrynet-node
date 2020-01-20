@@ -22,13 +22,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/internal/ethapi"
-	"github.com/Evrynetlabs/evrynet-client/signer/core"
-	"github.com/Evrynetlabs/evrynet-client/signer/storage"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/internal/ethapi"
+	"github.com/Evrynetlabs/evrynet-node/signer/core"
+	"github.com/Evrynetlabs/evrynet-node/signer/storage"
 )
 
 const JS = `

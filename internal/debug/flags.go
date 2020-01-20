@@ -24,9 +24,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/metrics"
-	"github.com/Evrynetlabs/evrynet-client/metrics/exp"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/metrics"
+	"github.com/Evrynetlabs/evrynet-node/metrics/exp"
 	"github.com/fjl/memsize/memsizeui"
 	colorable "github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"

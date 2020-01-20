@@ -22,9 +22,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
-	"github.com/Evrynetlabs/evrynet-client/console"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/console"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/urfave/cli"
 )
 

@@ -19,10 +19,10 @@ package state
 import (
 	"bytes"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/ethdb"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
-	"github.com/Evrynetlabs/evrynet-client/trie"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/ethdb"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/trie"
 )
 
 // NewStateSync create a new state trie download scheduler.

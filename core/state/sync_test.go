@@ -21,12 +21,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/core/rawdb"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/ethdb"
-	"github.com/Evrynetlabs/evrynet-client/ethdb/memorydb"
-	"github.com/Evrynetlabs/evrynet-client/trie"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/ethdb"
+	"github.com/Evrynetlabs/evrynet-node/ethdb/memorydb"
+	"github.com/Evrynetlabs/evrynet-node/trie"
 )
 
 // testAccount is the data associated with an account used by the state tests.

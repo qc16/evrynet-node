@@ -40,7 +40,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
 var dumpEnc bool

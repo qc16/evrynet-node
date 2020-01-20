@@ -22,12 +22,12 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus/ethash"
-	"github.com/Evrynetlabs/evrynet-client/core/rawdb"
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
-	"github.com/Evrynetlabs/evrynet-client/ethdb"
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus/ethash"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/ethdb"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 func TestDefaultGenesisBlock(t *testing.T) {

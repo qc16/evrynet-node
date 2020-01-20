@@ -21,17 +21,17 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/core"
-	"github.com/Evrynetlabs/evrynet-client/core/state"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
-	"github.com/Evrynetlabs/evrynet-client/eth/downloader"
-	"github.com/Evrynetlabs/evrynet-client/ethdb"
-	"github.com/Evrynetlabs/evrynet-client/event"
-	"github.com/Evrynetlabs/evrynet-client/params"
-	"github.com/Evrynetlabs/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/eth/downloader"
+	"github.com/Evrynetlabs/evrynet-node/ethdb"
+	"github.com/Evrynetlabs/evrynet-node/event"
+	"github.com/Evrynetlabs/evrynet-node/params"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
 
 // Backend interface provides the common API services (that are provided by

@@ -20,9 +20,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/core/rawdb"
-	"github.com/Evrynetlabs/evrynet-client/eth/downloader"
-	"github.com/Evrynetlabs/evrynet-client/light"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/eth/downloader"
+	"github.com/Evrynetlabs/evrynet-node/light"
 )
 
 // syncer is responsible for periodically synchronising with the network, both

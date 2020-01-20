@@ -22,11 +22,11 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/internal/ethapi"
-	"github.com/Evrynetlabs/evrynet-client/params"
-	"github.com/Evrynetlabs/evrynet-client/rpc"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/internal/ethapi"
+	"github.com/Evrynetlabs/evrynet-node/params"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
 
 var maxPrice = big.NewInt(500 * params.GWei)

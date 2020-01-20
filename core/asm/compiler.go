@@ -22,8 +22,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/common/math"
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 )
 
 // Compiler contains information about the parsed source

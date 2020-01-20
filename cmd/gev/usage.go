@@ -24,8 +24,8 @@ import (
 
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
-	"github.com/Evrynetlabs/evrynet-client/internal/debug"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/internal/debug"
 	cli "github.com/urfave/cli"
 )
 

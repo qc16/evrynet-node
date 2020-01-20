@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/ethclient"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/ethclient"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/mclock"
 )
 
 func TestTopicRadius(t *testing.T) {

@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // explorerDockerfile is the Dockerfile required to run a block explorer.

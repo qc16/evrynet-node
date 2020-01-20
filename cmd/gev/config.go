@@ -27,13 +27,13 @@ import (
 
 	cli "github.com/urfave/cli"
 
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
-	"github.com/Evrynetlabs/evrynet-client/dashboard"
-	"github.com/Evrynetlabs/evrynet-client/eth"
-	"github.com/Evrynetlabs/evrynet-client/graphql"
-	"github.com/Evrynetlabs/evrynet-client/node"
-	"github.com/Evrynetlabs/evrynet-client/params"
-	whisper "github.com/Evrynetlabs/evrynet-client/whisper/whisperv6"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/dashboard"
+	"github.com/Evrynetlabs/evrynet-node/eth"
+	"github.com/Evrynetlabs/evrynet-node/graphql"
+	"github.com/Evrynetlabs/evrynet-node/node"
+	"github.com/Evrynetlabs/evrynet-node/params"
+	whisper "github.com/Evrynetlabs/evrynet-node/whisper/whisperv6"
 	"github.com/naoina/toml"
 )
 

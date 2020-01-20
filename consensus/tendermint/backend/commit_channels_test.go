@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/Evrynetlabs/evrynet-client/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 )
 
 func TestCommitChannels(t *testing.T) {

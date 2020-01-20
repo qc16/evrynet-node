@@ -19,7 +19,7 @@
 package downloader
 
 import (
-	"github.com/Evrynetlabs/evrynet-client/metrics"
+	"github.com/Evrynetlabs/evrynet-node/metrics"
 )
 
 var (

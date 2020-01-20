@@ -19,8 +19,8 @@
 package whisperv6
 
 import (
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 )
 
 // TopicType represents a cryptographically secure, probabilistic partial

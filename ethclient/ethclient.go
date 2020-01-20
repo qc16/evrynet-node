@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"math/big"
 
-	ethereum "github.com/Evrynetlabs/evrynet-client"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/hexutil"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
-	"github.com/Evrynetlabs/evrynet-client/rpc"
+	ethereum "github.com/Evrynetlabs/evrynet-node"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.

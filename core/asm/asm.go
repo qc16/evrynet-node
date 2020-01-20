@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 )
 
 // Iterator for disassembled EVM instructions

@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 const (

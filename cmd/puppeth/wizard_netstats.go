@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/core"
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/olekukonko/tablewriter"
 )
 

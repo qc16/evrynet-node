@@ -22,11 +22,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/internal/ethapi"
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/signer/core"
-	"github.com/Evrynetlabs/evrynet-client/signer/rules/deps"
-	"github.com/Evrynetlabs/evrynet-client/signer/storage"
+	"github.com/Evrynetlabs/evrynet-node/internal/ethapi"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/signer/core"
+	"github.com/Evrynetlabs/evrynet-node/signer/rules/deps"
+	"github.com/Evrynetlabs/evrynet-node/signer/storage"
 	"github.com/robertkrimen/otto"
 )
 

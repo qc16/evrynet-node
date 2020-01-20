@@ -19,9 +19,9 @@ package types
 import (
 	"bytes"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
-	"github.com/Evrynetlabs/evrynet-client/trie"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/trie"
 )
 
 type DerivableList interface {

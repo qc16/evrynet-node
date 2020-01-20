@@ -24,14 +24,14 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus/ethash"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-client/core"
-	"github.com/Evrynetlabs/evrynet-client/eth/downloader"
-	"github.com/Evrynetlabs/evrynet-client/eth/gasprice"
-	"github.com/Evrynetlabs/evrynet-client/miner"
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus/ethash"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/eth/downloader"
+	"github.com/Evrynetlabs/evrynet-node/eth/gasprice"
+	"github.com/Evrynetlabs/evrynet-node/miner"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 // DefaultConfig contains default settings for use on the Ethereum main net.

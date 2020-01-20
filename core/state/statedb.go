@@ -24,13 +24,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/log"
-	"github.com/Evrynetlabs/evrynet-client/metrics"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
-	"github.com/Evrynetlabs/evrynet-client/trie"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/metrics"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/trie"
 )
 
 type revision struct {
@@ -595,7 +595,7 @@ func (self *StateDB) Copy() *StateDB {
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
-		// As documented [here](https://github.com/Evrynetlabs/evrynet-client/pull/16485#issuecomment-380438527),
+		// As documented [here](https://github.com/Evrynetlabs/evrynet-node/pull/16485#issuecomment-380438527),
 		// and in the Finalise-method, there is a case where an object is in the journal but not
 		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
 		// nil

@@ -9,14 +9,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
-	tendermintBackend "github.com/Evrynetlabs/evrynet-client/consensus/tendermint/backend"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint/validator"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/p2p"
-	"github.com/Evrynetlabs/evrynet-client/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	tendermintBackend "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 )
 
 //TestTendermintBroadcast setup a test to broadcast a message from a node

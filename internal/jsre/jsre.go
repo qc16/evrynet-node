@@ -26,8 +26,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/internal/jsre/deps"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/internal/jsre/deps"
 	"github.com/robertkrimen/otto"
 )
 

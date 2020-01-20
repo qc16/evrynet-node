@@ -21,8 +21,8 @@ package geth
 import (
 	"errors"
 
-	ethereum "github.com/Evrynetlabs/evrynet-client"
-	"github.com/Evrynetlabs/evrynet-client/common"
+	ethereum "github.com/Evrynetlabs/evrynet-node"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 // Subscription represents an event subscription where events are

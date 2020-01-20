@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/math"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
 )
 
 var _ = (*stEnvMarshaling)(nil)

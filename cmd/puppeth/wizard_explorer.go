@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // deployExplorer creates a new block explorer based on some user input.

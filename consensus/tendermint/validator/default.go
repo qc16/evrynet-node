@@ -5,8 +5,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 )
 
 type defaultValidator struct {

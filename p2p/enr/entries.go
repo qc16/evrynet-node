@@ -21,7 +21,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/Evrynetlabs/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 // Entry is implemented by known node record entry types.

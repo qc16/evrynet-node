@@ -19,7 +19,7 @@ package ethapi
 import (
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 type AddrLocker struct {

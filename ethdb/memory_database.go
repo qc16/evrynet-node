@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 /*

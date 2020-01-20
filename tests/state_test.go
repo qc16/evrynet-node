@@ -24,8 +24,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
-	"github.com/Evrynetlabs/evrynet-client/core/vm"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 )
 
 func TestState(t *testing.T) {

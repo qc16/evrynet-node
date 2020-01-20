@@ -21,8 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Evrynetlabs/evrynet-client/internal/debug"
-	"github.com/Evrynetlabs/evrynet-client/params"
+	"github.com/Evrynetlabs/evrynet-node/internal/debug"
+	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/urfave/cli"
 )
 

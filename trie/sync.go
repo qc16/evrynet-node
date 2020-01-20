@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/common/prque"
-	"github.com/Evrynetlabs/evrynet-client/ethdb"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/common/prque"
+	"github.com/Evrynetlabs/evrynet-node/ethdb"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a

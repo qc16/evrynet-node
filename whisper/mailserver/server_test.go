@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	whisper "github.com/Evrynetlabs/evrynet-client/whisper/whisperv6"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	whisper "github.com/Evrynetlabs/evrynet-node/whisper/whisperv6"
 )
 
 const powRequirement = 0.00001

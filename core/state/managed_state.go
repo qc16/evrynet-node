@@ -19,7 +19,7 @@ package state
 import (
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 type account struct {

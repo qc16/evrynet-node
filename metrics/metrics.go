@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // Enabled is checked by the constructor functions for all of the

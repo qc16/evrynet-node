@@ -26,7 +26,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // makeWizard creates and returns a new puppeth wizard.

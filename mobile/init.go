@@ -22,7 +22,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 func init() {

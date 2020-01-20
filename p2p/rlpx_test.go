@@ -32,10 +32,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/crypto/ecies"
-	"github.com/Evrynetlabs/evrynet-client/p2p/simulations/pipes"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/crypto/ecies"
+	"github.com/Evrynetlabs/evrynet-node/p2p/simulations/pipes"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

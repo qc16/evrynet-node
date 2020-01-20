@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // ensureVirtualHost checks whether a reverse-proxy is running on the specified

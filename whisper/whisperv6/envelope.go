@@ -26,10 +26,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
-	"github.com/Evrynetlabs/evrynet-client/crypto/ecies"
-	"github.com/Evrynetlabs/evrynet-client/rlp"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/crypto/ecies"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 // Envelope represents a clear-text data packet to transmit through the Whisper

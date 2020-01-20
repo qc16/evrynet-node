@@ -23,8 +23,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts/abi"
-	"github.com/Evrynetlabs/evrynet-client/common"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
 // decodedCallData is an internal type to represent a method call parsed according

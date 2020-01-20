@@ -26,13 +26,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/consensus/ethash"
-	"github.com/Evrynetlabs/evrynet-client/core"
-	"github.com/Evrynetlabs/evrynet-client/eth"
-	"github.com/Evrynetlabs/evrynet-client/internal/jsre"
-	"github.com/Evrynetlabs/evrynet-client/miner"
-	"github.com/Evrynetlabs/evrynet-client/node"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus/ethash"
+	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/eth"
+	"github.com/Evrynetlabs/evrynet-node/internal/jsre"
+	"github.com/Evrynetlabs/evrynet-node/miner"
+	"github.com/Evrynetlabs/evrynet-node/node"
 )
 
 const (

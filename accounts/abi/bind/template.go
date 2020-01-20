@@ -16,7 +16,7 @@
 
 package bind
 
-import "github.com/Evrynetlabs/evrynet-client/accounts/abi"
+import "github.com/Evrynetlabs/evrynet-node/accounts/abi"
 
 // tmplData is the data structure required to fill the binding template.
 type tmplData struct {
@@ -68,12 +68,12 @@ import (
 	"math/big"
 	"strings"
 
-	ethereum "github.com/Evrynetlabs/evrynet-client"
-	"github.com/Evrynetlabs/evrynet-client/accounts/abi"
-	"github.com/Evrynetlabs/evrynet-client/accounts/abi/bind"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/core/types"
-	"github.com/Evrynetlabs/evrynet-client/event"
+	ethereum "github.com/Evrynetlabs/evrynet-node"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/Evrynetlabs/evrynet-client/log"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // deployEthstats queries the user for various input on deploying an ethstats

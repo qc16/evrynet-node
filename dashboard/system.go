@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/elastic/gosigar"
-	"github.com/Evrynetlabs/evrynet-client/metrics"
-	"github.com/Evrynetlabs/evrynet-client/p2p"
+	"github.com/Evrynetlabs/evrynet-node/metrics"
+	"github.com/Evrynetlabs/evrynet-node/p2p"
 )
 
 // meterCollector returns a function, which retrieves the count of a specific meter.

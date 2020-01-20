@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/Evrynetlabs/evrynet-client/eth/tracers/internal/tracers"
+	"github.com/Evrynetlabs/evrynet-node/eth/tracers/internal/tracers"
 )
 
 // all contains all the built in JavaScript tracers by name.

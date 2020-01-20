@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event

@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-node/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a

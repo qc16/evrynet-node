@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-client/common/math"
+	"github.com/Evrynetlabs/evrynet-node/common/math"
 )
 
 func TestBlockNumberJSONUnmarshal(t *testing.T) {

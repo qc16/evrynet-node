@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-client/event"
+	"github.com/Evrynetlabs/evrynet-node/event"
 )
 
 // This example demonstrates how SubscriptionScope can be used to control the lifetime of

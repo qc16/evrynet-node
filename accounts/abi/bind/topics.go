@@ -23,9 +23,9 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/Evrynetlabs/evrynet-client/accounts/abi"
-	"github.com/Evrynetlabs/evrynet-client/common"
-	"github.com/Evrynetlabs/evrynet-client/crypto"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
+	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
 // makeTopics converts a filter query argument list into a filter topic set.

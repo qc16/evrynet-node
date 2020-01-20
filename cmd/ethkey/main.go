@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Evrynetlabs/evrynet-client/cmd/utils"
+	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
 	"github.com/urfave/cli"
 )
 

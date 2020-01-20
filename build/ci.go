@@ -53,7 +53,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Evrynetlabs/evrynet-client/internal/build"
+	"github.com/Evrynetlabs/evrynet-node/internal/build"
 )
 
 var GOBIN, _ = filepath.Abs(filepath.Join("build", "bin"))

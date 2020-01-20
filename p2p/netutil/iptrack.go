@@ -19,7 +19,7 @@ package netutil
 import (
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-client/common/mclock"
+	"github.com/Evrynetlabs/evrynet-node/common/mclock"
 )
 
 // IPTracker predicts the external endpoint, i.e. IP address and port, of the local host
