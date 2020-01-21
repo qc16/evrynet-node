@@ -6,20 +6,16 @@ Ex: `deploy/testnet/build_image_by_version.sh 1.0-beta.1`
 - Push that image to Docker Hub by command `docker push kybernetwork/evrynet-builder:1.0-beta.1` (`1.0-beta.1` is your version you just built)  
 
 ## 2. Deployment
-- To deploy by version, use this command `deploy/testnet/deploy_by_version.sh` with the params explanation in this file.   
-Ex: `deploy/testnet/deploy_by_version.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y 1.0-beta.1`  
-- To deploy last code on develop, use this command `deploy/testnet/deploy_dev_branch.sh` with the params explanation in this file.   
-Ex: `deploy/testnet/deploy_dev_branch.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y`
-
 ### 2.1. Using Existing Config
 #### Run Testnet Docker
 Everything was setup. You only need to run this script  
-`./deploy/testnet/deploy.sh <path_to_share_volumes> <rpc_corsdomain> <wanna_to_deploy_explorer>`    
+`deploy/testnet/deploy_by_version.sh <path_to_share_volumes> <rpc_corsdomain> <deploy_explorer> <version>`    
 
-Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-node/deploy/testnet/nodes/data localhost y`
+Ex: `deploy/testnet/deploy_by_version.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y 1.0-beta.1`  
 - `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
-- `wanna_to_deploy_explorer` if you wanna deploy explorer, input is `y`
+- `deploy_explorer` if you wanna deploy explorer, input is `y`
+- `version` is the tag version you wanna to deploy
 
 #### Nodes Information
 Everything about 3 nodes I put at `deploy/testnet/nodes/data`.  
@@ -154,3 +150,6 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
     INFO [11-27|18:09:06.981] Saved genesis chain spec                 client=harmony path=testnet-harmony.json
     ```
 8. Replace all content of `deploy/testnet/nodes/bin/genesis.json` with `testnet.json` (new genesis file just created)
+
+** To deploy last code on develop, use this command `deploy/testnet/deploy_dev_branch.sh` with the params explanation in this file.   
+Ex: `deploy/testnet/deploy_dev_branch.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y`
