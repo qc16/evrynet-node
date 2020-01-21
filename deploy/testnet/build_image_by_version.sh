@@ -17,7 +17,7 @@ git fetch --all --tags --prune
 git clone -b "$version" git@github.com:Evrynetlabs/evrynet-node.git "$BASEDIR"/builder/project
 
 echo "--- Building builder container for version $version"
-yes | sudo version="img_builder" docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-builder
+yes | sudo version="kybernetwork/evrynet-builder:$version" docker-compose -f "$BASEDIR"/docker-compose.yml up -d --force-recreate --build gev-builder
 
 rm -rf "$BASEDIR"/builder/project
 
