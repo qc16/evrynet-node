@@ -1,7 +1,18 @@
-# How to use Testsnet Docker  
+# How to use Testsnet Docker   
 
-## 1. Using Existing Config
-### Run Testnet Docker
+## 1. Build docker image to push on Docker Hub 
+- Using `deploy/testnet/build_image_by_version.sh` with a first param is the tag you wanna build ([Here](https://github.com/Evrynetlabs/evrynet-node/tags)).  
+Ex: `deploy/testnet/build_image_by_version.sh 1.0-beta.1`
+- Push that image to Docker Hub by command `docker push kybernetwork/evrynet-builder:1.0-beta.1` (`1.0-beta.1` is your version you just built)  
+
+## 2. Deployment
+- To deploy by version, use this command `deploy/testnet/deploy_by_version.sh` with the params explanation in this file.   
+Ex: `deploy/testnet/deploy_by_version.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y 1.0-beta.1`  
+- To deploy last code on develop, use this command `deploy/testnet/deploy_dev_branch.sh` with the params explanation in this file.   
+Ex: `deploy/testnet/deploy_dev_branch.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y`
+
+### 2.1. Using Existing Config
+#### Run Testnet Docker
 Everything was setup. You only need to run this script  
 `./deploy/testnet/deploy.sh <path_to_share_volumes> <rpc_corsdomain> <wanna_to_deploy_explorer>`    
 
@@ -10,20 +21,20 @@ Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-node
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
 - `wanna_to_deploy_explorer` if you wanna deploy explorer, input is `y`
 
-### Nodes Information
+#### Nodes Information
 Everything about 3 nodes I put at `deploy/testnet/nodes/data`.  
 You can clear all data by running this file `deploy/testnet/nodes/data/clear_data.sh`
 
 ### Webs
 - Explorer: http://localhost:8080
 
-### NOTICE!
+#### NOTICE!
 - If you want to stop nodes, DON'T USE `docker stop ...`. It can make a crash to DB of nodes => can not run for next time!
 - To stop nodes gracefully, USE this file `deploy/testnet/stop_dockers.sh`. It will interact with node in docker to stop gracefully.
 
 ---
 
-## 2. Setup From Zero
+### 2.2. Setup From Zero
 1. Build and export to `PATH`
     ```shell script
     $ go build ./cmd/gev
