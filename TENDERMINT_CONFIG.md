@@ -125,21 +125,21 @@
     - Node 1
     ```shell
     $ cd node1
-    $ gev --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,evr,debug,miner,net,shh,txpool,personal,web3 --port 30300 --debug console
+    $ gev --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30300 --debug console
     ```
     - Node 2
     ```shell
     $ cd ../node2
-    $ gev --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,evr,debug,miner,net,shh,txpool,personal,web3 --port 30301 --debug console
+    $ gev --datadir data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30301 --debug console
     ```
     
 12. Or you can start all nodes by first creating a script and running it.
     ```shell
     $ nano startall.sh
     #!/bin/bash
-    gev --datadir node1/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,evr,debug,miner,net,shh,txpool,personal,web3 --port 30300 2>>node1/node.log &
+    gev --datadir node1/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22000 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30300 2>>node1/node.log &
 
-    gev --datadir node2/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,evr,debug,miner,net,shh,txpool,personal,web3 --port 30301 2>>node2/node.log &
+    gev --datadir node2/data --nodiscover --syncmode fast --mine --minerthreads 1 --networkid 15 --rpc --rpcaddr 0.0.0.0 --rpcport 22001 --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 --port 30301 2>>node2/node.log &
     ```
 
     ```shell
