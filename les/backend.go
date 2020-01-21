@@ -215,17 +215,17 @@ func (s *LightDummyAPI) Mining() bool {
 func (s *LightEvrynet) APIs() []rpc.API {
 	return append(evrapi.GetAPIs(s.ApiBackend), []rpc.API{
 		{
-			Namespace: "evr",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   &LightDummyAPI{},
 			Public:    true,
 		}, {
-			Namespace: "evr",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
 		}, {
-			Namespace: "evr",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, true),
 			Public:    true,
