@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	RPCEndpoint = "http://52.220.52.16:22001"
+	RPCEndpoint = "http://0.0.0.0:22001"
 )
 
 func TestAllApis(t *testing.T) {
@@ -24,7 +24,7 @@ func TestAllApis(t *testing.T) {
 			"protocolVersion", "syncing", "coinbase", "mining", "hashrate", "gasPrice", "accounts",
 			"blockNumber", "getStorageAt", "getTransactionCount", "getBlockTransactionCountByHash",
 			"getBlockTransactionCountByNumber", "getUncleCountByBlockHash", "getUncleCountByBlockNumber",
-			"getCode", "sign", "providerSignTrannsaction", "sendTransaction", "sendRawTransaction",
+			"getCode", "sign", "providerSignTransaction", "sendTransaction", "sendRawTransaction",
 			"estimateGas", "getBlockByHash", "getBlockSignerByHash", "getBlockByNumber",
 			"getBlockSignerByNumber", "getTransactionByHash", "getTransactionByBlockHashAndIndex",
 			"getTransactionByBlockNumberAndIndex", "getTransactionReceipt", "getUncleByBlockHashAndIndex",
@@ -46,4 +46,5 @@ func TestAllApis(t *testing.T) {
 
 		time.Sleep(200 * time.Millisecond)
 	}
+
 }
