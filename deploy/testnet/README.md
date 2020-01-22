@@ -1,13 +1,13 @@
 # How to use Testsnet Docker   
 
-## 1. Build docker image to push on Docker Hub 
+## 1. Re-build docker image to deploy a specific version 
 - Using `deploy/testnet/build_image_by_version.sh` with a first param is the tag you wanna build ([Here](https://github.com/Evrynetlabs/evrynet-node/tags)).  
 Ex: `deploy/testnet/build_image_by_version.sh 1.0-beta.1`
 - Push that image to Docker Hub by command `docker push kybernetwork/evrynet-builder:1.0-beta.1` (`1.0-beta.1` is your version you just built)  
 
 ## 2. Deployment
-### 2.1. Using Existing Config
-#### Run Testnet Docker
+### 2.1. Using Quick start With Predefined Config
+#### Run Testnet Docker with 3 nodes on a single machine
 Everything was setup. You only need to run this script  
 `deploy/testnet/deploy_by_version.sh <path_to_share_volumes> <rpc_corsdomain> <deploy_explorer> <version>`    
 
@@ -30,7 +30,16 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
 
 ---
 
-### 2.2. Setup From Zero
+### 2.2. Setup From Zero 
+This guide will demonstrate the process of setting up 3 nodes manually. The process will including: 
+ - Build the executable from source code
+ - Create working directory for the node data
+ - Generate node's key (for consensus message signing)
+ - Generate enodes address (for node connections)
+ - Deploy
+ 
+The bellow example explains how to deploy 3 nodes manually
+
 1. Build and export to `PATH`
     ```shell script
     $ go build ./cmd/gev
@@ -151,5 +160,19 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
     ```
 8. Replace all content of `deploy/testnet/nodes/bin/genesis.json` with `testnet.json` (new genesis file just created)
 
-** To deploy last code on develop, use this command `deploy/testnet/deploy_dev_branch.sh` with the params explanation in this file.   
+9. Run the deployment script or to run each node from executable:
+
+ To deploy using pre-written scripts:
+ < TO WRITE>
+ 
+ To deploy by running binary files:
+ < TO WRITE> 
+ 
+
+Ex: `deploy/testnet/deploy_by_version.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y 1.0-beta.1`  
+- `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
+- `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
+- `deploy_explorer` if you wanna deploy explorer, input is `y`
+- `version` is the tag version you wanna to deploy
+** To deploy lastest code on develop, use this command `deploy/testnet/deploy_dev_branch.sh` with the params explanation in this file.   
 Ex: `deploy/testnet/deploy_dev_branch.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y`
