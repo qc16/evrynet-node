@@ -17,6 +17,7 @@ then
 fi
 
 BASEDIR=$(dirname "$0")
+IMAGE_TAG="registry.gitlab.com/evry/evrynet-client"
 
 # Start builder
 echo "--- Cleaning executable files ..."
@@ -34,17 +35,17 @@ sudo docker stop bootnode
 # Clear network bridge
 yes | sudo docker network prune
 
-echo "--- Pulling kybernetwork/evrynet-builder image"
-sudo docker pull kybernetwork/evrynet-builder:"$version"
+echo "--- Pulling $IMAGE_TAG image"
+sudo docker pull "$IMAGE_TAG:$version"
 
-echo "--- Checking kybernetwork/evrynet-builder:$version image"
-GrepInfo=$(sudo docker images -a | grep "kybernetwork/evrynet-builder" | grep "$version" | awk '{print $1}')
+echo "--- Checking $IMAGE_TAG:$version image"
+GrepInfo=$(sudo docker images -a | grep "$IMAGE_TAG" | grep "$version" | awk '{print $1}')
 echo "$GrepInfo"
 
 # shellcheck disable=SC2181
 if [ "$GrepInfo" != "" ];
 then
-  echo "=> Pulling kybernetwork/evrynet-builder:$version image successfully!"
+  echo "=> Pulling $IMAGE_TAG:$version image successfully!"
   sleep 3
 
   # Remove old services
@@ -52,10 +53,10 @@ then
   sudo docker rmi -f img_bootnode img_node_1 img_node_2 img_node_3
   sudo docker rm -f gev-bootnode gev-node-1 gev-node-2 gev-node-3
 
-  echo '--- Creating temporary docker container from kybernetwork/evrynet-builder to get bin files'
-  TempBuilderContainer=$(docker create kybernetwork/evrynet-builder:$version)
+  echo "--- Creating temporary docker container from $IMAGE_TAG to get bin files"
+  TempBuilderContainer=$(docker create "$IMAGE_TAG:$version")
 
-  echo "--- Copy gev, bootnode from kybernetwork/evrynet-builder to ./builder/bin/"
+  echo "--- Copy gev, bootnode from $IMAGE_TAG to ./builder/bin/"
   mkdir "$BASEDIR"/builder/bin/
   sudo docker cp "$TempBuilderContainer":/evrynet/gev "$BASEDIR"/builder/bin/
   sudo docker cp "$TempBuilderContainer":/evrynet/bootnode "$BASEDIR"/builder/bin/
