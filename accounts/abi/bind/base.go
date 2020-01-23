@@ -55,7 +55,7 @@ type TransactOpts struct {
 	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
 	GasLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
 
-	Enterprise *types.EnterpriseOption
+	Enterprise *types.CreateAccountOption
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
