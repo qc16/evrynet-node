@@ -1,7 +1,7 @@
 machine github.com
-login your_git_username
-password your_token
+login timPrachasri
+password ddae4abe7ebba0969c9bf3e8651e90c4fe215213
 
 machine api.github.com
-login your_git_username
-password your_token
+login timPrachasri
+password ddae4abe7ebba0969c9bf3e8651e90c4fe215213
