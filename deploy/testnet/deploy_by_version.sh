@@ -54,13 +54,13 @@ then
   sudo docker rm -f gev-bootnode gev-node-1 gev-node-2 gev-node-3
 
   echo "--- Creating temporary docker container from $IMAGE_TAG to get bin files"
-  TempBuilderContainer=$(docker create "$IMAGE_TAG:$version")
+  TempBuilderContainer=$(sudo docker create "$IMAGE_TAG:$version")
 
   echo "--- Copy gev, bootnode from $IMAGE_TAG to ./builder/bin/"
   mkdir "$BASEDIR"/builder/bin/
   sudo docker cp "$TempBuilderContainer":/evrynet/gev "$BASEDIR"/builder/bin/
   sudo docker cp "$TempBuilderContainer":/evrynet/bootnode "$BASEDIR"/builder/bin/
-  docker rm -v "$TempBuilderContainer"
+  sudo docker rm -v "$TempBuilderContainer"
 
   # Start bootnode
   echo "------ Start bootnode ------"
