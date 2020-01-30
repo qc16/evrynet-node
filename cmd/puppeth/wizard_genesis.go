@@ -18,8 +18,12 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ed25519"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -27,13 +31,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
-
-	"github.com/evrynet-official/evrynet-tools/accounts"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
@@ -163,7 +167,7 @@ func (w *wizard) makeGenesis() {
 		fmt.Println()
 		fmt.Println("What is the seed? (default = testnet)")
 		seed := w.readDefaultString("testnet")
-		accs, err := accounts.GenerateAccounts(numberAcc, seed)
+		accs, err := generateAccounts(numberAcc, seed)
 		if err != nil {
 			log.Error("fail to generate new account", "Error:", err)
 			return
@@ -367,4 +371,45 @@ func saveGenesis(folder, network, client string, spec interface{}) {
 		return
 	}
 	log.Info("Saved genesis chain spec", "client", client, "path", path)
+}
+
+type account struct {
+	PriKey  *ecdsa.PrivateKey
+	PubKey  *ecdsa.PublicKey
+	Address common.Address
+}
+
+func (a *account) PrivateKeyStr() string {
+	return hex.EncodeToString(crypto.FromECDSA(a.PriKey))
+}
+
+func (a *account) PublicKeyStr() string {
+	return hex.EncodeToString(crypto.FromECDSAPub(a.PubKey))
+}
+
+// generateAccounts creates a list of accounts from seed
+func generateAccounts(num int, seed string) ([]*account, error) {
+	var accs []*account
+	for i := 0; i < num; i++ {
+		seedBytes := []byte(seed + strconv.Itoa(i))
+		seedBytes = append(seedBytes, bytes.Repeat([]byte{0x00}, ed25519.SeedSize-len(seedBytes))...)
+
+		key := ed25519.NewKeyFromSeed(seedBytes)[32:]
+		privateKey, err := crypto.ToECDSA(key[:])
+		if err != nil {
+			return nil, err
+		}
+
+		publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
+		if !ok {
+			return nil, errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+		}
+		accs = append(accs,
+			&account{
+				PriKey:  privateKey,
+				PubKey:  publicKeyECDSA,
+				Address: crypto.PubkeyToAddress(privateKey.PublicKey),
+			})
+	}
+	return accs, nil
 }

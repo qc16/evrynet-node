@@ -8,14 +8,14 @@ WORKDIR /go-ethereum
 ADD . /go-ethereum
 
 # Load all project dependencies
-RUN go mod download
+RUN ./vendor.sh
 
 # Install golangci-lint tool
 RUN curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 				sh -s -- -b $GOPATH/bin v1.21.0
 
 # Build the gev binary
-RUN go run build/ci.go install
+RUN go run build/ci.go install ./cmd/gev
 
 # Pull Geth into a second stage deploy alpine container
 FROM alpine:latest
