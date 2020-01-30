@@ -17,6 +17,10 @@ pipeline {
     stages {
         stage ('Cleanup') {
             steps {
+                sh '''
+                    docker images
+                    free -m
+                '''
                 dir('directoryToDelete') {
                     deleteDir()
                 }
