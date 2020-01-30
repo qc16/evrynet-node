@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/elastic/gosigar"
+
 	"github.com/Evrynetlabs/evrynet-node/metrics"
 	"github.com/Evrynetlabs/evrynet-node/p2p"
 )

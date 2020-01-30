@@ -542,7 +542,7 @@ func (c *core) FinalizeBlock(proposal *Proposal) (*types.Block, error) {
 
 	votes, ok := precommits.voteByBlock[header.Hash()]
 	if !ok || votes == nil {
-		c.getLogger().Panicw("no votes for the commiting block", "block_hash", header.Hash())
+		c.getLogger().Panicw("no votes for the committing block", "block_hash", header.Hash())
 	}
 	if votes.totalReceived < minMajority {
 		return nil, fmt.Errorf("not enough precommits received expect at least %d received %d", minMajority, totalPrecommits)
