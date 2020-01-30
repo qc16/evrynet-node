@@ -1,22 +1,23 @@
 package test
 
 import (
-	"context"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/Evrynetlabs/evrynet-node/rpc"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
-	RPCEndpoint = "http://0.0.0.0:22001"
+	RPCEndpoint        = "http://52.220.52.16:22001"
+	MethodNotFoundCode = -32601 // the code of method not found error
 )
 
 func TestAllApis(t *testing.T) {
 
 	rpcClient, err := rpc.Dial(RPCEndpoint)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var (
 		prefix  = "eth_"
@@ -39,12 +40,16 @@ func TestAllApis(t *testing.T) {
 			continue
 		}
 		method := prefix + element
-		err = rpcClient.CallContext(context.Background(), nil, method)
+		err = rpcClient.Call(nil, method)
+
 		if err != nil {
-			assert.NotContains(t, err.Error(), "the method "+method+" does not exist/is not available")
+			var jsonErr = err.(rpc.Error)
+			require.NotNil(t, jsonErr)
+			if jsonErr.ErrorCode() == MethodNotFoundCode {
+				t.Error(jsonErr)
+			}
 		}
 
 		time.Sleep(200 * time.Millisecond)
 	}
-
 }
