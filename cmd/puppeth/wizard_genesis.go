@@ -22,8 +22,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/ed25519"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -33,6 +31,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/core"
