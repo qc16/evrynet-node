@@ -43,10 +43,10 @@ func TestAllApis(t *testing.T) {
 		err = rpcClient.Call(nil, method)
 
 		if err != nil {
-			var jsonErr = err.(rpc.Error)
-			require.NotNil(t, jsonErr)
-			if jsonErr.ErrorCode() == MethodNotFoundCode {
-				t.Error(jsonErr)
+			if jsonErr, ok := err.(rpc.Error); ok {
+				if jsonErr.ErrorCode() == MethodNotFoundCode {
+					t.Error(jsonErr)
+				}
 			}
 		}
 
