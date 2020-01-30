@@ -27,10 +27,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/elastic/gosigar"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 
-	"github.com/elastic/gosigar"
 	"github.com/Evrynetlabs/evrynet-node/accounts"
 	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
 	"github.com/Evrynetlabs/evrynet-node/cmd/utils"

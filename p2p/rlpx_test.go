@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/crypto/ecies"
 	"github.com/Evrynetlabs/evrynet-node/p2p/simulations/pipes"
