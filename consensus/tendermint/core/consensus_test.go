@@ -36,9 +36,9 @@ func TestFinalizeBlock(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, txPool := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
-	core := newTestCore(be, tendermint.DefaultConfig, txPool)
+	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	state := core.CurrentState()
 	assert.Equal(t, RoundStepNewHeight, state.Step())
@@ -137,7 +137,7 @@ func TestFinalizeBlock(t *testing.T) {
 				switch tc.validatorVotes[i] {
 				case Block1:
 					ok, err := newMsgSet.AddVote(msg,
-						&tendermint.Vote{
+						&Vote{
 							BlockHash:   &blHash1,
 							BlockNumber: core.CurrentState().BlockNumber(),
 							Round:       voteRound,
@@ -146,7 +146,7 @@ func TestFinalizeBlock(t *testing.T) {
 					require.NoError(t, err)
 					assert.True(t, ok)
 				case Block2:
-					vote := &tendermint.Vote{
+					vote := &Vote{
 						BlockHash:   &blHash2,
 						BlockNumber: core.CurrentState().BlockNumber(),
 						Round:       voteRound,
@@ -171,7 +171,7 @@ func TestFinalizeBlock(t *testing.T) {
 			assert.Equal(t, tc.totalReceived, core.currentState.PrecommitsReceived[voteRound].voteByBlock[blHash2].totalReceived, "Total Precommits Received on block 2 must be same when getting vote by block hash")
 
 			//Check error after finalizing block
-			finalizedBlock, err := core.FinalizeBlock(&tendermint.Proposal{
+			finalizedBlock, err := core.FinalizeBlock(&Proposal{
 				Block:    bl2,
 				Round:    0,
 				POLRound: 0,
