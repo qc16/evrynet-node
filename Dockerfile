@@ -7,14 +7,14 @@ WORKDIR /evrynet-node
 ADD . .
 
 # Load all project dependencies
-RUN go mod download
+RUN ./vendor.sh
 
 # Install golangci-lint tool
 RUN curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 				sh -s -- -b $GOPATH/bin v1.21.0
 
 # Build the gev binary
-RUN go run build/ci.go install
+RUN go run build/ci.go install ./cmd/gev
 
 RUN go build ./cmd/gev
 RUN go build ./cmd/bootnode
