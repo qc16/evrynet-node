@@ -172,7 +172,6 @@ func TestBackend_Gossip(t *testing.T) {
 	)
 
 	be.coreStarted = true
-	go be.gossipLoop()
 	dataCh := make(chan string)
 
 	broadcaster := &mockBroadcaster{
@@ -187,7 +186,7 @@ func TestBackend_Gossip(t *testing.T) {
 	valSet := validator.NewSet(nodeAddrs, tendermint.RoundRobin, 100)
 
 	//test basic
-	require.NoError(t, be.Gossip(valSet, big.NewInt(0), []byte(expectedData)))
+	require.NoError(t, be.Gossip(valSet, big.NewInt(0), 0, 0, []byte(expectedData)))
 	select {
 	case <-time.After(time.Millisecond * 20):
 		t.Fatal("not receive msg to peer")
@@ -197,7 +196,7 @@ func TestBackend_Gossip(t *testing.T) {
 
 	//test retrying broadcast data
 	broadcaster.isDisconnect = true
-	err := be.Gossip(valSet, big.NewInt(0), []byte(expectedData))
+	err := be.Gossip(valSet, big.NewInt(0), 0, 0, []byte(expectedData))
 	require.NoError(t, err)
 	select {
 	case <-time.After(time.Millisecond * 80):
@@ -215,7 +214,7 @@ func TestBackend_Gossip(t *testing.T) {
 
 	//test not passed when sending failed
 	broadcaster.isSendFailed = true
-	require.NoError(t, be.Gossip(valSet, big.NewInt(0), []byte(expectedData)))
+	require.NoError(t, be.Gossip(valSet, big.NewInt(0), 0, 0, []byte(expectedData)))
 
 	select {
 	case <-time.After(time.Millisecond * 80):
@@ -233,7 +232,7 @@ func TestBackend_Gossip(t *testing.T) {
 
 	// test gossip is cancelled when new head event
 	broadcaster.isDisconnect = true
-	require.NoError(t, be.Gossip(valSet, big.NewInt(1), []byte(expectedData)))
+	require.NoError(t, be.Gossip(valSet, big.NewInt(1), 0, 0, []byte(expectedData)))
 	select {
 	case <-time.After(time.Millisecond * 80):
 	case <-dataCh:

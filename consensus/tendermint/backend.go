@@ -23,11 +23,11 @@ type Backend interface {
 
 	// Gossip sends a message to all validators (exclude self)
 	// these message are send via p2p network interface.
-	Gossip(valSet ValidatorSet, blockNumber *big.Int, payload []byte) error
+	Gossip(valSet ValidatorSet, blockNumber *big.Int, round int64, msgType uint64, payload []byte) error
 
 	// Broadcast sends a message to all validators (including self)
 	// It will call gossip and post an identical event to its EventMux().
-	Broadcast(valSet ValidatorSet, blockNumber *big.Int, payload []byte) error
+	Broadcast(valSet ValidatorSet, blockNumber *big.Int, round int64, msgType uint64, payload []byte) error
 
 	// Multicast sends a message to a group of given address
 	// returns error if sending is failed, or not found the targets address
