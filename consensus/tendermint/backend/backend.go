@@ -12,6 +12,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
 	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -42,6 +43,13 @@ type Option func(b *Backend) error
 func WithDB(db evrdb.Database) Option {
 	return func(b *Backend) error {
 		b.db = db
+		return nil
+	}
+}
+
+func WithValsetAddresses(addrs []common.Address) Option {
+	return func(b *Backend) error {
+		b.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(addrs)
 		return nil
 	}
 }
@@ -107,6 +115,8 @@ type Backend struct {
 	proposedValidator *ProposalValidator
 
 	broadcastCh chan broadcastTask
+
+	valSetInfo ValidatorSetInfo
 }
 
 // EventMux implements tendermint.Backend.EventMux
@@ -289,7 +299,11 @@ func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) er
 // Validators return validator set for a block number
 // TODO: revise this function once auth vote is implemented
 func (sb *Backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
-	return sb.getValSet(sb.chain, blockNumber)
+	valSet, err := sb.valSetInfo.GetValSet(sb.chain, blockNumber)
+	if err != nil {
+		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
+	}
+	return valSet
 }
 
 // FindExistingPeers check validator peers exist or not by address
@@ -329,5 +343,9 @@ func (sb *Backend) CurrentHeadBlock() *types.Block {
 
 // ValidatorsByChainReader returns val-set from snapshot
 func (sb *Backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
-	return sb.getValSet(chain, blockNumber)
+	valSet, err := sb.valSetInfo.GetValSet(chain, blockNumber)
+	if err != nil {
+		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
+	}
+	return valSet
 }
