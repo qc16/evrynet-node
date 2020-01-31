@@ -412,9 +412,8 @@ func (c *core) handlePrecommit(msg message) error {
 		if blockHash.Hex() != emptyBlockHash.Hex() {
 			c.enterCommit(state.BlockNumber(), vote.Round)
 			//TODO: if we need to skip when precommits has all votes
-		} else {
-			//wait for more precommit
-			c.enterPrecommitWait(state.BlockNumber(), vote.Round)
+		} else { // enter new Round for consensus
+			c.enterNewRound(state.BlockNumber(), vote.Round+1)
 		}
 		return nil
 	}
