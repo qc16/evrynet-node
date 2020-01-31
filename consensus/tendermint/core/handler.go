@@ -115,6 +115,9 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 	c.sentMsgStorage.truncateMsgStored(logger)
 	c.updateStateForNewblock()
 	c.startNewRound()
+	if _, err := c.processFutureMessages(logger); err != nil {
+		logger.Errorw("failed to process future msg", "err", err)
+	}
 	return nil
 }
 

@@ -89,9 +89,4 @@ func (c *core) updateStateForNewblock() {
 	c.currentState = state
 	c.valSet = c.backend.Validators(c.CurrentState().BlockNumber())
 	logger.Infow("updated to new block", "new_block_number", state.BlockNumber())
-
-	if _, err := c.processFutureMessages(logger); err != nil {
-		logger.Errorw("failed to process future msg", "err", err)
-	}
-
 }
