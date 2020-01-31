@@ -147,7 +147,7 @@ func (c *core) SendPropose(propose *Proposal) {
 	// store before send propose msg
 	c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPropose, propose.Round, payload)
 
-	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), propose.Round, msgPropose, payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
 		return
 	}
@@ -216,7 +216,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	default:
 	}
 
-	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), round, voteType, payload); err != nil {
 		logger.Errorw("Failed to Broadcast vote", "error", err)
 		return
 	}

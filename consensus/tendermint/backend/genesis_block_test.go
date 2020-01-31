@@ -122,7 +122,6 @@ func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.
 	backend.core = tendermintCore.New(backend, config.Tendermint)
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	go backend.dequeueMsgLoop()
-	go backend.gossipLoop()
 
 	//init tendermint engine
 	engine := New(config.Tendermint, nodePK, WithValsetAddresses(config.Tendermint.FixedValidators))

@@ -255,7 +255,7 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 		sBlockNumber = state.BlockNumber()
 		sRound       = state.Round()
 		sStep        = state.Step()
-		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
+		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevoteWait)
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && RoundStepPrevoteWait <= sStep) {

@@ -137,9 +137,9 @@ func (sb *Backend) Address() common.Address {
 
 // Broadcast implements tendermint.Backend.Broadcast
 // It sends message to its validator by calling gossiping, and send message to itself by eventMux
-func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
+func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.Int, round int64, msgType uint64, payload []byte) error {
 	// send to others
-	if err := sb.Gossip(valSet, blockNumber, payload); err != nil {
+	if err := sb.Gossip(valSet, blockNumber, round, msgType, payload); err != nil {
 		return err
 	}
 	// send to self
@@ -159,13 +159,15 @@ type broadcastTask struct {
 	TotalPeers  int
 	Targets     map[common.Address]bool
 	BlockNumber *big.Int
+	Round       int64
+	MsgType     uint64
 }
 
 // Gossip implements tendermint.Backend.Gossip
 // It sends message to its validators only, not itself.
 // The validators must be able to connected through Peer.
 // It will return backend.ErrNoBroadcaster if no broadcaster is set for backend
-func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, payload []byte) error {
+func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, round int64, msgType uint64, payload []byte) error {
 	//TODO: check for known message by lru.ARCCache
 
 	targets := make(map[common.Address]bool)
@@ -185,85 +187,102 @@ func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, 
 			Targets:     targets,
 			TotalPeers:  len(targets),
 			BlockNumber: blockNumber,
+			Round:       round,
+			MsgType:     msgType,
 		}
-		go func() {
-			sb.broadcastCh <- task
-		}()
+		go sb.gossip(task)
 	}
 	return nil
 }
 
-func (sb *Backend) gossipLoop() {
+func (sb *Backend) gossip(task broadcastTask) {
 	var (
-		task        broadcastTask
+		timeSleep   = initialBroadcastSleepTime
+		successSent = 0
+		mu          sync.Mutex
+
 		finalEvtSub = sb.EventMux().Subscribe(tendermint.FinalCommittedEvent{})
 		stopEvtSub  = sb.EventMux().Subscribe(tendermint.StopCoreEvent{})
+		abort       = make(chan struct{})
 	)
 	defer func() {
 		finalEvtSub.Unsubscribe()
 		stopEvtSub.Unsubscribe()
 	}()
-	for {
-		select {
-		case task = <-sb.broadcastCh:
-		case <-finalEvtSub.Chan():
-			continue // we skip finalEvtSub to avoid block the go routine send finalEvt to backend.EventMux()
-		case <-stopEvtSub.Chan():
-			log.Info("cancel broadcast task because core is stopped")
-			return
-		}
-
-		var (
-			timeSleep   = initialBroadcastSleepTime
-			successSent = 0
-			mu          sync.Mutex
-		)
-
-	taskLoop:
+	// close abort go routine if new block or core.abort()
+	go func() {
 		for {
-			ps := sb.broadcaster.FindPeers(task.Targets)
-			log.Info("find peers", "len", len(ps), "min", task.MinPeers, "success", successSent)
-
-			var wg sync.WaitGroup
-			for addr, p := range ps {
-				wg.Add(1)
-				//TODO: check for recent messsages using lru.ARCCache
-				go func(p consensus.Peer, addr common.Address) {
-					defer wg.Done()
-					if err := p.Send(consensus.TendermintMsg, task.Payload); err != nil {
-						log.Error("failed to send message to peer", "error", err)
-						return
-					}
-					mu.Lock()
-					delete(task.Targets, addr)
-					successSent += 1
-					mu.Unlock()
-				}(p, addr)
-			}
-			wg.Wait()
-
-			if successSent < task.MinPeers {
-				log.Info("failed to sent to peer, sleeping", "min", task.MinPeers, "success", successSent,
-					"time_sleep", timeSleep)
-				// sleep and retries until success or core stop or new block event
-				select {
-				case finalEvt := <-finalEvtSub.Chan():
-					if finalEvt.Data.(tendermint.FinalCommittedEvent).BlockNumber.Cmp(task.BlockNumber) >= 0 {
-						log.Info("cancel broadcast task because of final event")
-						break taskLoop
-					}
-				case <-stopEvtSub.Chan():
-					log.Info("cancel broadcast task because core is stopped")
+			select {
+			case finalEvt, ok := <-finalEvtSub.Chan():
+				if !ok {
 					return
-				case <-time.After(timeSleep):
-					// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
-					if timeSleep < maxBroadcastSleepTime {
-						timeSleep += broadcastSleepTimeIncreament
-					}
 				}
-				continue taskLoop
+				finalizedBlock := finalEvt.Data.(tendermint.FinalCommittedEvent).BlockNumber
+				if finalizedBlock.Cmp(task.BlockNumber) >= 0 {
+					log.Info("cancel broadcast task because of final event", "task_block", task.BlockNumber, "finalized_block", finalizedBlock)
+					close(abort)
+					return
+				}
+			case _, ok := <-stopEvtSub.Chan():
+				if !ok {
+					return
+				}
+				log.Info("cancel broadcast task because core is stopped")
+				close(abort)
+				return
 			}
-			break taskLoop
+		}
+	}()
+	for {
+		ps := sb.broadcaster.FindPeers(task.Targets)
+		log.Info("find peers", "found_peers", len(ps),
+			"block", task.BlockNumber, "round", task.Round, "msg_type", task.MsgType)
+		done := make(chan struct{})
+		var wg sync.WaitGroup
+		for addr, p := range ps {
+			wg.Add(1)
+			//TODO: check for recent messsages using lru.ARCCache
+			go func(p consensus.Peer, addr common.Address) {
+				defer wg.Done()
+				if err := p.Send(consensus.TendermintMsg, task.Payload); err != nil {
+					log.Error("failed to send message to peer", "error", err, "addr", addr,
+						"block", task.BlockNumber, "round", task.Round, "msg_type", task.MsgType)
+					return
+				}
+				mu.Lock()
+				delete(task.Targets, addr)
+				successSent += 1
+				mu.Unlock()
+			}(p, addr)
+		}
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+			log.Info("gossip to peers", "found_peers", len(ps), "min", task.MinPeers, "success", successSent,
+				"block", task.BlockNumber, "round", task.Round, "msg_type", task.MsgType)
+			if successSent >= task.MinPeers {
+				return
+			}
+		case _, ok := <-abort:
+			if !ok {
+				return
+			}
+		}
+		// sleep and retries until success or core abort or new block event
+		log.Info("failed to sent to peer, sleeping", "time_sleep", timeSleep)
+		select {
+		case <-time.After(timeSleep):
+		case _, ok := <-abort:
+			if !ok {
+				return
+			}
+		}
+		// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
+		if timeSleep < maxBroadcastSleepTime {
+			timeSleep += broadcastSleepTimeIncreament
 		}
 	}
 }
