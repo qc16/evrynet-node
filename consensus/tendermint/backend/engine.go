@@ -101,7 +101,6 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		//TODO: DO we need timeout for consensus?
 		for bl := range ch {
 			// remove lock whether Seal is success or not
-			sb.proposedValidator.removeStick()
 			if bl.Number().String() != blockNumberStr {
 				log.Warn("committing.. Received a different block number than the sealing block number", "received", bl.Number().String(), "expected", blockNumberStr)
 			}
