@@ -30,3 +30,18 @@ func (api *TendermintAPI) GetValidators(number *uint64) []common.Address {
 	}
 	return validators
 }
+
+// GetValidatorsFromSC returns the list of validators by block's number
+// number is block-number if null will returns current time
+func (api *TendermintAPI) GetValidatorsFromSC(number *uint64) ([]common.Address, error) {
+	var (
+		blockNumber *big.Int
+	)
+	if number == nil {
+		blockNumber = api.chain.CurrentHeader().Number
+	} else {
+		blockNumber = new(big.Int).SetUint64(*number)
+	}
+
+	return api.be.GetValidatorsFromSC(blockNumber)
+}
