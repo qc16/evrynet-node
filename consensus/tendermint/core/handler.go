@@ -124,12 +124,15 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 func (c *core) handleNewBlock(block *types.Block) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var state = c.CurrentState()
-	c.getLogger().Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
+	var (
+		state  = c.CurrentState()
+		logger = c.getLogger()
+	)
+	logger.Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
 
 	if block.Number() == nil || state.BlockNumber().Cmp(block.Number()) > 0 {
 		//This is temporary to let miner come up with a newer block
-		c.getLogger().Errorw("new block number is smaller than current block",
+		logger.Errorw("new block number is smaller than current block",
 			"new_block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
 		//return a nil block to allow miner to send over a new one
 		c.backend.Cancel(types.NewBlockWithHeader(&types.Header{
@@ -139,6 +142,20 @@ func (c *core) handleNewBlock(block *types.Block) {
 		return
 	}
 	state.SetBlock(block)
+	// in case handleNewBlock is called after enterPropose
+	if state.step == RoundStepPropose {
+		if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
+			logger.Infow("this node is not a validator of this round", "address", c.backend.Address())
+			return
+		}
+		if c.valSet.IsProposer(c.backend.Address()) {
+			logger.Infow("this node is proposer of this round", "node_address", c.backend.Address())
+			proposal := c.getDefaultProposal(logger, state.Round())
+			if proposal != nil {
+				c.SendPropose(proposal)
+			}
+		}
+	}
 }
 
 //VerifyProposal validate msg & proposal when get from other nodes
