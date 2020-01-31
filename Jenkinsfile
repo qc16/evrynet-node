@@ -7,6 +7,8 @@ pipeline {
         ).trim()
         dockerTag="${env.branchName}-${env.BUILD_NUMBER}"
         dockerImage="${env.CONTAINER_IMAGE}:${env.dockerTag}"
+        dockerOnenodeImage="${env.CONTAINER_IMAGE}:${env.dockerTag}-onenode"
+        dockerOnenodeContainer="evrynet-onenode"
         appName="evrynet-node"
         githubUsername="Evrynetlabs"
 
@@ -18,7 +20,7 @@ pipeline {
         stage ('Cleanup') {
             steps {
                 sh '''
-                    docker images
+                    echo "memory usage"
                     free -m
                 '''
                 dir('directoryToDelete') {
@@ -53,6 +55,16 @@ pipeline {
                 sh '''
                     echo "Run unit test -> ${dockerImage}"
                     docker run --rm ${dockerImage} sh -c "go run build/ci.go test"
+                '''
+            }
+        }
+
+        stage('Integration Test') {
+            steps {
+                sh '''
+                    docker build . -f ./tests/onenode/Dockerfile -t ${dockerOnenodeImage}
+                    docker run -d -p 22001:8545 -it --name ${dockerOnenodeContainer} ${dockerOnenodeImage}
+                    docker run --network host --rm ${dockerImage} sh -c "go run build/ci.go test -integration -coverage"
                 '''
             }
         }
@@ -104,6 +116,9 @@ pipeline {
             sh '''
                docker image rm -f ${CONTAINER_IMAGE}:${branchName}
                docker image rm -f ${dockerImage}
+               docker image rm -f ${dockerOnenodeImage}
+               docker stop ${dockerOnenodeContainer}
+               docker rm ${dockerOnenodeContainer}
             '''
             deleteDir()
         }
