@@ -15,8 +15,7 @@ RUN curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/in
 				sh -s -- -b $GOPATH/bin v1.21.0
 
 # Build the gev binary
-#TODO: not sure why but if replace this by 'go run build/ci.go install', Jenkins CI is failed by out of memory
-RUN go run build/ci.go install ./cmd/gev
+RUN go run build/ci.go install
 
 # Pull Geth into a second stage deploy alpine container
 FROM alpine:latest
