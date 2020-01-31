@@ -65,7 +65,6 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		commitChs:            newCommitChannels(),
 		mutex:                &sync.RWMutex{},
 		storingMsgs:          queue.NewFIFO(),
-		proposedValidator:    newProposedValidator(),
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 		broadcastCh:          make(chan broadcastTask),
 		controlChan:          make(chan struct{}),
@@ -111,8 +110,6 @@ type Backend struct {
 	dequeueMsgTriggering chan struct{}
 
 	currentBlock func() *types.Block
-
-	proposedValidator *ProposalValidator
 
 	broadcastCh chan broadcastTask
 
