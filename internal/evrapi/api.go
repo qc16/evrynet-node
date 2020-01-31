@@ -41,6 +41,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -49,7 +50,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
-)
+	)
 
 const (
 	defaultGasPrice = params.GWei
@@ -919,6 +920,50 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNr rpc.Bl
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
 	return DoEstimateGas(ctx, s.b, args, rpc.PendingBlockNumber, s.b.RPCGasCap())
+}
+
+// GetValidators returns the list of validators by block's number
+// number is block-number if null will returns current time
+func (api *PublicBlockChainAPI) GetValidators(ctx context.Context, number rpc.BlockNumber) ([]common.Address, error) {
+	var (
+		scAddress  = common.HexToAddress(api.b.ChainConfig().Tendermint.SCAddress)
+		validators []common.Address
+		err        error
+	)
+
+	if number == rpc.LatestBlockNumber {
+		blockNumber := new(big.Int).SetInt64(number.Int64())
+		validators, err = api.getValidatorsFromSC(scAddress, blockNumber)
+	} else {
+		stateDB, _, err := api.b.StateAndHeaderByNumber(ctx, number)
+		if err != nil {
+			return validators, err
+		}
+		validators = state.GetValidators(stateDB, scAddress)
+	}
+
+	return validators, err
+}
+
+func (api *PublicBlockChainAPI) getValidatorsFromSC(scAddress common.Address, blockNumber *big.Int) ([]common.Address, error) {
+	// TODO: call from contract package
+	//client, err := api.b.GetIPCClient()
+	//if err != nil {
+	//	return []common.Address{}, err
+	//}
+	//
+	//validator, err := contractValidator.NewStakingValidator(scAddress, client)
+	//if err != nil {
+	//	return []common.Address{}, err
+	//}
+	//
+	//var opts = new(bind.CallOpts)
+	//validators, err := validator.GetValidators(opts, blockNumber)
+	//if err != nil {
+	//	return []common.Address{}, err
+	//}
+
+	return []common.Address{}, nil
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM
