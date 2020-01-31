@@ -73,7 +73,6 @@ func MakeGenesisHeader(validators []common.Address) *types.Header {
 	var buf bytes.Buffer
 	buf.Write(extra[:types.TendermintExtraVanity])
 	tdm := &types.TendermintExtra{
-		Validators:    validators,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
 	}
