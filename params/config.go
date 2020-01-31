@@ -240,6 +240,7 @@ type TendermintConfig struct {
 	Epoch           uint64           `json:"epoch"`  // Epoch length to reset votes and checkpoint
 	ProposerPolicy  uint64           `json:"policy"` // The policy for proposer selection
 	FixedValidators []common.Address `json:"fixed_validators"`
+	SCAddress       string           `toml:",omitempty"` // SCAddress is a address of smart-contract
 }
 
 // String implements the stringer interface, returning the consensus engine details.
