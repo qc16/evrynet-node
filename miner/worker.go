@@ -360,7 +360,12 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 		case head := <-w.chainHeadCh:
 			if h, ok := w.engine.(consensus.Handler); ok {
-				h.HandleNewChainHead(head.Block.Number())
+				headBlkNumber := new(big.Int).Set(head.Block.Number())
+				if headBlkNumber.Cmp(w.chain.CurrentBlock().Number()) < 0 {
+					log.Warn("head block number is smaller than current block of chain, replace it", "head_block", headBlkNumber, "chain_block", w.chain.CurrentBlock().Number())
+					headBlkNumber = new(big.Int).Set(w.chain.CurrentBlock().Number())
+				}
+				_ = h.HandleNewChainHead(headBlkNumber)
 			}
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
