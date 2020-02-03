@@ -33,7 +33,7 @@ func TestHandleMsg(t *testing.T) {
 	)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	// generate one msg
 	data := []byte("data1")

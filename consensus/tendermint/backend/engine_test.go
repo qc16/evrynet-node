@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -32,7 +32,7 @@ func TestSimulateSubscribeAndReceiveToSeal(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader, validators)
 
 	// without seal
 	block := tests_utils.MakeBlockWithoutSeal(genesisHeader)
@@ -63,7 +63,7 @@ func TestAuthor(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader, validators)
 
 	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
 	header := block.Header()
@@ -86,7 +86,7 @@ func TestPrepare(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader, validators)
 
 	block := tests_utils.MakeBlockWithoutSeal(genesisHeader)
 	header := block.Header()
@@ -113,11 +113,11 @@ func TestVerifySeal(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader)
+	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader, validators)
 
 	// cannot verify genesis
 	err = be.VerifySeal(be.chain, genesisHeader)
-	assert.Equal(t, errUnknownBlock, err)
+	assert.Equal(t, tendermint.ErrUnknownBlock, err)
 
 	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
 	err = be.VerifySeal(be.chain, block.Header())
@@ -125,7 +125,7 @@ func TestVerifySeal(t *testing.T) {
 }
 
 // TestPrepareExtra
-// 0xd8c094000000000000000000000000000000000000000080c0
+// 0xc280c0 (empty tendermint extra)
 func TestPrepareExtra(t *testing.T) {
 	var (
 		nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
@@ -139,13 +139,13 @@ func TestPrepareExtra(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, validators)
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 	assert.Equal(t, true, engine.coreStarted)
 
 	vanity := make([]byte, types.TendermintExtraVanity)
-	data := hexutil.MustDecode("0xd8c094000000000000000000000000000000000000000080c0")
+	data := hexutil.MustDecode("0xc280c0")
 	expectedResult := append(vanity, data...)
 
 	header := &types.Header{
@@ -162,26 +162,4 @@ func TestPrepareExtra(t *testing.T) {
 	header.Extra = engine.prepareExtra(header)
 	assert.Equal(t, expectedResult, header.Extra)
 
-	var (
-		candidate = ProposalValidator{
-			address: common.HexToAddress("123456"),
-			vote:    true,
-		}
-		newCandidate = ProposalValidator{
-			address: common.HexToAddress("654321"),
-			vote:    true,
-		}
-	)
-
-	// will attach a candidate to voting
-	require.NoError(t, engine.proposedValidator.setProposedValidator(candidate.address, candidate.vote))
-	header.Extra = engine.prepareExtra(header)
-	candidateAddr, _ := getModifiedValidator(*header)
-	assert.Equal(t, candidate.address, candidateAddr)
-
-	// the candidate will be repplaced by new candidate when call setProposedValidator and old candidate have not processed yet
-	require.NoError(t, engine.proposedValidator.setProposedValidator(newCandidate.address, newCandidate.vote))
-	header.Extra = engine.prepareExtra(header)
-	newCandidateAddr, _ := getModifiedValidator(*header)
-	assert.Equal(t, newCandidate.address, newCandidateAddr)
 }
