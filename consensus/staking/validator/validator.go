@@ -1,7 +1,6 @@
 package staking
 
 import (
-	"math/big"
 	"strings"
 
 	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
@@ -27,7 +26,7 @@ func NewValidatorCaller(address common.Address, caller bind.ContractCaller, valA
 // GetValidators is a free data retrieval call binding the contract method.
 //
 // Solidity: function getCandidates(uint256) constant returns(address[])
-func (val *ValidatorCaller) GetValidators(opts *bind.CallOpts, blockNumber *big.Int) ([]common.Address, error) {
+func (val *ValidatorCaller) GetValidators(opts *bind.CallOpts, blockNumber uint64) ([]common.Address, error) {
 	var (
 		ret0 = new([]common.Address)
 	)

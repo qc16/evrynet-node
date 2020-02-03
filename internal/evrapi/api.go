@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/Evrynetlabs/evrynet-node/accounts"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
 	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
 	"github.com/Evrynetlabs/evrynet-node/accounts/scwallet"
 	"github.com/Evrynetlabs/evrynet-node/common"
@@ -37,6 +37,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -45,9 +46,12 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/sha3"
+
+	staking "github.com/Evrynetlabs/evrynet-node/consensus/staking/validator"
 )
 
 const (
@@ -918,6 +922,48 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNr rpc.Bl
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
 	return DoEstimateGas(ctx, s.b, args, rpc.PendingBlockNumber, s.b.RPCGasCap())
+}
+
+// GetValidators returns the list of validators by block's number
+// number is block-number if null will returns current time
+func (api *PublicBlockChainAPI) GetValidators(ctx context.Context, number rpc.BlockNumber) ([]common.Address, error) {
+	var (
+		scAddress  = common.HexToAddress(api.b.ChainConfig().Tendermint.SCAddress)
+		valABI     = api.b.ChainConfig().Tendermint.ValidatorABI
+		validators []common.Address
+		err        error
+	)
+
+	if number == rpc.LatestBlockNumber {
+		blockNumber := new(big.Int).SetInt64(number.Int64())
+		validators, err = api.getValidatorsFromSC(valABI, scAddress, blockNumber)
+	} else {
+		stateDB, _, err := api.b.StateAndHeaderByNumber(ctx, number)
+		if err != nil {
+			return validators, err
+		}
+		validators = state.GetValidators(stateDB, scAddress)
+	}
+
+	return validators, err
+}
+
+func (api *PublicBlockChainAPI) getValidatorsFromSC(valABI string, scAddress common.Address, blockNumber *big.Int) ([]common.Address, error) {
+	var (
+		opts = new(bind.CallOpts)
+	)
+
+	validator, err := staking.NewValidatorCaller(scAddress, nil, valABI)
+	if err != nil {
+		return []common.Address{}, err
+	}
+
+	candidates, err := validator.GetValidators(opts, 0)
+	if err != nil {
+		return []common.Address{}, err
+	}
+
+	return candidates, nil
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM

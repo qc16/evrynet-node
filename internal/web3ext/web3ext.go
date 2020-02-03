@@ -520,6 +520,12 @@ web3._extend({
 			params: 3,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null, web3._extend.formatters.inputBlockNumberFormatter]
 		}),
+		new web3._extend.Method({
+			name: 'getValidators',
+			call: 'eth_getValidators',
+			params: 1,
+			inputFormatter:[web3._extend.formatters.inputBlockNumberFormatter]
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -806,12 +812,6 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getValidators',
 			call: 'tendermint_getValidators',
-			params: 1,
-			inputFormatter:[null]
-		}),
-		new web3._extend.Method({
-			name: 'getValidatorsFromSC',
-			call: 'tendermint_getValidatorsFromSC',
 			params: 1,
 			inputFormatter:[null]
 		}),

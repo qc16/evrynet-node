@@ -9,10 +9,8 @@ import (
 	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/pkg/errors"
 
-	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
-	staking "github.com/Evrynetlabs/evrynet-node/consensus/staking/validator"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
 	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
@@ -21,7 +19,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/evrdb"
 	"github.com/Evrynetlabs/evrynet-node/log"
-
 )
 
 const (
@@ -344,26 +341,4 @@ func (sb *Backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus
 		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
 	}
 	return valSet
-}
-
-// GetValidatorsFromSC returns val-set from smart contract
-// blockNumber: block-number want to get
-func (sb *Backend) GetValidatorsFromSC(blockNumber *big.Int) ([]common.Address, error) {
-	var (
-		valABI = sb.config.ValidatorABI
-		addr = common.HexToAddress(sb.config.SCAddress)
-		opts = new(bind.CallOpts)
-	)
-
-	validator, err := staking.NewValidatorCaller(addr, nil, valABI)
-	if err != nil {
-		return []common.Address{}, err
-	}
-
-	candidates, err := validator.GetValidators(opts, blockNumber)
-	if err != nil {
-		return []common.Address{}, err
-	}
-
-	return candidates, nil
 }

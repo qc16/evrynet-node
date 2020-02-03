@@ -1,7 +1,6 @@
 package staking
 
 import (
-	"math/big"
 	"reflect"
 	"testing"
 
@@ -15,7 +14,7 @@ func TestValidatorCaller_GetValidators(t *testing.T) {
 	}
 	type args struct {
 		opts        *bind.CallOpts
-		blockNumber *big.Int
+		blockNumber uint64
 	}
 	tests := []struct {
 		name    string
