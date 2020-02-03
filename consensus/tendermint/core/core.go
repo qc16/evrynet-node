@@ -269,3 +269,8 @@ func (c *core) getLogger() *zap.SugaredLogger {
 		zap.Int64("round", c.currentState.Round()),
 		zap.Stringer("step", c.currentState.Step())).Sugar()
 }
+
+// address returns address of current nodes
+func (c *core) getAddress() common.Address {
+	return c.backend.Address()
+}

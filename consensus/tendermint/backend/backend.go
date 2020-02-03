@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
@@ -281,17 +282,23 @@ func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) er
 		return nil
 	}
 	var (
-		failed   = 0
-		ps       = sb.broadcaster.FindPeers(targets)
-		notFound = len(targets) - len(ps)
+		failed   int64 = 0
+		ps             = sb.broadcaster.FindPeers(targets)
+		notFound       = len(targets) - len(ps)
 	)
 	log.Trace("multicast", "targets", len(targets), "found", len(ps))
+	var wg sync.WaitGroup
 	for addr, peer := range ps {
-		if err := peer.Send(consensus.TendermintMsg, payload); err != nil {
-			failed++
-			log.Debug("failed to send when multicast", "err", err, "addr", addr)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := peer.Send(consensus.TendermintMsg, payload); err != nil {
+				atomic.AddInt64(&failed, 1)
+				log.Debug("failed to send when multicast", "err", err, "addr", addr)
+			}
+		}()
 	}
+	wg.Wait()
 	if failed != 0 || notFound != 0 {
 		return errors.Errorf("failed to multicast: failed to send %d address, not found %d address", failed, notFound)
 	}
