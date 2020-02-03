@@ -39,17 +39,13 @@ var (
 //Option return an optional function for backend's initial behaviour
 type Option func(b *Backend) error
 
-//WithDB return an option to set backend's db
-func WithDB(db evrdb.Database) Option {
-	return func(b *Backend) error {
-		b.db = db
-		return nil
-	}
-}
-
+//WithValsetAddresses return an option to assign backend.valSetInfo to fixed valset info
+//it will only do so if the input addresses set is not empty
 func WithValsetAddresses(addrs []common.Address) Option {
 	return func(b *Backend) error {
-		b.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(addrs)
+		if len(addrs) > 0 {
+			b.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(addrs)
+		}
 		return nil
 	}
 }

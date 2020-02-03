@@ -119,10 +119,6 @@ func (w *wizard) makeGenesis() {
 		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
 		policy := uint64(w.readDefaultInt(0))
 
-		genesis.Config.Tendermint = &params.TendermintConfig{
-			Epoch:          epoch,
-			ProposerPolicy: policy,
-		}
 		// In the case of Tendermint, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
 
@@ -140,9 +136,12 @@ func (w *wizard) makeGenesis() {
 				break
 			}
 		}
-		tendermintExtra := types.TendermintExtra{
-			Validators: validators,
+		genesis.Config.Tendermint = &params.TendermintConfig{
+			Epoch:           epoch,
+			ProposerPolicy:  policy,
+			FixedValidators: validators,
 		}
+		tendermintExtra := types.TendermintExtra{}
 		extraData, err := rlp.EncodeToBytes(&tendermintExtra)
 		if err != nil {
 			log.Error("rlp encode got error", "error", err)
