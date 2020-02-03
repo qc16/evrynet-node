@@ -58,5 +58,3 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff
 )
-
-replace github.com/Evrynetlabs/evrynet-node => ../evrynet-node

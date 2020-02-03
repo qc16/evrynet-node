@@ -1,29 +1,45 @@
-# How to use Testsnet Docker  
+# How to use Testsnet Docker   
 
-## 1. Using Existing Config
-### Run Testnet Docker
+## 1. Re-build docker image to deploy a specific version 
+- Using `deploy/testnet/build_image_by_version.sh` with a first param is the tag you wanna build ([Here](https://github.com/Evrynetlabs/evrynet-node/tags)).  
+Ex: `deploy/testnet/build_image_by_version.sh 1.0-beta.1`
+- Push that image to Docker Hub by command `docker push registry.gitlab.com/evry/evrynet-client:1.0-beta.1` (`1.0-beta.1` is your version you just built)  
+
+## 2. Deployment
+### 2.1. Using Quick start With Predefined Config
+#### Run Testnet Docker with 3 nodes on a single machine
 Everything was setup. You only need to run this script  
-`./deploy/testnet/deploy.sh <path_to_share_volumes> <rpc_corsdomain> <wanna_to_deploy_explorer>`    
+`deploy/testnet/deploy_by_version.sh <path_to_share_volumes> <rpc_corsdomain> <deploy_explorer> <version>`    
 
-Ex: `./deploy/testnet/deploy.sh /Volumes/Work/Projects/KyberNetwork/evrynet-node/deploy/testnet/nodes/data localhost y`
+Ex: `deploy/testnet/deploy_by_version.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y 1.0-beta.1`  
 - `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
-- `wanna_to_deploy_explorer` if you wanna deploy explorer, input is `y`
+- `deploy_explorer` if you wanna deploy explorer, input is `y`
+- `version` is the tag version you wanna to deploy
 
-### Nodes Information
+#### Nodes Information
 Everything about 3 nodes I put at `deploy/testnet/nodes/data`.  
 You can clear all data by running this file `deploy/testnet/nodes/data/clear_data.sh`
 
 ### Webs
 - Explorer: http://localhost:8080
 
-### NOTICE!
+#### NOTICE!
 - If you want to stop nodes, DON'T USE `docker stop ...`. It can make a crash to DB of nodes => can not run for next time!
 - To stop nodes gracefully, USE this file `deploy/testnet/stop_dockers.sh`. It will interact with node in docker to stop gracefully.
 
 ---
 
-## 2. Setup From Zero
+### 2.2. Setup From Zero 
+This guide will demonstrate the process of setting up 3 nodes manually. The process will including: 
+ - Build the executable from source code
+ - Create working directory for the node data
+ - Generate node's key (for consensus message signing)
+ - Generate enodes address (for node connections)
+ - Deploy
+ 
+The bellow example explains how to deploy 3 nodes manually
+
 1. Build and export to `PATH`
     ```shell script
     $ go build ./cmd/gev
@@ -143,3 +159,50 @@ You can clear all data by running this file `deploy/testnet/nodes/data/clear_dat
     INFO [11-27|18:09:06.981] Saved genesis chain spec                 client=harmony path=testnet-harmony.json
     ```
 8. Replace all content of `deploy/testnet/nodes/bin/genesis.json` with `testnet.json` (new genesis file just created)
+
+9. Run the deployment script or to run each node from executable:
+
+ To deploy using pre-written scripts:  
+ Run this command `deploy/testnet/deploy_by_version.sh <path_to_share_volumes> <rpc_corsdomain> <deploy_explorer> <version>` with the suitable params
+- `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
+- `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
+- `deploy_explorer` if you wanna deploy explorer, input is `y`
+- `version` is the tag version you wanna to deploy    
+
+Ex: This command can use om Testnet server   
+`deploy/testnet/deploy_by_version.sh /home/ubuntu/testnet/nodes 52.220.52.16 n 1.0-beta.1`  
+
+ To deploy by running binary files:
+- You must start the bootnode first to let nodes discover each other
+```shell script
+./bootnode -nodekeyhex "9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09" -verbosity 9 -addr ":30300"
+```
+-nodekeyhex: you can get new value by command `./bootnode --genkey=nodekey`
+
+- You must init data for the node first
+```shell script
+./gev --datadir ./data init ./deploy/testnet/nodes/bin/genesis.json
+```
+--datadir: where you store node data
+
+- Then start node by this command
+```shell script
+./gev --datadir ./data --verbosity 4 --tendermint.blockperiod 1 --syncmode full --networkid 15 \
+    --rpc --rpcaddr 0.0.0.0 --rpccorsdomain "*" --rpcvhosts "*" --rpcport 22001 --port 30301 \
+    --bootnodes "enode://aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f@172.25.0.100:30300" \
+    --allow-insecure-unlock \
+    --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3 2>>./log/node_1.log
+```
+--bootnodes: you will see this value when you start bootnode. Change `172.25.0.100` to IP of bootnode server
+
+- To run another node, you can reuse the above command. You must change the value of params `rpcport, port` and `node_1.log`
+
+Ex: `deploy/testnet/deploy_by_version.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y 1.0-beta.1`  
+- `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
+- `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
+- `deploy_explorer` if you wanna deploy explorer, input is `y`
+- `version` is the tag version you wanna to deploy  
+
+** To deploy lastest code on develop, use this command `deploy/testnet/deploy_dev_branch.sh` with the params explanation in this file.   
+
+Ex: `deploy/testnet/deploy_dev_branch.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y`
