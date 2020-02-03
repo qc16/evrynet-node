@@ -20,7 +20,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
-	"github.com/Evrynetlabs/evrynet-node/evrdb"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
 )
@@ -55,7 +54,7 @@ func TestValidators(t *testing.T) {
 			nodeAddr,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
-		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
+		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 	)
 
 	valSet0 := be.Validators(big.NewInt(0))
@@ -79,10 +78,10 @@ func TestValidators(t *testing.T) {
 	}
 
 	valSet2 := be.Validators(big.NewInt(2))
-	assert.Equal(t, 0, valSet2.Size())
+	assert.Equal(t, 1, valSet2.Size())
 }
 
-func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header) *Backend {
+func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header, validators []common.Address) *Backend {
 	var (
 		address = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		trigger = false
@@ -100,9 +99,8 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 			Trigger: &trigger,
 		}
 		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
-		memDB  = evrdb.NewMemDatabase()
 		config = tendermint.DefaultConfig
-		be     = New(config, nodePrivateKey, WithDB(memDB)).(*Backend)
+		be     = New(config, nodePrivateKey, WithValsetAddresses(validators)).(*Backend)
 	)
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
 	defer pool.Stop()
@@ -160,7 +158,7 @@ func TestBackend_Gossip(t *testing.T) {
 			nodeAddr,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
-		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
+		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 		nodeAddrs = []common.Address{
 			common.HexToAddress("1"),
@@ -258,7 +256,7 @@ func TestBackend_Multicast(t *testing.T) {
 			nodeAddr,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
-		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader)
+		be            = mustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 		//nodeAddrs = []common.Address{
 		//	common.HexToAddress("1"),
