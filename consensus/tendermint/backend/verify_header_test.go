@@ -13,7 +13,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/crypto/secp256k1"
-	"github.com/Evrynetlabs/evrynet-node/evrdb"
 )
 
 func TestBackend_VerifyHeader(t *testing.T) {
@@ -29,7 +28,7 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader)
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, validators)
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 
@@ -42,7 +41,7 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	header := block.Header()
 	header.Coinbase = common.Address{}
 	tests_utils.AppendSeal(header, engine)
-	assert.Equal(t, errCoinBaseInvalid, engine.VerifyHeader(engine.chain, header, false))
+	assert.Equal(t, tendermint.ErrCoinBaseInvalid, engine.VerifyHeader(engine.chain, header, false))
 
 	// without committed seal
 	block = tests_utils.MakeBlockWithSeal(engine, genesisHeader)
@@ -50,7 +49,7 @@ func TestBackend_VerifyHeader(t *testing.T) {
 
 	// with committed seal but is invalid
 	block = tests_utils.MustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
-	assert.Equal(t, errInvalidCommittedSeals, engine.VerifyHeader(engine.chain, block.Header(), false))
+	assert.Equal(t, tendermint.ErrInvalidCommittedSeals, engine.VerifyHeader(engine.chain, block.Header(), false))
 
 	// with committed seal
 	block = tests_utils.MustMakeBlockWithCommittedSeal(engine, genesisHeader, validators)
@@ -59,10 +58,9 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header) (*tests_utils.MockChainReader, *Backend) {
-	memDB := evrdb.NewMemDatabase()
+func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header, validators []common.Address) (*tests_utils.MockChainReader, *Backend) {
 	config := tendermint.DefaultConfig
-	b, ok := New(config, nodePK, WithDB(memDB)).(*Backend)
+	b, ok := New(config, nodePK, WithValsetAddresses(validators)).(*Backend)
 	b.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	if !ok {
 		panic("New() cannot be asserted back to backend")
@@ -71,13 +69,6 @@ func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types
 		GenesisHeader: genesisHeader,
 	}
 
-	snap, err := b.snapshot(&chain, 0, common.Hash{}, nil)
-	if err != nil {
-		panic(err)
-	}
-	if snap == nil {
-		panic("failed to get snapshot")
-	}
 	currentBlock := func() *types.Block {
 		tests_utils.AppendSeal(genesisHeader, b)
 		return types.NewBlockWithHeader(genesisHeader)
