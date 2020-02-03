@@ -152,9 +152,22 @@ func (tt *timeoutTicker) timeoutRoutine() {
 			// We can eliminate it by merging the timeoutRoutine into receiveRoutine
 			//  and managing the timeouts ourselves with a millisecond ticker
 			// TODO: see if we can fire directly into core.events
-			go func(toi timeoutInfo) { tt.tockChan <- toi }(ti)
+			go func(toi timeoutInfo) {
+				if !tt.isTockChanClosed() {
+					tt.tockChan <- toi
+				}
+			}(ti)
 		case <-tt.Quit:
 			return
 		}
 	}
+}
+
+func (tt *timeoutTicker) isTockChanClosed() bool {
+	select {
+	case <-tt.tockChan:
+		return true
+	default:
+	}
+	return false
 }
