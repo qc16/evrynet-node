@@ -8,7 +8,7 @@ WORKDIR /go-ethereum
 ADD . /go-ethereum
 
 # Load all project dependencies
-RUN ./vendor.sh
+RUN go mod download
 
 # Install golangci-lint tool
 RUN curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \

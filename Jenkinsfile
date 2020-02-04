@@ -117,8 +117,16 @@ pipeline {
                docker image rm -f ${CONTAINER_IMAGE}:${branchName}
                docker image rm -f ${dockerImage}
                docker image rm -f ${dockerOnenodeImage}
-               docker stop ${dockerOnenodeContainer}
-               docker rm ${dockerOnenodeContainer}
+            '''
+            // remove intermediate images when multi-stage build
+            sh '''
+                docker image prune -f
+                docker image ls
+            '''
+            // stop and remove one node container
+            sh '''
+                docker stop ${dockerOnenodeContainer}
+                docker rm ${dockerOnenodeContainer}
             '''
             deleteDir()
         }
