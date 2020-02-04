@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/evrclient"
 )
 
+// TODO: create a global nonce provider so tests not need to wait others complete
 /* These tests are done on a chain with already setup account/ contracts.
 To run these test, please deploy your own account/ contract and extract privatekey inorder to get the expected result
 Adjust these params to match deployment on local machine:
@@ -27,6 +29,26 @@ Adjust these params to match deployment on local machine:
 	Test Send ETH to a normal address
 		- No provider signature is required
 */
+
+func TestMain(m *testing.M) {
+	ethClient, err := evrclient.Dial(ethRPCEndpoint)
+	if err != nil {
+		panic(err)
+	}
+	// wait until pass byzantium block
+	for {
+		block, err := ethClient.BlockByNumber(context.Background(), nil)
+		if err != nil {
+			panic(err)
+		}
+		if block.Number().Cmp(big.NewInt(2)) > 0 {
+			break
+		}
+	}
+	code := m.Run()
+	os.Exit(code)
+}
+
 func TestCreateContractWithProviderAddress(t *testing.T) {
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
@@ -52,12 +74,12 @@ func TestCreateContractWithProviderAndOwner(t *testing.T) {
 	spk, err := crypto.HexToECDSA(senderPK)
 	assert.NoError(t, err)
 	sender := common.HexToAddress(senderAddrStr)
-	provideraddr := common.HexToAddress(providerAddrStr)
+	providerAddr := common.HexToAddress(providerAddrStr)
 	payLoadBytes, err := hexutil.Decode(payload)
 	assert.NoError(t, err)
 	var option types.CreateAccountOption
 	option.OwnerAddress = &sender
-	option.ProviderAddress = &provideraddr
+	option.ProviderAddress = &providerAddr
 
 	ethClient, err := evrclient.Dial(ethRPCEndpoint)
 	assert.NoError(t, err)
@@ -66,7 +88,8 @@ func TestCreateContractWithProviderAndOwner(t *testing.T) {
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
+	require.NoError(t, ethClient.SendTransaction(context.Background(), tx))
+	assertTransactionSuccess(t, ethClient, tx.Hash(), true, sender)
 }
 
 func TestCreateContractWithoutProviderAddress(t *testing.T) {
@@ -85,16 +108,7 @@ func TestCreateContractWithoutProviderAddress(t *testing.T) {
 	assert.NoError(t, err)
 
 	require.NoError(t, ethClient.SendTransaction(context.Background(), tx))
-	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = ethClient.TransactionReceipt(context.Background(), tx.Hash())
-		if err == nil {
-			assert.Equal(t, uint64(1), receipt.Status)
-			assert.NotEqual(t, receipt.ContractAddress, common.Address{})
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	assertTransactionSuccess(t, ethClient, tx.Hash(), true, sender)
 }
 
 func TestCreateContractWithProviderSignature(t *testing.T) {
@@ -115,7 +129,7 @@ func TestCreateContractWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 	tx, err = types.ProviderSignTx(tx, types.HomesteadSigner{}, ppk)
 	assert.NoError(t, err)
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), tx))
+	require.Error(t, ethClient.SendTransaction(context.Background(), tx))
 }
 
 func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
@@ -136,7 +150,8 @@ func TestCreateContractWithProviderAddressWithoutGas(t *testing.T) {
 	tx := types.NewContractCreation(nonce, big.NewInt(0), testGasLimit, big.NewInt(testGasPrice), payLoadBytes, option)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, spk)
 	assert.NoError(t, err)
-	assert.NoError(t, ethClient.SendTransaction(context.Background(), tx))
+	require.NoError(t, ethClient.SendTransaction(context.Background(), tx))
+	assertTransactionSuccess(t, ethClient, tx.Hash(), true, sender)
 }
 
 func TestCreateContractWithProviderAddressMustHaveOwnerAddress(t *testing.T) {
@@ -177,4 +192,21 @@ func TestCreateNormalContractMustHaveNoOwnerAndProviderAddress(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, tx.Owner())
 	assert.Nil(t, tx.Provider())
+}
+
+func assertTransactionSuccess(t *testing.T, client *evrclient.Client, txHash common.Hash, contractCreation bool, gasPayer common.Address) {
+	for i := 0; i < getReceiptMaxRetries; i++ {
+		var receipt *types.Receipt
+		receipt, err := client.TransactionReceipt(context.Background(), txHash)
+		if err == nil {
+			assert.Equal(t, uint64(1), receipt.Status)
+			if contractCreation {
+				assert.NotEqual(t, receipt.ContractAddress, common.Address{})
+			}
+			assert.Equal(t, gasPayer, receipt.GasPayer)
+			return
+		}
+		time.Sleep(1 * time.Second)
+	}
+	t.Errorf("transaction %s not found", txHash.Hex())
 }
