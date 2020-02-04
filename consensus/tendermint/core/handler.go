@@ -230,17 +230,34 @@ func (c *core) handlePropose(msg message) error {
 	}
 
 	// Does not apply, this is not an error but may happen due to network lattency
-	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		logger.Warnw("received proposal with different height/round.")
+	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 {
+		logger.Warnw("received proposal with different height.")
 		if proposal.Block.Number().Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
-			logger.Infow("store prevote vote from future block", "from", msg.Address)
+			logger.Infow("store proposal vote from future block", "from", msg.Address)
 			if err := c.futureMessages.Put(&msgItem{message: msg, height: proposal.Block.Number().Uint64()}); err != nil {
-				logger.Errorw("failed to store future prevote message to queue", "err", err, "from", msg.Address)
+				logger.Errorw("failed to store future proposal message to queue", "err", err, "from", msg.Address)
 			}
 		}
 		return nil
 	}
+
+	// Does not apply, this is not an error but may happen due to network latency
+	if proposal.Round != state.Round() {
+		logger.Warnw("received proposal with different round.")
+		if proposal.Round > state.Round() {
+			logger.Warnw("received proposal from future round.")
+			// make sure this is the proposer of next round
+			valSet := c.valSet.Copy()
+			valSet.CalcProposer(c.valSet.GetProposer().Address(), proposal.Round-state.Round())
+			if valSet.GetProposer().Address() == msg.Address {
+				logger.Infow("store proposal from next round", "from", msg.Address)
+				c.futureProposals[proposal.Round] = msg
+			}
+		}
+		return nil
+	}
+
 	if err := c.VerifyProposal(proposal, msg); err != nil {
 		return err
 	}
