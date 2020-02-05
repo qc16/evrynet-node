@@ -159,6 +159,21 @@ func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Addres
 	return val[:], nil
 }
 
+// ForEachStorageAt returns func to read all keys, values in the storage
+func (b *SimulatedBackend) ForEachStorageAt(contract common.Address, blockNumber *big.Int, f func(key, val common.Hash) bool) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+		return errBlockNumberUnsupported
+	}
+	statedb, _ := b.blockchain.State()
+	if err := statedb.ForEachStorage(contract, f); err != nil {
+		return err
+	}
+	return nil
+}
+
 // TransactionReceipt returns the receipt of a transaction.
 func (b *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	receipt, _, _, _ := rawdb.ReadReceipt(b.database, txHash, b.config)
@@ -307,7 +322,6 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
 	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
-
 	return core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
 }
 
