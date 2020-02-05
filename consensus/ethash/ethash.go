@@ -34,6 +34,7 @@ import (
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
+
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/core/types"

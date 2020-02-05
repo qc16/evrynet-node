@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,4 +45,36 @@ func TestTimeoutInfo(t *testing.T) {
 	require.Equal(t, false, ti1.earlierOrEqual(ti2))
 	require.Equal(t, true, ti1.earlierOrEqual(ti3))
 	require.Equal(t, false, ti1.earlierOrEqual(ti4))
+}
+
+func TestRunningTimeoutTicker(t *testing.T) {
+	ticker := NewTimeoutTicker()
+	ticker.Start()
+
+	ticker.ScheduleTimeout(timeoutInfo{
+		Duration:    time.Millisecond * 10,
+		BlockNumber: big.NewInt(1),
+		Round:       0,
+		Step:        RoundStepPrevote,
+	})
+	time.Sleep(time.Millisecond * 20)
+
+	ticker.Stop()
+
+	//This timeoutInfo should not be sent to tokChan
+	ticker.ScheduleTimeout(timeoutInfo{
+		Duration:    time.Millisecond * 10,
+		BlockNumber: big.NewInt(2),
+		Round:       0,
+		Step:        RoundStepPrevoteWait,
+	})
+	time.Sleep(time.Millisecond * 20)
+
+	ti1, ok := <-ticker.Chan()
+	assert.NotNil(t, ti1, "Only the first timeoutInfo can get from tokChan")
+	assert.True(t, ok)
+	assert.Equal(t, big.NewInt(1), ti1.BlockNumber, "The blocknumber of the first timeoutInfo must be 1")
+
+	_, ok = <-ticker.Chan()
+	assert.False(t, ok, "The second timeouInfo won't be sent to tokChan")
 }
