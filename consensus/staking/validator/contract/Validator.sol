@@ -13,3 +13,8 @@ contract Validator {
 		return validators;
 	}
 }
+
+// NOTICE: 
+// to generate file validator.go let do
+// - go build ./cmd/abigen
+// - run command ./abigen  --sol ./consensus/staking/validator/contract/Validator.sol --pkg contract --out "./consensus/staking/validator/contract/validator.go"
