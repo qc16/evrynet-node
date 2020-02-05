@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
 	"math/big"
 	"strings"
 	"time"
@@ -50,7 +51,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/sha3"
 
-	//contractValidator "github.com/tomochain/tomochain/contracts/validator/contract"
+	contractValidator "github.com/Evrynetlabs/evrynet-node/consensus/staking/validator/contract"
 )
 
 const (
@@ -947,22 +948,21 @@ func (api *PublicBlockChainAPI) GetValidators(ctx context.Context, number rpc.Bl
 }
 
 func (api *PublicBlockChainAPI) getValidatorsFromSC(scAddress common.Address, blockNumber *big.Int) ([]common.Address, error) {
-	// TODO: call from contract package
-	//client, err := api.b.GetIPCClient()
-	//if err != nil {
-	//	return []common.Address{}, err
-	//}
-	//
-	//validator, err := contractValidator.NewStakingValidator(scAddress, client)
-	//if err != nil {
-	//	return []common.Address{}, err
-	//}
-	//
-	//var opts = new(bind.CallOpts)
-	//validators, err := validator.GetValidators(opts, blockNumber)
-	//if err != nil {
-	//	return []common.Address{}, err
-	//}
+	client, err := api.b.GetIPCClient()
+	if err != nil {
+		return []common.Address{}, err
+	}
+	
+	validator, err := contractValidator.NewValidator(scAddress, client)
+	if err != nil {
+		return []common.Address{}, err
+	}
+	
+	var opts = new(bind.CallOpts)
+	validators, err := validator.GetValidators(opts, blockNumber)
+	if err != nil {
+		return []common.Address{}, err
+	}
 
 	return []common.Address{}, nil
 }
