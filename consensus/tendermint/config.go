@@ -42,6 +42,8 @@ type Config struct {
 	FixedValidators       []common.Address
 
 	FaultyMode uint64 `toml:",omitempty"` // The faulty node indicates the faulty node's behavior
+
+	SCAddress string `toml:",omitempty"` // SCAddress is a address of smart-contract
 }
 
 var DefaultConfig = &Config{

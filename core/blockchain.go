@@ -36,6 +36,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/event"
+	"github.com/Evrynetlabs/evrynet-node/evrclient"
 	"github.com/Evrynetlabs/evrynet-node/evrdb"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/metrics"
@@ -172,6 +173,9 @@ type BlockChain struct {
 	badBlocks       *lru.Cache                     // Bad block cache
 	shouldPreserve  func(*types.Block) bool        // Function used to determine whether should preserve the given block.
 	terminateInsert func(common.Hash, uint64) bool // Testing hook used to terminate ancient receipt chain insertion.
+
+	IPCEndpoint string
+	Client      *evrclient.Client // Global ipc client instance.
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -2134,4 +2138,19 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 // block processing has started while false means it has stopped.
 func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscription {
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
+}
+
+// Get current IPC Client.
+func (bc *BlockChain) GetClient() (*evrclient.Client, error) {
+	if bc.Client == nil {
+		// Inject ipc client global instance.
+		client, err := evrclient.Dial(bc.IPCEndpoint)
+		if err != nil {
+			log.Error("Fail to connect IPC", "error", err)
+			return nil, err
+		}
+		bc.Client = client
+	}
+
+	return bc.Client, nil
 }
