@@ -67,6 +67,7 @@ type timeoutTicker struct {
 	tickChan chan timeoutInfo // for scheduling timeouts
 	tockChan chan timeoutInfo // for notifying about them
 	Quit     chan struct{}
+	running  bool // to check timer expires
 }
 
 // NewTimeoutTicker returns a new TimeoutTicker that's ready to use
@@ -82,11 +83,13 @@ func NewTimeoutTicker() TimeoutTicker {
 
 func (tt *timeoutTicker) Start() error {
 	tt.tockChan = make(chan timeoutInfo, tickTockBufferSize)
+	tt.running = true
 	go tt.timeoutRoutine()
 	return nil
 }
 
 func (tt *timeoutTicker) Stop() error {
+	tt.running = false
 	tt.stopTimer()
 	tt.Quit <- struct{}{}
 	close(tt.tockChan)
@@ -153,7 +156,7 @@ func (tt *timeoutTicker) timeoutRoutine() {
 			//  and managing the timeouts ourselves with a millisecond ticker
 			// TODO: see if we can fire directly into core.events
 			go func(toi timeoutInfo) {
-				if !tt.isTockChanClosed() {
+				if tt.running {
 					tt.tockChan <- toi
 				}
 			}(ti)
@@ -161,13 +164,4 @@ func (tt *timeoutTicker) timeoutRoutine() {
 			return
 		}
 	}
-}
-
-func (tt *timeoutTicker) isTockChanClosed() bool {
-	select {
-	case <-tt.tockChan:
-		return true
-	default:
-	}
-	return false
 }
