@@ -237,9 +237,9 @@ func (c *CliqueConfig) String() string {
 
 // TendermintConfig is the consensus engine configs for IBFT based sealing.
 type TendermintConfig struct {
-	Epoch           uint64           `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	ProposerPolicy  uint64           `json:"policy"` // The policy for proposer selection
-	FixedValidators []common.Address `json:"fixed_validators"`
+	Epoch           uint64           `json:"epoch"`            // Epoch length to reset votes and checkpoint
+	ProposerPolicy  uint64           `json:"policy"`           // The policy for proposer selection
+	FixedValidators []common.Address `json:"fixed_validators"` // The fixed validators
 }
 
 // String implements the stringer interface, returning the consensus engine details.
