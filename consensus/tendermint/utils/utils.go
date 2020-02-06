@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
@@ -46,6 +46,23 @@ func WriteSeal(h *types.Header, seal []byte) error {
 	}
 
 	tendermintExtra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&tendermintExtra)
+	if err != nil {
+		return err
+	}
+
+	h.Extra = append(h.Extra[:types.TendermintExtraVanity], payload...)
+	return nil
+}
+
+// WriteValSet writes the extra-data field of the given header with the given val-sets.
+func WriteValSet(h *types.Header, valSet []byte) error {
+	tendermintExtra, err := types.ExtractTendermintExtra(h)
+	if err != nil {
+		return err
+	}
+
+	tendermintExtra.ValSet = valSet
 	payload, err := rlp.EncodeToBytes(&tendermintExtra)
 	if err != nil {
 		return err
