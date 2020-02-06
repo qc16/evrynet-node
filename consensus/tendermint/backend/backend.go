@@ -15,11 +15,13 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
 	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/evrdb"
 	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 const (
@@ -358,4 +360,25 @@ func (sb *Backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus
 		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
 	}
 	return valSet
+}
+
+// Add validator set back to the tendermint extra.
+func (sb *Backend) addValSetToHeader(header *types.Header, validatorSet tendermint.ValidatorSet) error {
+	var (
+		blockNumber = header.Number.Uint64()
+		epoch       = sb.chain.Config().Tendermint.Epoch
+	)
+
+	if blockNumber%epoch != 0 {
+		// ignore if this block is not the end of epoch
+		return nil
+	}
+
+	// RLP encode val-set to bytes
+	payload, err := rlp.EncodeToBytes(validatorSet)
+	if err != nil {
+		log.Error("failed to encode validatorSet to payload", "error", err)
+	}
+
+	return utils.WriteValSet(header, payload)
 }

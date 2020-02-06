@@ -61,6 +61,9 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	if err != nil {
 		return err
 	}
+	// add valset to header extra-data
+	sb.addValSetToHeader(header, valSet)
+
 	if err = sb.addProposalSeal(header); err != nil {
 		return err
 	}
@@ -318,7 +321,7 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		log.Warn("block time difference is too small", "different in ms", header.Time-sb.config.BlockPeriod)
 	}
 
-	// get snap shoot to prepare for the verify proposal and committed seal
+	// get val-sets to prepare for the verify proposal and committed seal
 	valSet, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
 	if err != nil {
 		return err
@@ -370,7 +373,7 @@ func (sb *Backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 		return tendermint.ErrUnknownBlock
 	}
 
-	// get snap shoot to prepare for the verify proposal
+	// get valsets to prepare for the verify proposal
 	valset, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
 	if err != nil {
 		return err
