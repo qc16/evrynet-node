@@ -40,19 +40,19 @@ This guide will demonstrate the process of setting up 3 nodes manually. The proc
  
 The bellow example explains how to deploy 3 nodes manually
 
-1. Build and export to `PATH`
+#### 2.2.1. Build and export to `PATH`
     ```shell script
     $ go build ./cmd/gev
     $ go build ./cmd/bootnode
     $ go build ./cmd/puppeth
     $ export PATH=$(pwd):$PATH
     ```
-2. Move to folder where you want to store nodes data. Creating a working directory for 3 validator nodes  
+#### 2.2.2. Move to folder where you want to store nodes data. Creating a working directory for 3 validator nodes  
     ```shell script
     $ mkdir node_1 node_2 node_3
     ```  
 
-3. In each node’s working directory, create a log & data directory called `data`, and inside `data` create the `geth` directory   
+#### 2.2.3. In each node’s working directory, create a log & data directory called `data`, and inside `data` create the `geth` directory   
     ```shell script
     $ mkdir -p node_1/log
     $ mkdir -p node_2/log
@@ -62,14 +62,14 @@ The bellow example explains how to deploy 3 nodes manually
     $ mkdir -p node_3/data/geth
     ```
 
-4. Generate node key and copy it into folder `node_1`, `node_2` `node_3`
+#### 2.2.4. Generate node key and copy it into folder `node_1`, `node_2` `node_3`
     ```shell script
     $ bootnode --genkey=nodekey1
     $ bootnode --genkey=nodekey2
     $ bootnode --genkey=nodekey3
     ```
    
-5. Now we will generate initial accounts for any of the nodes in the required node’s working directory. The resulting public account address printed in the terminal should be recorded. Repeat as many times as necessary. A set of funded accounts may be required depending what you are trying to accomplish  
+#### 2.2.5. Now we will generate initial accounts for any of the nodes in the required node’s working directory. The resulting public account address printed in the terminal should be recorded. Repeat as many times as necessary. A set of funded accounts may be required depending what you are trying to accomplish  
     ```shell script
     $ gev --datadir node_1/data account new
     INFO [06-11|16:05:53.672] Maximum peer count                       ETH=25 LES=0 total=25
@@ -86,8 +86,10 @@ The bellow example explains how to deploy 3 nodes manually
     ... 
     ```
   
- 6. Now we will get address for 3 nodes. Using the content of nodekey1,2,3 files (Ex: `node_1/data/geth/nodekey`) as Private Key to get Address of each nodes at [myetherwallet](myetherwallet.com) 
- 7. Last step, we need to update `deploy/testnet/nodes/bin/genesis.json` by new address of validators.  
+ #### 2.2.6. Now we will get address for 3 nodes. 
+ Using the content of nodekey1,2,3 files (Ex: `node_1/data/geth/nodekey`) as Private Key to get Address of each nodes at [myetherwallet](myetherwallet.com) 
+ 
+ #### 2.2.7. Last step, we need to update `deploy/testnet/nodes/bin/genesis.json` by new address of validators.  
  Run `puppeth` and full fill data of your chain. Using 3 Addresses we just get from 3 Private Keys above.   
     ```shell script
     Please specify a network name to administer (no spaces, hyphens or capital letters please)
@@ -158,11 +160,12 @@ The bellow example explains how to deploy 3 nodes manually
     ERROR[11-27|18:09:06.980] Failed to create Parity chain spec       err="unsupported consensus engine"
     INFO [11-27|18:09:06.981] Saved genesis chain spec                 client=harmony path=testnet-harmony.json
     ```
-8. Replace all content of `deploy/testnet/nodes/bin/genesis.json` with `testnet.json` (new genesis file just created)
+#### 2.2.8. Replace the genesis
+ Replace content of `deploy/testnet/nodes/bin/genesis.json` with `testnet.json` (new genesis file just created)
 
-9. Run the deployment script or to run each node from executable:
+#### 2.2.9. Run the deployment script or to run each node from executable:
 
- To deploy using pre-written scripts:  
+#### 2.2.9a. To deploy using pre-written scripts:  
  Run this command `deploy/testnet/deploy_by_version.sh <path_to_share_volumes> <rpc_corsdomain> <deploy_explorer> <version>` with the suitable params
 - `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
@@ -172,7 +175,7 @@ The bellow example explains how to deploy 3 nodes manually
 Ex: This command can use om Testnet server   
 `deploy/testnet/deploy_by_version.sh /home/ubuntu/testnet/nodes 52.220.52.16 n 1.0-beta.1`  
 
- To deploy by running binary files:
+#### 2.2.9b. To deploy by running the executable:
 - You must start the bootnode first to let nodes discover each other
 ```shell script
 ./bootnode -nodekeyhex "9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09" -verbosity 9 -addr ":30300"
@@ -196,7 +199,7 @@ Ex: This command can use om Testnet server
 --bootnodes: you will see this value when you start bootnode. Change `172.25.0.100` to IP of bootnode server
 
 - To run another node, you can reuse the above command. You must change the value of params `rpcport, port` and `node_1.log`
-
+n
 Ex: `deploy/testnet/deploy_by_version.sh /Volumes/Work/Kyber/evrynet-client/deploy/testnet/nodes/data localhost y 1.0-beta.1`  
 - `path_to_share_volumes` is a path to folder where you want to share volumes with docker. The folder must include nodekey and keystore in each node. Ex: `deploy/testnet/nodes/data` 
 - `rpc_corsdomain` is a domain which was allowed to call RPC API to node  
