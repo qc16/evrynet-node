@@ -2,7 +2,10 @@ package core
 
 import (
 	"math/big"
+	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/Evrynetlabs/evrynet-node/log"
 )
@@ -14,6 +17,7 @@ const (
 // TimeoutTicker is a timer that schedules timeouts
 // conditional on the height/round/step in the timeoutInfo.
 // The timeoutInfo.Duration may be non-positive.
+// TimeoutTicker is thread-safe
 type TimeoutTicker interface {
 	Start() error
 	Stop() error
@@ -67,7 +71,10 @@ type timeoutTicker struct {
 	tickChan chan timeoutInfo // for scheduling timeouts
 	tockChan chan timeoutInfo // for notifying about them
 	Quit     chan struct{}
-	running  bool // to check timer expires
+	wg       *sync.WaitGroup // to check all send to channel done
+
+	running bool
+	lock    sync.Mutex
 }
 
 // NewTimeoutTicker returns a new TimeoutTicker that's ready to use
@@ -77,21 +84,34 @@ func NewTimeoutTicker() TimeoutTicker {
 		timer:    time.NewTimer(time.Duration(1<<63 - 1)),
 		tickChan: make(chan timeoutInfo, tickTockBufferSize),
 		Quit:     make(chan struct{}),
+		running:  false,
 	}
 	return tt
 }
 
 func (tt *timeoutTicker) Start() error {
 	tt.tockChan = make(chan timeoutInfo, tickTockBufferSize)
+	tt.lock.Lock()
+	defer tt.lock.Unlock()
+	if tt.running {
+		return errors.New("timer already started")
+	}
 	tt.running = true
 	go tt.timeoutRoutine()
 	return nil
 }
 
 func (tt *timeoutTicker) Stop() error {
+	tt.lock.Lock()
+	defer tt.lock.Unlock()
+	if !tt.running {
+		return errors.New("timer already stopped")
+	}
 	tt.running = false
+
 	tt.stopTimer()
 	tt.Quit <- struct{}{}
+	tt.wg.Wait()
 	close(tt.tockChan)
 	return nil
 }
@@ -124,10 +144,14 @@ func (tt *timeoutTicker) stopTimer() {
 // timers are interupted and replaced by new ticks from later steps
 // timeouts of 0 on the tickChan will be immediately relayed to the tockChan
 func (tt *timeoutTicker) timeoutRoutine() {
-	var ti = timeoutInfo{
-		BlockNumber: big.NewInt(0),
-		Round:       0,
-	}
+	var (
+		ti = timeoutInfo{
+			BlockNumber: big.NewInt(0),
+			Round:       0,
+		}
+		abort = make(chan struct{})
+	)
+	tt.wg = new(sync.WaitGroup)
 	//TODO: DO we need mutex for this?
 	for {
 		select {
@@ -155,12 +179,17 @@ func (tt *timeoutTicker) timeoutRoutine() {
 			// We can eliminate it by merging the timeoutRoutine into receiveRoutine
 			//  and managing the timeouts ourselves with a millisecond ticker
 			// TODO: see if we can fire directly into core.events
+			tt.wg.Add(1)
 			go func(toi timeoutInfo) {
-				if tt.running {
-					tt.tockChan <- toi
+				defer tt.wg.Done()
+				select {
+				case <-abort:
+				case tt.tockChan <- toi:
 				}
 			}(ti)
 		case <-tt.Quit:
+			// abort to send to tt.tockChan
+			close(abort)
 			return
 		}
 	}
