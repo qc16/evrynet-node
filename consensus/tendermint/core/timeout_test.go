@@ -49,7 +49,7 @@ func TestTimeoutInfo(t *testing.T) {
 
 func TestRunningTimeoutTicker(t *testing.T) {
 	ticker := NewTimeoutTicker()
-	ticker.Start()
+	require.NoError(t, ticker.Start())
 
 	ticker.ScheduleTimeout(timeoutInfo{
 		Duration:    time.Millisecond * 10,
@@ -59,7 +59,7 @@ func TestRunningTimeoutTicker(t *testing.T) {
 	})
 	time.Sleep(time.Millisecond * 20)
 
-	ticker.Stop()
+	require.NoError(t, ticker.Stop())
 
 	//This timeoutInfo should not be sent to tokChan
 	ticker.ScheduleTimeout(timeoutInfo{
@@ -77,4 +77,21 @@ func TestRunningTimeoutTicker(t *testing.T) {
 
 	_, ok = <-ticker.Chan()
 	assert.False(t, ok, "The second timeouInfo won't be sent to tokChan")
+}
+
+func TestRunningTimeoutTickerAbortSending(t *testing.T) {
+	ticker := NewTimeoutTicker()
+	require.NoError(t, ticker.Start())
+
+	for i := 0; i < 11; i++ {
+		ticker.ScheduleTimeout(timeoutInfo{
+			Duration:    time.Millisecond * 1,
+			BlockNumber: big.NewInt(1),
+			Round:       int64(i),
+			Step:        RoundStepPrevote,
+		})
+		time.Sleep(time.Millisecond * 2)
+	}
+	require.NoError(t, ticker.Stop())
+	time.Sleep(time.Millisecond * 20)
 }
