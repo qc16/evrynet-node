@@ -576,9 +576,10 @@ func (sb *Backend) verifyValSet(header *types.Header, valSet tendermint.Validato
 		log.Error("failed to encode validatorSet to payload", "error", err)
 		return err
 	}
+	// compare block header's val-set with current val-set
 	if bytes.Compare(extra.ValSet, payload) != 0 {
-		log.Error("the validatorSet is in-correct ")
-		return tendermint.ErrValSetInCorrect
+		log.Error("the validatorSet is mismatch with the current validator set")
+		return tendermint.ErrMismatchValSet
 	}
 	return nil
 }
