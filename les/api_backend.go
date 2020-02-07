@@ -33,7 +33,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/evr/downloader"
 	"github.com/Evrynetlabs/evrynet-node/evr/gasprice"
-	"github.com/Evrynetlabs/evrynet-node/evrclient"
 	"github.com/Evrynetlabs/evrynet-node/evrdb"
 	"github.com/Evrynetlabs/evrynet-node/light"
 	"github.com/Evrynetlabs/evrynet-node/params"
@@ -217,9 +216,4 @@ func (b *LesApiBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.evr.bloomRequests)
 	}
-}
-
-func (b *LesApiBackend) GetIPCClient() (*evrclient.Client, error) {
-	// TODO: not implement
-	return nil, nil
 }
