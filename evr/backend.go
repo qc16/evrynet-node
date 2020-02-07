@@ -212,9 +212,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 	}
 	evr.APIBackend.gpo = gasprice.NewOracle(evr.APIBackend, gpoParams)
 
-	// Set global ipc endpoint.
-	evr.blockchain.IPCEndpoint = ctx.GetConfig().IPCEndpoint()
-
 	return evr, nil
 }
 

@@ -29,7 +29,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/evr/downloader"
-	"github.com/Evrynetlabs/evrynet-node/evrclient"
 	"github.com/Evrynetlabs/evrynet-node/evrdb"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
@@ -73,8 +72,6 @@ type Backend interface {
 
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
-
-	GetIPCClient() (*evrclient.Client, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
