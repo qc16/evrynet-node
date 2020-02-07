@@ -97,11 +97,6 @@ func (ctx *ServiceContext) ExtRPCEnabled() bool {
 	return ctx.config.ExtRPCEnabled()
 }
 
-// GetConfig returns the current node config.
-func (ctx *ServiceContext) GetConfig() *Config {
-	return ctx.config
-}
-
 // ServiceConstructor is the function signature of the constructors needed to be
 // registered for service instantiation.
 type ServiceConstructor func(ctx *ServiceContext) (Service, error)
