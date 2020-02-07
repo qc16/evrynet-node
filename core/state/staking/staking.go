@@ -2,10 +2,10 @@ package staking
 
 import (
 	"context"
-
-	"github.com/pkg/errors"
 	"math/big"
 	"sort"
+
+	"github.com/pkg/errors"
 
 	ethereum "github.com/Evrynetlabs/evrynet-node"
 	"github.com/Evrynetlabs/evrynet-node/common"
