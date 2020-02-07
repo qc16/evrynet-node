@@ -2151,6 +2151,5 @@ func (bc *BlockChain) GetClient() (*evrclient.Client, error) {
 		}
 		bc.Client = client
 	}
-
 	return bc.Client, nil
 }

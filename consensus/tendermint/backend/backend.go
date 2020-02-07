@@ -64,6 +64,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 		broadcastCh:          make(chan broadcastTask),
 		controlChan:          make(chan struct{}),
+		stakingAddr:          common.HexToAddress(config.SCAddress),
 	}
 	be.core = tendermintCore.New(be, config)
 
@@ -109,7 +110,8 @@ type Backend struct {
 
 	broadcastCh chan broadcastTask
 
-	valSetInfo ValidatorSetInfo
+	valSetInfo  ValidatorSetInfo
+	stakingAddr common.Address
 }
 
 // EventMux implements tendermint.Backend.EventMux

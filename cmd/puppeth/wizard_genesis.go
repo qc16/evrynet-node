@@ -114,8 +114,8 @@ func (w *wizard) makeGenesis() {
 		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
 		policy := uint64(w.readDefaultInt(0))
 
-		fmt.Println("What is address of smart contract (default 0x0)")
-		scAddress := w.readDefaultString("0x0")
+		fmt.Println("What is address of smart contract (default 0x14229bC33F417cd5470e09b41DF41ce23dE0D06b)")
+		scAddress := w.readDefaultString("0x14229bC33F417cd5470e09b41DF41ce23dE0D06b")
 
 		// In the case of Tendermint, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
@@ -138,7 +138,7 @@ func (w *wizard) makeGenesis() {
 			Epoch:           epoch,
 			ProposerPolicy:  policy,
 			FixedValidators: validators,
-			SCAddress: scAddress,
+			SCAddress:       scAddress,
 		}
 		tendermintExtra := types.TendermintExtra{}
 		extraData, err := rlp.EncodeToBytes(&tendermintExtra)
