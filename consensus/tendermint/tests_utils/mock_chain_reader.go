@@ -20,7 +20,11 @@ type MockChainReader struct {
 }
 
 func (c *MockChainReader) Config() *params.ChainConfig {
-	panic("implement me")
+	return &params.ChainConfig{
+		Tendermint: &params.TendermintConfig{
+			Epoch: params.EpochDuration,
+		},
+	}
 }
 
 func (c *MockChainReader) CurrentHeader() *types.Header {
