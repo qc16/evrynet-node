@@ -41,7 +41,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
-	"github.com/Evrynetlabs/evrynet-node/core/state"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -50,7 +49,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
-	)
+)
 
 const (
 	defaultGasPrice = params.GWei
@@ -926,21 +925,21 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 // number is block-number if null will returns current time
 func (api *PublicBlockChainAPI) GetValidators(ctx context.Context, number rpc.BlockNumber) ([]common.Address, error) {
 	var (
-		scAddress  = common.HexToAddress(api.b.ChainConfig().Tendermint.SCAddress)
+		//scAddress  = common.HexToAddress(api.b.ChainConfig().Tendermint.SCAddress)
 		validators []common.Address
 		err        error
 	)
 
-	if number == rpc.LatestBlockNumber {
-		blockNumber := new(big.Int).SetInt64(number.Int64())
-		validators, err = api.getValidatorsFromSC(scAddress, blockNumber)
-	} else {
-		stateDB, _, err := api.b.StateAndHeaderByNumber(ctx, number)
-		if err != nil {
-			return validators, err
-		}
-		validators = state.GetValidators(stateDB, scAddress)
-	}
+	//if number == rpc.LatestBlockNumber {
+	//	blockNumber := new(big.Int).SetInt64(number.Int64())
+	//	validators, err = api.getValidatorsFromSC(scAddress, blockNumber)
+	//} else {
+	//	stateDB, _, err := api.b.StateAndHeaderByNumber(ctx, number)
+	//	if err != nil {
+	//		return validators, err
+	//	}
+	//	validators = staking.GetValidators(stateDB, scAddress)
+	//}
 
 	return validators, err
 }

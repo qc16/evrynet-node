@@ -11,7 +11,9 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
@@ -407,6 +409,7 @@ func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	uncles []*types.Header) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
+	sb.calculateNewValSet(chain, state, header)
 
 	// Since there is a change in stateDB, its trie must be update
 	// In case block reached EIP158 hash, the state will attempt to delete empty object as EIP158 sepcification
@@ -422,6 +425,7 @@ func (sb *Backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
+	sb.calculateNewValSet(chain, state, header)
 
 	// No block rewards, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -543,6 +547,27 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	reward := new(big.Int).Set(TendermintBlockReward)
 
 	state.AddBalance(header.Coinbase, reward)
+}
+
+func (be *Backend) calculateNewValSet(chain consensus.ChainReader, state *state.StateDB, header *types.Header) {
+	log.Warn("calculate new val set", "addr", be.stakingAddr)
+	if header.Number.Uint64()%be.config.Epoch != 0 {
+		return
+	}
+	stakingCaller := staking.NewStakingCaller(state, staking.NewChainContextWrapper(be, chain.GetHeader), header, chain.Config(), vm.Config{})
+	validators, err := stakingCaller.GetValidators(be.stakingAddr)
+	if err != nil {
+		log.Error("failed to get new val set", "err", err)
+		return
+	}
+	addressesString := ""
+	for _, val := range validators {
+		addressesString += val.Hex() + ","
+	}
+	if len(addressesString) != 0 {
+		addressesString = addressesString[:len(addressesString)-1]
+	}
+	log.Info("found new val set", "addrs", addressesString)
 }
 
 func (sb *Backend) prepareExtra(header *types.Header) []byte {

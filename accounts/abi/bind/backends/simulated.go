@@ -33,6 +33,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/bloombits"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
 	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/event"
@@ -422,6 +423,15 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
 
 	return nil
+}
+
+func (b *SimulatedBackend) GetStakingCaller() (staking.StakingCaller, error) {
+	state, err := b.blockchain.State()
+	if err != nil {
+		return nil, err
+	}
+	header := b.blockchain.CurrentHeader()
+	return staking.NewStakingCaller(state, b.blockchain, header, b.config, vm.Config{}), nil
 }
 
 // callmsg implements core.Message to allow passing it as a transaction simulator.
