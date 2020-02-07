@@ -47,6 +47,8 @@ func TestAllApis(t *testing.T) {
 				if jsonErr.ErrorCode() == MethodNotFoundCode {
 					t.Error(jsonErr)
 				}
+			} else {
+				t.Error(err)
 			}
 		}
 
