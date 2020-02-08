@@ -72,9 +72,11 @@ func MakeGenesisHeader(validators []common.Address) *types.Header {
 
 	var buf bytes.Buffer
 	buf.Write(extra[:types.TendermintExtraVanity])
+	valSetData, _ := rlp.EncodeToBytes(validators)
 	tdm := &types.TendermintExtra{
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
+		ValidatorAdds: valSetData,
 	}
 	payload, _ := rlp.EncodeToBytes(&tdm)
 

@@ -47,6 +47,8 @@ func WithValsetAddresses(addrs []common.Address) Option {
 	return func(b *Backend) error {
 		if len(addrs) > 0 {
 			b.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(addrs)
+		} else {
+			b.valSetInfo = NewValSetData(b.config.Epoch)
 		}
 		return nil
 	}

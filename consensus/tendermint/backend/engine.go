@@ -567,17 +567,17 @@ func (sb *Backend) verifyValSet(header *types.Header, valSet tendermint.Validato
 		return err
 	}
 	// The length of Validator set should be larger than 0
-	if len(extra.ValSet) == 0 {
+	if len(extra.ValidatorAdds) == 0 {
 		return tendermint.ErrEmptyValSet
 	}
-	// RLP encode val-set to bytes
-	payload, err := rlp.EncodeToBytes(valSet)
+	// RLP encode validator's address to bytes
+	payload, err := rlp.EncodeToBytes(valSet.GetAddresses())
 	if err != nil {
 		log.Error("failed to encode validatorSet to payload", "error", err)
 		return err
 	}
-	// compare block header's val-set with current val-set
-	if bytes.Compare(extra.ValSet, payload) != 0 {
+	// compare block header's validator's address with current validator's address
+	if bytes.Compare(extra.ValidatorAdds, payload) != 0 {
 		log.Error("the validatorSet is mismatch with the current validator set")
 		return tendermint.ErrMismatchValSet
 	}
@@ -596,8 +596,8 @@ func (sb *Backend) addValSetToHeader(header *types.Header, validatorSet tendermi
 		return nil
 	}
 
-	// RLP encode val-set to bytes
-	payload, err := rlp.EncodeToBytes(validatorSet)
+	// RLP encode validator's address to bytes
+	payload, err := rlp.EncodeToBytes(validatorSet.GetAddresses())
 	if err != nil {
 		log.Error("failed to encode validatorSet to payload", "error", err)
 		return err
