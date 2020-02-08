@@ -55,14 +55,14 @@ func WriteSeal(h *types.Header, seal []byte) error {
 	return nil
 }
 
-// WriteValSet writes the extra-data field of the given header with the given val-sets.
-func WriteValSet(h *types.Header, valSet []byte) error {
+// WriteValSet writes the extra-data field of the given header with the given val-sets address.
+func WriteValSet(h *types.Header, validators []byte) error {
 	tendermintExtra, err := types.ExtractTendermintExtra(h)
 	if err != nil {
 		return err
 	}
 
-	tendermintExtra.ValSet = valSet
+	tendermintExtra.ValidatorAdds = validators
 	payload, err := rlp.EncodeToBytes(&tendermintExtra)
 	if err != nil {
 		return err
@@ -119,4 +119,12 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	buf.Write(hash.Bytes())
 	buf.Write([]byte{byte(msgCommit)})
 	return buf.Bytes()
+}
+
+// GetCheckpointNumber returns check-point base on epoch duration and block-number
+func GetCheckpointNumber(epochDuration uint64, blockNumber uint64) uint64 {
+	if blockNumber == 0 || blockNumber < epochDuration {
+		return 0
+	}
+	return epochDuration * (blockNumber / epochDuration)
 }

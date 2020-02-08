@@ -46,7 +46,7 @@ type TendermintExtra struct {
 	// CommittedSeal is list seals of validators that committed the block, 65 * len(Validators) bytes
 	CommittedSeal [][]byte
 	// Set of authorized validators at this moment
-	ValSet []byte
+	ValidatorAdds []byte
 }
 
 // EncodeRLP serializes ist into the Evrynet RLP format.
@@ -54,7 +54,7 @@ func (te *TendermintExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		te.Seal,
 		te.CommittedSeal,
-		te.ValSet,
+		te.ValidatorAdds,
 	})
 }
 
@@ -63,12 +63,12 @@ func (te *TendermintExtra) DecodeRLP(s *rlp.Stream) error {
 	var tendermintExtra struct {
 		Seal          []byte
 		CommittedSeal [][]byte
-		ValSet        []byte
+		ValidatorAdds []byte
 	}
 	if err := s.Decode(&tendermintExtra); err != nil {
 		return err
 	}
-	te.Seal, te.CommittedSeal, te.ValSet = tendermintExtra.Seal, tendermintExtra.CommittedSeal, tendermintExtra.ValSet
+	te.Seal, te.CommittedSeal, te.ValidatorAdds = tendermintExtra.Seal, tendermintExtra.CommittedSeal, tendermintExtra.ValidatorAdds
 	return nil
 }
 
@@ -102,7 +102,7 @@ func TendermintFilteredHeader(h *Header, keepSeal bool) *Header {
 		tendermintExtra.Seal = []byte{}
 	}
 	tendermintExtra.CommittedSeal = [][]byte{}
-	tendermintExtra.ValSet = []byte{}
+	tendermintExtra.ValidatorAdds = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&tendermintExtra)
 	if err != nil {
