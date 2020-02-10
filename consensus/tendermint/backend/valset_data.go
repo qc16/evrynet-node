@@ -26,11 +26,12 @@ func NewValSetData(epochDuration uint64) *ValSetData {
 }
 
 //GetValSet keep tracks of validator set in associate with blockNumber
-func (v *ValSetData) GetValSet(chainReader consensus.ChainReader, blockNumber *big.Int) (tendermint.ValidatorSet, error) {
+func (v *ValSetData) GetValSet(chainReader consensus.ChainReader, number *big.Int) (tendermint.ValidatorSet, error) {
 	var (
 		// get the checkpoint of block-number
-		checkPoint    = utils.GetCheckpointNumber(v.Epoch, blockNumber.Uint64())
-		valSet        = validator.NewSet([]common.Address{}, tendermint.RoundRobin, blockNumber.Int64())
+		blockNumber   = number.Int64()
+		checkPoint    = utils.GetCheckpointNumber(v.Epoch, number.Uint64())
+		valSet        = validator.NewSet([]common.Address{}, tendermint.RoundRobin, blockNumber)
 		validatorAdds []common.Address
 	)
 
@@ -40,9 +41,9 @@ func (v *ValSetData) GetValSet(chainReader consensus.ChainReader, blockNumber *b
 		log.Error("cannot load extra-data", "number", blockNumber, "error", err)
 		return valSet, err
 	}
-	// The length of Validator set should be larger than 0
+	// The length of Validator's address should be larger than 0
 	if len(extra.ValidatorAdds) == 0 {
-		log.Error("validator set is empty", "number", blockNumber)
+		log.Error("validator' address is empty", "number", blockNumber)
 		return valSet, tendermint.ErrEmptyValSet
 	}
 	if err = rlp.DecodeBytes(extra.ValidatorAdds, &validatorAdds); err != nil {
@@ -50,5 +51,5 @@ func (v *ValSetData) GetValSet(chainReader consensus.ChainReader, blockNumber *b
 		return valSet, err
 	}
 
-	return validator.NewSet(validatorAdds, tendermint.RoundRobin, blockNumber.Int64()), nil
+	return validator.NewSet(validatorAdds, tendermint.RoundRobin, blockNumber), nil
 }
