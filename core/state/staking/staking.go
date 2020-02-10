@@ -41,7 +41,7 @@ type BackendContractCaller struct {
 	vmConfig     vm.Config
 }
 
-// GetValidators returns validators from stateDB by smart-contract's address
+// GetValidators returns validators from stateDB and block number of the caller by smart-contract's address
 func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]common.Address, error) {
 	sc, err := staking_contracts.NewStakingContractsCaller(scAddress, caller)
 	if err != nil {
