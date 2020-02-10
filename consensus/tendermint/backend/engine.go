@@ -568,6 +568,7 @@ func (be *Backend) calculateNewValSet(chain consensus.ChainReader, state *state.
 	if len(addressesString) != 0 {
 		addressesString = addressesString[:len(addressesString)-1]
 	}
+	//TODO: remove this log in production
 	log.Info("found new val set", "addrs", addressesString)
 }
 

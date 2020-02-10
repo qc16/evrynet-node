@@ -20,8 +20,9 @@ import (
 )
 
 var (
-	errEmptyValidatorSet  = errors.New("empty validator set")
-	indexValidatorMapping = map[string]uint64{
+	errEmptyValidatorSet                   = errors.New("empty validator set")
+	errLengthOfCandidatesAndStakesMisMatch = errors.New("length of stakes is not equal to length of candidates")
+	indexValidatorMapping                  = map[string]uint64{
 		"validators": 0,
 	}
 )
@@ -52,7 +53,7 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 	}
 	// sanity checks
 	if len(data.Candidates) != len(data.Stakes) {
-		return nil, errors.New("length of stakes is not equal to length of candidates")
+		return nil, errLengthOfCandidatesAndStakesMisMatch
 	}
 
 	if len(data.Candidates) == 0 {
@@ -106,7 +107,7 @@ func (caller *BackendContractCaller) CallContract(ctx context.Context, call ethe
 		call.GasPrice = big.NewInt(1)
 	}
 	if call.Gas == 0 {
-		call.Gas = 50000000
+		call.Gas = math.MaxUint64
 	}
 	if call.Value == nil {
 		call.Value = new(big.Int)
