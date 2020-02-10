@@ -39,7 +39,6 @@ func TestProviderSignTransaction(t *testing.T) {
 	tx := types.NewTransaction(nonce, *contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, nil)
 	txSigned, err := types.SignTx(tx, signer, spk)
 	assert.NoError(t, err)
-	//v, r, s := txSigned.RawSignatureValues()
 
 	ppk, err := crypto.HexToECDSA(providerPK)
 	// Check Tx for existion
