@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+
 	"github.com/Evrynetlabs/evrynet-node/log"
 )
 

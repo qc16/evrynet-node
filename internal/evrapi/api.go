@@ -26,6 +26,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/Evrynetlabs/evrynet-node/accounts"
 	"github.com/Evrynetlabs/evrynet-node/accounts/keystore"
 	"github.com/Evrynetlabs/evrynet-node/accounts/scwallet"
@@ -45,9 +49,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
