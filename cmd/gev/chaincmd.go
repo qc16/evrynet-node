@@ -260,12 +260,13 @@ func initGenesis(ctx *cli.Context) error {
 		//Deploy contract to simulated backend
 		//TODO: These temporary variables were used for Staking SC. Do we need somewhere to read it? In genesis file?
 		_candidates := tendermintExtra.Validators
-		var _candidatesOwner common.Address
+		_candidatesOwner := tendermintExtra.Validators[0]
 		_epochPeriod := big.NewInt(1024)
 		_maxValidatorSize := big.NewInt(10000000)
 		_minValidatorStake := big.NewInt(1)
 		_minVoteCap := big.NewInt(1)
-		contractAddress, _, _, err := bind.DeployContract(transactOpts, parsedABI, common.FromHex(byteCodeSC), contractBackend, _candidates, _candidatesOwner, _epochPeriod, _maxValidatorSize, _minValidatorStake, _minVoteCap)
+		_admin := tendermintExtra.Validators[0]
+		smlSCAddress, _, _, err := bind.DeployContract(transactOpts, parsedABI, common.FromHex(byteCodeSC), contractBackend, _candidates, _candidatesOwner, _epochPeriod, _maxValidatorSize, _minValidatorStake, _minVoteCap, _admin)
 		if err != nil {
 			utils.Fatalf("Failed to deploy contract: %v", err)
 		}
@@ -275,7 +276,7 @@ func initGenesis(ctx *cli.Context) error {
 		//Get code of staking SC after deploy to simulated backend
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1000*time.Millisecond))
 		defer cancel()
-		codeOfStakingSC, err := contractBackend.CodeAt(ctx, contractAddress, nil)
+		codeOfStakingSC, err := contractBackend.CodeAt(ctx, smlSCAddress, nil)
 		if err != nil || len(codeOfStakingSC) == 0 {
 			utils.Fatalf("Failed to get code contract: %v", err)
 		}
@@ -292,22 +293,19 @@ func initGenesis(ctx *cli.Context) error {
 			log.Info("DecodeBytes", "value", val.String(), "decode", storage[key].String())
 			return true
 		}
-		if err := contractBackend.ForEachStorageAt(contractAddress, nil, f); err != nil {
+		if err := contractBackend.ForEachStorageAt(smlSCAddress, nil, f); err != nil {
 			utils.Fatalf("Failed to to read all keys, values in the storage: %v", err)
 		}
 
 		//TODO: Should we read this address from genesis file?
-		genesis.Alloc[common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a")] = core.GenesisAccount{
+		addressOfStakingSC := common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a")
+		genesis.Alloc[addressOfStakingSC] = core.GenesisAccount{
 			Balance: new(big.Int).Lsh(big.NewInt(1), 256-7),
 			Code:    codeOfStakingSC,
 			Storage: storage,
 		}
 
-		if len(codeOfStakingSC) > 0 {
-			log.Info("Successfully deploy staking SC", "contractAddress", contractAddress)
-		} else {
-			utils.Fatalf("Failed to deploy staking SC: %v", err)
-		}
+		log.Info("Successfully deploy staking SC", "addressOfStakingSC", addressOfStakingSC)
 	}
 
 	for _, name := range []string{"chaindata", "lightchaindata"} {

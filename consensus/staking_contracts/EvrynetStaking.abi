@@ -429,6 +429,11 @@
         "internalType": "uint256",
         "name": "_minVoteCap",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_admin",
+        "type": "address"
       }
     ],
     "payable": false,
