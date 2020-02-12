@@ -213,10 +213,7 @@ func (sb *Backend) gossip(task broadcastTask) {
 					close(abort)
 					return
 				}
-			case _, ok := <-stopEvtSub.Chan():
-				if !ok {
-					return
-				}
+			case _ = <-stopEvtSub.Chan():
 				log.Info("cancel broadcast task because core is stopped")
 				close(abort)
 				return
@@ -256,19 +253,15 @@ func (sb *Backend) gossip(task broadcastTask) {
 			if successSent >= task.MinPeers {
 				return
 			}
-		case _, ok := <-abort:
-			if !ok {
-				return
-			}
+		case _ = <-abort:
+			return
 		}
 		// sleep and retries until success or core abort or new block event
 		log.Info("failed to sent to peer, sleeping", "time_sleep", timeSleep)
 		select {
 		case <-time.After(timeSleep):
-		case _, ok := <-abort:
-			if !ok {
-				return
-			}
+		case _ = <-abort:
+			return
 		}
 		// increase timeSleep 100ms after each epoch until timeSleep >= maxBroadcastSleepTime
 		if timeSleep < maxBroadcastSleepTime {
