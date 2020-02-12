@@ -1518,6 +1518,10 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 
 // SubmitTransaction is a helper function that submits tx to txPool and logs a message.
 func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
+	if err := validateStakingSCAddress(b, tx); err != nil {
+		return common.Hash{}, err
+	}
+
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}
@@ -1533,6 +1537,20 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
 	return tx.Hash(), nil
+}
+
+func validateStakingSCAddress(b Backend, tx *types.Transaction) error {
+	stakingSCAddress := b.ChainConfig().Tendermint.StakingSCAddress
+	sender, err := types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number()).Sender(tx)
+	if err != nil {
+		return err
+	}
+
+	newAddress := crypto.CreateAddress(sender, tx.Nonce())
+	if newAddress.Hex() == stakingSCAddress.Hex() {
+		return errors.New(fmt.Sprintf("New Tx address (%s) is duplicated with Staking SC address (%s)", newAddress.Hex(), stakingSCAddress.Hex()))
+	}
+	return nil
 }
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the

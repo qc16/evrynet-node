@@ -17,25 +17,15 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/urfave/cli"
-
-	"github.com/Evrynetlabs/evrynet-node/accounts/abi"
-	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
-	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind/backends"
 	"github.com/Evrynetlabs/evrynet-node/cmd/utils"
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/console"
@@ -43,12 +33,11 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
 	"github.com/Evrynetlabs/evrynet-node/core/state"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
-	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/evr/downloader"
 	"github.com/Evrynetlabs/evrynet-node/log"
-	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/trie"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -59,7 +48,6 @@ var (
 		ArgsUsage: "<genesisPath>",
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
-			utils.SCDirFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -229,85 +217,6 @@ func initGenesis(ctx *cli.Context) error {
 	stack := makeFullNode(ctx)
 	defer stack.Close()
 
-	// Init staking SmartContract
-	if ctx.GlobalIsSet(utils.SCDirFlag.Name) {
-		scPathDir := ctx.GlobalString(utils.SCDirFlag.Name)
-		byteCodeSC, err := ReadBytecodeOfSC(scPathDir)
-		if err != nil {
-			utils.Fatalf("Failed to read bytecode of SC file: %v", err)
-		}
-		ABIOfSC, err := ReadABIOfSC(scPathDir)
-		if err != nil {
-			utils.Fatalf("Failed to read ABI of SC file: %v", err)
-		}
-		parsedABI, err := abi.JSON(strings.NewReader(ABIOfSC))
-		if err != nil {
-			utils.Fatalf("Failed to parse ABI of SC: %v", err)
-		}
-
-		//Simulated backend & Preparing TransactOpts which is the collection of authorization data required to create a valid transaction.
-		pKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-		addr := crypto.PubkeyToAddress(pKey.PublicKey)
-		contractBackend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: big.NewInt(10000000000)}}, genesis.GasLimit)
-		transactOpts := bind.NewKeyedTransactor(pKey)
-
-		//Get init validator from ExtraData
-		tendermintExtra, err := getValidatorsFromExtraData(genesis.ExtraData)
-		if err != nil {
-			utils.Fatalf("Failed to get validator from extra data: %v", err)
-		}
-
-		//Deploy contract to simulated backend
-		//TODO: These temporary variables were used for Staking SC. Do we need somewhere to read it? In genesis file?
-		_candidates := tendermintExtra.Validators
-		_candidatesOwner := tendermintExtra.Validators[0]
-		_epochPeriod := big.NewInt(1024)
-		_maxValidatorSize := big.NewInt(10000000)
-		_minValidatorStake := big.NewInt(1)
-		_minVoteCap := big.NewInt(1)
-		_admin := tendermintExtra.Validators[0]
-		smlSCAddress, _, _, err := bind.DeployContract(transactOpts, parsedABI, common.FromHex(byteCodeSC), contractBackend, _candidates, _candidatesOwner, _epochPeriod, _maxValidatorSize, _minValidatorStake, _minVoteCap, _admin)
-		if err != nil {
-			utils.Fatalf("Failed to deploy contract: %v", err)
-		}
-		//Make SC can be interacted
-		contractBackend.Commit()
-
-		//Get code of staking SC after deploy to simulated backend
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1000*time.Millisecond))
-		defer cancel()
-		codeOfStakingSC, err := contractBackend.CodeAt(ctx, smlSCAddress, nil)
-		if err != nil || len(codeOfStakingSC) == 0 {
-			utils.Fatalf("Failed to get code contract: %v", err)
-		}
-
-		// Read data of contract in statedb & put to Storage of genesis account
-		storage := make(map[common.Hash]common.Hash)
-		f := func(key, val common.Hash) bool {
-			var decode []byte
-			trim := bytes.TrimLeft(val.Bytes(), "\x00") // Remove 00 in bytes
-			if err := rlp.DecodeBytes(trim, &decode); err != nil {
-				log.Error("Can't DecodeBytes", "error:", err, "value:", trim)
-			}
-			storage[key] = common.BytesToHash(decode)
-			log.Info("DecodeBytes", "value", val.String(), "decode", storage[key].String())
-			return true
-		}
-		if err := contractBackend.ForEachStorageAt(smlSCAddress, nil, f); err != nil {
-			utils.Fatalf("Failed to to read all keys, values in the storage: %v", err)
-		}
-
-		//TODO: Should we read this address from genesis file?
-		addressOfStakingSC := common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a")
-		genesis.Alloc[addressOfStakingSC] = core.GenesisAccount{
-			Balance: new(big.Int).Lsh(big.NewInt(1), 256-7),
-			Code:    codeOfStakingSC,
-			Storage: storage,
-		}
-
-		log.Info("Successfully deploy staking SC", "addressOfStakingSC", addressOfStakingSC)
-	}
-
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		chaindb, err := stack.OpenDatabase(name, 0, 0, "")
 		if err != nil {
@@ -320,18 +229,7 @@ func initGenesis(ctx *cli.Context) error {
 		chaindb.Close()
 		log.Info("Successfully wrote genesis state", "database", name, "hash", hash)
 	}
-
 	return nil
-}
-
-func getValidatorsFromExtraData(extraData []byte) (tendermintExtra *types.TendermintExtra, err error) {
-	if len(extraData) < types.TendermintExtraVanity {
-		return nil, errors.New("the extra data is smaller than TendermintExtraVanity")
-	}
-	if err := rlp.DecodeBytes(extraData[types.TendermintExtraVanity:], &tendermintExtra); err != nil {
-		return nil, err
-	}
-	return tendermintExtra, nil
 }
 
 func importChain(ctx *cli.Context) error {

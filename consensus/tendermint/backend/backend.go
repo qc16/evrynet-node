@@ -67,7 +67,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 		broadcastCh:          make(chan broadcastTask),
 		controlChan:          make(chan struct{}),
-		stakingContractAddr:  common.HexToAddress(config.SCAddress),
+		stakingContractAddr:  *config.StakingSCAddress,
 		computedValSetCache:  valSetCache,
 	}
 	be.core = tendermintCore.New(be, config)

@@ -167,8 +167,11 @@ func (b *SimulatedBackend) ForEachStorageAt(contract common.Address, blockNumber
 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
 		return errBlockNumberUnsupported
 	}
-	statedb, _ := b.blockchain.State()
-	if err := statedb.ForEachStorage(contract, f); err != nil {
+	statedb, err := b.blockchain.State()
+	if err != nil {
+		return err
+	}
+	if err = statedb.ForEachStorage(contract, f); err != nil {
 		return err
 	}
 	return nil
