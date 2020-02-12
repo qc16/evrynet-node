@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	RPCEndpoint        = "http://52.220.52.16:22001"
+	RPCEndpoint        = "http://localhost:22001"
 	MethodNotFoundCode = -32601 // the code of method not found error
 )
 
@@ -29,7 +29,7 @@ func TestAllApis(t *testing.T) {
 			"estimateGas", "getBlockByHash", "getBlockSignerByHash", "getBlockByNumber",
 			"getBlockSignerByNumber", "getTransactionByHash", "getTransactionByBlockHashAndIndex",
 			"getTransactionByBlockNumberAndIndex", "getTransactionReceipt", "getUncleByBlockHashAndIndex",
-			"getCompilers", "compileSolidity", "newFilter",
+			"newFilter",
 			"newBlockFilter", "newPendingTransactionFilter", "uninstallFilter", "getFilterChanges",
 			"getFilterLogs", "getLogs",
 		}
