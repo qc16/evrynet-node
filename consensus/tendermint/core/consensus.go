@@ -64,6 +64,13 @@ func (c *core) enterNewRound(blockNumber *big.Int, round int64) {
 
 	c.enterPropose(blockNumber, round)
 
+	// handle future proposal if not nil
+	if _, ok := c.futureProposals[round]; ok {
+		if err := c.handleMsgLocked(c.futureProposals[round]); err != nil {
+			c.getLogger().Errorw("failed to handle msg from next round", "err", err)
+		}
+	}
+
 }
 func (c *core) getDefaultProposal(logger *zap.SugaredLogger, round int64) *Proposal {
 	proposal := c.defaultDecideProposal(logger, round)
@@ -255,7 +262,7 @@ func (c *core) enterPrevoteWait(blockNumber *big.Int, round int64) {
 		sBlockNumber = state.BlockNumber()
 		sRound       = state.Round()
 		sStep        = state.Step()
-		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevote)
+		logger       = c.getLogger().With("input_block_number", blockNumber, "input_round", round, "input_step", RoundStepPrevoteWait)
 	)
 
 	if sBlockNumber.Cmp(blockNumber) != 0 || round < sRound || (sRound == round && RoundStepPrevoteWait <= sStep) {

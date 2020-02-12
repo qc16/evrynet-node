@@ -19,14 +19,15 @@ import (
 // New creates an Tendermint consensus core
 func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 	c := &core{
-		handlerWg:      new(sync.WaitGroup),
-		backend:        backend,
-		timeout:        NewTimeoutTicker(),
-		config:         config,
-		mu:             &sync.RWMutex{},
-		blockFinalize:  new(event.TypeMux),
-		futureMessages: queue.NewPriorityQueue(0, true),
-		sentMsgStorage: NewMsgStorage(),
+		handlerWg:       new(sync.WaitGroup),
+		backend:         backend,
+		timeout:         NewTimeoutTicker(),
+		config:          config,
+		mu:              &sync.RWMutex{},
+		blockFinalize:   new(event.TypeMux),
+		futureMessages:  queue.NewPriorityQueue(0, true),
+		futureProposals: make(map[int64]message),
+		sentMsgStorage:  NewMsgStorage(),
 	}
 	return c
 }
@@ -73,6 +74,10 @@ type core struct {
 	// and handle them later when we jump to that block number
 	// futureMessages only accepts msgItem
 	futureMessages *queue.PriorityQueue
+
+	// futureProposals stores future proposal which is ahead in round from current state
+	// In case: the current node is still at precommit but another node jumps to next round and sends the proposal
+	futureProposals map[int64]message
 }
 
 // Start implements core.Engine.Start
@@ -147,7 +152,7 @@ func (c *core) SendPropose(propose *Proposal) {
 	// store before send propose msg
 	c.sentMsgStorage.storeSentMsg(c.getLogger(), RoundStepPropose, propose.Round, payload)
 
-	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), propose.Round, msgPropose, payload); err != nil {
 		c.getLogger().Errorw("Failed to Broadcast proposal", "error", err)
 		return
 	}
@@ -216,7 +221,7 @@ func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	default:
 	}
 
-	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), payload); err != nil {
+	if err := c.backend.Broadcast(c.valSet, c.currentState.CopyBlockNumber(), round, voteType, payload); err != nil {
 		logger.Errorw("Failed to Broadcast vote", "error", err)
 		return
 	}

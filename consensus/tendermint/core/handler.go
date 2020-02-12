@@ -115,18 +115,24 @@ func (c *core) handleFinalCommitted(newHeadNumber *big.Int) error {
 	c.sentMsgStorage.truncateMsgStored(logger)
 	c.updateStateForNewblock()
 	c.startNewRound()
+	if _, err := c.processFutureMessages(logger); err != nil {
+		logger.Errorw("failed to process future msg", "err", err)
+	}
 	return nil
 }
 
 func (c *core) handleNewBlock(block *types.Block) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var state = c.CurrentState()
-	c.getLogger().Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
+	var (
+		state  = c.CurrentState()
+		logger = c.getLogger()
+	)
+	logger.Infow("received New Block event", "new_block_number", block.Number(), "new_block_hash", block.Hash().Hex())
 
 	if block.Number() == nil || state.BlockNumber().Cmp(block.Number()) > 0 {
 		//This is temporary to let miner come up with a newer block
-		c.getLogger().Errorw("new block number is smaller than current block",
+		logger.Errorw("new block number is smaller than current block",
 			"new_block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
 		//return a nil block to allow miner to send over a new one
 		c.backend.Cancel(types.NewBlockWithHeader(&types.Header{
@@ -136,6 +142,20 @@ func (c *core) handleNewBlock(block *types.Block) {
 		return
 	}
 	state.SetBlock(block)
+	// in case handleNewBlock is called after enterPropose
+	if state.step == RoundStepPropose {
+		if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
+			logger.Infow("this node is not a validator of this round", "address", c.backend.Address())
+			return
+		}
+		if c.valSet.IsProposer(c.backend.Address()) {
+			logger.Infow("this node is proposer of this round", "node_address", c.backend.Address())
+			proposal := c.getDefaultProposal(logger, state.Round())
+			if proposal != nil {
+				c.SendPropose(proposal)
+			}
+		}
+	}
 }
 
 //VerifyProposal validate msg & proposal when get from other nodes
@@ -210,17 +230,34 @@ func (c *core) handlePropose(msg message) error {
 	}
 
 	// Does not apply, this is not an error but may happen due to network lattency
-	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 || proposal.Round != state.Round() {
-		logger.Warnw("received proposal with different height/round.")
+	if proposal.Block.Number().Cmp(state.BlockNumber()) != 0 {
+		logger.Warnw("received proposal with different height.")
 		if proposal.Block.Number().Cmp(state.BlockNumber()) > 0 {
 			// vote from future block, save to future message queue
-			logger.Infow("store prevote vote from future block", "from", msg.Address)
+			logger.Infow("store proposal vote from future block", "from", msg.Address)
 			if err := c.futureMessages.Put(&msgItem{message: msg, height: proposal.Block.Number().Uint64()}); err != nil {
-				logger.Errorw("failed to store future prevote message to queue", "err", err, "from", msg.Address)
+				logger.Errorw("failed to store future proposal message to queue", "err", err, "from", msg.Address)
 			}
 		}
 		return nil
 	}
+
+	// Does not apply, this is not an error but may happen due to network latency
+	if proposal.Round != state.Round() {
+		logger.Warnw("received proposal with different round.")
+		if proposal.Round > state.Round() {
+			logger.Warnw("received proposal from future round.")
+			// make sure this is the proposer of next round
+			valSet := c.valSet.Copy()
+			valSet.CalcProposer(c.valSet.GetProposer().Address(), proposal.Round-state.Round())
+			if valSet.GetProposer().Address() == msg.Address {
+				logger.Infow("store proposal from next round", "from", msg.Address)
+				c.futureProposals[proposal.Round] = msg
+			}
+		}
+		return nil
+	}
+
 	if err := c.VerifyProposal(proposal, msg); err != nil {
 		return err
 	}
@@ -412,9 +449,8 @@ func (c *core) handlePrecommit(msg message) error {
 		if blockHash.Hex() != emptyBlockHash.Hex() {
 			c.enterCommit(state.BlockNumber(), vote.Round)
 			//TODO: if we need to skip when precommits has all votes
-		} else {
-			//wait for more precommit
-			c.enterPrecommitWait(state.BlockNumber(), vote.Round)
+		} else { // enter new Round for consensus
+			c.enterNewRound(state.BlockNumber(), vote.Round+1)
 		}
 		return nil
 	}
