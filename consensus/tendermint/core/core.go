@@ -16,8 +16,18 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
+type Option func(c *core) error
+
+//WithoutRebroadcast return an option to set whether or not core will rebroadcast its message
+func WithoutRebroadcast() Option {
+	return func(c *core) error {
+		c.rebroadcast = false
+		return nil
+	}
+}
+
 // New creates an Tendermint consensus core
-func New(backend tendermint.Backend, config *tendermint.Config) Engine {
+func New(backend tendermint.Backend, config *tendermint.Config, opts ...Option) Engine {
 	c := &core{
 		handlerWg:       new(sync.WaitGroup),
 		backend:         backend,
@@ -28,6 +38,12 @@ func New(backend tendermint.Backend, config *tendermint.Config) Engine {
 		futureMessages:  queue.NewPriorityQueue(0, true),
 		futureProposals: make(map[int64]message),
 		sentMsgStorage:  NewMsgStorage(),
+		rebroadcast:     true,
+	}
+	for _, opt := range opts {
+		if err := opt(c); err != nil {
+			panic(err)
+		}
 	}
 	return c
 }
@@ -78,6 +94,8 @@ type core struct {
 	// futureProposals stores future proposal which is ahead in round from current state
 	// In case: the current node is still at precommit but another node jumps to next round and sends the proposal
 	futureProposals map[int64]message
+
+	rebroadcast bool
 }
 
 // Start implements core.Engine.Start
