@@ -27,15 +27,16 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
+	"github.com/syndtr/goleveldb/leveldb/errors"
+	"golang.org/x/crypto/pbkdf2"
+	"golang.org/x/sync/syncmap"
+
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
-	"github.com/syndtr/goleveldb/leveldb/errors"
-	"golang.org/x/crypto/pbkdf2"
-	"golang.org/x/sync/syncmap"
 )
 
 // Statistics holds several message-related counter for analytics

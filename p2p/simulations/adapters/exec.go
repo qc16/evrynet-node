@@ -36,12 +36,13 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
+	"golang.org/x/net/websocket"
+
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/node"
 	"github.com/Evrynetlabs/evrynet-node/p2p"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
-	"golang.org/x/net/websocket"
 )
 
 func init() {

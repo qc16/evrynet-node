@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,16 +40,7 @@ func TestSendToNormalAddress(t *testing.T) {
 	transaction := types.NewTransaction(nonce, normalAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, nil)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
-	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
-		if err == nil {
-			assert.Equal(t, senderAddr, receipt.GasPayer)
-			assert.Equal(t, uint64(1), receipt.Status)
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	assertTransactionSuccess(t, ethClient, transaction.Hash(), false, senderAddr)
 }
 
 /*
@@ -78,7 +68,7 @@ func TestSendToNormalAddressWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	require.Error(t, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -103,16 +93,7 @@ func TestSendToNonEnterpriseSmartContractWithoutProviderSignature(t *testing.T) 
 	// return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
-	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
-		if err == nil {
-			assert.Equal(t, senderAddr, receipt.GasPayer)
-			assert.Equal(t, uint64(1), receipt.Status)
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	assertTransactionSuccess(t, ethClient, transaction.Hash(), false, senderAddr)
 }
 
 /*
@@ -140,7 +121,7 @@ func TestSendToNonEnterpriseSmartContractWithProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	require.Error(t, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -167,8 +148,8 @@ func TestInteractWithNonEnterpriseSmartContractWithoutProviderSignature(t *testi
 	dataBytes := []byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")
 	transaction := types.NewTransaction(nonce, contractAddr, big.NewInt(testAmountSend), testGasLimit, gasPrice, dataBytes)
 	transaction, err = types.SignTx(transaction, signer, spk)
-	err = ethClient.SendTransaction(context.Background(), transaction)
-	assert.NoError(t, err)
+	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
+	assertTransactionSuccess(t, ethClient, transaction.Hash(), false, senderAddr)
 }
 
 /*
@@ -197,7 +178,7 @@ func TestSendToEnterPriseSmartContractWithInvalidProviderSignature(t *testing.T)
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	require.Error(t, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -227,16 +208,7 @@ func TestSendToEnterPriseSmartContractWithValidProviderSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
-	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
-		if err == nil {
-			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
-			assert.Equal(t, uint64(1), receipt.Status)
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	assertTransactionSuccess(t, ethClient, transaction.Hash(), false, common.HexToAddress(providerAddrStr))
 }
 
 /*
@@ -269,7 +241,7 @@ func TestInteractToEnterpriseSmartContractWithInvalidProviderSignature(t *testin
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	require.Error(t, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -297,7 +269,7 @@ func TestInteractToEnterpriseSmartContractWithoutProviderSignature(t *testing.T)
 	transaction, err = types.SignTx(transaction, signer, spk)
 	assert.NoError(t, err)
 
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	require.Error(t, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 /*
@@ -331,14 +303,5 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignature(t *testing.
 	assert.NoError(t, err)
 
 	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
-	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
-		if err == nil {
-			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
-			assert.Equal(t, uint64(1), receipt.Status)
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	assertTransactionSuccess(t, ethClient, transaction.Hash(), false, common.HexToAddress(providerAddrStr))
 }
