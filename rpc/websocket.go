@@ -32,8 +32,9 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/Evrynetlabs/evrynet-node/log"
 	"golang.org/x/net/websocket"
+
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 // websocketJSONCodec is a custom JSON codec with payload size enforcement and

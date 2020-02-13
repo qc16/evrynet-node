@@ -75,9 +75,11 @@ func init() {
 		Epoch:          30000,
 		ProposerPolicy: common.Big0.Uint64(),
 	}
-	tx1, _ := types.SignTx(types.NewTransaction(0, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
+	tx1, _ := types.SignTx(types.NewTransaction(0, testUserAddress, big.NewInt(1000), params.TxGas,
+		big.NewInt(params.GasPriceConfig), nil), types.HomesteadSigner{}, testBankKey)
 	pendingTxs = append(pendingTxs, tx1)
-	tx2, _ := types.SignTx(types.NewTransaction(1, testUserAddress, big.NewInt(1000), params.TxGas, nil, nil), types.HomesteadSigner{}, testBankKey)
+	tx2, _ := types.SignTx(types.NewTransaction(1, testUserAddress, big.NewInt(1000), params.TxGas,
+		big.NewInt(params.GasPriceConfig), nil), types.HomesteadSigner{}, testBankKey)
 	newTxs = append(newTxs, tx2)
 }
 
@@ -202,10 +204,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	)
 
 	checkEqual := func(t *testing.T, task *task, index int) {
-		receiptLen, balance := 0, big.NewInt(0)
-		if index == 1 {
-			receiptLen, balance = 1, big.NewInt(1000)
-		}
+		receiptLen, balance := 1, big.NewInt(1000)
 		if len(task.receipts) != receiptLen {
 			t.Errorf("receipt number mismatch: have %d, want %d", len(task.receipts), receiptLen)
 		}
@@ -234,12 +233,10 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	}
 
 	w.start()
-	for i := 0; i < 2; i += 1 {
-		select {
-		case <-taskCh:
-		case <-time.NewTimer(2 * time.Second).C:
-			t.Error("new task timeout")
-		}
+	select {
+	case <-taskCh:
+	case <-time.NewTimer(2 * time.Second).C:
+		t.Error("new task timeout")
 	}
 }
 
@@ -282,13 +279,11 @@ func TestStreamUncleBlock(t *testing.T) {
 	}
 	w.start()
 
-	// Ignore the first two works
-	for i := 0; i < 2; i += 1 {
-		select {
-		case <-taskCh:
-		case <-time.NewTimer(time.Second).C:
-			t.Error("new task timeout")
-		}
+	// Ignore the first work
+	select {
+	case <-taskCh:
+	case <-time.NewTimer(time.Second).C:
+		t.Error("new task timeout")
 	}
 	b.PostChainEvents([]interface{}{core.ChainSideEvent{Block: b.uncleBlock}})
 
@@ -346,13 +341,11 @@ func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, en
 	}
 
 	w.start()
-	// Ignore the first two works
-	for i := 0; i < 2; i += 1 {
-		select {
-		case <-taskCh:
-		case <-time.NewTimer(time.Second).C:
-			t.Error("new task timeout")
-		}
+	// Ignore the first work
+	select {
+	case <-taskCh:
+	case <-time.NewTimer(time.Second).C:
+		t.Error("new task timeout")
 	}
 	b.txPool.AddLocals(newTxs)
 	time.Sleep(time.Second)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,16 +51,7 @@ func TestInteractToEnterpriseSmartContractWithValidProviderSignatureFromAccountW
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
-	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
-		if err == nil {
-			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
-			assert.Equal(t, uint64(1), receipt.Status)
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	assertTransactionSuccess(t, ethClient, transaction.Hash(), false, common.HexToAddress(providerAddrStr))
 }
 
 // Interact with a payable function and sending some native token along with transaction
@@ -93,7 +83,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	require.Error(t, ethClient.SendTransaction(context.Background(), transaction))
 }
 
 // Interact with a payable function and sending some native token along with transaction
@@ -126,16 +116,7 @@ func TestInteractWithAmountToEnterpriseSmartContractWithValidProviderSignatureFr
 	assert.NoError(t, err)
 
 	require.NoError(t, ethClient.SendTransaction(context.Background(), transaction))
-	for i := 0; i < 10; i++ {
-		var receipt *types.Receipt
-		receipt, err = ethClient.TransactionReceipt(context.Background(), transaction.Hash())
-		if err == nil {
-			assert.Equal(t, common.HexToAddress(providerAddrStr), receipt.GasPayer)
-			assert.Equal(t, uint64(1), receipt.Status)
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	assertTransactionSuccess(t, ethClient, transaction.Hash(), false, common.HexToAddress(providerAddrStr))
 }
 
 // Interact with enterprise contract where provider has zero gas
@@ -166,5 +147,5 @@ func TestInteractEnterpriseSmartContractWithValidProviderSignatureWithoutGas(t *
 	transaction, err = types.ProviderSignTx(transaction, signer, ppk)
 	assert.NoError(t, err)
 
-	assert.NotEqual(t, nil, ethClient.SendTransaction(context.Background(), transaction))
+	require.Error(t, ethClient.SendTransaction(context.Background(), transaction))
 }

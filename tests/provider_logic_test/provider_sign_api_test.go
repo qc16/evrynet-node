@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/evrclient"
-	"github.com/stretchr/testify/assert"
 )
 
 //TestProviderSignTransaction will sign a transaction with both sender's Key and Providers's Key
@@ -38,7 +39,6 @@ func TestProviderSignTransaction(t *testing.T) {
 	tx := types.NewTransaction(nonce, *contractAddr, big.NewInt(1000000), testGasLimit, gasPrice, nil)
 	txSigned, err := types.SignTx(tx, signer, spk)
 	assert.NoError(t, err)
-	v, r, s := txSigned.RawSignatureValues()
 
 	ppk, err := crypto.HexToECDSA(providerPK)
 	// Check Tx for existion
@@ -49,20 +49,6 @@ func TestProviderSignTransaction(t *testing.T) {
 	pTxSigned, err := ethClient.ProviderSignTx(context.Background(), txSigned, &providerAddr)
 	assert.NoError(t, err)
 	assert.NotEqual(t, nil, pTxSigned)
-	if err != nil {
-		v2, r2, s2 := pTxSigned.RawSignatureValues()
-		pv, pr, ps := pTxSigned.RawProviderSignatureValues()
-		assert.Equal(t, v, v2)
-		assert.Equal(t, r, r2)
-		assert.Equal(t, s, s2)
-		assert.NotEqual(t, nil, pv)
-		assert.NotEqual(t, nil, pr)
-		assert.NotEqual(t, nil, ps)
-
-		//The transaction should be able to process
-		err = ethClient.SendTransaction(context.Background(), pTxSigned)
-		assert.NoError(t, err)
-	}
 }
 
 func prepareNewContract(hasProvider bool) *common.Address {
@@ -106,7 +92,7 @@ func prepareNewContract(hasProvider bool) *common.Address {
 
 	err = ethClient.SendTransaction(context.Background(), tx)
 	if err != nil {
-		return nil
+		panic(err)
 	}
 	for i := 0; i < 10; i++ {
 		var receipt *types.Receipt
@@ -114,7 +100,6 @@ func prepareNewContract(hasProvider bool) *common.Address {
 		if err == nil && receipt.Status == uint64(1) {
 			return &receipt.ContractAddress
 		}
-
 		time.Sleep(1 * time.Second)
 	}
 	return nil
