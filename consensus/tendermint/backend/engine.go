@@ -62,7 +62,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return err
 	}
 	// add valset to header extra-data
-	sb.addValSetToHeader(header, valSet)
+	sb.addValSetToHeader(header)
 
 	if err = sb.addProposalSeal(header); err != nil {
 		return err
@@ -592,7 +592,7 @@ func (sb *Backend) verifyValSet(header *types.Header) error {
 }
 
 // Add validator set back to the tendermint extra.
-func (sb *Backend) addValSetToHeader(header *types.Header, validatorSet tendermint.ValidatorSet) error {
+func (sb *Backend) addValSetToHeader(header *types.Header) error {
 	var (
 		blockNumber = header.Number.Uint64()
 		epoch       = sb.chain.Config().Tendermint.Epoch
@@ -601,6 +601,13 @@ func (sb *Backend) addValSetToHeader(header *types.Header, validatorSet tendermi
 	if blockNumber%epoch != 0 {
 		// ignore if this block is not the end of epoch
 		return nil
+	}
+
+	// validate address of the validator
+	// TODO: re-calculate valset to setback to tendermint extra
+	validatorSet, err := sb.valSetInfo.GetValSet(sb.chain, big.NewInt(int64(blockNumber-1)))
+	if err != nil {
+		return err
 	}
 
 	// RLP encode validator's address to bytes
