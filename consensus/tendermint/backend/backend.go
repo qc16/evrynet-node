@@ -288,15 +288,15 @@ func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) er
 	)
 	log.Trace("multicast", "targets", len(targets), "found", len(ps))
 	var wg sync.WaitGroup
-	for addr, peer := range ps {
+	for a, p := range ps {
 		wg.Add(1)
-		go func() {
+		go func(addr common.Address, peer consensus.Peer) {
 			defer wg.Done()
 			if err := peer.Send(consensus.TendermintMsg, payload); err != nil {
 				atomic.AddInt64(&failed, 1)
 				log.Debug("failed to send when multicast", "err", err, "addr", addr)
 			}
-		}()
+		}(a, p)
 	}
 	wg.Wait()
 	if failed != 0 || notFound != 0 {
