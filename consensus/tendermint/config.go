@@ -21,6 +21,8 @@ const (
 	Disabled FaultyMode = iota
 	// SendFakeProposal sends the proposal with the fake info
 	SendFakeProposal
+	// RandomlyStopSendingMsg randomly stop message sending
+	RandomlyStopSendingMsg
 )
 
 func (f FaultyMode) Uint64() uint64 {

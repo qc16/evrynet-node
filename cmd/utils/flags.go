@@ -678,7 +678,7 @@ var (
 	}
 	TendermintFaultyModeFlag = cli.Uint64Flag{
 		Name:  "tendermint.faultymode",
-		Usage: "0: not faulty, 1: send fake proposal",
+		Usage: "0: not faulty, 1: send fake proposal, 2: enable randomly stop message sending",
 		Value: evr.DefaultConfig.Tendermint.FaultyMode,
 	}
 	TendermintTimeoutProposeFlag = cli.DurationFlag{
