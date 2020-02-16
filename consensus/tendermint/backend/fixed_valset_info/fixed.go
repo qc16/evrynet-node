@@ -20,6 +20,6 @@ func NewFixedValidatorSetInfo(addrs []common.Address) *FixedValidatorSetInfo {
 }
 
 //GetValSet keep tracks of validator set in associate with blockNumber
-func (mvi *FixedValidatorSetInfo) GetValSet(chainReader consensus.ChainReader, blockNumber *big.Int) (tendermint.ValidatorSet, error) {
+func (mvi *FixedValidatorSetInfo) GetValSet(chainReader consensus.ChainReader, epoch uint64, blockNumber *big.Int) (tendermint.ValidatorSet, error) {
 	return validator.NewSet(mvi.addresses, tendermint.RoundRobin, blockNumber.Int64()), nil
 }
