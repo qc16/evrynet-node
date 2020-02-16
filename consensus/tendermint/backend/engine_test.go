@@ -160,6 +160,6 @@ func TestPrepareExtra(t *testing.T) {
 	header.Extra = append(vanity, make([]byte, 15)...)
 
 	header.Extra = engine.prepareExtra(header)
-	//assert.Equal(t, expectedResult, header.Extra)
+	assert.Equal(t, expectedResult, header.Extra)
 
 }

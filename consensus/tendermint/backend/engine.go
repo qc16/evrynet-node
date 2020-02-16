@@ -57,7 +57,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return errors.New("cannot Seal block 0")
 	}
 	// validate address of the validator
-	valSet, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
+	valSet, err := sb.valSetInfo.GetValSet(chain, sb.config.Epoch, big.NewInt(int64(blockNumber-1)))
 	if err != nil {
 		return err
 	}
@@ -322,7 +322,7 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// get val-sets to prepare for the verify proposal and committed seal
-	valSet, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
+	valSet, err := sb.valSetInfo.GetValSet(chain, sb.config.Epoch, big.NewInt(int64(blockNumber-1)))
 	if err != nil {
 		return err
 	}
@@ -378,7 +378,7 @@ func (sb *Backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 	}
 
 	// get valsets to prepare for the verify proposal
-	valset, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
+	valset, err := sb.valSetInfo.GetValSet(chain, sb.config.Epoch, big.NewInt(int64(blockNumber-1)))
 	if err != nil {
 		return err
 	}
@@ -563,7 +563,7 @@ func (sb *Backend) verifyValSet(header *types.Header) error {
 	}
 
 	// get val-sets to prepare for the verify validators
-	valSet, err := sb.valSetInfo.GetValSet(sb.chain, big.NewInt(int64(blockNumber)))
+	valSet, err := sb.valSetInfo.GetValSet(sb.chain, sb.config.Epoch, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return err
 	}
@@ -605,7 +605,7 @@ func (sb *Backend) addValSetToHeader(header *types.Header) error {
 
 	// validate address of the validator
 	// TODO: re-calculate valset to setback to tendermint extra
-	validatorSet, err := sb.valSetInfo.GetValSet(sb.chain, big.NewInt(int64(blockNumber-1)))
+	validatorSet, err := sb.valSetInfo.GetValSet(sb.chain, sb.config.Epoch, big.NewInt(int64(blockNumber-1)))
 	if err != nil {
 		return err
 	}

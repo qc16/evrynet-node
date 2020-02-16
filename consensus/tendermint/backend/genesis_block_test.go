@@ -36,7 +36,7 @@ func TestBackend_Genesis_block(t *testing.T) {
 	backend, _, blockchain, err := createBlockchainAndBackendFromGenesis()
 	assert.NoError(t, err)
 
-	valSet, err := backend.valSetInfo.GetValSet(blockchain, big.NewInt(0))
+	valSet, err := backend.valSetInfo.GetValSet(blockchain, backend.config.Epoch, big.NewInt(0))
 	assert.NoError(t, err)
 
 	validator := valSet.GetByIndex(0)
