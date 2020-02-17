@@ -99,7 +99,7 @@ type Backend struct {
 
 	coreStarted bool
 	mutex       *sync.RWMutex
-	chain       consensus.ChainReader
+	chain       consensus.FullChainReader
 	controlChan chan struct{}
 
 	//storingMsgs is used to store msg to handler when core stopped
