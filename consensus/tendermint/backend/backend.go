@@ -134,9 +134,7 @@ func (sb *Backend) Broadcast(valSet tendermint.ValidatorSet, blockNumber *big.In
 	}
 	// send to self
 	go func() {
-		if err := sb.EventMux().Post(tendermint.MessageEvent{
-			Payload: payload,
-		}); err != nil {
+		if err := sb.checkAndSendMsg(payload); err != nil {
 			log.Error("failed to post event to self", "error", err)
 		}
 	}()
