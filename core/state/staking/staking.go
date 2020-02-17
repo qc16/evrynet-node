@@ -25,6 +25,8 @@ var (
 	indexValidatorMapping                  = map[string]uint64{
 		"validators": 0,
 	}
+
+	maxGasGetValSet uint64 = 50000000
 )
 
 type StakingCaller interface {
@@ -107,7 +109,7 @@ func (caller *BackendContractCaller) CallContract(ctx context.Context, call ethe
 		call.GasPrice = big.NewInt(1)
 	}
 	if call.Gas == 0 {
-		call.Gas = math.MaxUint64
+		call.Gas = maxGasGetValSet
 	}
 	if call.Value == nil {
 		call.Value = new(big.Int)
