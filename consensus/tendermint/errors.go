@@ -39,4 +39,6 @@ var (
 	ErrInvalidVote = errors.New("vote nonce not 0x0000000000000000 or 0xffffffffffffffff")
 	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
 	ErrInvalidCandidate = errors.New("candidate for validator is invalid")
+	// ErrUnknownParent is return when a proposal is sent with unknown parent hash
+	ErrUnknownParent = errors.New("unknown parent")
 )
