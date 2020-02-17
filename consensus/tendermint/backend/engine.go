@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
@@ -164,7 +165,7 @@ func (sb *Backend) tryStartCore() bool {
 }
 
 // Start implements consensus.Tendermint.Start
-func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block) error {
+func (sb *Backend) Start(chain consensus.FullChainReader, currentBlock func() *types.Block) error {
 	sb.mutex.Lock()
 	if sb.coreStarted {
 		return tendermint.ErrStartedEngine
@@ -238,6 +239,24 @@ func (sb *Backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 func (sb *Backend) VerifyProposalHeader(header *types.Header) error {
 	if sb.chain == nil {
 		return errors.New("no chain reader ")
+	}
+	// verify valSet in header is match with valSet from stateDB
+	parent := sb.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	if parent == nil {
+		return tendermint.ErrUnknownParent
+	}
+	if header.Number.Uint64()%sb.config.Epoch == 0 {
+		validators, err := sb.getNextValidatorSet(parent)
+		if err != nil {
+			//TODO: remove this after deploying staking SC in genesis block is done
+			if err == bind.ErrNoCode {
+				log.Info("No contract is available")
+				return nil
+			}
+			return err
+		}
+		// TODO: verify extra header here
+		log.Info("verifying proposal header", "validator", validators)
 	}
 	return sb.verifyHeader(sb.chain, header, nil)
 }
@@ -397,6 +416,9 @@ func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	//TODO: modify valset data if epoch is reached.
+	if err := sb.addValSetToHeader(header, parent); err != nil {
+		log.Error("failed to add val set to header", "err", err)
+	}
 
 	return nil
 }
@@ -409,7 +431,6 @@ func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	uncles []*types.Header) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
-	sb.calculateNewValSet(chain, state, header)
 
 	// Since there is a change in stateDB, its trie must be update
 	// In case block reached EIP158 hash, the state will attempt to delete empty object as EIP158 sepcification
@@ -425,7 +446,6 @@ func (sb *Backend) FinalizeAndAssemble(chain consensus.ChainReader, header *type
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
 	accumulateRewards(chain.Config(), state, header)
-	sb.calculateNewValSet(chain, state, header)
 
 	// No block rewards, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -549,17 +569,22 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	state.AddBalance(header.Coinbase, reward)
 }
 
-func (be *Backend) calculateNewValSet(chain consensus.ChainReader, state *state.StateDB, header *types.Header) {
-	log.Warn("calculate new val set", "addr", be.stakingAddr)
-	if header.Number.Uint64()%be.config.Epoch != 0 {
-		return
+//addValSetToHeader updates the information for new valset
+func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header) error {
+	if header.Number.Uint64()%sb.config.Epoch != 0 {
+		return nil
 	}
-	stakingCaller := staking.NewStakingCaller(state, staking.NewChainContextWrapper(be, chain.GetHeader), header, chain.Config(), vm.Config{})
-	validators, err := stakingCaller.GetValidators(be.stakingAddr)
+	validators, err := sb.getNextValidatorSet(parent)
 	if err != nil {
-		log.Error("failed to get new val set", "err", err)
-		return
+		//TODO: remove this after deploying staking SC in genesis block is done
+		if err == bind.ErrNoCode {
+			log.Info("No contract is available")
+			return nil
+		}
+		return err
 	}
+	//TODO: remove this log in production
+	// add extra data to header here
 	addressesString := ""
 	for _, val := range validators {
 		addressesString += val.Hex() + ","
@@ -567,8 +592,21 @@ func (be *Backend) calculateNewValSet(chain consensus.ChainReader, state *state.
 	if len(addressesString) != 0 {
 		addressesString = addressesString[:len(addressesString)-1]
 	}
-	//TODO: remove this log in production
 	log.Info("found new val set", "addrs", addressesString)
+	return nil
+}
+
+func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, error) {
+	stateDB, err := sb.chain.StateAt(header.Root)
+	if err != nil {
+		return nil, err
+	}
+	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
+	validators, err := stakingCaller.GetValidators(sb.stakingAddr)
+	if err != nil {
+		return nil, err
+	}
+	return validators, nil
 }
 
 func (sb *Backend) prepareExtra(header *types.Header) []byte {
