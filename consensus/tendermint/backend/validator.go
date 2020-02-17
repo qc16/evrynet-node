@@ -9,5 +9,5 @@ import (
 
 //ValidatorSetInfo keep tracks of validator set in associate with blockNumber
 type ValidatorSetInfo interface {
-	GetValSet(chainReader consensus.ChainReader, epoch uint64, blockNumber *big.Int) (tendermint.ValidatorSet, error)
+	GetValSet(chainReader consensus.ChainReader, blockNumber *big.Int) (tendermint.ValidatorSet, error)
 }
