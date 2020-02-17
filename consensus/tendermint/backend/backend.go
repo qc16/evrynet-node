@@ -14,6 +14,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/staking"
 	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -74,7 +75,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 	if config.FixedValidators != nil && len(config.FixedValidators) > 0 {
 		be.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.FixedValidators)
 	} else {
-		be.valSetInfo = NewStakingValidatorInfo(be)
+		be.valSetInfo = staking.NewStakingValidatorInfo(config.Epoch)
 	}
 	be.core = tendermintCore.New(be, config)
 
@@ -315,7 +316,7 @@ func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) er
 // Validators return validator set for a block number
 // TODO: revise this function once auth vote is implemented
 func (sb *Backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
-	valSet, err := sb.valSetInfo.GetValSet(sb.chain, sb.config.Epoch, blockNumber)
+	valSet, err := sb.valSetInfo.GetValSet(sb.chain, blockNumber)
 	if err != nil {
 		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
 	}
@@ -359,7 +360,7 @@ func (sb *Backend) CurrentHeadBlock() *types.Block {
 
 // ValidatorsByChainReader returns val-set from snapshot
 func (sb *Backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
-	valSet, err := sb.valSetInfo.GetValSet(chain, sb.config.Epoch, blockNumber)
+	valSet, err := sb.valSetInfo.GetValSet(chain, blockNumber)
 	if err != nil {
 		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
 	}

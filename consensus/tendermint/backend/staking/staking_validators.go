@@ -13,24 +13,24 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
-// StakingValidatorInfo is implementation of ValidatorSetInfo
-type StakingValidatorInfo struct {
-	be *Backend
+// StakingValidator is implementation of ValidatorSetInfo
+type StakingValidator struct {
+	Epoch uint64
 }
 
-// NewStakingValidatorInfo returns new StakingValidatorInfo
-func NewStakingValidatorInfo(backend *Backend) *StakingValidatorInfo {
-	return &StakingValidatorInfo{
-		be: backend,
+// NewStakingValidatorInfo returns new StakingValidator
+func NewStakingValidatorInfo(epoch uint64) *StakingValidator {
+	return &StakingValidator{
+		Epoch: epoch,
 	}
 }
 
 // GetValSet keep tracks of validator set in associate with blockNumber
-func (v *StakingValidator) GetValSet(chainReader consensus.ChainReader, epoch uint64, number *big.Int) (tendermint.ValidatorSet, error) {
+func (v *StakingValidator) GetValSet(chainReader consensus.ChainReader, number *big.Int) (tendermint.ValidatorSet, error) {
 	var (
 		// get the checkpoint of block-number
 		blockNumber   = number.Int64()
-		checkPoint    = utils.GetCheckpointNumber(v.be.config.Epoch, number.Uint64())
+		checkPoint    = utils.GetCheckpointNumber(v.Epoch, number.Uint64())
 		valSet        = validator.NewSet([]common.Address{}, tendermint.RoundRobin, blockNumber)
 		validatorAdds []common.Address
 	)
