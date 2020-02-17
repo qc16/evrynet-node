@@ -425,6 +425,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	return nil
 }
 
+//GetStakingCaller returns staking caller for testing
 func (b *SimulatedBackend) GetStakingCaller() (staking.StakingCaller, error) {
 	state, err := b.blockchain.State()
 	if err != nil {
