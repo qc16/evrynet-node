@@ -256,7 +256,7 @@ func (sb *Backend) VerifyProposalHeader(header *types.Header) error {
 			return err
 		}
 		// TODO: verify extra header here
-		log.Info("verifying proposal header", "validator", validators)
+		_ = validators
 	}
 	return sb.verifyHeader(sb.chain, header, nil)
 }
@@ -583,20 +583,18 @@ func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header)
 		}
 		return err
 	}
-	//TODO: remove this log in production
-	// add extra data to header here
-	addressesString := ""
-	for _, val := range validators {
-		addressesString += val.Hex() + ","
-	}
-	if len(addressesString) != 0 {
-		addressesString = addressesString[:len(addressesString)-1]
-	}
-	log.Info("found new val set", "addrs", addressesString)
+	//TODO: add extra data to header here
+	_ = validators
 	return nil
 }
 
 func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, error) {
+	if validators, known := sb.computedValSetCache.Get(header.Number.Uint64()); known {
+		if addresses, ok := validators.([]common.Address); ok {
+			return addresses, nil
+		}
+	}
+	start := time.Now()
 	stateDB, err := sb.chain.StateAt(header.Root)
 	if err != nil {
 		return nil, err
@@ -606,6 +604,9 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	if err != nil {
 		return nil, err
 	}
+	sb.computedValSetCache.Add(header.Number.Uint64(), validators)
+	log.Info("found new val set", "number", header.Number.Uint64(), "elapsed", common.PrettyDuration(time.Since(start)),
+		"valset", common.PrettyAddresses(validators))
 	return validators, nil
 }
 
