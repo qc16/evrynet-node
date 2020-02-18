@@ -546,47 +546,6 @@ func (sb *Backend) verifyCommittedSeals(header *types.Header, valSet tendermint.
 	return nil
 }
 
-// verifyValSet validates validator set in tendermint extra only at block % epochNumber= 0
-func (sb *Backend) verifyValSet(header *types.Header) error {
-	var (
-		blockNumber = header.Number.Uint64()
-		epoch       = sb.config.Epoch
-	)
-
-	if blockNumber%epoch != 0 {
-		// ignore if this block is not the end of epoch
-		return nil
-	}
-
-	// get val-sets to prepare for the verify validators
-	valSet, err := sb.valSetInfo.GetValSet(sb.chain, big.NewInt(int64(blockNumber)))
-	if err != nil {
-		return err
-	}
-
-	extra, err := types.ExtractTendermintExtra(header)
-	if err != nil {
-		return err
-	}
-	// The length of Validator set should be larger than 0
-	if len(extra.ValidatorAdds) == 0 {
-		return tendermint.ErrEmptyValSet
-	}
-	// RLP encode validator's address to bytes
-	payload, err := rlp.EncodeToBytes(valSet.GetAddresses())
-	if err != nil {
-		log.Error("failed to encode validatorSet to payload", "error", err)
-		return err
-	}
-
-	// compare block header's validator's address with current validator's address
-	if bytes.Compare(extra.ValidatorAdds, payload) != 0 {
-		log.Error("the validatorSet is mismatch with the current validator set")
-		return tendermint.ErrMismatchValSet
-	}
-	return nil
-}
-
 // Add validator set back to the tendermint extra.
 func (sb *Backend) addValSetToHeader(header *types.Header) error {
 	var (

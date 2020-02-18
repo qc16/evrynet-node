@@ -75,7 +75,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 	if config.FixedValidators != nil && len(config.FixedValidators) > 0 {
 		be.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.FixedValidators)
 	} else {
-		be.valSetInfo = staking.NewStakingValidatorInfo(config.Epoch)
+		be.valSetInfo = staking.NewStakingValidatorInfo(config.Epoch, config.ProposerPolicy)
 	}
 	be.core = tendermintCore.New(be, config)
 
