@@ -1,6 +1,7 @@
 package fixed_valset_info
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
@@ -20,6 +21,7 @@ func NewFixedValidatorSetInfo(addrs []common.Address) *FixedValidatorSetInfo {
 }
 
 //GetValSet keep tracks of validator set in associate with blockNumber
-func (mvi *FixedValidatorSetInfo) GetValSet(chainReader consensus.ChainReader, epoch uint64, blockNumber *big.Int) (tendermint.ValidatorSet, error) {
+func (mvi *FixedValidatorSetInfo) GetValSet(chainReader consensus.ChainReader, blockNumber *big.Int) (tendermint.ValidatorSet, error) {
+	fmt.Println("FixedValidatorSetInfo.GetValSet", "blockNumber", blockNumber, "validatorAdds", mvi.addresses)
 	return validator.NewSet(mvi.addresses, tendermint.RoundRobin, blockNumber.Int64()), nil
 }
