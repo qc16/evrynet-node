@@ -73,7 +73,7 @@ func TestBackend_VerifyHeader_WithStakingValidator(t *testing.T) {
 	//create New test backend and newMockChain
 	var cfg = tendermint.DefaultConfig
 	cfg.Epoch = 1
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, cfg, WithStakingConfig())
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, cfg, WithValsetAddresses([]common.Address{}))
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 
@@ -82,43 +82,44 @@ func TestBackend_VerifyHeader_WithStakingValidator(t *testing.T) {
 	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(engine.chain, block.Header(), false))
 
 	// with seal but incorrect coinbase
-	block = tests_utils.MakeBlockWithSeal(engine, genesisHeader)
-	header := block.Header()
+	blockWithSeal := tests_utils.MakeBlockWithSeal(engine, genesisHeader)
+	header := blockWithSeal.Header()
 	header.Coinbase = common.Address{}
 	tests_utils.AppendSeal(header, engine)
 	assert.Equal(t, tendermint.ErrCoinBaseInvalid, engine.VerifyHeader(engine.chain, header, false))
 
 	// without committed seal
-	block = tests_utils.MakeBlockWithSeal(engine, genesisHeader)
-	assert.Equal(t, tendermint.ErrEmptyCommittedSeals, engine.VerifyHeader(engine.chain, block.Header(), false))
+	assert.Equal(t, tendermint.ErrEmptyCommittedSeals, engine.VerifyHeader(engine.chain, blockWithSeal.Header(), false))
 
 	// with committed seal but is invalid
-	block = tests_utils.MustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
-	assert.Equal(t, tendermint.ErrInvalidCommittedSeals, engine.VerifyHeader(engine.chain, block.Header(), false))
+	blockWithCommittedSealInvalid := tests_utils.MustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
+	assert.Equal(t, tendermint.ErrInvalidCommittedSeals, engine.VerifyHeader(engine.chain, blockWithCommittedSealInvalid.Header(), false))
 
 	// with validators empty
-	block = tests_utils.MustMakeBlockWithCommittedSeal(engine, genesisHeader)
-	blockWithEmptyValset := tests_utils.MustMakeBlockWithValSet(block.Header(), []common.Address{})
+	blockWithCommitedSeal := tests_utils.MustMakeBlockWithCommittedSeal(engine, genesisHeader)
+	blockWithEmptyValset := tests_utils.MustMakeBlockWithValSet(blockWithCommitedSeal.Header(), []common.Address{})
 	assert.NotNil(t, engine.chain)
 	assert.Equal(t, tendermint.ErrMismatchValSet, engine.VerifyHeader(engine.chain, blockWithEmptyValset.Header(), false))
 
 	// with validators
-	blockWithValset := tests_utils.MustMakeBlockWithValSet(block.Header(), validators)
+	blockWithValset := tests_utils.MustMakeBlockWithValSet(blockWithCommitedSeal.Header(), validators)
 	assert.NotNil(t, engine.chain)
 	err = engine.VerifyHeader(engine.chain, blockWithValset.Header(), false)
 	assert.NoError(t, err)
 }
 
 func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header, cfg *tendermint.Config, option Option) (*tests_utils.MockChainReader, *Backend) {
-	var config = tendermint.DefaultConfig
+	var (
+		config = tendermint.DefaultConfig
+	)
 	if cfg != nil {
 		config = cfg
 	}
 	b, ok := New(config, nodePK, option).(*Backend)
-	b.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	if !ok {
 		panic("New() cannot be asserted back to backend")
 	}
+	b.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	chain := tests_utils.MockChainReader{
 		GenesisHeader: genesisHeader,
 	}

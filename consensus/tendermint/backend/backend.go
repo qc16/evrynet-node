@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/staking"
-
 	queue "github.com/enriquebris/goconcurrentqueue"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -43,10 +41,6 @@ var (
 //Option return an optional function for backend's initial behaviour
 type Option func(b *Backend) error
 
-// StakingConfig returns initialize params if have
-type StakingConfig struct {
-}
-
 //WithValsetAddresses return an option to assign backend.valSetInfo to fixed valset info
 //it will only do so if the input addresses set is not empty
 func WithValsetAddresses(addrs []common.Address) Option {
@@ -54,14 +48,6 @@ func WithValsetAddresses(addrs []common.Address) Option {
 		if len(addrs) > 0 {
 			b.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(addrs)
 		}
-		return nil
-	}
-}
-
-// WithStakingConfig return an option to assign backend.valSetInfo to get valset info
-func WithStakingConfig() Option {
-	return func(b *Backend) error {
-		b.valSetInfo = NewStakingValidatorInfo()
 		return nil
 	}
 }
@@ -88,7 +74,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 	if config.FixedValidators != nil && len(config.FixedValidators) > 0 {
 		be.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.FixedValidators)
 	} else {
-		be.valSetInfo = staking.NewStakingValidatorInfo()
+		be.valSetInfo = NewStakingValidatorInfo(be)
 	}
 	be.core = tendermintCore.New(be, config)
 
