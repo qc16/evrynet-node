@@ -335,7 +335,7 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	return sb.verifyValSet(header, valSet)
+	return sb.verifyValSet(header)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -551,15 +551,21 @@ func (sb *Backend) verifyCommittedSeals(header *types.Header, valSet tendermint.
 }
 
 // verifyValSet validates validator set in tendermint extra only at block % epochNumber= 0
-func (sb *Backend) verifyValSet(header *types.Header, valSet tendermint.ValidatorSet) error {
+func (sb *Backend) verifyValSet(header *types.Header) error {
 	var (
 		blockNumber = header.Number.Uint64()
-		epoch       = sb.chain.Config().Tendermint.Epoch
+		epoch       = sb.config.Epoch
 	)
 
 	if blockNumber%epoch != 0 {
 		// ignore if this block is not the end of epoch
 		return nil
+	}
+
+	// get val-sets to prepare for the verify validators
+	valSet, err := sb.valSetInfo.GetValSet(sb.chain, big.NewInt(int64(blockNumber)))
+	if err != nil {
+		return err
 	}
 
 	extra, err := types.ExtractTendermintExtra(header)
@@ -576,6 +582,7 @@ func (sb *Backend) verifyValSet(header *types.Header, valSet tendermint.Validato
 		log.Error("failed to encode validatorSet to payload", "error", err)
 		return err
 	}
+
 	// compare block header's validator's address with current validator's address
 	if bytes.Compare(extra.ValidatorAdds, payload) != 0 {
 		log.Error("the validatorSet is mismatch with the current validator set")

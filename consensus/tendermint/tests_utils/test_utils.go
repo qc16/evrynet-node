@@ -107,7 +107,12 @@ func MustMakeBlockWithCommittedSealInvalid(be tendermint.Backend, pHeader *types
 	return types.NewBlockWithHeader(header)
 }
 
-func MustMakeBlockWithCommittedSeal(be tendermint.Backend, pHeader *types.Header, validators []common.Address) *types.Block {
+func MustMakeBlockWithValSet(pHeader *types.Header, validatos []common.Address) *types.Block {
+	appendValidators(pHeader, validatos)
+	return types.NewBlockWithHeader(pHeader)
+}
+
+func MustMakeBlockWithCommittedSeal(be tendermint.Backend, pHeader *types.Header) *types.Block {
 	header := makeHeaderFromParent(types.NewBlockWithHeader(pHeader))
 	AppendSeal(header, be)
 	commitHash := utils.PrepareCommittedSeal(header.Hash())
@@ -134,6 +139,12 @@ func appendCommittedSeal(header *types.Header, committedSeal []byte) {
 	committedSeals[0] = make([]byte, types.TendermintExtraSeal)
 	copy(committedSeals[0][:], committedSeal[:])
 	_ = utils.WriteCommittedSeals(header, committedSeals)
+}
+
+// appendValidators returns a new header with validators
+func appendValidators(header *types.Header, validators []common.Address) {
+	valData, _ := rlp.EncodeToBytes(validators)
+	utils.WriteValSet(header, valData)
 }
 
 //makeHeaderFromParent return a new block With valid information from its parents.

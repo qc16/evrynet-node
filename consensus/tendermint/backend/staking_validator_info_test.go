@@ -15,7 +15,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
-func TestValSetData_GetValSet(t *testing.T) {
+func TestStakingValidatorInfo_GetValSet(t *testing.T) {
 	var (
 		nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
 		nodeAddr     = common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
@@ -28,7 +28,7 @@ func TestValSetData_GetValSet(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, []common.Address{})
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, nil, WithStakingConfig())
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 
@@ -73,9 +73,7 @@ func TestValSetData_GetValSet(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValSetData{
-				Epoch: tt.fields.Epoch,
-			}
+			v := &StakingValidatorInfo{}
 			got, err := v.GetValSet(tt.args.chainReader, tt.args.blockNumber)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValSetData.GetValSet() error = %v, wantErr %v", err, tt.wantErr)

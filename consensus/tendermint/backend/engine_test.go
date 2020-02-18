@@ -139,7 +139,7 @@ func TestPrepareExtra(t *testing.T) {
 	assert.NoError(t, err)
 
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, validators)
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, nil, WithValsetAddresses(validators))
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 	assert.Equal(t, true, engine.coreStarted)
