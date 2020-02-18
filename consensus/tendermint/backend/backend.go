@@ -7,6 +7,7 @@ import (
 	"time"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
@@ -29,6 +30,7 @@ const (
 	maxBroadcastSleepTime        = time.Minute * 5
 	initialBroadcastSleepTime    = time.Millisecond * 100
 	broadcastSleepTimeIncreament = time.Millisecond * 100
+	inMemoryValset               = 10
 )
 
 var (
@@ -53,6 +55,7 @@ func WithValsetAddresses(addrs []common.Address) Option {
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
+	valSetCache, _ := lru.NewARC(inMemoryValset)
 	be := &Backend{
 		config:               config,
 		tendermintEventMux:   new(event.TypeMux),
@@ -65,6 +68,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		broadcastCh:          make(chan broadcastTask),
 		controlChan:          make(chan struct{}),
 		stakingContractAddr:  common.HexToAddress(config.SCAddress),
+		computedValSetCache:  valSetCache,
 	}
 	be.core = tendermintCore.New(be, config)
 
@@ -111,7 +115,8 @@ type Backend struct {
 	broadcastCh chan broadcastTask
 
 	valSetInfo          ValidatorSetInfo
-	stakingContractAddr common.Address
+	stakingContractAddr common.Address // stakingContractAddr stores the address of staking smart-contract
+	computedValSetCache *lru.ARCCache  // computedValSetCache stores the valset is computed from stateDB
 }
 
 // EventMux implements tendermint.Backend.EventMux
