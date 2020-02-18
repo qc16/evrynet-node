@@ -6,12 +6,15 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
@@ -163,7 +166,7 @@ func (sb *Backend) tryStartCore() bool {
 }
 
 // Start implements consensus.Tendermint.Start
-func (sb *Backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block) error {
+func (sb *Backend) Start(chain consensus.FullChainReader, currentBlock func() *types.Block) error {
 	sb.mutex.Lock()
 	if sb.coreStarted {
 		return tendermint.ErrStartedEngine
@@ -237,6 +240,24 @@ func (sb *Backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 func (sb *Backend) VerifyProposalHeader(header *types.Header) error {
 	if sb.chain == nil {
 		return errors.New("no chain reader ")
+	}
+	// verify valSet in header is match with valSet from stateDB
+	parent := sb.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	if parent == nil {
+		return tendermint.ErrUnknownParent
+	}
+	if header.Number.Uint64()%sb.config.Epoch == 0 {
+		validators, err := sb.getNextValidatorSet(parent)
+		if err != nil {
+			//TODO: remove this after deploying staking SC in genesis block is done
+			if err == bind.ErrNoCode {
+				log.Info("No contract is available")
+				return nil
+			}
+			return err
+		}
+		// TODO: verify extra header here
+		_ = validators
 	}
 	return sb.verifyHeader(sb.chain, header, nil)
 }
@@ -396,6 +417,9 @@ func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	//TODO: modify valset data if epoch is reached.
+	if err := sb.addValSetToHeader(header, parent); err != nil {
+		log.Error("failed to add val set to header", "err", err)
+	}
 
 	return nil
 }
@@ -544,6 +568,47 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	reward := new(big.Int).Set(TendermintBlockReward)
 
 	state.AddBalance(header.Coinbase, reward)
+}
+
+//addValSetToHeader updates the information for new valset
+func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header) error {
+	if header.Number.Uint64()%sb.config.Epoch != 0 {
+		return nil
+	}
+	validators, err := sb.getNextValidatorSet(parent)
+	if err != nil {
+		//TODO: remove this after deploying staking SC in genesis block is done
+		if err == bind.ErrNoCode {
+			log.Info("No contract is available")
+			return nil
+		}
+		return err
+	}
+	//TODO: add extra data to header here
+	_ = validators
+	return nil
+}
+
+func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, error) {
+	if validators, known := sb.computedValSetCache.Get(header.Number.Uint64()); known {
+		if addresses, ok := validators.([]common.Address); ok {
+			return addresses, nil
+		}
+	}
+	start := time.Now()
+	stateDB, err := sb.chain.StateAt(header.Root)
+	if err != nil {
+		return nil, err
+	}
+	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
+	validators, err := stakingCaller.GetValidators(sb.stakingContractAddr)
+	if err != nil {
+		return nil, err
+	}
+	sb.computedValSetCache.Add(header.Number.Uint64(), validators)
+	log.Info("found new val set", "number", header.Number.Uint64(), "elapsed", common.PrettyDuration(time.Since(start)),
+		"valset", common.PrettyAddresses(validators))
+	return validators, nil
 }
 
 func (sb *Backend) prepareExtra(header *types.Header) []byte {
