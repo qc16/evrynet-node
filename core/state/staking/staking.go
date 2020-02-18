@@ -27,7 +27,7 @@ var (
 		"validators": 0,
 	}
 
-	maxGasGetValSet uint64 = 50000000
+	maxGasGetValSet uint64 = 500000000
 )
 
 type StakingCaller interface {
