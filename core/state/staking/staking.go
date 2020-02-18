@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -72,7 +73,7 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 	}
 	sort.Slice(data.Candidates, func(i, j int) bool {
 		if stakes[data.Candidates[i]].Cmp(stakes[data.Candidates[j]]) == 0 {
-			//data.Candidates[i].Bytes() > data.Candidates[j].Bytes()
+			return strings.Compare(data.Candidates[i].String(), data.Candidates[j].String()) > 0
 		}
 		return stakes[data.Candidates[i]].Cmp(stakes[data.Candidates[j]]) > 0
 	})
@@ -123,7 +124,7 @@ func (caller *BackendContractCaller) CallContract(ctx context.Context, call ethe
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(evmContext, clonedStateDB, caller.chainConfig, caller.vmConfig)
 	defer vmenv.Cancel()
-	gaspool := new(core.GasPool).AddGas(math.MaxUint64)
+	gaspool := new(core.GasPool).AddGas(maxGasGetValSet)
 	rval, _, _, err := core.NewStateTransition(vmenv, msg, gaspool).TransitionDb()
 	return rval, err
 }

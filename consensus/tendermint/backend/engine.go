@@ -603,7 +603,7 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 		return nil, err
 	}
 	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
-	validators, err := stakingCaller.GetValidators(sb.stakingAddr)
+	validators, err := stakingCaller.GetValidators(sb.stakingContractAddr)
 	if err != nil {
 		return nil, err
 	}
