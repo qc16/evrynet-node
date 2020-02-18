@@ -921,50 +921,6 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	return DoEstimateGas(ctx, s.b, args, rpc.PendingBlockNumber, s.b.RPCGasCap())
 }
 
-// GetValidators returns the list of validators by block's number
-// number is block-number if null will returns current time
-func (api *PublicBlockChainAPI) GetValidators(ctx context.Context, number rpc.BlockNumber) ([]common.Address, error) {
-	var (
-		//scAddress  = common.HexToAddress(api.b.ChainConfig().Tendermint.SCAddress)
-		validators []common.Address
-		err        error
-	)
-
-	//if number == rpc.LatestBlockNumber {
-	//	blockNumber := new(big.Int).SetInt64(number.Int64())
-	//	validators, err = api.getValidatorsFromSC(scAddress, blockNumber)
-	//} else {
-	//	stateDB, _, err := api.b.StateAndHeaderByNumber(ctx, number)
-	//	if err != nil {
-	//		return validators, err
-	//	}
-	//	validators = staking.GetValidators(stateDB, scAddress)
-	//}
-
-	return validators, err
-}
-
-func (api *PublicBlockChainAPI) getValidatorsFromSC(scAddress common.Address, blockNumber *big.Int) ([]common.Address, error) {
-	// TODO: call from contract package
-	//client, err := api.b.GetIPCClient()
-	//if err != nil {
-	//	return []common.Address{}, err
-	//}
-	//
-	//validator, err := contractValidator.NewStakingValidator(scAddress, client)
-	//if err != nil {
-	//	return []common.Address{}, err
-	//}
-	//
-	//var opts = new(bind.CallOpts)
-	//validators, err := validator.GetValidators(opts, blockNumber)
-	//if err != nil {
-	//	return []common.Address{}, err
-	//}
-
-	return []common.Address{}, nil
-}
-
 // ExecutionResult groups all structured logs emitted by the EVM
 // while replaying a transaction in debug mode as well as transaction
 // execution status, the amount of gas used and the return value
