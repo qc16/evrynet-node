@@ -143,7 +143,10 @@ func appendCommittedSeal(header *types.Header, committedSeal []byte) {
 
 // addValidators writes the validators's address to the input header's extra-data
 func addValidators(header *types.Header, validators []common.Address) {
-	valData, _ := rlp.EncodeToBytes(validators)
+	valData, err := rlp.EncodeToBytes(validators)
+	if err != nil {
+		panic(err)
+	}
 	utils.WriteValSet(header, valData)
 }
 

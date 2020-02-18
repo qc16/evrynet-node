@@ -28,6 +28,14 @@ func TestGetCheckpointNumber(t *testing.T) {
 			},
 			want: 1000,
 		},
+		{
+			name: "the block's number is a checkpoint",
+			args: args{
+				epochDuration: 1000,
+				blockNumber: 2000,
+			},
+			want: 2000,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
