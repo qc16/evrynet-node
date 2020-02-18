@@ -1760,7 +1760,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(config.Tendermint.ProposerPolicy)
 		tdmintConfig.Epoch = config.Tendermint.Epoch
 		tdmintConfig.StakingSCAddress = config.Tendermint.StakingSCAddress
-		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey(), tdmintBackend.WithValsetAddresses(config.Tendermint.FixedValidators))
+		tdmintConfig.FixedValidators = config.Tendermint.FixedValidators
+		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey())
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
