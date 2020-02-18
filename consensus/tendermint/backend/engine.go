@@ -331,11 +331,7 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return err
 	}
 
-	if err := sb.verifyCommittedSeals(header, valSet); err != nil {
-		return err
-	}
-
-	return sb.verifyValSet(header)
+	return sb.verifyCommittedSeals(header, valSet)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers

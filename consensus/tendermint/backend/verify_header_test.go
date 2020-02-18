@@ -59,6 +59,8 @@ func TestBackend_VerifyHeader(t *testing.T) {
 }
 
 func TestBackend_VerifyHeader_WithStakingValidator(t *testing.T) {
+	//TODO: currently, we don't need to verify its validators in the VerifyHeader function.
+	t.Skip()
 	var (
 		nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
 		nodeAddr     = common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")

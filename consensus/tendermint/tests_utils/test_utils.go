@@ -108,7 +108,7 @@ func MustMakeBlockWithCommittedSealInvalid(be tendermint.Backend, pHeader *types
 }
 
 func MustMakeBlockWithValSet(pHeader *types.Header, validatos []common.Address) *types.Block {
-	appendValidators(pHeader, validatos)
+	addValidators(pHeader, validatos)
 	return types.NewBlockWithHeader(pHeader)
 }
 
@@ -141,8 +141,8 @@ func appendCommittedSeal(header *types.Header, committedSeal []byte) {
 	_ = utils.WriteCommittedSeals(header, committedSeals)
 }
 
-// appendValidators writes the validators's address to the input header's extra-data
-func appendValidators(header *types.Header, validators []common.Address) {
+// addValidators writes the validators's address to the input header's extra-data
+func addValidators(header *types.Header, validators []common.Address) {
 	valData, _ := rlp.EncodeToBytes(validators)
 	utils.WriteValSet(header, valData)
 }
