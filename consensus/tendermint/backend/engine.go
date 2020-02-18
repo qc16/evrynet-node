@@ -61,8 +61,6 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	if err != nil {
 		return err
 	}
-	// add valset to header extra-data
-	sb.addValSetToHeader(header)
 
 	if err = sb.addProposalSeal(header); err != nil {
 		return err
@@ -546,35 +544,6 @@ func (sb *Backend) verifyCommittedSeals(header *types.Header, valSet tendermint.
 	return nil
 }
 
-// Add validator set back to the tendermint extra.
-func (sb *Backend) addValSetToHeader(header *types.Header) error {
-	var (
-		blockNumber = header.Number.Uint64()
-		epoch       = sb.chain.Config().Tendermint.Epoch
-	)
-
-	if blockNumber%epoch != 0 {
-		// ignore if this block is not the end of epoch
-		return nil
-	}
-
-	// validate address of the validator
-	// TODO: re-calculate valset to setback to tendermint extra
-	validatorSet, err := sb.valSetInfo.GetValSet(sb.chain, big.NewInt(int64(blockNumber-1)))
-	if err != nil {
-		return err
-	}
-
-	// RLP encode validator's address to bytes
-	payload, err := rlp.EncodeToBytes(validatorSet.GetAddresses())
-	if err != nil {
-		log.Error("failed to encode validatorSet to payload", "error", err)
-		return err
-	}
-
-	return utils.WriteValSet(header, payload)
-}
-
 // blockProposer extracts the Evrynet account address from a signed header.
 func blockProposer(header *types.Header) (common.Address, error) {
 	//TODO: check if existed in the cached
@@ -601,11 +570,18 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	state.AddBalance(header.Coinbase, reward)
 }
 
-//addValSetToHeader updates the information for new valset
+// addValSetToHeader Add validator set back to the tendermint extra.
 func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header) error {
-	if header.Number.Uint64()%sb.config.Epoch != 0 {
+	var (
+		blockNumber = header.Number.Uint64()
+		epoch       = sb.config.Epoch
+	)
+
+	if blockNumber%epoch != 0 {
+		// ignore if this block is not the end of epoch
 		return nil
 	}
+
 	validators, err := sb.getNextValidatorSet(parent)
 	if err != nil {
 		//TODO: remove this after deploying staking SC in genesis block is done
@@ -615,9 +591,15 @@ func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header)
 		}
 		return err
 	}
-	//TODO: add extra data to header here
-	_ = validators
-	return nil
+
+	// RLP encode validator's address to bytes
+	payload, err := rlp.EncodeToBytes(validators)
+	if err != nil {
+		log.Error("failed to encode validatorSet to payload", "error", err)
+		return err
+	}
+
+	return utils.WriteValSet(header, payload)
 }
 
 func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, error) {

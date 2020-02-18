@@ -58,58 +58,6 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestBackend_VerifyHeader_WithStakingValidator(t *testing.T) {
-	//TODO: currently, we don't need to verify its validators in the VerifyHeader function.
-	t.Skip("currently, we don't need to verify its validators in the VerifyHeader function")
-	var (
-		nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
-		nodeAddr     = common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
-		validators   = []common.Address{
-			nodeAddr,
-		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
-	)
-	nodePK, err := crypto.HexToECDSA(nodePKString)
-	assert.NoError(t, err)
-
-	//create New test backend and newMockChain
-	var cfg = tendermint.DefaultConfig
-	cfg.Epoch = 1
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, cfg, WithValsetAddresses([]common.Address{}))
-	assert.NotNil(t, chain)
-	assert.NotNil(t, engine)
-
-	// without seal
-	block := tests_utils.MakeBlockWithoutSeal(genesisHeader)
-	assert.Equal(t, secp256k1.ErrInvalidSignatureLen, engine.VerifyHeader(engine.chain, block.Header(), false))
-
-	// with seal but incorrect coinbase
-	blockWithSeal := tests_utils.MakeBlockWithSeal(engine, genesisHeader)
-	header := blockWithSeal.Header()
-	header.Coinbase = common.Address{}
-	tests_utils.AppendSeal(header, engine)
-	assert.Equal(t, tendermint.ErrCoinBaseInvalid, engine.VerifyHeader(engine.chain, header, false))
-
-	// without committed seal
-	assert.Equal(t, tendermint.ErrEmptyCommittedSeals, engine.VerifyHeader(engine.chain, blockWithSeal.Header(), false))
-
-	// with committed seal but is invalid
-	blockWithCommittedSealInvalid := tests_utils.MustMakeBlockWithCommittedSealInvalid(engine, genesisHeader)
-	assert.Equal(t, tendermint.ErrInvalidCommittedSeals, engine.VerifyHeader(engine.chain, blockWithCommittedSealInvalid.Header(), false))
-
-	// with validators empty
-	blockWithCommitedSeal := tests_utils.MustMakeBlockWithCommittedSeal(engine, genesisHeader)
-	blockWithEmptyValset := tests_utils.MustMakeBlockWithValSet(blockWithCommitedSeal.Header(), []common.Address{})
-	assert.NotNil(t, engine.chain)
-	assert.Equal(t, tendermint.ErrMismatchValSet, engine.VerifyHeader(engine.chain, blockWithEmptyValset.Header(), false))
-
-	// with validators
-	blockWithValset := tests_utils.MustMakeBlockWithValSet(blockWithCommitedSeal.Header(), validators)
-	assert.NotNil(t, engine.chain)
-	err = engine.VerifyHeader(engine.chain, blockWithValset.Header(), false)
-	assert.NoError(t, err)
-}
-
 func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header, cfg *tendermint.Config, option Option) (*tests_utils.MockChainReader, *Backend) {
 	var (
 		config = tendermint.DefaultConfig
