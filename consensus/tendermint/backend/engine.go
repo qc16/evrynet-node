@@ -416,7 +416,6 @@ func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		header.Time = headerTime.Uint64()
 	}
 
-	//TODO: modify valset data if epoch is reached.
 	if err := sb.addValSetToHeader(header, parent); err != nil {
 		log.Error("failed to add val set to header", "err", err)
 	}
@@ -592,14 +591,7 @@ func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header)
 		return err
 	}
 
-	// RLP encode validator's address to bytes
-	payload, err := rlp.EncodeToBytes(validators)
-	if err != nil {
-		log.Error("failed to encode validatorSet to payload", "error", err)
-		return err
-	}
-
-	return utils.WriteValSet(header, payload)
+	return utils.WriteValSet(header, validators)
 }
 
 func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, error) {

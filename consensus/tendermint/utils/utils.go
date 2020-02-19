@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
@@ -56,13 +57,19 @@ func WriteSeal(h *types.Header, seal []byte) error {
 }
 
 // WriteValSet writes the extra-data field of the given header with the given val-sets address.
-func WriteValSet(h *types.Header, validators []byte) error {
+func WriteValSet(h *types.Header, validators []common.Address) error {
 	tendermintExtra, err := types.ExtractTendermintExtra(h)
 	if err != nil {
 		return err
 	}
 
-	tendermintExtra.ValidatorAdds = validators
+	// RLP encode validator's address to bytes
+	valSetData, err := rlp.EncodeToBytes(validators)
+	if err != nil {
+		return err
+	}
+	tendermintExtra.ValidatorAdds = valSetData
+
 	payload, err := rlp.EncodeToBytes(&tendermintExtra)
 	if err != nil {
 		return err
@@ -127,4 +134,24 @@ func GetCheckpointNumber(epochDuration uint64, blockNumber uint64) uint64 {
 		return 0
 	}
 	return epochDuration * (blockNumber / epochDuration)
+}
+
+// GetValSetAddresses returns the address of validators from the extra-data field.
+func GetValSetAddresses(h *types.Header) ([]common.Address, error) {
+	tdmExtra, err := types.ExtractTendermintExtra(h)
+	if err != nil {
+		return nil, err
+	}
+	if len(tdmExtra.ValidatorAdds) == 0 {
+		return nil, tendermint.ErrEmptyValSet
+	}
+
+	// RLP decode validator's address from bytes
+	var validators []common.Address
+	err = rlp.DecodeBytes(tdmExtra.ValidatorAdds, validators)
+	if err != nil {
+		return nil, err
+	}
+
+	return validators, nil
 }
