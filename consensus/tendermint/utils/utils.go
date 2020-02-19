@@ -148,7 +148,7 @@ func GetValSetAddresses(h *types.Header) ([]common.Address, error) {
 
 	// RLP decode validator's address from bytes
 	var validators []common.Address
-	err = rlp.DecodeBytes(tdmExtra.ValidatorAdds, validators)
+	err = rlp.DecodeBytes(tdmExtra.ValidatorAdds, &validators)
 	if err != nil {
 		return nil, err
 	}

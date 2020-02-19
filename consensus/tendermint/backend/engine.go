@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
+	"reflect"
 	"time"
 
 	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
@@ -256,8 +257,15 @@ func (sb *Backend) VerifyProposalHeader(header *types.Header) error {
 			}
 			return err
 		}
-		// TODO: verify extra header here
-		_ = validators
+		// get validators's address from the extra-data
+		valSetInHeader, err := utils.GetValSetAddresses(header)
+		if err != nil {
+			log.Info("No validators in the extra-data", err)
+			return err
+		}
+		if !reflect.DeepEqual(validators, valSetInHeader) {
+			return tendermint.ErrMismatchValSet
+		}
 	}
 	return sb.verifyHeader(sb.chain, header, nil)
 }
