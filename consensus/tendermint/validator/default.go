@@ -98,15 +98,6 @@ func (valSet *defaultSet) GetByIndex(i int64) tendermint.Validator {
 	return nil
 }
 
-// GetAddresses return the list of validator's address
-func (valSet *defaultSet) GetAddresses() []common.Address {
-	var vAddresses []common.Address
-	for _, val := range valSet.List() {
-		vAddresses = append(vAddresses, val.Address())
-	}
-	return vAddresses
-}
-
 // GetByAddress will return the validator & its index of the validator set by the address
 // If the address does not exist in the validator set, it will return -1
 func (valSet *defaultSet) GetByAddress(addr common.Address) (int, tendermint.Validator) {
