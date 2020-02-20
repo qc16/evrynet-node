@@ -12,6 +12,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
 	"github.com/Evrynetlabs/evrynet-node/core/state"
 	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
@@ -326,13 +327,43 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		//	return errInvalidTimestamp
 		log.Warn("block time difference is too small", "different in ms", header.Time-sb.config.BlockPeriod)
 	}
-
 	// get val-sets to prepare for the verify proposal and committed seal
-	valSet, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
-	if err != nil {
-		return err
+	var (
+		checkpoint = utils.GetCheckpointNumber(sb.config.Epoch, header.Number.Uint64()-1)
+		hash       = header.ParentHash
+		number     = header.Number.Uint64() - 1
+		headers    []*types.Header
+		valSet     tendermint.ValidatorSet
+		err        error
+	)
+	// check if parent headers contains transition block
+	if chain.CurrentHeader().Number.Uint64() < checkpoint {
+		for len(parents) != 0 {
+			header = parents[len(parents)-1]
+			if header.Hash() != hash || header.Number.Uint64() != number {
+				return consensus.ErrUnknownAncestor
+			}
+			parents = parents[:len(parents)-1]
+			headers = append(headers, header)
+			number, hash = number-1, header.ParentHash
+			if number%sb.config.Epoch == 0 {
+				validators, err := utils.GetValSetAddresses(header)
+				if err != nil {
+					return err
+				}
+				valSet = validator.NewSet(validators, sb.config.ProposerPolicy, int64(blockNumber-1))
+				break
+			}
+		}
+	} else {
+		valSet, err = sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
+		if err != nil {
+			return err
+		}
 	}
-
+	if valSet == nil {
+		return tendermint.ErrUnknownBlock
+	}
 	if err := sb.verifyProposalSeal(header, valSet); err != nil {
 		return err
 	}
