@@ -9,7 +9,7 @@
     "tendermint": {
       "epoch": 30000,
       "policy": 0,
-      "fixed_validators": ["0x560089aB68dc224b250f9588b3DB540D87A66b7a"]
+      "fixedValidators": ["0x560089aB68dc224b250f9588b3DB540D87A66b7a"]
     }
   },
   "nonce": "0x0000000000000001",
