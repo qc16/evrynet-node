@@ -13,9 +13,13 @@ type MockBlockChain struct {
 	Statedb       *state.StateDB
 	GasLimit      uint64
 	ChainHeadFeed *event.Feed
+	MockCurrentBlock  *types.Block
 }
 
 func (bc *MockBlockChain) CurrentBlock() *types.Block {
+	if bc.MockCurrentBlock != nil {
+		return bc.MockCurrentBlock
+	}
 	return types.NewBlock(&types.Header{
 		GasLimit: bc.GasLimit,
 	}, nil, nil, nil)

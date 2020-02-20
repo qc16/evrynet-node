@@ -70,14 +70,19 @@ func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types
 		panic("New() cannot be asserted back to backend")
 	}
 	b.SetBroadcaster(&tests_utils.MockProtocolManager{})
-	chain := tests_utils.MockChainReader{
-		GenesisHeader: genesisHeader,
-	}
 
 	currentBlock := func() *types.Block {
 		tests_utils.AppendSeal(genesisHeader, b)
 		return types.NewBlockWithHeader(genesisHeader)
 	}
+
+	chain := tests_utils.MockChainReader{
+		GenesisHeader: genesisHeader,
+		MockBlockChain: &tests_utils.MockBlockChain{
+			MockCurrentBlock: currentBlock(),
+		},
+	}
+
 	if err := b.Start(&chain, currentBlock); err != nil {
 		log.Panicf("cannot start backend, error:%v", err)
 	}
