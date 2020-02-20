@@ -58,9 +58,40 @@
         "type": "address"
       },
       {
+        "internalType": "uint256",
+        "name": "epoch",
+        "type": "uint256"
+      }
+    ],
+    "name": "getTotalStakes",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_candidate",
+        "type": "address"
+      },
+      {
         "internalType": "address",
         "name": "_voter",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_epoch",
+        "type": "uint256"
       }
     ],
     "name": "getVoterStake",
@@ -98,7 +129,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "_totalStake",
+        "name": "_latestTotalStakes",
         "type": "uint256"
       }
     ],
@@ -119,6 +150,27 @@
     ],
     "payable": false,
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "epoch",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdraw",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -173,18 +225,29 @@
     "type": "function"
   },
   {
-    "constant": false,
+    "constant": true,
     "inputs": [
       {
         "internalType": "address",
         "name": "_candidate",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_voter",
+        "type": "address"
       }
     ],
-    "name": "register",
-    "outputs": [],
-    "payable": true,
-    "stateMutability": "payable",
+    "name": "getVoterLatestStake",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -281,6 +344,53 @@
     "constant": true,
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "initCandidates",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawalCap",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
         "internalType": "address",
         "name": "",
         "type": "address"
@@ -295,7 +405,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "totalStake",
+        "name": "latestTotalStakes",
         "type": "uint256"
       },
       {
@@ -306,6 +416,26 @@
     ],
     "payable": false,
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_candidate",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_owner",
+        "type": "address"
+      }
+    ],
+    "name": "register",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -429,6 +559,11 @@
         "internalType": "uint256",
         "name": "_minVoteCap",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_admin",
+        "type": "address"
       }
     ],
     "payable": false,
@@ -501,9 +636,9 @@
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "stake",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
       }
     ],
     "name": "Registered",
@@ -520,6 +655,25 @@
       }
     ],
     "name": "Resigned",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "_staker",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdraw",
     "type": "event"
   }
 ]

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Evrynetlabs/evrynet-node/common"
+
 	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/stretchr/testify/assert"
 
@@ -60,6 +62,7 @@ func makeNodeConfig() (*Config, error) {
 	config.Tendermint = &tendermint.Config{}
 	config.Tendermint.Epoch = genesisConf.Config.Tendermint.Epoch
 	config.Tendermint.FixedValidators = genesisConf.Config.Tendermint.FixedValidators
+	config.Tendermint.StakingSCAddress = &common.Address{}
 	return config, nil
 }
 

@@ -119,9 +119,6 @@ func (w *wizard) makeGenesis() {
 		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
 		policy := uint64(w.readDefaultInt(0))
 
-		fmt.Println("What is address of smart contract (default 0x14229bC33F417cd5470e09b41DF41ce23dE0D06b)")
-		scAddress := w.readDefaultString("0x14229bC33F417cd5470e09b41DF41ce23dE0D06b")
-
 		// In the case of Tendermint, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
 
@@ -140,10 +137,8 @@ func (w *wizard) makeGenesis() {
 			}
 		}
 		genesis.Config.Tendermint = &params.TendermintConfig{
-			Epoch:           epoch,
-			ProposerPolicy:  policy,
-			FixedValidators: validators,
-			SCAddress:       scAddress,
+			Epoch:          epoch,
+			ProposerPolicy: policy,
 		}
 		tendermintExtra := types.TendermintExtra{}
 		extraData, err := rlp.EncodeToBytes(&tendermintExtra)
@@ -153,6 +148,15 @@ func (w *wizard) makeGenesis() {
 		}
 		tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
 		genesis.ExtraData = append(tendermintExtraVanity, extraData...)
+
+		fmt.Println()
+		fmt.Println("Do you want to use fixed validators? (default = no)")
+		if w.readDefaultYesNo(false) {
+			genesis.Config.Tendermint.FixedValidators = validators
+		} else if err := w.configStakingSC(genesis, validators); err != nil {
+			log.Error("Failed to config staking SC", "error", err)
+			return
+		}
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
@@ -195,7 +199,7 @@ func (w *wizard) makeGenesis() {
 		}
 		fmt.Println()
 		fmt.Println("Should the precompile-addresses (0x1 .. 0xff) be pre-funded with 1 wei? (advisable yes)")
-		if w.readDefaultYesNo(true) {
+		if w.readDefaultYesNo(false) {
 			// Add a batch of precompile balances to avoid them getting deleted
 			for i := int64(0); i < 256; i++ {
 				genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}

@@ -511,7 +511,7 @@ func (self *StateDB) createObject(addr common.Address, opts ...types.CreateAccou
 	prev = self.getStateObject(addr)
 	var account Account
 	if len(opts) > 0 {
-		log.Info("got optional parameters, take only the first Option, ignore the rest", opts)
+		log.Info("got optional parameters, take only the first Option, ignore the rest", "opts", opts)
 		account = Account{
 			OwnerAddress: opts[0].OwnerAddress,
 		}
@@ -566,11 +566,7 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 		}
 
 		if len(it.Value) > 0 {
-			_, content, _, err := rlp.Split(it.Value)
-			if err != nil {
-				return err
-			}
-			if !cb(key, common.BytesToHash(content)) {
+			if !cb(key, common.BytesToHash(it.Value)) {
 				return nil
 			}
 		}

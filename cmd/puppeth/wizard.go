@@ -366,3 +366,21 @@ func (w *wizard) readIPAddress() string {
 		return text
 	}
 }
+
+//readMandatoryAddress reads at least one address
+func (w *wizard) readMandatoryAddress() *common.Address {
+	for {
+		if addr := w.readAddress(); addr != nil {
+			return addr
+		}
+	}
+}
+
+//readMandatoryBigInt reads at least one value
+func (w *wizard) readMandatoryBigInt() *big.Int {
+	for {
+		if value := w.readDefaultBigInt(nil); value != nil {
+			return value
+		}
+	}
+}
