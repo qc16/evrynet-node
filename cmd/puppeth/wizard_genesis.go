@@ -141,6 +141,23 @@ func (w *wizard) makeGenesis() {
 			ProposerPolicy: policy,
 		}
 		tendermintExtra := types.TendermintExtra{}
+
+		fmt.Println()
+		fmt.Println("Do you want to use fixed validators? (default = no)")
+		if w.readDefaultYesNo(false) {
+			genesis.Config.Tendermint.FixedValidators = validators
+			// RLP encode validator's address to bytes
+			valSetData, err := rlp.EncodeToBytes(validators)
+			if err != nil {
+				log.Error("rlp encode got error", "error", err)
+				return
+			}
+			tendermintExtra.ValidatorAdds = valSetData
+		} else if err := w.configStakingSC(genesis, validators); err != nil {
+			log.Error("Failed to config staking SC", "error", err)
+			return
+		}
+
 		extraData, err := rlp.EncodeToBytes(&tendermintExtra)
 		if err != nil {
 			log.Error("rlp encode got error", "error", err)
@@ -148,15 +165,6 @@ func (w *wizard) makeGenesis() {
 		}
 		tendermintExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
 		genesis.ExtraData = append(tendermintExtraVanity, extraData...)
-
-		fmt.Println()
-		fmt.Println("Do you want to use fixed validators? (default = no)")
-		if w.readDefaultYesNo(false) {
-			genesis.Config.Tendermint.FixedValidators = validators
-		} else if err := w.configStakingSC(genesis, validators); err != nil {
-			log.Error("Failed to config staking SC", "error", err)
-			return
-		}
 	default:
 		log.Crit("Invalid consensus engine choice", "choice", choice)
 	}
