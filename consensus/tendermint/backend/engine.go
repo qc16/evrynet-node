@@ -630,6 +630,7 @@ func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header)
 		return err
 	}
 
+	log.Info("sets the val-set back to extra-data", "number", blockNumber)
 	return utils.WriteValSet(header, validators)
 }
 

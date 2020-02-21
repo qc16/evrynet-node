@@ -68,10 +68,12 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 		broadcastCh:          make(chan broadcastTask),
 		controlChan:          make(chan struct{}),
-		stakingContractAddr:  *config.StakingSCAddress,
 		computedValSetCache:  valSetCache,
 	}
 
+	if config.StakingSCAddress != nil {
+		be.stakingContractAddr = *config.StakingSCAddress
+	}
 	if config.FixedValidators != nil && len(config.FixedValidators) > 0 {
 		be.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.FixedValidators)
 	} else {
