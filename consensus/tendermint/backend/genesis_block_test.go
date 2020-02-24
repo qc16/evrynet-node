@@ -11,14 +11,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-node/common"
-
 	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
-	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/staking"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
@@ -37,6 +35,9 @@ func TestBackend_Genesis_block(t *testing.T) {
 
 	valSet, err := backend.valSetInfo.GetValSet(blockchain, big.NewInt(0))
 	assert.NoError(t, err)
+
+	valSet2 := backend.Validators(big.NewInt(0))
+	assert.Equal(t, 4, len(valSet2.List()))
 
 	validator := valSet.GetByIndex(0)
 	assert.NotNil(t, validator)
@@ -58,10 +59,11 @@ func makeNodeConfig() (*Config, error) {
 	}
 	config := &Config{}
 	config.Genesis = genesisConf
-	config.Tendermint = &tendermint.Config{}
+	config.Tendermint = tendermint.DefaultConfig
+	config.Tendermint.ProposerPolicy = tendermint.ProposerPolicy(genesisConf.Config.Tendermint.ProposerPolicy)
 	config.Tendermint.Epoch = genesisConf.Config.Tendermint.Epoch
 	config.Tendermint.FixedValidators = genesisConf.Config.Tendermint.FixedValidators
-	config.Tendermint.StakingSCAddress = &common.Address{}
+	config.Tendermint.StakingSCAddress = genesisConf.Config.Tendermint.StakingSCAddress
 	return config, nil
 }
 
@@ -119,14 +121,24 @@ func createBlockchainAndBackendFromGenesis() (*Backend, *core.BlockChain, error)
 		storingMsgs:          queue.NewFIFO(),
 		dequeueMsgTriggering: make(chan struct{}, 1000),
 		broadcastCh:          make(chan broadcastTask),
-		valSetInfo:           fixed_valset_info.NewFixedValidatorSetInfo(config.Tendermint.FixedValidators),
+		stakingContractAddr:  *config.Tendermint.StakingSCAddress,
 	}
-	backend.core = tendermintCore.New(backend, config.Tendermint)
+
+	if config.Tendermint.FixedValidators != nil && len(config.Tendermint.FixedValidators) > 0 {
+		backend.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.Tendermint.FixedValidators)
+	} else {
+		backend.valSetInfo = staking.NewStakingValidatorInfo(config.Tendermint.Epoch, config.Tendermint.ProposerPolicy)
+	}
+
+	//backend.core = tendermintCore.New(backend, config.Tendermint)
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	go backend.dequeueMsgLoop()
 
+	//init tendermint engine
+	engine := New(config.Tendermint, nodePK)
+
 	//set up genesis block
-	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)
+	chainConfig, _, err := core.SetupGenesisBlock(db, config.Genesis)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,5 +148,6 @@ func createBlockchainAndBackendFromGenesis() (*Backend, *core.BlockChain, error)
 	if err != nil {
 		return nil, nil, err
 	}
+	backend.chain = blockchain
 	return backend, blockchain, nil
 }
