@@ -21,8 +21,10 @@ import (
 )
 
 var (
-	errEmptyValidatorSet                   = errors.New("empty validator set")
-	errLengthOfCandidatesAndStakesMisMatch = errors.New("length of stakes is not equal to length of candidates")
+	// ErrEmptyValidatorSet returns when valset from smart-contract is empty
+	ErrEmptyValidatorSet = errors.New("empty validator set")
+	// ErrLengthOfCandidatesAndStakesMisMatch returns when lengths stakes and candidates are not match
+	ErrLengthOfCandidatesAndStakesMisMatch = errors.New("length of stakes is not equal to length of candidates")
 	indexValidatorMapping                  = map[string]uint64{
 		"validators": 0,
 	}
@@ -56,11 +58,11 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 	}
 	// sanity checks
 	if len(data.Candidates) != len(data.Stakes) {
-		return nil, errLengthOfCandidatesAndStakesMisMatch
+		return nil, ErrLengthOfCandidatesAndStakesMisMatch
 	}
 
 	if len(data.Candidates) == 0 {
-		return nil, errEmptyValidatorSet
+		return nil, ErrEmptyValidatorSet
 	}
 
 	if len(data.Candidates) < int(data.MaxValSize) {

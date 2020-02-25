@@ -25,6 +25,8 @@ import (
 const (
 	StakingSCName    = "EvrynetStaking"
 	SimulatedBalance = 10000000000
+	StakingSCAddress = "0x14229bC33F417cd5470e09b41DF41ce23dE0D06b"
+	privateKeyHex    = "ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1"
 )
 
 func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Address) error {
@@ -46,19 +48,21 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 	//Reading params for staking SC
 	var stakingSCParams []interface{}
 	stakingSCParams = append(stakingSCParams, validators)
-	stakingSCParams = append(stakingSCParams, w.readStakingSCParams()...)
+	stakingSCParams = append(stakingSCParams, w.readStakingSCParams(genesis)...)
 
 	fmt.Println()
-	fmt.Println("What is the address of staking smart contract?")
-	expectedSCAddress := w.readMandatoryAddress()
+	//fmt.Println("What is the address of staking smart contract?")
+	//expectedSCAddress := w.readMandatoryAddress()
+	//TODO: Research how to deploy staking sc at given address
+	expectedSCAddress := common.HexToAddress(StakingSCAddress)
 
 	genesisAccount, err := createGenesisAccountWithStakingSC(genesis, abiSC, bytecodeSC, validators, stakingSCParams)
 	if err != nil {
 		return err
 	}
 
-	genesis.Config.Tendermint.StakingSCAddress = expectedSCAddress
-	genesis.Alloc[*expectedSCAddress] = genesisAccount
+	genesis.Config.Tendermint.StakingSCAddress = &expectedSCAddress
+	genesis.Alloc[expectedSCAddress] = genesisAccount
 	return nil
 }
 
@@ -124,7 +128,7 @@ func getBytecodeAndABIOfSC(contractName string, contracts map[string]*compiler.C
 
 //Simulated backend & Preparing TransactOpts which is the collection of authorization data required to create a valid transaction.
 func deployStakingSCToSimulatedBE(genesis *core.Genesis, parsedABI abi.ABI, byteCodeSC string, stakingSCParams []interface{}) (*backends.SimulatedBackend, common.Address, error) {
-	pKey, err := crypto.GenerateKey()
+	pKey, err := crypto.HexToECDSA(privateKeyHex)
 	if err != nil {
 		return nil, common.Address{}, err
 	}
@@ -157,7 +161,8 @@ func getStakingSCData(contractBackend *backends.SimulatedBackend, smlSCAddress c
 	return codeOfStakingSC, storage
 }
 
-func (w *wizard) readStakingSCParams() []interface{} {
+// readStakingSCParams returns the params to deploy staking smart-contract and writes epoch to genesis config
+func (w *wizard) readStakingSCParams(genesis *core.Genesis) []interface{} {
 	fmt.Println()
 	fmt.Println("Input params to init staking SC:")
 	fmt.Println("- What is the address of candidates owner?")
@@ -172,6 +177,7 @@ func (w *wizard) readStakingSCParams() []interface{} {
 	_minValidatorStake := w.readMandatoryBigInt()
 	fmt.Println("- What is the min cap of vote? (minimum amount of EVR tokens to vote for a candidate)")
 	_minVoteCap := w.readMandatoryBigInt()
+	genesis.Config.Tendermint.Epoch = _epochPeriod.Uint64()
 	return []interface{}{*_candidatesOwner, _epochPeriod, _maxValidatorSize, _minValidatorStake, _minVoteCap, *_admin}
 }
 

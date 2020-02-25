@@ -113,9 +113,6 @@ func (w *wizard) makeGenesis() {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
 	case choice == "" || choice == "3":
-		fmt.Println("How many block (Epoch) after which to checkpoint and reset the pending votes (default 30000)")
-		epoch := uint64(w.readDefaultInt(30000))
-
 		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
 		policy := uint64(w.readDefaultInt(0))
 
@@ -137,7 +134,6 @@ func (w *wizard) makeGenesis() {
 			}
 		}
 		genesis.Config.Tendermint = &params.TendermintConfig{
-			Epoch:          epoch,
 			ProposerPolicy: policy,
 		}
 		tendermintExtra := types.TendermintExtra{}
