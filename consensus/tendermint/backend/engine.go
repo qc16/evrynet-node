@@ -58,7 +58,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return errors.New("cannot Seal block 0")
 	}
 	// validate address of the validator
-	valSet, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
+	valSet, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return err
 	}
@@ -243,11 +243,11 @@ func (sb *Backend) VerifyProposalHeader(header *types.Header) error {
 		return errors.New("no chain reader ")
 	}
 	// verify valSet in header is match with valSet from stateDB
-	parent := sb.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	if parent == nil {
-		return tendermint.ErrUnknownParent
-	}
 	if header.Number.Uint64()%sb.config.Epoch == 0 {
+		parent := sb.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+		if parent == nil {
+			return tendermint.ErrUnknownParent
+		}
 		validators, err := sb.getNextValidatorSet(parent)
 		if err != nil {
 			return err
@@ -323,7 +323,7 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 	// get val-sets to prepare for the verify proposal and committed seal
 	var (
-		checkpoint = utils.GetCheckpointNumber(sb.config.Epoch, header.Number.Uint64()-1)
+		checkpoint = utils.GetCheckpointNumber(sb.config.Epoch, header.Number.Uint64())
 		hash       = header.ParentHash
 		number     = header.Number.Uint64() - 1
 		headers    []*types.Header
@@ -350,7 +350,7 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 			}
 		}
 	} else {
-		valSet, err = sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
+		valSet, err = sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber)))
 		if err != nil {
 			return err
 		}
@@ -405,7 +405,7 @@ func (sb *Backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 	}
 
 	// get valsets to prepare for the verify proposal
-	valset, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber-1)))
+	valset, err := sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return err
 	}
@@ -638,7 +638,7 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	validators, err := stakingCaller.GetValidators(sb.stakingContractAddr)
 	if err != nil {
 		if err == staking.ErrEmptyValidatorSet {
-			log.Warn("empty val set")
+			log.Warn("empty val set replace with valset at previous epoch")
 			valset, err := sb.valSetInfo.GetValSet(sb.chain, header.Number)
 			if err != nil {
 				return nil, err

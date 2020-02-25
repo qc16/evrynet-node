@@ -13,14 +13,14 @@ import (
 
 // StakingValidator is implementation of ValidatorSetInfo
 type StakingValidator struct {
-	Epoch uint64
+	Epoch          uint64
 	ProposerPolicy tendermint.ProposerPolicy
 }
 
 // NewStakingValidatorInfo returns new StakingValidator
 func NewStakingValidatorInfo(epoch uint64, proposerPolicy tendermint.ProposerPolicy) *StakingValidator {
 	return &StakingValidator{
-		Epoch: epoch,
+		Epoch:          epoch,
 		ProposerPolicy: proposerPolicy,
 	}
 }
@@ -29,9 +29,9 @@ func NewStakingValidatorInfo(epoch uint64, proposerPolicy tendermint.ProposerPol
 func (v *StakingValidator) GetValSet(chainReader consensus.ChainReader, number *big.Int) (tendermint.ValidatorSet, error) {
 	var (
 		// get the checkpoint of block-number
-		blockNumber   = number.Int64()
-		checkPoint    = utils.GetCheckpointNumber(v.Epoch, number.Uint64())
-		valSet        = validator.NewSet([]common.Address{}, v.ProposerPolicy, blockNumber)
+		blockNumber = number.Int64()
+		checkPoint  = utils.GetCheckpointNumber(v.Epoch, number.Uint64())
+		valSet      = validator.NewSet([]common.Address{}, v.ProposerPolicy, blockNumber)
 	)
 
 	header := chainReader.GetHeaderByNumber(checkPoint)
