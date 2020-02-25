@@ -3,7 +3,6 @@ package backend
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -20,34 +19,76 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	coreStaking "github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
+)
+
+type GenesisType string
+
+const (
+	StakingSC       GenesisType = "../tests/genesis_staking_sc.json"       // 1 validator
+	FixedValidators GenesisType = "../tests/genesis_fixed_validators.json" // 4 validators
 )
 
 var (
 	nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
 )
 
-func TestBackend_Genesis_block(t *testing.T) {
-	backend, blockchain, err := createBlockchainAndBackendFromGenesis()
+func TestGenesisblockWithStakingSC(t *testing.T) {
+	testCases := []struct {
+		name        string
+		genesisType GenesisType
+		validators  int
+	}{
+		{
+			name:        "StakingSC",
+			genesisType: StakingSC,
+			validators:  4,
+		},
+		{
+			name:        "FixedValidators",
+			genesisType: FixedValidators,
+			validators:  1,
+		},
+	}
+	for _, tc := range testCases {
+		getValidators := func(t *testing.T) {
+			backend, blockchain, err := createBlockchainAndBackendFromGenesis(tc.genesisType)
+			assert.NoError(t, err)
+
+			// Tested with 4 valset but it will break the test TestBackend_HandleMsg (not enough 2f+1)
+			// So I only test 1 valset
+			valSet, err := backend.valSetInfo.GetValSet(blockchain, big.NewInt(0))
+			assert.NoError(t, err)
+			assert.Equal(t, tc.validators, len(valSet.List()))
+
+			valSet2 := backend.Validators(big.NewInt(0))
+			assert.Equal(t, tc.validators, len(valSet2.List()))
+
+			validator := valSet.GetByIndex(0)
+			assert.NotNil(t, validator)
+		}
+		t.Run(tc.name, getValidators)
+	}
+}
+
+func TestBackendCallGetListCandidateFromSC(t *testing.T) {
+	backend, blockchain, err := createBlockchainAndBackendFromGenesis(StakingSC)
 	assert.NoError(t, err)
 
-	// Tested with 4 valset but it will break the test TestBackend_HandleMsg (not enough 2f+1)
-	// So I only test 1 valset
-	valSet, err := backend.valSetInfo.GetValSet(blockchain, big.NewInt(0))
+	genesisHeader := blockchain.Genesis().Header()
+	assert.NotNil(t, genesisHeader)
+
+	stateDB, err := backend.chain.StateAt(genesisHeader.Root)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(valSet.List()))
+	assert.NotNil(t, stateDB)
 
-	valSet2 := backend.Validators(big.NewInt(0))
-	assert.Equal(t, 1, len(valSet2.List()))
-
-	validator := valSet.GetByIndex(0)
-	assert.NotNil(t, validator)
-
-	fmt.Println("First set validators")
-	fmt.Println(validator)
-
+	stakingCaller := coreStaking.NewStakingCaller(stateDB, coreStaking.NewChainContextWrapper(backend, backend.chain.GetHeader), genesisHeader, backend.chain.Config(), vm.Config{})
+	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(validators))
 }
 
 type Config struct {
@@ -55,8 +96,8 @@ type Config struct {
 	Tendermint *tendermint.Config
 }
 
-func makeNodeConfig() (*Config, error) {
-	genesisConf, err := getGenesisConf()
+func makeNodeConfig(g GenesisType) (*Config, error) {
+	genesisConf, err := getGenesisConf(g)
 	if err != nil {
 		return nil, err
 	}
@@ -70,14 +111,14 @@ func makeNodeConfig() (*Config, error) {
 	return config, nil
 }
 
-func getGenesisConf() (*core.Genesis, error) {
+func getGenesisConf(g GenesisType) (*core.Genesis, error) {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
 	// Read file genesis generated from pupeth
-	genesisFile, err := ioutil.ReadFile(filepath.Join(workingDir, "../../../genesis.json"))
+	genesisFile, err := ioutil.ReadFile(filepath.Join(workingDir, string(g)))
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +132,8 @@ func getGenesisConf() (*core.Genesis, error) {
 	return config, nil
 }
 
-func createBlockchainAndBackendFromGenesis() (*Backend, *core.BlockChain, error) {
-	config, err := makeNodeConfig()
+func createBlockchainAndBackendFromGenesis(g GenesisType) (*Backend, *core.BlockChain, error) {
+	config, err := makeNodeConfig(g)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -124,21 +165,18 @@ func createBlockchainAndBackendFromGenesis() (*Backend, *core.BlockChain, error)
 		storingMsgs:          queue.NewFIFO(),
 		dequeueMsgTriggering: make(chan struct{}, 1000),
 		broadcastCh:          make(chan broadcastTask),
-		stakingContractAddr:  *config.Tendermint.StakingSCAddress,
 	}
 
 	if config.Tendermint.FixedValidators != nil && len(config.Tendermint.FixedValidators) > 0 {
 		backend.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.Tendermint.FixedValidators)
 	} else {
 		backend.valSetInfo = staking.NewStakingValidatorInfo(config.Tendermint.Epoch, config.Tendermint.ProposerPolicy)
+		backend.stakingContractAddr = *config.Tendermint.StakingSCAddress
 	}
 
 	//backend.core = tendermintCore.New(backend, config.Tendermint)
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	go backend.dequeueMsgLoop()
-
-	//init tendermint engine
-	engine := New(config.Tendermint, nodePK)
 
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlock(db, config.Genesis)
