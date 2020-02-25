@@ -100,8 +100,10 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 		}
 		pool   = evrynetCore.NewTxPool(testTxPoolConfig, params.TendermintTestChainConfig, blockchain)
 		config = tendermint.DefaultConfig
-		be     = New(config, nodePrivateKey, WithValsetAddresses(validators)).(*Backend)
 	)
+
+	config.FixedValidators = validators
+	be := New(config, nodePrivateKey).(*Backend)
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.Ether))
 	defer pool.Stop()
 	be.chain = blockchain

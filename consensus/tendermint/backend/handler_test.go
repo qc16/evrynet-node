@@ -111,7 +111,7 @@ func (m *mockCore) SetBlockForProposal(block *types.Block) {
 func TestBackend_HandleMsg(t *testing.T) {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
-	be, _, blockchain, err := createBlockchainAndBackendFromGenesis()
+	be, blockchain, err := createBlockchainAndBackendFromGenesis()
 	require.NoError(t, err)
 	mockCore := NewMockCore(be)
 	be.core = mockCore

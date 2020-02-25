@@ -27,8 +27,10 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
+	cfg := tendermint.DefaultConfig
+	cfg.FixedValidators = validators
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, nil, WithValsetAddresses(validators))
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, cfg)
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 
@@ -58,14 +60,14 @@ func TestBackend_VerifyHeader(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header, cfg *tendermint.Config, option Option) (*tests_utils.MockChainReader, *Backend) {
+func mustStartTestChainAndBackend(nodePK *ecdsa.PrivateKey, genesisHeader *types.Header, cfg *tendermint.Config) (*tests_utils.MockChainReader, *Backend) {
 	var (
 		config = tendermint.DefaultConfig
 	)
 	if cfg != nil {
 		config = cfg
 	}
-	b, ok := New(config, nodePK, option).(*Backend)
+	b, ok := New(config, nodePK).(*Backend)
 	if !ok {
 		panic("New() cannot be asserted back to backend")
 	}

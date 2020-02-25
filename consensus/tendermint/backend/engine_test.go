@@ -138,8 +138,10 @@ func TestPrepareExtra(t *testing.T) {
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	assert.NoError(t, err)
 
+	cfg := tendermint.DefaultConfig
+	cfg.FixedValidators = validators
 	//create New test backend and newMockChain
-	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, nil, WithValsetAddresses(validators))
+	chain, engine := mustStartTestChainAndBackend(nodePK, genesisHeader, cfg)
 	assert.NotNil(t, chain)
 	assert.NotNil(t, engine)
 	assert.Equal(t, true, engine.coreStarted)
