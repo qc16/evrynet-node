@@ -12,7 +12,7 @@
     "tendermint": {
       "epoch": 2000,
       "policy": 0,
-      "fixed_validators": [
+      "fixedValidators": [
         "0x560089aB68dc224b250f9588b3DB540D87A66b7a"
       ],
       "stakingSCAddress": null
