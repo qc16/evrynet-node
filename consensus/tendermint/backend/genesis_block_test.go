@@ -33,11 +33,14 @@ func TestBackend_Genesis_block(t *testing.T) {
 	backend, blockchain, err := createBlockchainAndBackendFromGenesis()
 	assert.NoError(t, err)
 
+	// Tested with 4 valset but it will break the test TestBackend_HandleMsg (not enough 2f+1)
+	// So I only test 1 valset
 	valSet, err := backend.valSetInfo.GetValSet(blockchain, big.NewInt(0))
 	assert.NoError(t, err)
+	assert.Equal(t, 1, len(valSet.List()))
 
 	valSet2 := backend.Validators(big.NewInt(0))
-	assert.Equal(t, 4, len(valSet2.List()))
+	assert.Equal(t, 1, len(valSet2.List()))
 
 	validator := valSet.GetByIndex(0)
 	assert.NotNil(t, validator)
