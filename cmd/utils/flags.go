@@ -121,11 +121,6 @@ var (
 		Usage: "Data directory for the databases and keystore",
 		Value: DirectoryString{node.DefaultDataDir()},
 	}
-	SCDirFlag = DirectoryFlag{
-		Name:  "scdir",
-		Usage: "Smart contract directory for init",
-		Value: DirectoryString{""},
-	}
 	AncientFlag = DirectoryFlag{
 		Name:  "datadir.ancient",
 		Usage: "Data directory for ancient chain segments (default = inside chaindata)",

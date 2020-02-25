@@ -16,7 +16,6 @@ import (
 	queue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
 	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
@@ -33,7 +32,7 @@ var (
 )
 
 func TestBackend_Genesis_block(t *testing.T) {
-	backend, _, blockchain, err := createBlockchainAndBackendFromGenesis()
+	backend, blockchain, err := createBlockchainAndBackendFromGenesis()
 	assert.NoError(t, err)
 
 	valSet, err := backend.valSetInfo.GetValSet(blockchain, big.NewInt(0))
@@ -87,26 +86,26 @@ func getGenesisConf() (*core.Genesis, error) {
 	return config, nil
 }
 
-func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.BlockChain, error) {
+func createBlockchainAndBackendFromGenesis() (*Backend, *core.BlockChain, error) {
 	config, err := makeNodeConfig()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	dir, err := ioutil.TempDir("", "eth-chain-genesis")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	//create db instance with implement leveldb
 	db, err := rawdb.NewLevelDBDatabase(dir, 128, 1024, "")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	//init tendermint backend
@@ -126,19 +125,16 @@ func createBlockchainAndBackendFromGenesis() (*Backend, consensus.Engine, *core.
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
 	go backend.dequeueMsgLoop()
 
-	//init tendermint engine
-	engine := New(config.Tendermint, nodePK, WithValsetAddresses(config.Tendermint.FixedValidators))
-
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlockWithOverride(db, config.Genesis, nil)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	//init block chain with tendermint engine
-	blockchain, err := core.NewBlockChain(db, nil, chainConfig, engine, vm.Config{}, nil)
+	blockchain, err := core.NewBlockChain(db, nil, chainConfig, backend, vm.Config{}, nil)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	return backend, engine, blockchain, nil
+	return backend, blockchain, nil
 }

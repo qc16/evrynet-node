@@ -50,9 +50,10 @@ type ChainReader interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 }
 
+// FullChainReader extends ChainReader with function StateAt to get validators for tendermint consensus
 type FullChainReader interface {
 	ChainReader
-
+	// StateAt returns a new mutable state based on a particular point in time.
 	StateAt(hash common.Hash) (*state.StateDB, error)
 }
 

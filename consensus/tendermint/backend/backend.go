@@ -42,17 +42,6 @@ var (
 //Option return an optional function for backend's initial behaviour
 type Option func(b *Backend) error
 
-//WithValsetAddresses return an option to assign backend.valSetInfo to fixed valset info
-//it will only do so if the input addresses set is not empty
-func WithValsetAddresses(addrs []common.Address) Option {
-	return func(b *Backend) error {
-		if len(addrs) > 0 {
-			b.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(addrs)
-		}
-		return nil
-	}
-}
-
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
