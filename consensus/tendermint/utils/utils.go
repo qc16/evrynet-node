@@ -128,12 +128,12 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
-// GetCheckpointNumber returns check-point base on epoch duration and block-number
+// GetCheckpointNumber returns check-point block where header contains valset of current epoch
 func GetCheckpointNumber(epochDuration uint64, blockNumber uint64) uint64 {
 	if blockNumber == 0 || blockNumber < epochDuration {
 		return 0
 	}
-	return epochDuration * (blockNumber / epochDuration)
+	return epochDuration * ((blockNumber - 1) / epochDuration)
 }
 
 // GetValSetAddresses returns the address of validators from the extra-data field.
