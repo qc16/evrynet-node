@@ -185,7 +185,9 @@ func getDataForStorage(storage map[common.Hash]common.Hash) func(key common.Hash
 	return func(key, val common.Hash) bool {
 		var decode []byte
 		trim := bytes.TrimLeft(val.Bytes(), "\x00") // Remove 00 in bytes
-		rlp.DecodeBytes(trim, &decode)
+		if err := rlp.DecodeBytes(trim, &decode); err != nil {
+			panic(err)
+		}
 		storage[key] = common.BytesToHash(decode)
 		log.Info("DecodeBytes", "value", val.String(), "decode", storage[key].String())
 		return true

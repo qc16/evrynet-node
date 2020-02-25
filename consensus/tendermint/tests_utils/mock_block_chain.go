@@ -10,10 +10,10 @@ import (
 
 //MockBlockChain is mock struct for block chain
 type MockBlockChain struct {
-	Statedb       *state.StateDB
-	GasLimit      uint64
-	ChainHeadFeed *event.Feed
-	MockCurrentBlock  *types.Block
+	Statedb          *state.StateDB
+	GasLimit         uint64
+	ChainHeadFeed    *event.Feed
+	MockCurrentBlock *types.Block
 }
 
 func (bc *MockBlockChain) CurrentBlock() *types.Block {
