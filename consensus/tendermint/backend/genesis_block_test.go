@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
@@ -155,6 +156,7 @@ func createBlockchainAndBackendFromGenesis(g GenesisType) (*Backend, *core.Block
 	}
 
 	//init tendermint backend
+	valSetCache, _ := lru.NewARC(inMemoryValset)
 	backend := &Backend{
 		config:               config.Tendermint,
 		tendermintEventMux:   new(event.TypeMux),
@@ -165,6 +167,7 @@ func createBlockchainAndBackendFromGenesis(g GenesisType) (*Backend, *core.Block
 		storingMsgs:          queue.NewFIFO(),
 		dequeueMsgTriggering: make(chan struct{}, 1000),
 		broadcastCh:          make(chan broadcastTask),
+		computedValSetCache:  valSetCache,
 	}
 
 	if config.Tendermint.FixedValidators != nil && len(config.Tendermint.FixedValidators) > 0 {
