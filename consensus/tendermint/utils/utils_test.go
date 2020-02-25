@@ -16,7 +16,7 @@ func TestGetCheckpointNumber(t *testing.T) {
 			name: "the block's number is lower than epoch duration",
 			args: args{
 				epochDuration: 1000,
-				blockNumber: 400,
+				blockNumber:   400,
 			},
 			want: 0,
 		},
@@ -24,7 +24,7 @@ func TestGetCheckpointNumber(t *testing.T) {
 			name: "the block's number is greater than epoch duration",
 			args: args{
 				epochDuration: 1000,
-				blockNumber: 1999,
+				blockNumber:   1999,
 			},
 			want: 1000,
 		},
@@ -32,9 +32,9 @@ func TestGetCheckpointNumber(t *testing.T) {
 			name: "the block's number is a checkpoint",
 			args: args{
 				epochDuration: 1000,
-				blockNumber: 2000,
+				blockNumber:   2000,
 			},
-			want: 2000,
+			want: 1000,
 		},
 	}
 	for _, tt := range tests {
