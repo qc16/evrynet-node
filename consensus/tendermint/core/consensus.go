@@ -156,10 +156,6 @@ func (c *core) enterPropose(blockNumber *big.Int, round int64) {
 		Step:        RoundStepPropose,
 	})
 
-	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		logger.Infow("this node is not a validator of this round", "address", c.backend.Address())
-		return
-	}
 	//if we are proposer, find the latest block we're having to propose
 	if c.valSet.IsProposer(c.backend.Address()) {
 		logger.Infow("this node is proposer of this round", "node_address", c.backend.Address())
@@ -618,6 +614,12 @@ func (c *core) startNewRound() {
 	default:
 		needInitializeTimeout = false
 	}
+	// if this is not a validator, core stays at NewHeightStep
+	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
+		c.getLogger().Warnw("this node is not a validator of this round, skipping consensus process", "address", c.backend.Address())
+		needInitializeTimeout = false
+	}
+
 	if needInitializeTimeout {
 		//We have to copy blockNumber out since it's pointer, and the use of ScheduleTimeout
 		timeOutBlock := big.NewInt(0).Set(state.BlockNumber())
