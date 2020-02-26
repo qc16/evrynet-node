@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,8 +18,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
-	"github.com/Evrynetlabs/evrynet-node/log"
-	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 const (
@@ -189,13 +186,7 @@ func (w *wizard) readStakingSCParams(genesis *core.Genesis) []interface{} {
 
 func getDataForStorage(storage map[common.Hash]common.Hash) func(key common.Hash, val common.Hash) bool {
 	return func(key, val common.Hash) bool {
-		var decode []byte
-		trim := bytes.TrimLeft(val.Bytes(), "\x00") // Remove 00 in bytes
-		if err := rlp.DecodeBytes(trim, &decode); err != nil {
-			panic(err)
-		}
-		storage[key] = common.BytesToHash(decode)
-		log.Info("DecodeBytes", "value", val.String(), "decode", storage[key].String())
+		storage[key] = val
 		return true
 	}
 }
