@@ -17,6 +17,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/compiler"
 	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
@@ -25,14 +26,16 @@ import (
 const (
 	StakingSCName    = "EvrynetStaking"
 	SimulatedBalance = 10000000000
-	StakingSCAddress = "0x14229bC33F417cd5470e09b41DF41ce23dE0D06b"
-	privateKeyHex    = "ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1"
 )
 
 func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Address) error {
+	var (
+		scPath            string
+		stakingSCParams   []interface{}
+		expectedSCAddress *common.Address
+	)
 	fmt.Println()
 	fmt.Println("Specify your staking smart contract path (default = ./consensus/staking_contracts/EvrynetStaking.sol)")
-	var scPath string
 	for {
 		if scPath = w.readDefaultString("./consensus/staking_contracts/EvrynetStaking.sol"); len(scPath) > 0 {
 			break
@@ -46,23 +49,26 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 	}
 
 	//Reading params for staking SC
-	var stakingSCParams []interface{}
 	stakingSCParams = append(stakingSCParams, validators)
 	stakingSCParams = append(stakingSCParams, w.readStakingSCParams(genesis)...)
 
 	fmt.Println()
-	//fmt.Println("What is the address of staking smart contract?")
-	//expectedSCAddress := w.readMandatoryAddress()
-	//TODO: Research how to deploy staking sc at given address
-	expectedSCAddress := common.HexToAddress(StakingSCAddress)
+	fmt.Println("What is the address of staking smart contract? (avoid special address from 0x0000000000000000000000000000000000000001 to 0x0000000000000000000000000000000000000008)")
+	for {
+		if expectedSCAddress = w.readAddress(); expectedSCAddress != nil {
+			if _, ok := vm.PrecompiledContractsByzantium[*expectedSCAddress]; !ok {
+				break
+			}
+		}
+	}
 
 	genesisAccount, err := createGenesisAccountWithStakingSC(genesis, abiSC, bytecodeSC, validators, stakingSCParams)
 	if err != nil {
 		return err
 	}
 
-	genesis.Config.Tendermint.StakingSCAddress = &expectedSCAddress
-	genesis.Alloc[expectedSCAddress] = genesisAccount
+	genesis.Config.Tendermint.StakingSCAddress = expectedSCAddress
+	genesis.Alloc[*expectedSCAddress] = genesisAccount
 	return nil
 }
 
@@ -128,7 +134,7 @@ func getBytecodeAndABIOfSC(contractName string, contracts map[string]*compiler.C
 
 //Simulated backend & Preparing TransactOpts which is the collection of authorization data required to create a valid transaction.
 func deployStakingSCToSimulatedBE(genesis *core.Genesis, parsedABI abi.ABI, byteCodeSC string, stakingSCParams []interface{}) (*backends.SimulatedBackend, common.Address, error) {
-	pKey, err := crypto.HexToECDSA(privateKeyHex)
+	pKey, err := crypto.GenerateKey()
 	if err != nil {
 		return nil, common.Address{}, err
 	}
