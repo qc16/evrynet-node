@@ -82,11 +82,11 @@ func TestBackendCallGetListCandidateFromSC(t *testing.T) {
 	genesisHeader := blockchain.Genesis().Header()
 	assert.NotNil(t, genesisHeader)
 
-	stateDB, err := backend.chain.StateAt(genesisHeader.Root)
+	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
 	assert.NoError(t, err)
-	assert.NotNil(t, stateDB)
 
-	stakingCaller := coreStaking.NewStakingCaller(stateDB, coreStaking.NewChainContextWrapper(backend, backend.chain.GetHeader), genesisHeader, backend.chain.Config(), vm.Config{})
+	header := backend.chain.CurrentHeader()
+	stakingCaller := coreStaking.NewStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
 	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(validators))
@@ -193,5 +193,6 @@ func createBlockchainAndBackendFromGenesis(g GenesisType) (*Backend, *core.Block
 		return nil, nil, err
 	}
 	backend.chain = blockchain
+	backend.currentBlock = blockchain.CurrentBlock
 	return backend, blockchain, nil
 }
