@@ -52,7 +52,7 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 	if err != nil {
 		return nil, err
 	}
-	data, err := sc.GetListCandidates(nil)
+	data, err := sc.GetListCandidatesWithCurrentData(nil)
 	if err != nil {
 		return nil, err
 	}
