@@ -69,16 +69,22 @@ contract EvrynetStaking is ReentrancyGuard {
     uint constant internal MAX_CANDIDATES = 128;
     // 2 epochs
     uint constant internal STAKER_LOCKING_PERIOD = 2;
+    uint constant internal POWER110 = 2 ** 110;
+    uint constant internal POWER36 = 2 ** 36;
+
+    // fit in only 1 uint256: 36 bits (modifiedEpoch), 110 bits (curStake), 110 bits (preStake)
+    struct StakeData {
+        uint preStake;
+        uint curStake;
+        uint modifiedEpoch;
+    }
 
     struct CandidateData {
         bool isCandidate;
-        // total stakes at each epoch
-        mapping(uint => uint) totalStakes;
-        uint latestTotalStakes;
+        uint totalStakeData;
         address owner;
         // voter's stakes for each epoch
-        mapping(address => mapping(uint => uint)) voterStakes;
-        mapping(address => uint) latestVoterStakes;
+        mapping(address => uint) voterStakeData;
     }
 
     mapping(address => CandidateData) public candidateData;
@@ -123,6 +129,7 @@ contract EvrynetStaking is ReentrancyGuard {
         address[] memory _candidates,
         address candidatesOwner,
         uint _epochPeriod,
+        uint _startBlock,
         uint _maxValidatorSize,
         uint _minValidatorStake,
         uint _minVoteCap,
@@ -138,21 +145,21 @@ contract EvrynetStaking is ReentrancyGuard {
         require(_maxValidatorSize >= _candidates.length);
 
         candidates = _candidates;
+        // modifed epoch = 0, preStake = 0, curStake  = _minValidatorStake
+        uint stakeData = encodeStakeData(0, _minValidatorStake, 0);
         for(uint i = 0; i < _candidates.length; i++) {
             candidateData[_candidates[i]] = CandidateData({
                 isCandidate: true,
                 owner: candidatesOwner,
-                latestTotalStakes: _minValidatorStake
+                totalStakeData: stakeData
             });
-            candidateData[_candidates[i]].voterStakes[candidatesOwner][0] = _minValidatorStake;
-            candidateData[_candidates[i]].latestVoterStakes[candidatesOwner] = _minValidatorStake;
-            candidateData[_candidates[i]].totalStakes[0] = _minValidatorStake;
+            candidateData[_candidates[i]].voterStakeData[candidatesOwner] = stakeData;
         }
 
         initCandidates = _candidates;
 
         admin = _admin;
-        startBlock = block.number;
+        startBlock = _startBlock;
     }
 
     function () external payable {}
@@ -175,15 +182,29 @@ contract EvrynetStaking is ReentrancyGuard {
 
         uint amount = msg.value;
         address voter = msg.sender;
-
-        candidateData[candidate].latestTotalStakes = candidateData[candidate].latestTotalStakes.add(amount);
-
         uint curEpoch = getCurrentEpoch();
-        candidateData[candidate].totalStakes[curEpoch] = candidateData[candidate].totalStakes[curEpoch].add(amount);
 
-        candidateData[candidate].latestVoterStakes[voter] = candidateData[candidate].latestVoterStakes[voter].add(amount);
+        StakeData memory _totalStakeData = decodeStakeData(candidateData[candidate].totalStakeData);
+        if (_totalStakeData.modifiedEpoch == curEpoch) {
+            _totalStakeData.curStake = _totalStakeData.curStake.add(amount);
+        } else {
+            _totalStakeData.preStake = _totalStakeData.curStake;
+            _totalStakeData.curStake = _totalStakeData.curStake.add(amount);
+            _totalStakeData.modifiedEpoch = curEpoch;
+        }
+        // re-assign total stake data
+        candidateData[candidate].totalStakeData = encodeStakeData(_totalStakeData);
 
-        candidateData[candidate].voterStakes[voter][curEpoch] = candidateData[candidate].latestVoterStakes[voter];
+        StakeData memory _voterStakeData = decodeStakeData(candidateData[candidate].voterStakeData[voter]);
+        if (_voterStakeData.modifiedEpoch == curEpoch) {
+            _voterStakeData.curStake = _voterStakeData.curStake.add(amount);
+        } else {
+            _voterStakeData.preStake = _voterStakeData.curStake;
+            _voterStakeData.curStake = _voterStakeData.curStake.add(amount);
+            _voterStakeData.modifiedEpoch = curEpoch;
+        }
+        candidateData[candidate].voterStakeData[voter] = encodeStakeData(_voterStakeData);
+
         emit Voted(voter, candidate, amount);
     }
 
@@ -194,10 +215,10 @@ contract EvrynetStaking is ReentrancyGuard {
         uint curEpoch = getCurrentEpoch();
         address payable voter = msg.sender;
 
-        uint lVoterStake = candidateData[candidate].latestVoterStakes[voter];
-        require(lVoterStake >= amount, "amount too big to withdraw");
+        StakeData memory _voterStakeData = decodeStakeData(candidateData[candidate].voterStakeData[voter]);
+        require(_voterStakeData.curStake >= amount, "amount too big to withdraw");
 
-        uint remainAmount = lVoterStake.sub(amount);
+        uint remainAmount = _voterStakeData.curStake.sub(amount);
 
         if (voter == candidateData[candidate].owner) {
             // owner, remainAmount must be >= minValidatorStake, otherwise need to use resign & withdraw
@@ -210,14 +231,25 @@ contract EvrynetStaking is ReentrancyGuard {
             );
         }
 
-        // update voter's latest stake and current epoch stake
-        candidateData[candidate].latestVoterStakes[voter] = remainAmount;
-        candidateData[candidate].voterStakes[voter][curEpoch] = remainAmount;
+        if (_voterStakeData.modifiedEpoch == curEpoch) {
+            _voterStakeData.curStake = remainAmount;
+        } else {
+            _voterStakeData.preStake = _voterStakeData.curStake;
+            _voterStakeData.curStake = remainAmount;
+            _voterStakeData.modifiedEpoch = curEpoch;
+        }
+        candidateData[candidate].voterStakeData[voter] = encodeStakeData(_voterStakeData);
 
-        // update candidate's latest stake and current epoch stake
-        candidateData[candidate].latestTotalStakes = candidateData[candidate].latestTotalStakes.sub(amount);
-        candidateData[candidate].totalStakes[curEpoch] = candidateData[candidate].latestTotalStakes;
-
+        // update candidate's latest stake data
+        StakeData memory _totalStakeData = decodeStakeData(candidateData[candidate].totalStakeData);
+        if (_totalStakeData.modifiedEpoch == curEpoch) {
+            _totalStakeData.curStake = _totalStakeData.curStake.sub(amount);
+        } else {
+            _totalStakeData.preStake = _totalStakeData.curStake;
+            _totalStakeData.curStake = _totalStakeData.curStake.sub(amount);
+            _totalStakeData.modifiedEpoch = curEpoch;
+        }
+        candidateData[candidate].totalStakeData = encodeStakeData(_totalStakeData);
         // transfer funds back to user
         voter.transfer(amount);
 
@@ -232,7 +264,7 @@ contract EvrynetStaking is ReentrancyGuard {
         candidateData[_candidate] = CandidateData({
            owner: _owner,
            isCandidate: true,
-           latestTotalStakes: 0
+           totalStakeData: encodeStakeData(0, 0, 0)
         });
         candidates.push(_candidate);
         emit Registered(_candidate, _owner);
@@ -257,17 +289,24 @@ contract EvrynetStaking is ReentrancyGuard {
         }
 
         candidateData[_candidate].isCandidate = false;
-        // withdraw stake of owner
-        uint curEpoch = getCurrentEpoch();
 
-        uint ownerStake = candidateData[_candidate].latestVoterStakes[sender];
+        uint curEpoch = getCurrentEpoch();
+        StakeData memory _ownerStakeData = decodeStakeData(candidateData[_candidate].voterStakeData[sender]);
+        uint ownerStake = _ownerStakeData.curStake;
         uint lockedStake = ownerStake.min(minValidatorStake);
         uint withdawableStake = ownerStake.sub(lockedStake);
 
-        candidateData[_candidate].latestTotalStakes = candidateData[_candidate].latestTotalStakes.sub(ownerStake);
-        candidateData[_candidate].totalStakes[curEpoch] = candidateData[_candidate].latestTotalStakes;
-        candidateData[_candidate].latestVoterStakes[sender] = 0;
-        candidateData[_candidate].voterStakes[sender][curEpoch] = 0;
+        StakeData memory _totalStakeData = decodeStakeData(candidateData[_candidate].totalStakeData);
+        if (_totalStakeData.modifiedEpoch == curEpoch) {
+            _totalStakeData.curStake = _totalStakeData.curStake.sub(ownerStake);
+        } else {
+            _totalStakeData.preStake = _totalStakeData.curStake;
+            _totalStakeData.curStake = _totalStakeData.curStake.sub(ownerStake);
+            _totalStakeData.modifiedEpoch = curEpoch;
+        }
+        // update total stake data
+        candidateData[_candidate].totalStakeData = encodeStakeData(_totalStakeData);
+        candidateData[_candidate].voterStakeData[sender] = encodeStakeData(0, 0, 0); // just reset data
 
         // locked this fund for 2 epochs
         uint unlockEpoch = curEpoch.add(STAKER_LOCKING_PERIOD);
@@ -328,11 +367,22 @@ contract EvrynetStaking is ReentrancyGuard {
         // using previous epoch data to compute list validators
         uint epoch = curEpoch - 1;
 
+        StakeData memory _stakeData;
+        address owner;
+        uint eligibleStake;
+
         uint validCandiateCount;
         // only count candidate with his own stake >= minValidatorStake
         for(uint i = 0; i < candidates.length; i++) {
-            address owner = candidateData[candidates[i]].owner;
-            if (candidateData[candidates[i]].voterStakes[owner][epoch] >= minValidatorStake) {
+            owner = candidateData[candidates[i]].owner;
+            _stakeData = decodeStakeData(candidateData[candidates[i]].voterStakeData[owner]);
+            // modifiedEpoch <= curEpoch, either modifiedEpoch <= epoch or modifiedEpoch = epoch + 1
+            if (_stakeData.modifiedEpoch <= epoch) {
+                eligibleStake = _stakeData.curStake;
+            } else {
+                eligibleStake = _stakeData.preStake;
+            }
+            if (eligibleStake >= minValidatorStake) {
                 validCandiateCount++;
             }
         }
@@ -342,10 +392,70 @@ contract EvrynetStaking is ReentrancyGuard {
 
         uint index = 0;
         for(uint i = 0; i < candidates.length; i++) {
-            address owner = candidateData[candidates[i]].owner;
-            if (candidateData[candidates[i]].voterStakes[owner][epoch] >= minValidatorStake) {
+            owner = candidateData[candidates[i]].owner;
+            _stakeData = decodeStakeData(candidateData[candidates[i]].voterStakeData[owner]);
+            // modifiedEpoch <= curEpoch, either modifiedEpoch <= epoch or modifiedEpoch = epoch + 1
+            if (_stakeData.modifiedEpoch <= epoch) {
+                eligibleStake = _stakeData.curStake;
+            } else {
+                eligibleStake = _stakeData.preStake;
+            }
+            if (eligibleStake >= minValidatorStake) {
                 _candidates[index] = candidates[i];
-                _stakes[index] = candidateData[candidates[i]].totalStakes[epoch];
+                _stakeData = decodeStakeData(candidateData[candidates[i]].totalStakeData);
+                if (_stakeData.modifiedEpoch <= epoch) {
+                    _stakes[index] = _stakeData.curStake;
+                } else {
+                    _stakes[index] = _stakeData.preStake;
+                }
+                index++;
+            }
+        }
+    }
+
+    // Return list of candidates, stakes, max valset and epoch number
+    // using current stake data
+    function getListCandidatesWithCurrentData()
+        public view returns(address[] memory _candidates, uint[] memory _stakes, uint32 _maxValSize, uint32 _epochSize)
+    {
+        _maxValSize = uint32(maxValidatorSize);
+        _epochSize = uint32(getCurrentEpoch());
+
+        uint curEpoch = getCurrentEpoch();
+        if (curEpoch == 0) {
+             _candidates = new address[](initCandidates.length);
+             _stakes = new uint[](initCandidates.length);
+             for(uint i = 0; i < initCandidates.length; i++) {
+                 _candidates[i] = initCandidates[i];
+                 _stakes[i] = minValidatorStake;
+             }
+             return (_candidates, _stakes, _maxValSize, _epochSize);
+        }
+
+        StakeData memory _stakeData;
+        address owner;
+
+        uint validCandiateCount;
+        // only count candidate with his own stake >= minValidatorStake
+        for(uint i = 0; i < candidates.length; i++) {
+            owner = candidateData[candidates[i]].owner;
+            _stakeData = decodeStakeData(candidateData[candidates[i]].voterStakeData[owner]);
+            if (_stakeData.curStake >= minValidatorStake) {
+                validCandiateCount++;
+            }
+        }
+
+        _candidates = new address[](validCandiateCount);
+        _stakes = new uint[](validCandiateCount);
+
+        uint index = 0;
+        for(uint i = 0; i < candidates.length; i++) {
+            owner = candidateData[candidates[i]].owner;
+            _stakeData = decodeStakeData(candidateData[candidates[i]].voterStakeData[owner]);
+            if (_stakeData.curStake >= minValidatorStake) {
+                _candidates[index] = candidates[i];
+                _stakeData = decodeStakeData(candidateData[candidates[i]].totalStakeData);
+                _stakes[index] = _stakeData.curStake;
                 index++;
             }
         }
@@ -361,18 +471,35 @@ contract EvrynetStaking is ReentrancyGuard {
     {
         _isCandidate = candidateData[_candidate].isCandidate;
         _owner = candidateData[_candidate].owner;
-        _latestTotalStakes = candidateData[_candidate].latestTotalStakes;
+        StakeData memory _stakeData = decodeStakeData(candidateData[_candidate].totalStakeData);
+        _latestTotalStakes = _stakeData.curStake;
     }
 
-    function getVoterStake(address _candidate, address _voter, uint _epoch) public view returns(uint) {
-        return candidateData[_candidate].voterStakes[_voter][_epoch];
+    function getVoterStakeData(address _candidate, address _voter)
+        public view
+        returns(uint _preStake, uint _curStake, uint _lastModifiedEpoch)
+    {
+        StakeData memory _stakeData = decodeStakeData(candidateData[_candidate].voterStakeData[_voter]);
+        _preStake = _stakeData.preStake;
+        _curStake = _stakeData.curStake;
+        _lastModifiedEpoch = _stakeData.modifiedEpoch;
     }
 
-    function getVoterLatestStake(address _candidate, address _voter) public view returns(uint) {
-        return candidateData[_candidate].latestVoterStakes[_voter];
+    function decodeStakeData(uint data) internal pure returns(StakeData memory stakeData) {
+        stakeData.preStake = data & (POWER110.sub(1));
+        stakeData.curStake = (data.div(POWER110)) & (POWER110.sub(1));
+        stakeData.modifiedEpoch = (data.div(POWER110.mul(POWER110))) & (POWER36.sub(1));
     }
 
-    function getTotalStakes(address _candidate, uint epoch) public view returns(uint) {
-        return candidateData[_candidate].totalStakes[epoch];
+    function encodeStakeData(StakeData memory stakeData) internal pure returns(uint data) {
+        data = stakeData.preStake & (POWER110.sub(1));
+        data |= (stakeData.curStake & (POWER110.sub(1))).mul(POWER110);
+        data |= (stakeData.modifiedEpoch & (POWER36.sub(1))).mul(POWER110).mul(POWER110);
+    }
+
+    function encodeStakeData(uint epoch, uint curStake, uint preStake) public pure returns(uint data) {
+        data = preStake & (POWER110.sub(1));
+        data |= (curStake & (POWER110.sub(1))).mul(POWER110);
+        data |= (epoch & (POWER36.sub(1))).mul(POWER110).mul(POWER110);
     }
 }

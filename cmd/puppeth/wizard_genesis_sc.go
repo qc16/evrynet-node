@@ -174,6 +174,7 @@ func (w *wizard) readStakingSCParams(genesis *core.Genesis) []interface{} {
 	_admin := w.readMandatoryAddress()
 	fmt.Println("- How many blocks for epoch period? (default = 1024)")
 	_epochPeriod := w.readDefaultBigInt(big.NewInt(1024))
+	_startBlock := big.NewInt(0)
 	fmt.Println("- What is the max size of validators? (max number of candidates to be selected as validators for producing blocks)")
 	_maxValidatorSize := w.readMandatoryBigInt()
 	fmt.Println("- What is the min stake of validator? (minimum (his own) stake of each candidate to become a validator (use to slash if validator is doing malicious things))")
@@ -181,7 +182,7 @@ func (w *wizard) readStakingSCParams(genesis *core.Genesis) []interface{} {
 	fmt.Println("- What is the min cap of vote? (minimum amount of EVR tokens to vote for a candidate)")
 	_minVoteCap := w.readMandatoryBigInt()
 	genesis.Config.Tendermint.Epoch = _epochPeriod.Uint64()
-	return []interface{}{*_candidatesOwner, _epochPeriod, _maxValidatorSize, _minValidatorStake, _minVoteCap, *_admin}
+	return []interface{}{*_candidatesOwner, _epochPeriod, _startBlock, _maxValidatorSize, _minValidatorStake, _minVoteCap, *_admin}
 }
 
 func getDataForStorage(storage map[common.Hash]common.Hash) func(key common.Hash, val common.Hash) bool {
