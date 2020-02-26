@@ -169,11 +169,6 @@ func (c *core) SetBlockForProposal(b *types.Block) {
 //it only accept 2 voteType: msgPrevote and msgcommit
 func (c *core) SendVote(voteType uint64, block *types.Block, round int64) {
 	logger := c.getLogger().With("send_vote_type", voteType, "send_vote_round", round)
-	//This should never happen, but it is a safe guard
-	if i, _ := c.valSet.GetByAddress(c.backend.Address()); i == -1 {
-		logger.Warnw("this node is not a validator of this round, skipping vote", "address", c.backend.Address())
-		return
-	}
 	if voteType != msgPrevote && voteType != msgPrecommit {
 		logger.Errorw("vote type is invalid")
 		return
