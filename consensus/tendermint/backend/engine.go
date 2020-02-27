@@ -322,47 +322,52 @@ func (sb *Backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		log.Warn("block time difference is too small", "different in ms", header.Time-sb.config.BlockPeriod)
 	}
 	// get val-sets to prepare for the verify proposal and committed seal
-	var (
-		checkpoint = utils.GetCheckpointNumber(sb.config.Epoch, header.Number.Uint64())
-		hash       = header.ParentHash
-		number     = header.Number.Uint64() - 1
-		headers    []*types.Header
-		valSet     tendermint.ValidatorSet
-		err        error
-	)
-	// check if parent headers contains transition block
-	if chain.CurrentHeader().Number.Uint64() < checkpoint {
-		for len(parents) != 0 {
-			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Number.Uint64() != number {
-				return consensus.ErrUnknownAncestor
-			}
-			parents = parents[:len(parents)-1]
-			headers = append(headers, header)
-			number, hash = number-1, header.ParentHash
-			if number%sb.config.Epoch == 0 {
-				validators, err := utils.GetValSetAddresses(header)
-				if err != nil {
-					return err
-				}
-				valSet = validator.NewSet(validators, sb.config.ProposerPolicy, int64(blockNumber-1))
-				break
-			}
-		}
-	} else {
-		valSet, err = sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber)))
-		if err != nil {
-			return err
-		}
-	}
-	if valSet == nil {
-		return tendermint.ErrUnknownBlock
+	valSet, err := sb.getValSetFromChain(chain, header, parents)
+	if err != nil {
+		return err
 	}
 	if err := sb.verifyProposalSeal(header, valSet); err != nil {
 		return err
 	}
 
 	return sb.verifyCommittedSeals(header, valSet)
+}
+
+// getValSetFromChain returns the valset deprived from ChainReader and parents Headers
+func (sb *Backend) getValSetFromChain(chain consensus.ChainReader, header *types.Header, parents []*types.Header) (tendermint.ValidatorSet, error) {
+	var (
+		blockNumber   = header.Number.Uint64()
+		checkpoint    = utils.GetCheckpointNumber(sb.config.Epoch, header.Number.Uint64())
+		hash          = header.ParentHash
+		number        = header.Number.Uint64() - 1
+		currentHeader = header
+	)
+	// if type of validator set is fixed, then use valsetInfo to get it
+	if len(sb.config.FixedValidators) > 0 {
+		return sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber)))
+	}
+	// check if chain contains transition block, get it from historical data
+	if chain.CurrentHeader().Number.Uint64() >= checkpoint {
+		return sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber)))
+	}
+	// check if parent headers contains transition block
+	for len(parents) != 0 {
+		currentHeader = parents[len(parents)-1]
+		if currentHeader.Hash() != hash || currentHeader.Number.Uint64() != number {
+			return nil, consensus.ErrUnknownAncestor
+		}
+		if number%sb.config.Epoch == 0 {
+			validators, err := utils.GetValSetAddresses(currentHeader)
+			if err != nil {
+				return nil, err
+			}
+			return validator.NewSet(validators, sb.config.ProposerPolicy, int64(blockNumber)), nil
+		}
+		parents = parents[:len(parents)-1]
+		number, hash = number-1, currentHeader.ParentHash
+	}
+	// if the parents does not contain the transition block, return an error
+	return nil, tendermint.ErrUnknownBlock
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
