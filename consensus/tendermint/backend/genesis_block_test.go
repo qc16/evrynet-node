@@ -7,11 +7,8 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
-	queue "github.com/enriquebris/goconcurrentqueue"
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
@@ -23,15 +20,12 @@ import (
 	coreStaking "github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
-	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
-type GenesisType string
-
 const (
-	StakingSC       GenesisType = "../tests/genesis_staking_sc.json"       // 1 validator
-	FixedValidators GenesisType = "../tests/genesis_fixed_validators.json" // 4 validators
+	StakingSC       = "../tests/genesis_staking_sc.json"       // 4 validator
+	FixedValidators = "../tests/genesis_fixed_validators.json" // 1 validators
 )
 
 var (
@@ -41,7 +35,7 @@ var (
 func TestGenesisblockWithStakingSC(t *testing.T) {
 	testCases := []struct {
 		name        string
-		genesisType GenesisType
+		genesisType string
 		validators  int
 	}{
 		{
@@ -98,8 +92,8 @@ type Config struct {
 	Tendermint *tendermint.Config
 }
 
-func makeNodeConfig(g GenesisType) (*Config, error) {
-	genesisConf, err := getGenesisConf(g)
+func makeNodeConfig(genesisPath string) (*Config, error) {
+	genesisConf, err := getGenesisConf(genesisPath)
 	if err != nil {
 		return nil, err
 	}
@@ -113,14 +107,14 @@ func makeNodeConfig(g GenesisType) (*Config, error) {
 	return config, nil
 }
 
-func getGenesisConf(g GenesisType) (*core.Genesis, error) {
+func getGenesisConf(genesisPath string) (*core.Genesis, error) {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
 	// Read file genesis generated from pupeth
-	genesisFile, err := ioutil.ReadFile(filepath.Join(workingDir, string(g)))
+	genesisFile, err := ioutil.ReadFile(filepath.Join(workingDir, genesisPath))
 	if err != nil {
 		return nil, err
 	}
@@ -134,8 +128,8 @@ func getGenesisConf(g GenesisType) (*core.Genesis, error) {
 	return config, nil
 }
 
-func createBlockchainAndBackendFromGenesis(g GenesisType) (*Backend, *core.BlockChain, error) {
-	config, err := makeNodeConfig(g)
+func createBlockchainAndBackendFromGenesis(genesisPath string) (*Backend, *core.BlockChain, error) {
+	config, err := makeNodeConfig(genesisPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -157,19 +151,7 @@ func createBlockchainAndBackendFromGenesis(g GenesisType) (*Backend, *core.Block
 	}
 
 	//init tendermint backend
-	valSetCache, _ := lru.NewARC(inMemoryValset)
-	backend := &Backend{
-		config:               config.Tendermint,
-		tendermintEventMux:   new(event.TypeMux),
-		privateKey:           nodePK,
-		address:              crypto.PubkeyToAddress(nodePK.PublicKey),
-		db:                   db,
-		mutex:                &sync.RWMutex{},
-		storingMsgs:          queue.NewFIFO(),
-		dequeueMsgTriggering: make(chan struct{}, 1000),
-		broadcastCh:          make(chan broadcastTask),
-		computedValSetCache:  valSetCache,
-	}
+	backend := New(config.Tendermint, nodePK).(*Backend)
 
 	if config.Tendermint.FixedValidators != nil && len(config.Tendermint.FixedValidators) > 0 {
 		backend.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.Tendermint.FixedValidators)
