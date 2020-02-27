@@ -24,6 +24,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 type GenesisType string
@@ -76,11 +77,11 @@ func TestGenesisblockWithStakingSC(t *testing.T) {
 }
 
 func TestBackendCallGetListCandidateFromSC(t *testing.T) {
+	// Must init log to show error when using log.Debug
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+
 	backend, blockchain, err := createBlockchainAndBackendFromGenesis(StakingSC)
 	assert.NoError(t, err)
-
-	genesisHeader := blockchain.Genesis().Header()
-	assert.NotNil(t, genesisHeader)
 
 	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
 	assert.NoError(t, err)
