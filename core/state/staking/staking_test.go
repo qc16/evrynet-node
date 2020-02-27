@@ -30,6 +30,7 @@ func TestGetValidators(t *testing.T) {
 			common.HexToAddress("0x954e4BF2C68F13D97C45db0e02645D145dB6911f"),
 		}
 		epoch             = big.NewInt(300000)
+		startBlock        = common.Big0
 		maxValidatorSize  = big.NewInt(100)
 		minValidatorStake = big.NewInt(20)
 		minVoteCap        = big.NewInt(10)
@@ -51,7 +52,7 @@ func TestGetValidators(t *testing.T) {
 	authOpts.Nonce = big.NewInt(0)
 	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 
-	addr, tx, _, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates[0], epoch, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
+	addr, tx, _, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates[0], epoch, startBlock, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
 	require.NoError(t, err)
 
 	be.Commit()
