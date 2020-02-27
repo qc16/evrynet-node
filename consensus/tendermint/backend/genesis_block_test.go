@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/staking"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
@@ -152,17 +150,7 @@ func createBlockchainAndBackendFromGenesis(genesisPath string) (*Backend, *core.
 
 	//init tendermint backend
 	backend := New(config.Tendermint, nodePK).(*Backend)
-
-	if config.Tendermint.FixedValidators != nil && len(config.Tendermint.FixedValidators) > 0 {
-		backend.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.Tendermint.FixedValidators)
-	} else {
-		backend.valSetInfo = staking.NewStakingValidatorInfo(config.Tendermint.Epoch, config.Tendermint.ProposerPolicy)
-		backend.stakingContractAddr = *config.Tendermint.StakingSCAddress
-	}
-
-	//backend.core = tendermintCore.New(backend, config.Tendermint)
 	backend.SetBroadcaster(&tests_utils.MockProtocolManager{})
-	go backend.dequeueMsgLoop()
 
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlock(db, config.Genesis)
