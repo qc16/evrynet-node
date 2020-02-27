@@ -103,7 +103,7 @@ func MustMakeBlockWithCommittedSealInvalid(be tendermint.Backend, pHeader *types
 	//sign header with rand private key
 	hashData := crypto.Keccak256(utils.SigHash(header).Bytes())
 	invalidCommitSeal, _ := crypto.Sign(hashData, privateKey)
-	appendCommittedSeal(header, invalidCommitSeal)
+	AppendCommittedSeal(header, invalidCommitSeal)
 	return types.NewBlockWithHeader(header)
 }
 
@@ -115,7 +115,7 @@ func MustMakeBlockWithCommittedSeal(be tendermint.Backend, pHeader *types.Header
 	if err != nil {
 		panic(err)
 	}
-	appendCommittedSeal(header, committedSeal)
+	AppendCommittedSeal(header, committedSeal)
 	block := types.NewBlockWithHeader(header)
 	return block.WithSeal(header)
 }
@@ -127,8 +127,8 @@ func AppendSeal(header *types.Header, be tendermint.Backend) {
 	_ = utils.WriteSeal(header, seal)
 }
 
-//appendCommittedSeal
-func appendCommittedSeal(header *types.Header, committedSeal []byte) {
+//AppendCommittedSeal
+func AppendCommittedSeal(header *types.Header, committedSeal []byte) {
 	//TODO: make this logic as the same as AppendSeal, which involve signing commit before writeCommittedSeal
 	committedSeals := make([][]byte, 1)
 	committedSeals[0] = make([]byte, types.TendermintExtraSeal)
