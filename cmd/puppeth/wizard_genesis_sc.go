@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 const (
@@ -30,19 +32,52 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 		scPath            string
 		stakingSCParams   []interface{}
 		expectedSCAddress *common.Address
+		bytecodeSC        string
+		abiSC             *abi.ABI
 	)
-	fmt.Println()
-	fmt.Println("Specify your staking smart contract path (default = ./consensus/staking_contracts/EvrynetStaking.sol)")
-	for {
-		if scPath = w.readDefaultString("./consensus/staking_contracts/EvrynetStaking.sol"); len(scPath) > 0 {
-			break
-		}
-	}
 
-	//Compile SC file to get Bytecode, ABI
-	bytecodeSC, abiSC, err := compileSCFile(scPath)
-	if err != nil {
-		return err
+	fmt.Println()
+	fmt.Println("Do you want to use precompiled Staking Smart Contract file?")
+	if usePrecompiledSC := w.readDefaultYesNo(true); usePrecompiledSC {
+		fmt.Println("Specify your Bytecode file path (default = ./consensus/staking_contracts/EvrynetStaking.bin/EvrynetStaking.bin)")
+		for {
+			if tempValue, err := readFile(w.readDefaultString("./consensus/staking_contracts/EvrynetStaking.bin/EvrynetStaking.bin")); err != nil {
+				log.Error("Failed to read Bytecode file", "error", err)
+			} else {
+				bytecodeSC = tempValue
+				break
+			}
+		}
+
+		fmt.Println("Specify your ABI path (default = ./consensus/staking_contracts/EvrynetStaking.bin/EvrynetStaking.abi)")
+		for {
+			if tempValue, err := readFile(w.readDefaultString("./consensus/staking_contracts/EvrynetStaking.bin/EvrynetStaking.abi")); err != nil {
+				log.Error("Failed to read ABI file", "error", err)
+			} else {
+				if parsedABI, err := abi.JSON(strings.NewReader(tempValue)); err != nil {
+					return err
+				} else {
+					abiSC = &parsedABI
+					break
+				}
+			}
+		}
+	} else {
+		fmt.Println()
+		fmt.Println("Specify your staking smart contract path (default = ./consensus/staking_contracts/EvrynetStaking.sol)")
+		for {
+			if scPath = w.readDefaultString("./consensus/staking_contracts/EvrynetStaking.sol"); len(scPath) > 0 {
+				break
+			}
+		}
+
+		//Compile SC file to get Bytecode, ABI
+		if compiledBytecode, compiledABI, err := compileSCFile(scPath); err != nil {
+			return err
+		} else {
+			bytecodeSC = compiledBytecode
+			abiSC = compiledABI
+		}
 	}
 
 	//Reading params for staking SC
@@ -190,4 +225,12 @@ func getDataForStorage(storage map[common.Hash]common.Hash) func(key common.Hash
 		storage[key] = val
 		return true
 	}
+}
+
+func readFile(path string) (string, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
