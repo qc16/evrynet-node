@@ -32,7 +32,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 		scPath            string
 		stakingSCParams   []interface{}
 		expectedSCAddress *common.Address
-		bytecodeSC        string
+		bytecodeString    string
 		abiSC             *abi.ABI
 	)
 
@@ -44,7 +44,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 			if tempValue, err := readFile(w.readDefaultString("./consensus/staking_contracts/EvrynetStaking.bin/EvrynetStaking.bin")); err != nil {
 				log.Error("Failed to read Bytecode file", "error", err)
 			} else {
-				bytecodeSC = tempValue
+				bytecodeString = tempValue
 				break
 			}
 		}
@@ -75,7 +75,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 		if compiledBytecode, compiledABI, err := compileSCFile(scPath); err != nil {
 			return err
 		} else {
-			bytecodeSC = compiledBytecode
+			bytecodeString = compiledBytecode
 			abiSC = compiledABI
 		}
 	}
@@ -94,7 +94,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 		}
 	}
 
-	genesisAccount, err := createGenesisAccountWithStakingSC(genesis, abiSC, bytecodeSC, validators, stakingSCParams)
+	genesisAccount, err := createGenesisAccountWithStakingSC(genesis, abiSC, bytecodeString, validators, stakingSCParams)
 	if err != nil {
 		return err
 	}
