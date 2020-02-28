@@ -116,8 +116,9 @@ func (w *wizard) makeGenesis() {
 		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
 		policy := uint64(w.readDefaultInt(0))
 
-		// In the case of Tendermint, configure the consensus parameters
+		// In the case of Tender-mint, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
+		genesis.Config.ConstantinopleBlock = big.NewInt(0)
 
 		// We also need the initial list of validators
 		fmt.Println()
@@ -304,7 +305,7 @@ func (w *wizard) manageGenesis() {
 		w.conf.Genesis.Config.ByzantiumBlock = w.readDefaultBigInt(w.conf.Genesis.Config.ByzantiumBlock)
 
 		fmt.Println()
-		fmt.Printf("Which block should Constantinople come into effect? (default = %v)\n", w.conf.Genesis.Config.ConstantinopleBlock)
+		fmt.Printf("Which block should Constantinople come into effect? (default = %v, advisable 0 if using Tendermint)\n", w.conf.Genesis.Config.ConstantinopleBlock)
 		w.conf.Genesis.Config.ConstantinopleBlock = w.readDefaultBigInt(w.conf.Genesis.Config.ConstantinopleBlock)
 		if w.conf.Genesis.Config.PetersburgBlock == nil {
 			w.conf.Genesis.Config.PetersburgBlock = w.conf.Genesis.Config.ConstantinopleBlock
