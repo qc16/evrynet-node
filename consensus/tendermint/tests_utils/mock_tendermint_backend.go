@@ -1,23 +1,21 @@
 package tests_utils
 
 import (
-	"testing"
-
-	"github.com/Evrynetlabs/evrynet-node/core"
-	"github.com/Evrynetlabs/evrynet-node/params"
-
 	"crypto/ecdsa"
 	"math/big"
 	"sync"
+	"testing"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
+	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 type MockBackend struct {
@@ -60,6 +58,19 @@ func NewMockBackend(privateKey *ecdsa.PrivateKey, blockchain *MockChainReader, v
 
 func (mb *MockBackend) VerifyProposalHeader(header *types.Header) error {
 	log.Warn("mocked backend always return nil when verifyProposalHeader")
+	return nil
+}
+
+func (mb *MockBackend) VerifyProposalBlock(block *types.Block) error {
+	var (
+		txs     = block.Transactions()
+		txsHash = types.DeriveSha(txs)
+	)
+
+	// Verify txs hash
+	if txsHash != block.Header().TxHash {
+		return tendermint.ErrMismatchTxhashes
+	}
 	return nil
 }
 
@@ -144,23 +155,12 @@ func (mb *MockBackend) Commit(block *types.Block) {
 	log.Error("not implemented")
 }
 
-// EnqueueBlock adds a block returned from consensus into fetcher queue
-func (mb *MockBackend) EnqueueBlock(block *types.Block) {
-	log.Error("not implemented")
-}
-
 func (mb *MockBackend) CurrentHeadBlock() *types.Block {
 	return mb.currentBlock()
 }
 
 func (mb *MockBackend) Cancel(block *types.Block) {
 	log.Error("not implemented")
-}
-
-// ValidatorsByChainReader returns val-set from snapshot
-func (mb *MockBackend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
-	log.Error("not implemented")
-	return validator.NewSet(nil, 0, int64(0))
 }
 
 func MustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey, genesisHeader *types.Header, validators []common.Address) (tendermint.Backend, *core.TxPool) {

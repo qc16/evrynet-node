@@ -25,7 +25,6 @@ import (
 )
 
 const (
-	fetcherID         = "tendermint"
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
 
@@ -111,6 +110,8 @@ type Backend struct {
 	dequeueMsgTriggering chan struct{}
 
 	currentBlock func() *types.Block
+	//verifyAndSubmitBlock to send the proposal block to miner
+	verifyAndSubmitBlock func(*types.Block) error
 
 	broadcastCh chan broadcastTask
 
@@ -336,21 +337,10 @@ func (sb *Backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.
 //Commit implement tendermint.Backend.Commit()
 func (sb *Backend) Commit(block *types.Block) {
 	sb.commitChs.sendBlock(block)
-	// if node is not proposer, EnqueueBlock for downloading
-	if block.Coinbase() != sb.address {
-		sb.EnqueueBlock(block)
-	}
 }
 
 func (sb *Backend) Cancel(block *types.Block) {
 	sb.commitChs.sendBlock(block)
-}
-
-// EnqueueBlock adds a block returned from consensus into fetcher queue
-func (sb *Backend) EnqueueBlock(block *types.Block) {
-	if sb.broadcaster != nil {
-		sb.broadcaster.Enqueue(fetcherID, block)
-	}
 }
 
 func (sb *Backend) CurrentHeadBlock() *types.Block {
@@ -364,4 +354,21 @@ func (sb *Backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus
 		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
 	}
 	return valSet
+}
+
+// VerifyProposalBlock verify post-processor state of proposal block (txs, Root, receipt).
+// If success, the result will be send to the pending tasks of miner
+func (sb *Backend) VerifyProposalBlock(block *types.Block) error {
+	//if block from this node, there is no need to verify state
+	if block.Coinbase() == sb.Address() {
+		return nil
+	}
+	//verify txs, stateRoot and receipt
+	if sb.verifyAndSubmitBlock == nil {
+		return errors.New("no verify block hook")
+	}
+	if err := sb.verifyAndSubmitBlock(block); err != nil {
+		return err
+	}
+	return nil
 }
