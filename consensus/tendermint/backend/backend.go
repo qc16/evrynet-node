@@ -7,11 +7,14 @@ import (
 	"time"
 
 	queue "github.com/enriquebris/goconcurrentqueue"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/fixed_valset_info"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend/staking"
 	tendermintCore "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -28,6 +31,7 @@ const (
 	maxBroadcastSleepTime        = time.Minute * 5
 	initialBroadcastSleepTime    = time.Millisecond * 100
 	broadcastSleepTimeIncreament = time.Millisecond * 100
+	inMemoryValset               = 10
 )
 
 var (
@@ -38,17 +42,10 @@ var (
 //Option return an optional function for backend's initial behaviour
 type Option func(b *Backend) error
 
-//WithDB return an option to set backend's db
-func WithDB(db evrdb.Database) Option {
-	return func(b *Backend) error {
-		b.db = db
-		return nil
-	}
-}
-
 // New creates an backend for Istanbul core engine.
 // The p2p communication, i.e, broadcaster is set separately by calling backend.SetBroadcaster
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
+	valSetCache, _ := lru.NewARC(inMemoryValset)
 	be := &Backend{
 		config:               config,
 		tendermintEventMux:   new(event.TypeMux),
@@ -57,10 +54,20 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		commitChs:            newCommitChannels(),
 		mutex:                &sync.RWMutex{},
 		storingMsgs:          queue.NewFIFO(),
-		proposedValidator:    newProposedValidator(),
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
 		broadcastCh:          make(chan broadcastTask),
 		controlChan:          make(chan struct{}),
+		computedValSetCache:  valSetCache,
+	}
+
+	if config.FixedValidators != nil && len(config.FixedValidators) > 0 {
+		be.valSetInfo = fixed_valset_info.NewFixedValidatorSetInfo(config.FixedValidators)
+	} else {
+		be.valSetInfo = staking.NewStakingValidatorInfo(config.Epoch, config.ProposerPolicy)
+		if config.StakingSCAddress == nil {
+			panic("nil staking address")
+		}
+		be.stakingContractAddr = *config.StakingSCAddress
 	}
 	be.core = tendermintCore.New(be, config)
 
@@ -95,7 +102,7 @@ type Backend struct {
 
 	coreStarted bool
 	mutex       *sync.RWMutex
-	chain       consensus.ChainReader
+	chain       consensus.FullChainReader
 	controlChan chan struct{}
 
 	//storingMsgs is used to store msg to handler when core stopped
@@ -104,9 +111,11 @@ type Backend struct {
 
 	currentBlock func() *types.Block
 
-	proposedValidator *ProposalValidator
-
 	broadcastCh chan broadcastTask
+
+	valSetInfo          ValidatorSetInfo
+	stakingContractAddr common.Address // stakingContractAddr stores the address of staking smart-contract
+	computedValSetCache *lru.ARCCache  // computedValSetCache stores the valset is computed from stateDB
 }
 
 // EventMux implements tendermint.Backend.EventMux
@@ -299,7 +308,11 @@ func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) er
 // Validators return validator set for a block number
 // TODO: revise this function once auth vote is implemented
 func (sb *Backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
-	return sb.getValSet(sb.chain, blockNumber)
+	valSet, err := sb.valSetInfo.GetValSet(sb.chain, blockNumber)
+	if err != nil {
+		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
+	}
+	return valSet
 }
 
 // FindExistingPeers check validator peers exist or not by address
@@ -339,5 +352,9 @@ func (sb *Backend) CurrentHeadBlock() *types.Block {
 
 // ValidatorsByChainReader returns val-set from snapshot
 func (sb *Backend) ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) tendermint.ValidatorSet {
-	return sb.getValSet(chain, blockNumber)
+	valSet, err := sb.valSetInfo.GetValSet(chain, blockNumber)
+	if err != nil {
+		log.Error("failed to get validator set", "error", err, "block", blockNumber.Int64())
+	}
+	return valSet
 }

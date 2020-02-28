@@ -33,6 +33,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/bloombits"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
 	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/event"
@@ -156,6 +157,24 @@ func (b *SimulatedBackend) StorageAt(ctx context.Context, contract common.Addres
 	statedb, _ := b.blockchain.State()
 	val := statedb.GetState(contract, key)
 	return val[:], nil
+}
+
+// ForEachStorageAt returns func to read all keys, values in the storage
+func (b *SimulatedBackend) ForEachStorageAt(contract common.Address, blockNumber *big.Int, f func(key, val common.Hash) bool) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
+		return errBlockNumberUnsupported
+	}
+	statedb, err := b.blockchain.State()
+	if err != nil {
+		return err
+	}
+	if err = statedb.ForEachStorage(contract, f); err != nil {
+		return err
+	}
+	return nil
 }
 
 // TransactionReceipt returns the receipt of a transaction.
@@ -422,6 +441,16 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), statedb.Database())
 
 	return nil
+}
+
+//GetStakingCaller returns staking caller for testing
+func (b *SimulatedBackend) GetStakingCaller() (staking.StakingCaller, error) {
+	state, err := b.blockchain.State()
+	if err != nil {
+		return nil, err
+	}
+	header := b.blockchain.CurrentHeader()
+	return staking.NewStakingCaller(state, b.blockchain, header, b.config, vm.Config{}), nil
 }
 
 // callmsg implements core.Message to allow passing it as a transaction simulator.

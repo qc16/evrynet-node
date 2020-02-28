@@ -242,8 +242,10 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 	if chainConfig.Tendermint != nil {
 		config.Tendermint.ProposerPolicy = tendermint.ProposerPolicy(chainConfig.Tendermint.ProposerPolicy)
 		config.Tendermint.Epoch = chainConfig.Tendermint.Epoch
+		config.Tendermint.StakingSCAddress = chainConfig.Tendermint.StakingSCAddress
+		config.Tendermint.FixedValidators = chainConfig.Tendermint.FixedValidators
 		log.Info("Create Tendermint consensus engine")
-		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey(), tendermintBackend.WithDB(db))
+		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey())
 	}
 
 	// Otherwise assume proof-of-work

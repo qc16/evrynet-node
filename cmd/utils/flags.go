@@ -1754,7 +1754,9 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		setTendermint(ctx, tdmintConfig)
 		tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(config.Tendermint.ProposerPolicy)
 		tdmintConfig.Epoch = config.Tendermint.Epoch
-		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey(), tdmintBackend.WithDB(chainDb))
+		tdmintConfig.StakingSCAddress = config.Tendermint.StakingSCAddress
+		tdmintConfig.FixedValidators = config.Tendermint.FixedValidators
+		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey())
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {
