@@ -3,11 +3,6 @@ package backend
 import (
 	"bytes"
 	"errors"
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
-	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
-	"github.com/Evrynetlabs/evrynet-node/core/vm"
-	"github.com/Evrynetlabs/evrynet-node/rlp"
-	"github.com/Evrynetlabs/evrynet-node/rpc"
 	"math/big"
 	"reflect"
 	"time"
@@ -16,10 +11,15 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
 	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
 
 var (
