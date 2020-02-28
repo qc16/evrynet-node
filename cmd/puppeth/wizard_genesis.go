@@ -53,12 +53,12 @@ func (w *wizard) makeGenesis() {
 		Difficulty: big.NewInt(524288),
 		Alloc:      make(core.GenesisAlloc),
 		Config: &params.ChainConfig{
-			HomesteadBlock:      big.NewInt(1),
-			EIP150Block:         big.NewInt(2),
-			EIP155Block:         big.NewInt(3),
-			EIP158Block:         big.NewInt(3),
-			ByzantiumBlock:      big.NewInt(4),
-			ConstantinopleBlock: big.NewInt(5),
+			HomesteadBlock:      big.NewInt(0),
+			EIP150Block:         big.NewInt(0),
+			EIP155Block:         big.NewInt(0),
+			EIP158Block:         big.NewInt(0),
+			ByzantiumBlock:      big.NewInt(0),
+			ConstantinopleBlock: big.NewInt(0),
 		},
 	}
 	// Figure out which consensus engine to choose
@@ -118,7 +118,6 @@ func (w *wizard) makeGenesis() {
 
 		// In the case of Tender-mint, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
-		genesis.Config.ConstantinopleBlock = big.NewInt(0)
 
 		// We also need the initial list of validators
 		fmt.Println()
@@ -305,7 +304,7 @@ func (w *wizard) manageGenesis() {
 		w.conf.Genesis.Config.ByzantiumBlock = w.readDefaultBigInt(w.conf.Genesis.Config.ByzantiumBlock)
 
 		fmt.Println()
-		fmt.Printf("Which block should Constantinople come into effect? (default = %v, advisable 0 if using Tendermint)\n", w.conf.Genesis.Config.ConstantinopleBlock)
+		fmt.Printf("Which block should Constantinople come into effect? (default = %v)\n", w.conf.Genesis.Config.ConstantinopleBlock)
 		w.conf.Genesis.Config.ConstantinopleBlock = w.readDefaultBigInt(w.conf.Genesis.Config.ConstantinopleBlock)
 		if w.conf.Genesis.Config.PetersburgBlock == nil {
 			w.conf.Genesis.Config.PetersburgBlock = w.conf.Genesis.Config.ConstantinopleBlock
