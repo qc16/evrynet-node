@@ -125,7 +125,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// start core
-	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock))
+	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock, nil))
 	// trigger to  dequeue and replay msg
 	_, err = be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, []byte(strconv.FormatInt(int64(count), 10))))
 	count += 1
@@ -134,7 +134,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	// immediately stop core
 	require.NoError(t, be.Stop())
 
-	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock))
+	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock, nil))
 	_, err = be.HandleMsg(common.Address{}, makeMsg(consensus.TendermintMsg, []byte(strconv.FormatInt(int64(count), 10))))
 	require.NoError(t, err)
 

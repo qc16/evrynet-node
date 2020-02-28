@@ -267,7 +267,7 @@ func (w *worker) pendingBlock() *types.Block {
 func (w *worker) start() {
 	if tendermint, ok := w.engine.(consensus.Tendermint); ok {
 		log.Info("Start Tendermint worker")
-		err := tendermint.Start(w.chain, w.chain.CurrentBlock)
+		err := tendermint.Start(w.chain, w.chain.CurrentBlock, w.VerifyAndSubmitPendingBlock)
 		if err != nil {
 			log.Error("Failed to start Tendermint engine", "err", err)
 			return
@@ -1007,5 +1007,44 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 	if update {
 		w.updateSnapshot()
 	}
+	return nil
+}
+
+//VerifyAndSubmitPendingBlock verifies if the block is valid, then submit it to pending task
+func (w *worker) VerifyAndSubmitPendingBlock(block *types.Block) error {
+	start := time.Now()
+	curHeader := w.chain.CurrentHeader()
+	if err := w.chain.Validator().ValidateBody(block); err != nil {
+		return err
+	}
+	// get current stateDB
+	stateDB, err := w.chain.StateAt(curHeader.Root)
+	if err != nil {
+		return err
+	}
+	// insert txs to stateDB
+	receipts, _, usedGas, err := w.chain.Processor().Process(block, stateDB, *w.chain.GetVMConfig())
+	if err != nil {
+		return err
+	}
+	// check if pending root, receipts and usedGas matched with block header
+	if err := w.chain.Validator().ValidateState(block, stateDB, receipts, usedGas); err != nil {
+		return err
+	}
+
+	task := &task{
+		receipts:  receipts,
+		block:     block,
+		state:     stateDB,
+		createdAt: time.Now(),
+	}
+	w.pendingMu.Lock()
+	w.pendingTasks[w.engine.SealHash(block.Header())] = task
+	w.pendingMu.Unlock()
+	log.Info("Verify and submit pending task", "number", block.Number(), "hash", block.Hash(),
+		"uncles", len(block.Uncles()), "txs", len(block.Transactions()), "gas", block.GasUsed(),
+		"elapsed", common.PrettyDuration(time.Since(start)),
+		"root", block.Root())
+
 	return nil
 }

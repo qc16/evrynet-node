@@ -8,6 +8,7 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	evrynetCore "github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
@@ -187,24 +188,8 @@ func (c *core) VerifyProposal(proposal Proposal, msg message) error {
 		return err
 	}
 
-	// verify transaction hash & header
-	if err := c.verifyTxs(proposal); err != nil {
+	if err := c.backend.VerifyProposalBlock(proposal.Block); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (c *core) verifyTxs(proposal Proposal) error {
-	var (
-		block   = proposal.Block
-		txs     = block.Transactions()
-		txsHash = types.DeriveSha(txs)
-	)
-
-	// Verify txs hash
-	if txsHash != block.Header().TxHash {
-		return tendermint.ErrMismatchTxhashes
 	}
 
 	return nil
@@ -259,6 +244,9 @@ func (c *core) handlePropose(msg message) error {
 	}
 
 	if err := c.VerifyProposal(proposal, msg); err != nil {
+		if err == evrynetCore.ErrKnownBlock { // block is already inserted into chain
+			return nil
+		}
 		return err
 	}
 	logger.Infow("setProposal receive...")
