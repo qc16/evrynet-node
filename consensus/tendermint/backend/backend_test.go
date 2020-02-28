@@ -289,7 +289,7 @@ func TestBackend_Multicast(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(time.Millisecond * 20):
+	case <-time.After(time.Millisecond * 200):
 		t.Fatal("not receive msg to peer")
 	case data := <-dataCh:
 		assert.Equal(t, expectedData, data)

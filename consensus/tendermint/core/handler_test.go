@@ -30,6 +30,7 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
 		blockFinalize:  new(event.TypeMux),
 		futureMessages: queue.NewPriorityQueue(0, true),
 		sentMsgStorage: NewMsgStorage(),
+		rebroadcast:    false,
 	}
 }
 

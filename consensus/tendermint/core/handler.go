@@ -263,6 +263,8 @@ func (c *core) handlePropose(msg message) error {
 	}
 	logger.Infow("setProposal receive...")
 
+	go c.reBroadcastMsg(msg, logger)
+
 	state.SetProposalReceived(&proposal)
 	//WARNING: THIS piece of code is experimental
 	if state.Step() <= RoundStepPropose && state.IsProposalComplete() {
@@ -342,22 +344,8 @@ func (c *core) handlePrevote(msg message) error {
 			}
 		}
 	}
-	//rebroadcast
-	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
-	//go func() {
-	//	//We don't re-gossip if this is our own message
-	//	if msg.Address.Hex() == c.backend.Address().Hex() {
-	//		return
-	//	}
-	//	payload, err := rlp.EncodeToBytes(&msg)
-	//	if err != nil {
-	//		log.Error("failed to encode msg", "error", err)
-	//		return
-	//	}
-	//	if err := c.backend.Gossip(c.valSet, payload); err != nil {
-	//		log.Error("failed to re-gossip the vote received", "error", err)
-	//	}
-	//}()
+
+	go c.reBroadcastMsg(msg, logger)
 	//if we receive a future roundthat come to 2/3 of prevotes on any block
 	switch {
 	case state.Round() < vote.Round && prevotes.HasTwoThirdAny():
@@ -415,23 +403,7 @@ func (c *core) handlePrecommit(msg message) error {
 	}
 	logger.Infow("added precommit vote into roundState")
 
-	//TODO: revise if we need rebroadcast
-	//rebroadcast
-	//note that tendermint doesn't do it, but it seems like this would speed up the process of gossiping
-	//go func() {
-	//	//we don't re-gossip if this is our own message
-	//	if msg.Address.Hex() == c.backend.Address().Hex() {
-	//		return
-	//	}
-	//	payload, err := rlp.EncodeToBytes(&msg)
-	//	if err != nil {
-	//		log.Error("failed to encode msg", "error", err)
-	//		return
-	//	}
-	//	if err := c.backend.Gossip(c.valSet, payload); err != nil {
-	//		log.Error("failed to re-gossip the vote received", "error", err)
-	//	}
-	//}()
+	go c.reBroadcastMsg(msg, logger)
 
 	precommits, ok := state.GetPrecommitsByRound(vote.Round)
 	if !ok {
