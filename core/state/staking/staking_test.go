@@ -20,7 +20,7 @@ import (
 
 const (
 	privateKeyHex = "ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1"
-	gasLimit      = 5000000
+	gasLimit      = 10000000
 )
 
 func TestGetValidators(t *testing.T) {
