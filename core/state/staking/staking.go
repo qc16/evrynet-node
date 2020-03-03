@@ -65,7 +65,7 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 		return nil, ErrEmptyValidatorSet
 	}
 
-	if len(data.Candidates) < int(data.MaxValSize) {
+	if len(data.Candidates) < int(data.MaxValSize.Int64()) {
 		return data.Candidates, nil
 	}
 	// sort and returns topN
@@ -79,7 +79,7 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 		}
 		return stakes[data.Candidates[i]].Cmp(stakes[data.Candidates[j]]) > 0
 	})
-	return data.Candidates[:int(data.MaxValSize)], err
+	return data.Candidates[:int(data.MaxValSize.Int64())], err
 }
 
 // NewBECaller returns
