@@ -131,6 +131,7 @@ var (
 		utils.NoDiscoverFlag,
 		utils.DiscoveryV5Flag,
 		utils.NetrestrictFlag,
+		utils.NodeKeyFromKeystore,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
 		utils.DeveloperFlag,
@@ -338,11 +339,11 @@ func geth(ctx *cli.Context) error {
 func startNode(ctx *cli.Context, stack *node.Node) {
 	debug.Memsize.Add("node", stack)
 
-	// Start up the node itself
-	utils.StartNode(stack)
-
 	// Unlock any account specifically requested
 	unlockAccounts(ctx, stack)
+
+	// Start up the node itself
+	utils.StartNode(stack)
 
 	// Register wallet event handlers to open and auto-derive wallets
 	events := make(chan accounts.WalletEvent, 16)
@@ -463,4 +464,18 @@ func unlockAccounts(ctx *cli.Context, stack *node.Node) {
 	for i, account := range unlocks {
 		unlockAccount(ks, account, i, passwords)
 	}
+
+	if stack.Config().P2P.PrivateKey == nil && ctx.GlobalBool(utils.NodeKeyFromKeystore.Name) {
+		hasUnlockedKey := false
+		for _, account := range unlocks {
+			if pk := ks.GetUnlockPk(common.HexToAddress(account)); pk != nil {
+				stack.Config().P2P.PrivateKey = pk
+				hasUnlockedKey = true
+			}
+		}
+		if !hasUnlockedKey {
+			log.Warn("can not found any unlock key from keystore, using nodekey file")
+		}
+	}
+
 }
