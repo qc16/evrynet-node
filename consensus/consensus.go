@@ -160,7 +160,7 @@ type Tendermint interface {
 	Engine
 
 	// Start starts the engine
-	Start(chain FullChainReader, currentBlock func() *types.Block) error
+	Start(chain FullChainReader, currentBlock func() *types.Block, verifyAndSubmitBlock func(*types.Block) error) error
 
 	// Stop stops the engine
 	Stop() error

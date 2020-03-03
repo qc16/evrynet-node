@@ -117,18 +117,8 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 				return
 			}
 
-			//we only posted the block back to the miner if and only if the block is ours
-			if bl.Coinbase() == sb.address {
-				log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
-
-				results <- bl
-			} else {
-				log.Info("committing... not this node's block, exit and let downloader sync the block from proposer...", "block_hash", block.Hash(), "number", block.Number())
-			}
-			return
-			//case <-stop:
-			//log.Warn("committing... refused to exit because the sealing task might be the finalize block. The seal only exit when core commit a block", "number", block.Number())
-
+			log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
+			results <- bl
 		}
 	}(blockNumberStr)
 	return nil
@@ -167,7 +157,7 @@ func (sb *Backend) tryStartCore() bool {
 }
 
 // Start implements consensus.Tendermint.Start
-func (sb *Backend) Start(chain consensus.FullChainReader, currentBlock func() *types.Block) error {
+func (sb *Backend) Start(chain consensus.FullChainReader, currentBlock func() *types.Block, verifyAndSubmitBlock func(*types.Block) error) error {
 	sb.mutex.Lock()
 	if sb.coreStarted {
 		return tendermint.ErrStartedEngine
@@ -176,6 +166,7 @@ func (sb *Backend) Start(chain consensus.FullChainReader, currentBlock func() *t
 	//set chain reader
 	sb.chain = chain
 	sb.currentBlock = currentBlock
+	sb.verifyAndSubmitBlock = verifyAndSubmitBlock
 	if sb.commitChs != nil {
 		sb.commitChs.closeAndRemoveAllChannels()
 	}
@@ -200,7 +191,6 @@ func (sb *Backend) Start(chain consensus.FullChainReader, currentBlock func() *t
 			}
 		}
 	}
-
 }
 
 // Stop implements consensus.Tendermint.Stop

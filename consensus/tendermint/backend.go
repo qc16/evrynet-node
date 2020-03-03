@@ -49,16 +49,12 @@ type Backend interface {
 	//Cancel send the consensus block back to miner if it is invalid for consensus.
 	Cancel(block *types.Block)
 
-	//EnqueueBlock adds the block returned from consensus into fetcher queue to update the chain to that specific block.
-	EnqueueBlock(block *types.Block)
-
-	// ValidatorsByChainReader returns val-set from snapshot
-	// this function supports to get validator's addresses in case a miner not run yet.
-	// for reason because when the miner not run then chaỉn-reader in core not initialized.
-	ValidatorsByChainReader(blockNumber *big.Int, chain consensus.ChainReader) ValidatorSet
-
 	// VerifyProposalHeader checks whether a header conforms to the consensus rules of a
 	// given engine. Verifying the seal may be done optionally here, or explicitly
 	// via the VerifySeal method.
 	VerifyProposalHeader(header *types.Header) error
+
+	// VerifyProposalBlock verify post-processor state of proposal block (txs, Root, receipt).
+	// If success, the result will be send to the pending tasks of miner
+	VerifyProposalBlock(block *types.Block) error
 }
