@@ -149,19 +149,6 @@ func stickyProposer(valSet tendermint.ValidatorSet, proposer common.Address, rou
 	return valSet.GetByIndex(pick)
 }
 
-// AddValidator will add a validator to validators collection
-func (valSet *defaultSet) AddValidator(address common.Address) bool {
-	valSet.validatorMu.Lock()
-	defer valSet.validatorMu.Unlock()
-	for _, v := range valSet.validators {
-		if v.Address() == address {
-			return false
-		}
-	}
-	valSet.validators = append(valSet.validators, New(address))
-	return true
-}
-
 // RemoveValidator will remove a validator from validatorset
 func (valSet *defaultSet) RemoveValidator(address common.Address) bool {
 	valSet.validatorMu.Lock()
@@ -200,9 +187,6 @@ func (valSet *defaultSet) MinMajority() int {
 
 // F get the maximum number of faulty nodes
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
-
-// V get the minimum number of vote nodes
-func (valSet *defaultSet) V() int { return int(math.Ceil(float64(valSet.Size()) / 2)) }
 
 // Policy get proposal policy
 func (valSet *defaultSet) Policy() tendermint.ProposerPolicy { return valSet.policy }

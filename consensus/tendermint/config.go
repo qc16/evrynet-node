@@ -37,10 +37,10 @@ type Config struct {
 	BlockPeriod           uint64           `toml:",omitempty"` // Default minimum difference between two consecutive block's timestamps in second
 	TimeoutPropose        time.Duration    //Duration waiting a propose
 	TimeoutProposeDelta   time.Duration    //Increment if timeout happens at propose step to reach eventually synchronous
-	TimeoutPrevote        time.Duration    //Duration waiting for more prevote after 2/3 received
-	TimeoutPrevoteDelta   time.Duration    //Increment if timeout happens at prevoteWait to reach eventually synchronous
-	TimeoutPrecommit      time.Duration    //Duration waiting for more precommit after 2/3 received
-	TimeoutPrecommitDelta time.Duration    //Duration waiting to increase if precommit wait expired to reach eventually synchronous
+	TimeoutPrevote        time.Duration    //Duration waiting for more pre-vote after 2/3 received
+	TimeoutPrevoteDelta   time.Duration    //Increment if timeout happens at pre-voteWait to reach eventually synchronous
+	TimeoutPrecommit      time.Duration    //Duration waiting for more pre-commit after 2/3 received
+	TimeoutPrecommitDelta time.Duration    //Duration waiting to increase if pre-commit wait expired to reach eventually synchronous
 	TimeoutCommit         time.Duration    //Duration waiting to start round with new height
 	FixedValidators       []common.Address // The fixed validators
 
@@ -53,7 +53,7 @@ var DefaultConfig = &Config{
 	StakingSCAddress:      &common.Address{},
 	BlockPeriod:           1,                       // 1 seconds
 	TimeoutPropose:        3000 * time.Millisecond, //This is taken from tendermint. Might need tuning
-	TimeoutProposeDelta:   500 * time.Millisecond,  //This is taken from tendermint. Might need tunning
+	TimeoutProposeDelta:   500 * time.Millisecond,  //This is taken from tendermint. Might need tuning
 	TimeoutPrevote:        1000 * time.Millisecond,
 	TimeoutPrevoteDelta:   500 * time.Millisecond,
 	TimeoutPrecommit:      1000 * time.Millisecond,
@@ -70,37 +70,37 @@ func (cfg Config) ProposeTimeout(round int64) time.Duration {
 	) * time.Nanosecond
 }
 
-// PrevoteTimeout returns the amount of time to wait for straggler votes after receiving any +2/3 prevotes
+// PrevoteTimeout returns the amount of time to wait for straggler votes after receiving any +2/3 pre-votes
 func (cfg *Config) PrevoteTimeout(round int64) time.Duration {
 	return time.Duration(
 		cfg.TimeoutPrevote.Nanoseconds()+cfg.TimeoutPrevoteDelta.Nanoseconds()*int64(round),
 	) * time.Nanosecond
 }
 
-//PrevoteCatchupTimeout returns the amount of time to wait for prevote msgs before sending catchup msg
-//Notes: if node 1 did not receive propose msg, it will delay max = proposeTimeout before sending prevote
-// So node 2 received propose msg, it will entered prevote earlier than node 1 by proposeTimeout
-// In here, node 2 sleep about 2 times of proposeTimeout before assuming that sending prevote message of node 1 has problem
+//Pre-voteCatchupTimeout returns the amount of time to wait for pre-vote msgs before sending catchup msg
+//Notes: if node 1 did not receive propose msg, it will delay max = proposeTimeout before sending pre-vote
+// So node 2 received propose msg, it will entered pre-vote earlier than node 1 by proposeTimeout
+// In here, node 2 sleep about 2 times of proposeTimeout before assuming that sending pre-vote message of node 1 has problem
 func (cfg *Config) PrevoteCatchupTimeout(round int64) time.Duration {
 	return time.Duration(cfg.ProposeTimeout(round).Nanoseconds() * int64(2))
 }
 
-// PrecommitTimeout returns the amount of time to wait for straggler votes after receiving any +2/3 precommits
+// PrecommitTimeout returns the amount of time to wait for straggler votes after receiving any +2/3 pre-commits
 func (cfg *Config) PrecommitTimeout(round int64) time.Duration {
 	return time.Duration(
 		cfg.TimeoutPrecommit.Nanoseconds()+cfg.TimeoutPrecommitDelta.Nanoseconds()*int64(round),
 	) * time.Nanosecond
 }
 
-//PrecommitCatchupTimeout returns the amount of time to wait for precommit msgs before sending catchup msg
-//Notes: if node 1 did not receive a polka of prevote msg, it will delay max = prevoteWaitTimeout before sending precommit
-// So node 2 received a polka of prevote msg, it will entered precommit earlier than node 1 by prevoteWaitTimeout
-// In here, node 2 sleep about 2 times of prevoteWaitTimeout before assuming that sending precommit message of node 1 has problem
+//Pre-commitCatchupTimeout returns the amount of time to wait for pre-commit msgs before sending catchup msg
+//Notes: if node 1 did not receive a polka of pre-vote msg, it will delay max = pre-voteWaitTimeout before sending pre-commit
+// So node 2 received a polka of pre-vote msg, it will entered pre-commit earlier than node 1 by pre-voteWaitTimeout
+// In here, node 2 sleep about 2 times of pre-voteWaitTimeout before assuming that sending pre-commit message of node 1 has problem
 func (cfg *Config) PrecommitCatchupTimeout(round int64) time.Duration {
 	return time.Duration(cfg.PrevoteTimeout(round).Nanoseconds() * int64(2))
 }
 
-// Commit returns the amount of time to wait for straggler votes after receiving +2/3 precommits for a single block (ie. a commit).
+// Commit returns the amount of time to wait for straggler votes after receiving +2/3 pre-commits for a single block (ie. a commit).
 func (cfg *Config) Commit(t time.Time) time.Time {
 	return t.Add(cfg.TimeoutCommit)
 }

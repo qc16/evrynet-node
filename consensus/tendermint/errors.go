@@ -31,18 +31,10 @@ var (
 	ErrInvalidMixDigest = errors.New("invalid Tendermint mix digest")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
-	// errInvalidVotingChain is returned if an authorization list is attempted to
-	// be modified via out-of-range or non-contiguous headers.
-	ErrInvalidVotingChain = errors.New("invalid voting chain")
 	// errCoinBaseInvalid is returned if the value of coin base is not equals proposer's address in header
 	ErrCoinBaseInvalid = errors.New("invalid coin base address")
 	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
 	ErrInvalidUncleHash = errors.New("non empty uncle hash")
-	// errInvalidVote is returned if a nonce value is something else that the two
-	// allowed constants of 0x00..0 or 0xff..f.
-	ErrInvalidVote = errors.New("vote nonce not 0x0000000000000000 or 0xffffffffffffffff")
-	// errInvalidCandidate is return if the extra data's modifiedValidator is empty or nil
-	ErrInvalidCandidate = errors.New("candidate for validator is invalid")
 	// ErrUnknownParent is return when a proposal is sent with unknown parent hash
 	ErrUnknownParent = errors.New("unknown parent")
 )
