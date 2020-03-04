@@ -20,11 +20,13 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/log"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 const (
-	StakingSCName    = "EvrynetStaking"
-	SimulatedBalance = 10000000000
+	stakingSCName            = "EvrynetStaking"
+	simulatedGasLimit uint64 = 500000000
+	simulatedBalance         = simulatedGasLimit * params.GasPriceConfig
 )
 
 func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Address) error {
@@ -37,7 +39,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 	)
 
 	fmt.Println()
-	fmt.Println("Do you want to use precompiled Staking Smart Contract file?")
+	fmt.Println("Do you want to use precompiled Staking Smart Contract file? (default =yes)")
 	if usePrecompiledSC := w.readDefaultYesNo(true); usePrecompiledSC {
 		fmt.Println("Specify your Bytecode file path (default = ./consensus/staking_contracts/EvrynetStaking.bin/EvrynetStaking.bin)")
 		for {
@@ -131,7 +133,7 @@ func compileSCFile(scPath string) (string, *abi.ABI, error) {
 	if err != nil {
 		return "", nil, errors.Errorf("Failed to compile Solidity contract: %v", err)
 	}
-	bytecodeSC, abiSC, err := getBytecodeAndABIOfSC(fmt.Sprintf("%s:%s", scPath, StakingSCName), contracts)
+	bytecodeSC, abiSC, err := getBytecodeAndABIOfSC(fmt.Sprintf("%s:%s", scPath, stakingSCName), contracts)
 	if err != nil {
 		return "", nil, errors.Errorf("Failed to get Bytecode, ABI from contract: %v", err)
 	}
@@ -171,7 +173,7 @@ func deployStakingSCToSimulatedBE(genesis *core.Genesis, parsedABI abi.ABI, byte
 		return nil, common.Address{}, err
 	}
 	addr := crypto.PubkeyToAddress(pKey.PublicKey)
-	contractBackend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: big.NewInt(SimulatedBalance)}}, genesis.GasLimit)
+	contractBackend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: big.NewInt(int64(simulatedBalance))}}, simulatedGasLimit)
 
 	transactOpts := bind.NewKeyedTransactor(pKey)
 	smlSCAddress, _, _, err := bind.DeployContract(transactOpts, parsedABI, common.FromHex(byteCodeSC), contractBackend, stakingSCParams...)

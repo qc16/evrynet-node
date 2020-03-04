@@ -295,7 +295,7 @@ func (w *wizard) readAddress() *common.Address {
 			return nil
 		}
 		// Make sure it looks ok and return it if so
-		if len(text) > 42 {
+		if len(text) != 42 && len(text) != 40 {
 			log.Error("Invalid address length, please retry")
 			continue
 		}
@@ -319,7 +319,7 @@ func (w *wizard) readDefaultAddress(def common.Address) common.Address {
 			return def
 		}
 		// Make sure it looks ok and return it if so
-		if len(text) > 42 {
+		if len(text) != 42 && len(text) != 40 {
 			log.Error("Invalid address length, please retry")
 			continue
 		}
