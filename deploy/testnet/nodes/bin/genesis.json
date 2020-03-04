@@ -10,7 +10,7 @@
     "byzantiumBlock": 0,
     "constantinopleBlock": 0,
     "tendermint": {
-      "epoch": 1024,
+      "epoch": 40,
       "policy": 0,
       "stakingSCAddress": "0x2d5bd25efa0ab97aaca4e888c5fbcb4866904e46",
       "fixedValidators": null
