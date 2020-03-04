@@ -17,12 +17,14 @@ RUN curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/in
 RUN go run build/ci.go install
 
 RUN go build ./cmd/gev
+RUN go build ./cmd/bootnode
 
 # Pull Geth into a second stage deploy alpine container
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /evrynet-node/gev /usr/local/bin/
+COPY --from=builder /evrynet-node/bootnode /usr/local/bin/
 
 #--rpcport 8545
 #--wsport 8546
