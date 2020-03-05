@@ -84,7 +84,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 
 	//Reading params for staking SC
 	stakingSCParams = append(stakingSCParams, validators)
-	stakingSCParams = append(stakingSCParams, w.readStakingSCParams(genesis)...)
+	stakingSCParams = append(stakingSCParams, w.readStakingSCParams(len(validators), genesis)...)
 
 	fmt.Println()
 	fmt.Println("What is the address of staking smart contract? (avoid special address from 0x0000000000000000000000000000000000000001 to 0x0000000000000000000000000000000000000008)")
@@ -202,11 +202,16 @@ func getStakingSCData(contractBackend *backends.SimulatedBackend, smlSCAddress c
 }
 
 // readStakingSCParams returns the params to deploy staking smart-contract and writes epoch to genesis config
-func (w *wizard) readStakingSCParams(genesis *core.Genesis) []interface{} {
+func (w *wizard) readStakingSCParams(valCount int, genesis *core.Genesis) []interface{} {
 	fmt.Println()
 	fmt.Println("Input params to init staking SC:")
-	fmt.Println("- What is the address of candidates owner?")
-	_candidatesOwner := w.readMandatoryAddress()
+
+	fmt.Printf("- What is the address of candidates owner? (must be %v owners)", valCount)
+	fmt.Println()
+	var _candidateOwners []common.Address
+	for i := 0; i < valCount; i++ {
+		_candidateOwners = append(_candidateOwners, *w.readMandatoryAddress())
+	}
 	fmt.Println("- What is the admin address of staking SC?")
 	_admin := w.readMandatoryAddress()
 	fmt.Println("- How many blocks for epoch period? (default = 1024)")
@@ -219,7 +224,7 @@ func (w *wizard) readStakingSCParams(genesis *core.Genesis) []interface{} {
 	fmt.Println("- What is the min cap of vote? (minimum amount of EVR tokens to vote for a candidate)")
 	_minVoteCap := w.readMandatoryBigInt()
 	genesis.Config.Tendermint.Epoch = _epochPeriod.Uint64()
-	return []interface{}{*_candidatesOwner, _epochPeriod, _startBlock, _maxValidatorSize, _minValidatorStake, _minVoteCap, *_admin}
+	return []interface{}{_candidateOwners, _epochPeriod, _startBlock, _maxValidatorSize, _minValidatorStake, _minVoteCap, *_admin}
 }
 
 func getDataForStorage(storage map[common.Hash]common.Hash) func(key common.Hash, val common.Hash) bool {

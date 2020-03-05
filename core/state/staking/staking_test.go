@@ -52,7 +52,7 @@ func TestGetValidators(t *testing.T) {
 	authOpts.Nonce = big.NewInt(0)
 	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 
-	addr, tx, _, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates[0], epoch, startBlock, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
+	addr, tx, _, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates, epoch, startBlock, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
 	require.NoError(t, err)
 
 	be.Commit()

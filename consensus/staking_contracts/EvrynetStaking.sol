@@ -129,7 +129,7 @@ contract EvrynetStaking is ReentrancyGuard {
      * @dev this list candidates should be the validators for epoch
      * @dev other validators should be added after deployed
      * @param _candidates list of initial candidates
-     * @param candidatesOwner owner of list candidates above
+     * @param _candidateOwners list owner of initial candidates above
      * @param _epochPeriod number of blocks for each epoch
      * @param _startBlock start block of epoch 0
      * @param _maxValidatorSize number of validators for consensus
@@ -138,7 +138,7 @@ contract EvrynetStaking is ReentrancyGuard {
     */
     constructor(
         address[] memory _candidates,
-        address candidatesOwner,
+        address[] memory _candidateOwners,
         uint _epochPeriod,
         uint _startBlock,
         uint _maxValidatorSize,
@@ -161,10 +161,10 @@ contract EvrynetStaking is ReentrancyGuard {
         for(uint i = 0; i < _candidates.length; i++) {
             candidateData[_candidates[i]] = CandidateData({
                 isCandidate: true,
-                owner: candidatesOwner,
+                owner: _candidateOwners[i],
                 totalStakeData: stakeData
             });
-            candidateData[_candidates[i]].voterStakeData[candidatesOwner] = stakeData;
+            candidateData[_candidates[i]].voterStakeData[_candidateOwners[i]] = stakeData;
         }
 
         initCandidates = _candidates;
