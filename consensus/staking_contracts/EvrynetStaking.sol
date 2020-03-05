@@ -374,9 +374,15 @@ contract EvrynetStaking is ReentrancyGuard {
     }
 
     function getListCandidates()
-        public view returns(address[] memory)
+        public view returns(address[] memory _candidates, uint[] memory stakes, uint epoch, uint validatorSize)
     {
-        return candidates;
+        epoch = getCurrentEpoch();
+        validatorSize = maxValidatorSize;
+        _candidates = candidates;
+        stakes = new uint[](_candidates.length);
+        for(uint i = 0; i < _candidates.length; i++) {
+            stakes[i] = candidateData[_candidates[i]].totalStake;
+        }
     }
 
     function getCandidateStake(address _candidate) public view returns(uint256) {

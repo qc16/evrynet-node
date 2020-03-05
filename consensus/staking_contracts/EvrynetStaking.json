@@ -278,8 +278,23 @@
 		"outputs": [
 			{
 				"internalType": "address[]",
-				"name": "",
+				"name": "_candidates",
 				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "stakes",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "epoch",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "validatorSize",
+				"type": "uint256"
 			}
 		],
 		"payable": false,
