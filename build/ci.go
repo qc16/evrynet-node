@@ -210,7 +210,7 @@ func doTest(cmdline []string) {
 
 	// TODO: fix all remaining tests so this could be ./...
 	packages := []string{
-		"./accounts/...", "./cmd/...", "./common/...", "./consensus/...", "./core/...", "./crypto/...",
+		"./accounts/...", "./cmd/...", "./common/...", "./consensus/...", "./crypto/...",
 		"./dashboard/...", "./ethstats/...", "./event/...", "./evr/...", "./evrclient/...", "./evrdb/...",
 		"./graphql/...", "./internal/...", "./les/...", "./light/...", "./log/...",
 		"./metrics/...", "./miner/...", "./mobile/...", "./node/...", "./p2p/...", "./params/...",
@@ -218,6 +218,14 @@ func doTest(cmdline []string) {
 	}
 	if *integration {
 		packages = []string{"./tests/provider_logic_test/..."}
+	} else {
+		gotest := goTool("test", buildFlags(env)...)
+		gotest.Args = append(gotest.Args, "-p", "1", "-timeout", "5m", "--short")
+		if *coverage {
+			gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover")
+		}
+		gotest.Args = append(gotest.Args, "./core/...")
+		build.MustRun(gotest)
 	}
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
