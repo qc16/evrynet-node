@@ -1,6 +1,6 @@
 #!/bin/bash
-#deploy/testnet/deploy_bootnode_nodes_explorer.sh <path_to_share_volumes> <rpc_corsdomain> <tag_version_or_develop_branch> <environment> <genesis_path> <deploy_explorer>
-# Ex: deploy/testnet/deploy_bootnode_nodes_explorer.sh /Volumes/Work/Kyber/evrynet-node/tests/nodes "*" develop testnet /Volumes/Work/Kyber/evrynet-node/deploy/testnet/nodes/bin/genesis.json n
+#deploy/testnet/deploy_bootnode_nodes.sh <path_to_share_volumes> <rpc_corsdomain> <tag_version_or_develop_branch> <environment> <genesis_path>
+# Ex: deploy/testnet/deploy_bootnode_nodes.sh /Volumes/Work/Kyber/evrynet-node/tests/nodes "*" develop testnet /Volumes/Work/Kyber/evrynet-node/deploy/testnet/nodes/bin/genesis.json
 
 localVolumes=$1
 shift
@@ -12,10 +12,8 @@ env=$1
 shift
 genesisPath=$1
 shift
-deployExplorer=$1
-shift
 
-if [[ "$localVolumes" == "" || "$rpccorsdomain" == "" || "$deployExplorer" == "" || "$version" == "" || "$env" == "" || "$genesisPath" == "" ]]
+if [[ "$localVolumes" == "" || "$rpccorsdomain" == "" || "$version" == "" || "$env" == "" || "$genesisPath" == "" ]]
 then
   echo 'Missing params'
   exit 1
@@ -111,21 +109,3 @@ for i in "${!nodes[@]}"; do
       "$NODE_TAG_ENV"
   fi
 done
-
-
-if [[ "$deployExplorer" == "y" ]]; then
-  EXPLORER_REPOSITORY="kybernetwork/evrynet-explorer"
-  EXPLORER_TAG_ENV="$EXPLORER_REPOSITORY:$version-$env"
-
-  echo "--- Pulling images $EXPLORER_TAG_ENV ..."
-  yes | sudo docker pull "$EXPLORER_TAG_ENV"
-
-  sudo docker stop gev-explorer
-  sudo docker rm -f gev-explorer
-
-  echo "--- Starting explorer on image $EXPLORER_TAG_ENV..."
-  yes | sudo docker run --name gev-explorer -d \
-      --publish 8080:8080 \
-      -e GETH_RPCPORT=22001 \
-      "$EXPLORER_TAG_ENV"
-fi
