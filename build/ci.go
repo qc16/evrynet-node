@@ -209,8 +209,13 @@ func doTest(cmdline []string) {
 	env := build.Env()
 
 	// TODO: fix all remaining tests so this could be ./...
-	packages := []string{"./consensus/tendermint/...", "./cmd/...", "./internal/...", "./evrclient/...",
-		"./miner/...", "./core/state/staking/..."}
+	packages := []string{
+		"./accounts/...", "./cmd/...", "./common/...", "./consensus/...", "./core/...", "./crypto/...",
+		"./dashboard/...", "./ethstats/...", "./event/...", "./evr/...", "./evrclient/...", "./evrdb/...",
+		"./graphql/...", "./internal/...", "./les/...", "./light/...", "./log/...",
+		"./metrics/...", "./miner/...", "./mobile/...", "./node/...", "./p2p/...", "./params/...",
+		"./rlp/...", "./rpc/...", "./signer/...", "./trie/...", "./whisper/...",
+	}
 	if *integration {
 		packages = []string{"./tests/provider_logic_test/..."}
 	}
