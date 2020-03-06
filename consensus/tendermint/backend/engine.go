@@ -25,7 +25,9 @@ import (
 var (
 	// TendermintBlockReward tempo fix the Block reward in wei for successfully mining a block
 	// TODO: will modify after
-	TendermintBlockReward = big.NewInt(5e+18)
+	TendermintBlockReward           = big.NewInt(5e+18)
+	validatorRewardPercentage int64 = 50
+	voterRewardPercentage     int64 = 50
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
@@ -452,13 +454,17 @@ func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header) {
+	uncles []*types.Header) error {
 	// Accumulate any block rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header)
+	if err := sb.accumulateRewards(chain, state, header); err != nil {
+		log.Error("failed to accumulateRewards", "err", err)
+		return err
+	}
 
 	// Since there is a change in stateDB, its trie must be update
 	// In case block reached EIP158 hash, the state will attempt to delete empty object as EIP158 sepcification
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	return nil
 }
 
 // FinalizeAndAssemble runs any post-transaction state modifications (e.g. block rewards)
@@ -469,7 +475,10 @@ func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 func (sb *Backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header)
+	if err := sb.accumulateRewards(chain, state, header); err != nil {
+		log.Error("failed to accumulateRewards", "err", err)
+		return nil, err
+	}
 
 	// No block rewards, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -586,11 +595,100 @@ func blockProposer(header *types.Header) (common.Address, error) {
 
 // AccumulateRewards credits the coinbase of the given block with the proposing
 // reward.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
-	// Accumulate the rewards for the proposer
-	reward := new(big.Int).Set(TendermintBlockReward)
+func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *state.StateDB, header *types.Header) error {
+	// If fixed validators (test) then return
+	if chainReader.Config().Tendermint.FixedValidators != nil {
+		reward := new(big.Int).Set(TendermintBlockReward)
+		state.AddBalance(header.Coinbase, reward)
+		return nil
+	}
+	var (
+		currentBlock = header.Number.Uint64()
+		epoch        = chainReader.Config().Tendermint.Epoch
+		start        = time.Now()
+	)
 
-	state.AddBalance(header.Coinbase, reward)
+	if currentBlock%epoch != 0 {
+		return nil
+	}
+
+	validatorsReward := calculateValidatorsReward(chainReader, currentBlock, epoch, header)
+	transitionHeader := chainReader.GetHeaderByNumber(currentBlock - epoch)
+	validatorAdds, err := utils.GetValSetAddresses(transitionHeader)
+	if err != nil {
+		return err
+	}
+	stateDB, err := sb.chain.StateAt(transitionHeader.Root)
+	if err != nil {
+		return err
+	}
+	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), transitionHeader, sb.chain.Config(), vm.Config{})
+	validatorsData, err := stakingCaller.GetValidatorsData(*sb.config.StakingSCAddress, validatorAdds)
+	if err != nil {
+		return err
+	}
+
+	finalReward := calculateReward(validatorsData, validatorsReward)
+	for addr, value := range finalReward {
+		state.AddBalance(addr, value)
+	}
+	log.Debug("accumulateRewards", "number", currentBlock, "elapsed", common.PrettyDuration(time.Since(start)))
+	return nil
+}
+
+// calculateValidatorsReward gets reward from chainReader and current header (from finalize)
+// reward includes block rewards and tx fee from block number currentBlock - epoch +1
+func calculateValidatorsReward(chainReader consensus.ChainReader, currentBlock uint64, epoch uint64, header *types.Header) map[common.Address]*big.Int {
+	validatorsReward := make(map[common.Address]*big.Int)
+	addReward := func(addr common.Address, value *big.Int) {
+		if current, ok := validatorsReward[addr]; ok {
+			validatorsReward[addr] = new(big.Int).Add(current, value)
+		} else {
+			validatorsReward[addr] = value
+		}
+	}
+	for i := currentBlock - epoch + 1; i <= currentBlock; i++ {
+		var currentHeader *types.Header
+		if i != currentBlock {
+			currentHeader = chainReader.GetHeaderByNumber(i)
+		} else {
+			currentHeader = header
+		}
+		reward := new(big.Int).Set(TendermintBlockReward)
+		txFee := new(big.Int).Mul(big.NewInt(int64(currentHeader.GasUsed)), big.NewInt(params.GasPriceConfig))
+		addReward(currentHeader.Coinbase, new(big.Int).Add(reward, txFee))
+	}
+	return validatorsReward
+}
+
+// calculateReward divides rewards into 50% to owner and 50% among voters
+// rewards for voters is proportional to voters'stake
+func calculateReward(validatorsData map[common.Address]staking.CandidateData, validatorsReward map[common.Address]*big.Int) map[common.Address]*big.Int {
+	finalReward := make(map[common.Address]*big.Int)
+	addReward := func(addr common.Address, value *big.Int) {
+		if current, ok := finalReward[addr]; ok {
+			finalReward[addr] = new(big.Int).Add(current, value)
+		} else {
+			finalReward[addr] = new(big.Int).Set(value)
+		}
+	}
+	for addr, validatorData := range validatorsData {
+		totalReward, ok := validatorsReward[addr]
+		if !ok {
+			continue
+		}
+		totalVoterReward := new(big.Int).Mul(totalReward, big.NewInt(voterRewardPercentage))
+		totalVoterReward = new(big.Int).Div(totalVoterReward, big.NewInt(100))
+		for voter, voterStake := range validatorData.VoterStakes {
+			voterReward := new(big.Int).Mul(totalVoterReward, voterStake)
+			voterReward = new(big.Int).Div(voterReward, validatorData.TotalStake)
+			addReward(voter, voterReward)
+		}
+		validatorReward := new(big.Int).Mul(totalReward, big.NewInt(validatorRewardPercentage))
+		validatorReward = new(big.Int).Div(validatorReward, big.NewInt(100))
+		addReward(validatorData.Owner, validatorReward)
+	}
+	return finalReward
 }
 
 // addValSetToHeader Add validator set back to the tendermint extra.

@@ -25,7 +25,9 @@ var (
 	ErrEmptyValidatorSet = errors.New("empty validator set")
 	// ErrLengthOfCandidatesAndStakesMisMatch returns when lengths stakes and candidates are not match
 	ErrLengthOfCandidatesAndStakesMisMatch = errors.New("length of stakes is not equal to length of candidates")
-	indexValidatorMapping                  = map[string]uint64{
+	// ErrLengthOfVotesAndStakesMisMatch returns when lengths voters and stakes are not match
+	ErrLengthOfVotesAndStakesMisMatch = errors.New("length of voters is not equal to length of stakes")
+	indexValidatorMapping             = map[string]uint64{
 		"validators": 0,
 	}
 
@@ -34,6 +36,13 @@ var (
 
 type StakingCaller interface {
 	GetValidators(common.Address) ([]common.Address, error)
+	GetValidatorsData(common.Address, []common.Address) (map[common.Address]CandidateData, error)
+}
+
+type CandidateData struct {
+	Owner       common.Address
+	VoterStakes map[common.Address]*big.Int
+	TotalStake  *big.Int
 }
 
 // BackendContractCaller creates a wrapper with statedb to implements ContractCaller
@@ -44,6 +53,42 @@ type BackendContractCaller struct {
 	chainContext core.ChainContext
 	chainConfig  *params.ChainConfig
 	vmConfig     vm.Config
+}
+
+func (caller *BackendContractCaller) GetValidatorsData(scAddress common.Address, candidates []common.Address) (map[common.Address]CandidateData, error) {
+	sc, err := staking_contracts.NewStakingContractsCaller(scAddress, caller)
+	if err != nil {
+		return nil, err
+	}
+
+	allVoterStake := make(map[common.Address]CandidateData)
+	for _, candidate := range candidates {
+		candidateData, err := sc.GetCandidateData(nil, candidate)
+		if err != nil {
+			return nil, err
+		}
+		voters, err := sc.GetVoters(nil, candidate)
+		if err != nil {
+			return nil, err
+		}
+		voterStakes, err := sc.GetVoterStakes(nil, candidate, voters)
+		if err != nil {
+			return nil, err
+		}
+		if len(voterStakes) != len(voters) { // if this happens, blame Mike not me
+			return nil, ErrLengthOfVotesAndStakesMisMatch
+		}
+		voteStake := make(map[common.Address]*big.Int)
+		for i := range voterStakes {
+			voteStake[voters[i]] = voterStakes[i]
+		}
+		allVoterStake[candidate] = CandidateData{
+			VoterStakes: voteStake,
+			Owner:       candidateData.Owner,
+			TotalStake:  candidateData.TotalStake,
+		}
+	}
+	return allVoterStake, nil
 }
 
 // GetValidators returns validators from stateDB and block number of the caller by smart-contract's address
