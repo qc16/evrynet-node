@@ -1,40 +1,66 @@
 #!/bin/bash
-#deploy/testnet/deploy_bootnode_nodes.sh <path_to_share_volumes> <rpc_corsdomain> <tag_version_or_develop_branch> <environment> <genesis_path>
-# Ex: deploy/testnet/deploy_bootnode_nodes.sh /Volumes/Work/Kyber/evrynet-node/tests/nodes "*" develop testnet /Volumes/Work/Kyber/evrynet-node/deploy/testnet/nodes/bin/genesis.json
 
-localVolumes=$1
-shift
-rpccorsdomain=$1
-shift
-version=$1
-shift
-env=$1
-shift
-genesisPath=$1
-shift
+# Input params
+localVolumes=
+until [[ $localVolumes ]]; do read -rp "- Path of Sharing Volume: " localVolumes; done
+genesisPath=
+until [[ $genesisPath ]]; do read -rp "- Path of Genesis File: " genesisPath; done
+rpccorsdomain=
+until [[ $rpccorsdomain ]]; do read -rp "- RPC Cors Domain: " rpccorsdomain; done
+version=
+until [[ $version ]]; do read -rp "- Tag Version/Branch Name you want to deploy: " version; done
+env=
+until [[ $env ]]; do read -rp "- Environment of Image: " env; done
 
-if [[ "$localVolumes" == "" || "$rpccorsdomain" == "" || "$version" == "" || "$env" == "" || "$genesisPath" == "" ]]
-then
-  echo 'Missing params'
-  exit 1
-fi
-
+BASEDIR=$(dirname "$0")
 BOOTNODE_REPOSITORY="kybernetwork/evrynet-bootnode"
 BOOTNODE_TAG_ENV="$BOOTNODE_REPOSITORY:$version-$env"
 
 NODE_REPOSITORY="kybernetwork/evrynet-node"
 NODE_TAG_ENV="$NODE_REPOSITORY:$version-$env"
 
-echo "--- Pulling images $BOOTNODE_TAG_ENV ..."
-yes | sudo docker pull "$BOOTNODE_TAG_ENV"
-
-echo "--- Pulling images $NODE_TAG_ENV ..."
-yes | sudo docker pull "$NODE_TAG_ENV"
+echo -e "\n=> The image $BOOTNODE_TAG_ENV will be used to deploy Bootnode!"
+echo -e "=> The image $NODE_TAG_ENV will be used to deploy Node!\n"
 
 
-echo "--- Stopping nodes 1,2,3 ..."
-for i in 1 2 3
-do
+# Check status of bootnode image
+if [[ "$(sudo docker images -q "$BOOTNODE_TAG_ENV" 2>/dev/null)" == "" ]]; then
+  pullBootnodeImage=
+  until [[ $pullBootnodeImage ]]; do read -rp "** Image $BOOTNODE_TAG_ENV doesn't exist on your local! Do you want to pull this image? " pullBootnodeImage; done
+
+  if [[ "$pullBootnodeImage" == "y" ]]; then
+    yes | sudo docker pull "$BOOTNODE_TAG_ENV"
+    # Check status of bootnode image
+    if [[ "$(sudo docker images -q "$BOOTNODE_TAG_ENV" 2>/dev/null)" == "" ]]; then
+      echo "=> Can not pull Image $BOOTNODE_TAG_ENV . Make sure this image has existed on your hub!"
+      exit 1
+    fi
+  else
+    echo "=> You must build bootnode image on you local. Read README.md to know the way to build!"
+    exit 1
+  fi
+fi
+
+# Check status of node image
+if [[ "$(sudo docker images -q "$NODE_TAG_ENV" 2>/dev/null)" == "" ]]; then
+  pullNodeImage=
+  until [[ $pullNodeImage ]]; do read -rp "** Image $NODE_TAG_ENV doesn't exist on your local! Do you want to pull this image? " pullNodeImage; done
+
+  if [[ "$pullNodeImage" == "y" ]]; then
+    yes | sudo docker pull "$NODE_TAG_ENV"
+    # Check status of node image
+    if [[ "$(sudo docker images -q "$NODE_TAG_ENV" 2>/dev/null)" == "" ]]; then
+      echo "=> Can not pull Image $NODE_TAG_ENV . Make sure this image has existed on your hub!"
+      exit 1
+    fi
+  else
+    echo "=> You must build node image on you local. Read README.md to know the way to build!"
+    exit 1
+  fi
+fi
+
+echo -e "\n--- Stopping nodes 1,2,3 ..."
+for i in 1 2 3; do
   yes | sudo docker exec -it gev-node-"$i" /bin/sh ./stop_node.sh
   sleep 3
 done
@@ -47,65 +73,15 @@ sudo docker rm -f gev-bootnode gev-node-1 gev-node-2 gev-node-3
 # Clear network bridge
 yes | sudo docker network prune
 
-# shellcheck disable=SC2028
-echo "--- Starting bootnode ..."
-yes | sudo docker run --name gev-bootnode -d \
-  -p 30300:30300/tcp -p 30300:30300/udp \
-  -e NODE_HEX_KEY='9dbcbd49f9f4e1b4949178d7e413142267050377ff99d81c08e371cdea712f09' \
-  "$BOOTNODE_TAG_ENV"
+echo -e "\n--- Starting bootnode ..."
+yes | sudo imageTag="$BOOTNODE_TAG_ENV" docker-compose -f "$BASEDIR"/docker-compose.yml up -d gev-bootnode
 
 bootnodeIP=$(sudo docker inspect -f "{{ .NetworkSettings.IPAddress }}" gev-bootnode)
-
 if [[ "$bootnodeIP" == "" ]]; then
   echo "=> Bootnode ID is empty!"
   exit 1
 fi
 
-nodes=(1 2 3)
-nodekeys=(
-  'ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1'
-  'e74f3525fb69f193b51d33f4baf602c4572d81ede57907c61a62eaf9ed95374a'
-  '276cd299f350174a6005525a523b59fccd4c536771e4876164adb9f1459b79e4'
-)
-bootnodeID='aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f'
-for i in "${!nodes[@]}"; do
-  nodeID="${nodes[i]}"
-
-  # shellcheck disable=SC2181
-  if [ "$nodeID" != "3" ];
-  then
-    echo "--- Starting normal node $nodeID ..."
-    yes | sudo docker run --name gev-node-"$nodeID" -d \
-      -v "$genesisPath":/node/genesis.json \
-      -v "$localVolumes"/node_"$nodeID"/data:/node/data \
-      -v "$localVolumes"/node_"$nodeID"/log:/node/log \
-      -p 2200"$nodeID":8545/tcp -p 2200"$nodeID":8545/udp \
-      -p 606"$nodeID":6060 \
-      -p 3030"$nodeID":30303/tcp -p 3030"$nodeID":30303/udp \
-      -e NODE_ID="${nodes[i]}" \
-      -e NODEKEYHEX="${nodekeys[i]}" \
-      -e BOOTNODE_ID=$bootnodeID \
-      -e BOOTNODE_IP="$bootnodeIP" \
-      -e RPC_CORSDOMAIN="$rpccorsdomain" \
-      "$NODE_TAG_ENV"
-  else
-    echo "--- Starting metrics node $nodeID ..."
-    yes | sudo docker run --name gev-node-"$nodeID" -d \
-      -v "$genesisPath":/node/genesis.json \
-      -v "$localVolumes"/node_"$nodeID"/data:/node/data \
-      -v "$localVolumes"/node_"$nodeID"/log:/node/log \
-      -p 2200"$nodeID":8545/tcp -p 2200"$nodeID":8545/udp \
-      -p 606"$nodeID":6060 \
-      -p 3030"$nodeID":30303/tcp -p 3030"$nodeID":30303/udp \
-      -e NODE_ID="${nodes[i]}" \
-      -e NODEKEYHEX="${nodekeys[i]}" \
-      -e BOOTNODE_ID=$bootnodeID \
-      -e BOOTNODE_IP="$bootnodeIP" \
-      -e RPC_CORSDOMAIN="$rpccorsdomain" \
-      -e HAS_METRIC=1 \
-      -e METRICS_ENDPOINT="http://52.220.52.16:8086" \
-      -e METRICS_USER='test' \
-      -e METRICS_PASS='test' \
-      "$NODE_TAG_ENV"
-  fi
-done
+echo -e "\n--- Starting nodes ..."
+yes | sudo bootnodeIP="$bootnodeIP" genesisPath="$genesisPath" imageTag="$NODE_TAG_ENV" shareVolumes="$localVolumes" rpccorsdomain="$rpccorsdomain" \
+  docker-compose -f "$BASEDIR"/docker-compose.yml up -d gev-node-1 gev-node-2 gev-node-3

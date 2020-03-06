@@ -5,12 +5,15 @@
 First of all, you need to change the `login` & `password` (is your token) at file `deploy/testnet/builder/token` to yours. You can get a token from [Here](https://github.com/settings/tokens).
 
 You use this file `deploy/testnet/build_images_for_bootnode_node_explorer.sh` with appropriate to params to build images for bootnode, node & explorer.  
-The params are `<tag_version_or_develop_branch> <evironment> <build_explorer>`:
-- `tag_version_or_develop_branch`: is specific tag or branch you wan to build (1.1.2, develop ...)
-- `environment`: to use as suffix of image tag (testnet, local, ...)
-- `build_explorer`: to build image for explorer or not (y ,n)
 
-Ex:  `deploy/testnet/build_images_for_bootnode_node_explorer.sh develop testnet n`
+```shell script
+$ deploy/testnet/build_images_for_bootnode_node_explorer.sh
+- Tag Version/Branch Name you want to build: develop   (specific tag or branch you want to build (1.1.2, develop ...))
+- Environment of Image: testnet                        (use as a suffix of image tag (testnet, local, ...))
+- Do you want to build Explorer Image? y               (build an explorer image or not (y,n))
+```
+
+
 
 After building successfully, you can check the images by command `docker images`. The result should be like this:
 ```
@@ -22,7 +25,8 @@ kybernetwork/evrynet-builder    develop-testnet     b5b539596145        6 hours 
 ```
 
 ### Pushing images to Docker Hub
-Now you must push images which you just built above to docker hub.   
+If you want to reuse built images, you should push them to docker hub. If not, ignore this step.
+
 Make sure you already login to the docker hub by `docker login`.  
 Use `docker push <REPOSITORY>:<TAG>` to push the image to Docker Hub.  
 
@@ -35,23 +39,27 @@ docker push kybernetwork/evrynet-explorer:develop-testnet
 
 
 ## 2. Deployment
-### 2.1. Using Quick start With Predefined Config
+### 2.1. Using Quickstart With Predefined Config
 #### Run Testnet Docker with 3 nodes and the explorer on a single machine
 Everything was setup. You only need to run this script to deploy new bootnode and nodes   
-`deploy/testnet/deploy_bootnode_nodes.sh <path_to_share_volumes> <rpc_corsdomain> <tag_version_or_develop_branch> <environment> <genesis_path>`    
+`deploy/testnet/deploy_bootnode_nodes.sh`  
 
-Ex: `deploy/testnet/deploy_bootnode_nodes.sh /home/ubuntu/testnet/nodes "*" develop testnet /home/ubuntu/evrynet-node/deploy/testnet/nodes/bin/genesis.json`
-- `path_to_share_volumes`: the path to nodes folder. On Testnet is `/home/ubuntu/testnet/nodes`
-- `rpc_corsdomain`: to allow URL can call API
-- `tag_version_or_develop_branch`: is a specific tag or branch you want to build (1.1.2, develop ...)
-- `environment`: to use as a suffix of image tag (testnet, local, ...)
-- `genesis_path`: to inject genesis file to image
+```shell script
+$ deploy/testnet/deploy_bootnode_nodes.sh
+- Path of Sharing Volume: /home/ubuntu/testnet/nodes                                            (the path to nodes folder. On Testnet is `/home/ubuntu/testnet/nodes`)
+- Path of Genesis File: /home/ubuntu/evrynet-node/deploy/testnet/nodes/bin/genesis.json         (inject genesis file to the image)
+- RPC Cors Domain: *                                                                            (allow URL can call API)
+- Tag Version/Branch Name you want to deploy: develop                                           (a specific tag or branch you want to build (1.1.2, develop ...)) 
+- Environment of Image: testnet                                                                 (use as a suffix of image tag (testnet, local, ...))
+```  
 
 To deploy the explorer run this script:   
-`deploy/testnet/deploy_explorer.sh <tag_version_or_develop_branch> <environment>`   
-Ex: `deploy/testnet/deploy_explorer.sh develop testnet`
-- `tag_version_or_develop_branch`: is a specific tag or branch you want to build (1.1.2, develop ...)
-- `environment`: to use as a suffix of image tag (testnet, local, ...)
+```
+$ deploy/testnet/deploy_explorer.sh
+- Tag Version/Branch Name you want to deploy: develop             (specific tag or branch you want to build (1.1.2, develop ...))
+- Environment of Image: testnet                                   (use as a suffix of image tag (testnet, local, ...))
+```
+
 
 #### Nodes Information
 Everything about 3 nodes I put at `deploy/testnet/nodes/data`.  
@@ -198,16 +206,17 @@ The bellow example explains how to deploy 3 nodes manually
 
 9. Run the deployment script or to run each node from executable:
 
- To deploy using pre-written scripts:  
- Run this command `deploy/testnet/deploy_bootnode_nodes.sh <path_to_share_volumes> <rpc_corsdomain> <tag_version_or_develop_branch> <environment> <genesis_path>` with the suitable params
-- `path_to_share_volumes`: the path to nodes folder. On Testnet is `/home/ubuntu/testnet/nodes`
-- `rpc_corsdomain`: to allow URL can call API
-- `tag_version_or_develop_branch`: is a specific tag or branch you want to build (1.1.2, develop ...)
-- `environment`: to use as a suffix of image tag (testnet, local, ...)
-- `genesis_path`: to inject genesis file to image
+To deploy using pre-written scripts:  
+ Run this command `deploy/testnet/deploy_bootnode_nodes.sh` with the suitable params. This command can use on Testnet server:  
+```shell script
+$ deploy/testnet/deploy_bootnode_nodes.sh
+- Path of Sharing Volume: /home/ubuntu/testnet/nodes                                            (the path to nodes folder. On Testnet is `/home/ubuntu/testnet/nodes`)
+- Path of Genesis File: /home/ubuntu/evrynet-node/deploy/testnet/nodes/bin/genesis.json         (inject genesis file to the image)
+- RPC Cors Domain: *                                                                            (allow URL can call API)
+- Tag Version/Branch Name you want to deploy: develop                                           (a specific tag or branch you want to build (1.1.2, develop ...)) 
+- Environment of Image: testnet                                                                 (use as a suffix of image tag (testnet, local, ...))
+```  
 
-Ex: This command can use on Testnet server   
-`deploy/testnet/deploy_bootnode_nodes.sh /home/ubuntu/testnet/nodes "*" develop testnet /home/ubuntu/evrynet-node/deploy/testnet/nodes/bin/genesis.json`  
 
  To deploy by running binary files:
 - You must start the bootnode first to let nodes discover each other
@@ -233,4 +242,3 @@ Ex: This command can use on Testnet server
 --bootnodes: you will see this value when you start bootnode. Change `172.25.0.100` to IP of bootnode server
 
 - To run another node, you can reuse the above command. You must change the value of params `rpcport, port` and `node_1.log`
-

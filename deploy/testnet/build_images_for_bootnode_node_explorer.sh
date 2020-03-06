@@ -1,23 +1,11 @@
 #!/bin/bash
 
-# This script will clone, build & push images of bootnode, node to docker hub by version
-# ./build_images_for_bootnode_node_explorer.sh <tag_version_or_develop_branch> <environment> <build_explorer>
-# Ex: deploy/testnet/build_images_for_bootnode_node_explorer.sh develop testnet n
-
-
-version=$1
-shift
-env=$1
-shift
-buildExplorer=$1
-shift
-
-
-if [[ "$version" == "" || "$env" == "" || "$buildExplorer" == "" ]]
-then
-  echo 'Missing params'
-  exit 1
-fi
+version=
+until [[ $version ]]; do read -rp "- Tag Version/Branch Name you want to build: " version; done
+env=
+until [[ $env ]]; do read -rp "- Environment of Image: " env; done
+buildExplorer=
+until [[ $buildExplorer ]]; do read -rp "- Do you want to build Explorer Image? " buildExplorer; done
 
 BASEDIR=$(dirname "$0")
 BUILDER_REPOSITORY="kybernetwork/evrynet-builder"
