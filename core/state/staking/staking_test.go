@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Evrynetlabs/evrynet-node/accounts/abi/bind"
@@ -92,8 +93,16 @@ func TestGetValidators(t *testing.T) {
 	authOpts.Value = big.NewInt(1000)
 	tx3, err := contract.Vote(authOpts, newCandidate)
 	require.NoError(t, err)
+
+	authOpts = bind.NewKeyedTransactor(privateKey)
+	authOpts.Nonce = big.NewInt(2)
+	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
+	authOpts.Value = big.NewInt(30)
+	tx4, err := contract.Vote(authOpts, newCandidate)
+	require.NoError(t, err)
 	be.Commit()
 	assertTxSuccess(t, be, tx3.Hash())
+	assertTxSuccess(t, be, tx4.Hash())
 	stakingCaller, err = be.GetStakingCaller()
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
@@ -102,6 +111,104 @@ func TestGetValidators(t *testing.T) {
 	for _, val := range validators {
 		fmt.Println(val.Hex())
 	}
+}
+
+func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
+	var (
+		candidates = []common.Address{
+			common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a"),
+			common.HexToAddress("0x954e4BF2C68F13D97C45db0e02645D145dB6911f"),
+		}
+		epoch             = big.NewInt(300000)
+		startBlock        = common.Big0
+		maxValidatorSize  = big.NewInt(100)
+		minValidatorStake = big.NewInt(20)
+		minVoteCap        = big.NewInt(10)
+		adminAddr         = common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a")
+		newCandidate      = common.HexToAddress("0x377615c604BA7639F37dFd62dC1909357a542DAB")
+	)
+
+	privateKey, err := crypto.HexToECDSA(privateKeyHex)
+	require.NoError(t, err)
+	publicKey := privateKey.Public()
+	addr := crypto.PubkeyToAddress(*publicKey.(*ecdsa.PublicKey))
+
+	be := backends.NewSimulatedBackend(core.GenesisAlloc{
+		addr: core.GenesisAccount{
+			Balance: big.NewInt(0).Exp(big.NewInt(10), big.NewInt(18), nil),
+		},
+		newCandidate: core.GenesisAccount{
+			Balance: new(big.Int).Mul(big.NewInt(gasLimit), big.NewInt(params.GasPriceConfig)),
+		},
+	}, gasLimit)
+
+	authOpts := bind.NewKeyedTransactor(privateKey)
+	authOpts.Nonce = big.NewInt(0)
+	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
+
+	addr, tx, contract, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates, epoch, startBlock, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
+	require.NoError(t, err)
+	be.Commit()
+	assertTxSuccess(t, be, tx.Hash())
+
+	stakingCaller, err := be.GetStakingCaller()
+	require.NoError(t, err)
+
+	validators, err := stakingCaller.GetValidators(addr)
+	require.NoError(t, err)
+	require.Equal(t, len(validators), 2)
+	//register new candidate, with 0 stake from owner
+	authOpts = bind.NewKeyedTransactor(privateKey)
+	authOpts.Nonce = big.NewInt(1)
+	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
+	tx2, err := contract.Register(authOpts, newCandidate, newCandidate)
+	require.NoError(t, err)
+	be.Commit()
+	assertTxSuccess(t, be, tx2.Hash())
+	stakingCaller, err = be.GetStakingCaller()
+	require.NoError(t, err)
+	validators, err = stakingCaller.GetValidators(addr)
+	require.NoError(t, err)
+	require.Equal(t, len(validators), 2)
+
+	data, err := contract.GetListCandidates(nil)
+	require.Equal(t, len(data.Candidates), 3)
+	// new validator is voted
+	ownerPk, _ := crypto.HexToECDSA(newCandidatePkHex)
+	authOpts = bind.NewKeyedTransactor(ownerPk)
+	authOpts.Nonce = big.NewInt(0)
+	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
+	authOpts.Value = big.NewInt(1000)
+	tx3, err := contract.Vote(authOpts, newCandidate)
+	require.NoError(t, err)
+
+	authOpts = bind.NewKeyedTransactor(privateKey)
+	authOpts.Nonce = big.NewInt(2)
+	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
+	authOpts.Value = big.NewInt(30)
+	tx4, err := contract.Vote(authOpts, newCandidate)
+	require.NoError(t, err)
+	be.Commit()
+	assertTxSuccess(t, be, tx3.Hash())
+	assertTxSuccess(t, be, tx4.Hash())
+	stakingCaller, err = be.GetStakingCaller()
+	require.NoError(t, err)
+	validators, err = stakingCaller.GetValidators(addr)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(validators))
+	for _, val := range validators {
+		fmt.Println(val.Hex())
+	}
+	// test get voter stake
+	voterStakes, err := stakingCaller.GetValidatorsData(addr, validators)
+	require.NoError(t, err)
+	assert.Equal(t, len(voterStakes), 3)
+	require.Contains(t, voterStakes, newCandidate)
+	assert.Equal(t, voterStakes[newCandidate].Owner, newCandidate)
+	require.Contains(t, voterStakes[newCandidate].VoterStakes, newCandidate)
+	assert.Equal(t, voterStakes[newCandidate].VoterStakes[newCandidate], big.NewInt(1000))
+	require.Contains(t, voterStakes[newCandidate].VoterStakes, adminAddr)
+	assert.Equal(t, voterStakes[newCandidate].VoterStakes[adminAddr], big.NewInt(30))
 }
 
 func assertTxSuccess(t *testing.T, be *backends.SimulatedBackend, txHash common.Hash) {
