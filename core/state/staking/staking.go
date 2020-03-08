@@ -48,11 +48,15 @@ type BackendContractCaller struct {
 
 // GetValidators returns validators from stateDB and block number of the caller by smart-contract's address
 func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]common.Address, error) {
+	var (
+		candidatesArr []common.Address
+		stakesArr     []*big.Int
+	)
 	sc, err := staking_contracts.NewStakingContractsCaller(scAddress, caller)
 	if err != nil {
 		return nil, err
 	}
-	data, err := sc.GetListCandidatesWithCurrentData(nil)
+	data, err := sc.GetListCandidates(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -60,26 +64,45 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 	if len(data.Candidates) != len(data.Stakes) {
 		return nil, ErrLengthOfCandidatesAndStakesMisMatch
 	}
-
-	if len(data.Candidates) == 0 {
+	// check and remove if owner stake of candidate is greater or equal minValidatorStake
+	minValidatorStake, err := sc.MinValidatorStake(nil)
+	if err != nil {
+		return nil, err
+	}
+	for i, candidate := range data.Candidates {
+		owner, err := sc.GetCandidateOwner(nil, candidate)
+		if err != nil {
+			return nil, err
+		}
+		stake, err := sc.GetVoterStake(nil, candidate, owner)
+		if err != nil {
+			return nil, err
+		}
+		if stake.Cmp(minValidatorStake) < 0 {
+			continue
+		}
+		candidatesArr = append(candidatesArr, data.Candidates[i])
+		stakesArr = append(stakesArr, data.Stakes[i])
+	}
+	if len(candidatesArr) == 0 || len(stakesArr) == 0 {
 		return nil, ErrEmptyValidatorSet
 	}
 
-	if len(data.Candidates) < int(data.MaxValSize.Int64()) {
-		return data.Candidates, nil
+	if len(candidatesArr) < int(data.ValidatorSize.Int64()) {
+		return candidatesArr, nil
 	}
 	// sort and returns topN
 	stakes := make(map[common.Address]*big.Int)
-	for i := 0; i < len(data.Candidates); i++ {
-		stakes[data.Candidates[i]] = data.Stakes[i]
+	for i := 0; i < len(candidatesArr); i++ {
+		stakes[candidatesArr[i]] = stakesArr[i]
 	}
-	sort.Slice(data.Candidates, func(i, j int) bool {
-		if stakes[data.Candidates[i]].Cmp(stakes[data.Candidates[j]]) == 0 {
-			return strings.Compare(data.Candidates[i].String(), data.Candidates[j].String()) > 0
+	sort.Slice(candidatesArr, func(i, j int) bool {
+		if stakes[candidatesArr[i]].Cmp(stakes[candidatesArr[j]]) == 0 {
+			return strings.Compare(candidatesArr[i].String(), candidatesArr[j].String()) > 0
 		}
-		return stakes[data.Candidates[i]].Cmp(stakes[data.Candidates[j]]) > 0
+		return stakes[candidatesArr[i]].Cmp(stakes[candidatesArr[j]]) > 0
 	})
-	return data.Candidates[:int(data.MaxValSize.Int64())], err
+	return candidatesArr[:int(data.ValidatorSize.Int64())], err
 }
 
 // NewBECaller returns
