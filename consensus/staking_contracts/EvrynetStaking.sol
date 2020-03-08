@@ -70,8 +70,6 @@ contract EvrynetStaking is ReentrancyGuard {
     // 2 epochs
     uint constant internal CANDIDATE_LOCKING_PERIOD = 2;
     uint constant internal VOTER_LOCKING_PERIOD = 2;
-    uint constant internal POWER110 = 2 ** 110;
-    uint constant internal POWER36 = 2 ** 36;
 
     struct CandidateData {
         bool isCandidate;
@@ -128,6 +126,11 @@ contract EvrynetStaking is ReentrancyGuard {
         _;
     }
 
+    /**
+    * @dev check if sender can unvote with amount _cap
+    * @dev _cap must be positive, not greater than current voter's stake
+    * @dev if voter is owner of the _candidate, remaing amt must not be less than minValidatorStake
+    */
     modifier onlyValidUnvoteAmount (address _candidate, uint256 _cap) {
         require(_cap > 0, "_cap should be positive");
         address voter = msg.sender;
@@ -171,7 +174,6 @@ contract EvrynetStaking is ReentrancyGuard {
         require(_maxValidatorSize >= _candidates.length);
 
         candidates = _candidates;
-        // modifed epoch = 0, curStake  = _minValidatorStake, preStake = 0
         for(uint i = 0; i < _candidates.length; i++) {
             candidateData[_candidates[i]] = CandidateData({
                 isCandidate: true,
