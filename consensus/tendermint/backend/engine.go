@@ -632,18 +632,6 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
 	validators, err := stakingCaller.GetValidators(sb.stakingContractAddr)
 	if err != nil {
-		if err == staking.ErrEmptyValidatorSet {
-			log.Warn("empty val set replace with valset at previous epoch")
-			valset, err := sb.valSetInfo.GetValSet(sb.chain, header.Number)
-			if err != nil {
-				return nil, err
-			}
-			for _, val := range valset.List() {
-				validators = append(validators, val.Address())
-			}
-			sb.computedValSetCache.Add(header.Number.Uint64(), validators)
-			return validators, nil
-		}
 		return nil, err
 	}
 	sb.computedValSetCache.Add(header.Number.Uint64(), validators)
