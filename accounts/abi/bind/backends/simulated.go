@@ -453,6 +453,11 @@ func (b *SimulatedBackend) GetStakingCaller() (staking.StakingCaller, error) {
 	return staking.NewStakingCaller(state, b.blockchain, header, b.config, vm.Config{}), nil
 }
 
+// CurrentStateDb returns the current stateDB for testing
+func (b *SimulatedBackend) CurrentStateDb() (*state.StateDB, error) {
+	return b.blockchain.State()
+}
+
 // callmsg implements core.Message to allow passing it as a transaction simulator.
 type callmsg struct {
 	ethereum.CallMsg

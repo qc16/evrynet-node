@@ -15,7 +15,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/state"
 	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
-	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
@@ -627,8 +626,8 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	if err != nil {
 		return nil, err
 	}
-	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
-	validators, err := stakingCaller.GetValidators(sb.stakingContractAddr)
+	state := staking.NewStateDbCaller(stateDB)
+	validators, err := state.GetValidators(sb.stakingContractAddr)
 	if err != nil {
 		return nil, err
 	}
