@@ -27,7 +27,10 @@ func (cc *commitChannels) sendBlock(block *types.Block) {
 		log.Error("no commit channel available", "block_number", block.Number().String())
 		return
 	}
-	ch <- block
+	select { // allow only 1 block send to the channel
+	case ch <- block:
+	default:
+	}
 }
 
 //createCommitChannelAndCloseIfExist creates the channel and if the channel is exist then close it and replace with new one

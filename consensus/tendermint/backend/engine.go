@@ -89,10 +89,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 		return
 	}
 
-	blockNumberStr := block.Number().String()
-
-	ch := sb.commitChs.createCommitChannelAndCloseIfExist(blockNumberStr)
-	//TODO: clear previous data of proposal
+	ch := sb.commitChs.createCommitChannelAndCloseIfExist(block.Number().String())
 	// post block into tendermint engine
 	go func(block *types.Block) {
 		//nolint:tendermint.Errheck
@@ -102,25 +99,17 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	}(block)
 	// miner won't be able to interrupt a sealing task
 	// a sealing task can only exist when core consensus agreed upon a block
-	go func(blockNumberStr string) {
+	go func(ch <-chan *types.Block) {
 		//TODO: DO we need timeout for consensus?
-		for bl := range ch {
-			// remove lock whether Seal is success or not
-			if bl.Number().String() != blockNumberStr {
-				log.Warn("committing.. Received a different block number than the sealing block number", "received", bl.Number().String(), "expected", blockNumberStr)
-			}
+		if bl, ok := <-ch; ok {
 			//this step is to stop other go routine wait for a block
 			sb.commitChs.closeAndRemoveCommitChannel(bl.Number().String())
-
-			if bl == nil {
-				log.Error("committing... Received nil ")
-				return
-			}
-
 			log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
 			results <- bl
+			return
 		}
-	}(blockNumberStr)
+		results <- nil // interrupt with new sealing or failing to seal
+	}(ch)
 	return nil
 }
 

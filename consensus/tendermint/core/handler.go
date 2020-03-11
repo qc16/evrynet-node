@@ -136,9 +136,7 @@ func (c *core) handleNewBlock(block *types.Block) {
 		logger.Errorw("new block number is smaller than current block",
 			"new_block_number", block.Number(), "state.BlockNumber", state.BlockNumber())
 		//return a nil block to allow miner to send over a new one
-		c.backend.Cancel(types.NewBlockWithHeader(&types.Header{
-			Number: block.Number(),
-		}))
+		c.backend.Cancel(block)
 
 		return
 	}

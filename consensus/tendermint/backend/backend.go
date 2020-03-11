@@ -340,7 +340,7 @@ func (sb *Backend) Commit(block *types.Block) {
 }
 
 func (sb *Backend) Cancel(block *types.Block) {
-	sb.commitChs.sendBlock(block)
+	sb.commitChs.closeAndRemoveCommitChannel(block.Number().String())
 }
 
 func (sb *Backend) CurrentHeadBlock() *types.Block {
