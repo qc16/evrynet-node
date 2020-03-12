@@ -80,8 +80,10 @@ contract EvrynetStaking is ReentrancyGuard {
     }
 
     struct WithdrawState {
-      mapping(uint => uint) caps;
-      uint[] epochs;
+        // withdrawal cap for each epoch
+        mapping(uint => uint) caps;
+        // list of epochs voter can withdraw
+        uint[] epochs;
     }
 
     mapping(address => WithdrawState) withdrawsState;
@@ -122,7 +124,7 @@ contract EvrynetStaking is ReentrancyGuard {
     }
 
     modifier onlyValidVoteCap {
-        require(msg.value >= minVoterCap, "amount low");
+        require(msg.value >= minVoterCap, "low vote amout");
         _;
     }
 
@@ -138,6 +140,10 @@ contract EvrynetStaking is ReentrancyGuard {
         require(voterStake >= _cap, "not enough to unvote");
         if (candidateData[_candidate].owner == voter) {
             require(voterStake.sub(_cap) >= minValidatorStake, "not enough to unvote");
+        } else {
+            // normal voter, remaining amount should be either 0 or >= minVoterCap
+            uint remainAmt = voterStake.sub(_cap);
+            require(remainAmt == 0 || remainAmt >= minVoterCap, "invalid unvote amt");
         }
         _;
     }
@@ -375,6 +381,9 @@ contract EvrynetStaking is ReentrancyGuard {
         return (block.number.sub(startBlock)).div(epochPeriod);
     }
 
+    /**
+    * Return list of candidates with stakes data, current epoch and max validator size
+    */
     function getListCandidates()
         public view returns(address[] memory _candidates, uint[] memory stakes, uint epoch, uint validatorSize)
     {
