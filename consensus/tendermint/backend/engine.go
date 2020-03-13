@@ -108,7 +108,6 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 			results <- bl
 			return
 		}
-		results <- nil // interrupt with new sealing or failing to seal
 	}(ch)
 	return nil
 }

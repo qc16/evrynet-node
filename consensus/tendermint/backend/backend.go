@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	fetcherID         = "tendermint"
 	maxNumberMessages = 64 * 128 * 6 // 64 node * 128 round * 6 messages per round. These number are made higher than expected for safety.
 	maxTrigger        = 1000         // maximum of trigger signal that dequeuing op will store.
 
@@ -336,7 +337,11 @@ func (sb *Backend) FindExistingPeers(valSet tendermint.ValidatorSet) map[common.
 
 //Commit implement tendermint.Backend.Commit()
 func (sb *Backend) Commit(block *types.Block) {
-	sb.commitChs.sendBlock(block)
+	isSent := sb.commitChs.sendBlock(block)
+	// if don't have committed channel to sent, then enqueue for downloading
+	if !isSent {
+		sb.broadcaster.Enqueue(fetcherID, block)
+	}
 }
 
 func (sb *Backend) Cancel(block *types.Block) {
