@@ -148,6 +148,7 @@ func (sb *Backend) tryStartCore() bool {
 func (sb *Backend) Start(chain consensus.FullChainReader, currentBlock func() *types.Block, verifyAndSubmitBlock func(*types.Block) error) error {
 	sb.mutex.Lock()
 	if sb.coreStarted {
+		sb.mutex.Unlock()
 		return tendermint.ErrStartedEngine
 	}
 
