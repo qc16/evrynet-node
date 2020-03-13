@@ -295,6 +295,11 @@
 				"internalType": "uint256",
 				"name": "validatorSize",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "minValidatorCap",
+				"type": "uint256"
 			}
 		],
 		"payable": false,
