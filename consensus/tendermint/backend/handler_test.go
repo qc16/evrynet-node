@@ -141,3 +141,28 @@ func TestBackend_HandleMsg(t *testing.T) {
 	time.Sleep(time.Millisecond * 16)
 	require.Equal(t, int64(numMsg+2), mockCore.numMsg)
 }
+
+// test double start-stop is not blocking
+func TestBackend_StartStop(t *testing.T) {
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+
+	be, blockchain, err := createBlockchainAndBackendFromGenesis(FixedValidators)
+	require.NoError(t, err)
+	mockCore := NewMockCore(be)
+	be.core = mockCore
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-time.After(time.Second * 10):
+			panic("timeout")
+		case <-done:
+			return
+		}
+	}()
+
+	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock, nil))
+	require.Error(t, be.Start(blockchain, blockchain.CurrentBlock, nil))
+	require.NoError(t, be.Stop())
+	require.Error(t, be.Stop())
+	close(done)
+}
