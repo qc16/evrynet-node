@@ -1,5 +1,16 @@
 #!/bin/bash
 
+#Define stop process
+stopProcess() {
+    echo "- Container stopped, performing stop node at PID $gev_pid ..."
+    kill -TERM "$gev_pid" 2>/dev/null
+}
+
+#Trap TERM INT
+trap 'stopProcess' TERM INT
+
+#Execute a command
+echo "- Create genesis block for node $NODE_ID!"
 ./gev --datadir ./data init ./genesis.json
 
 # shellcheck disable=SC2039
@@ -25,7 +36,10 @@ if [[ $HAS_METRIC ]]; then
     --allow-insecure-unlock \
     --pprof --pprofaddr 0.0.0.0 --pprofport 6060 \
     --nodekeyhex "$NODEKEYHEX"\
-    --metrics --metrics.influxdb --metrics.influxdb.endpoint "$METRICS_ENDPOINT" --metrics.influxdb.username $METRICS_USER --metrics.influxdb.password $METRICS_PASS 2>>./log/node.log
+    --metrics --metrics.influxdb --metrics.influxdb.endpoint "$METRICS_ENDPOINT" --metrics.influxdb.username $METRICS_USER --metrics.influxdb.password $METRICS_PASS 2>>./log/node.log &
+
+  gev_pid=$!
+  echo "- PID of node NODE_ID is $gev_pid"
 else
   echo "Start node $NODE_ID!"
   ./gev --datadir ./data --identity "$NODE_ID" --verbosity 4 --tendermint.blockperiod 1 --syncmode full --networkid 15 --mine \
@@ -35,5 +49,13 @@ else
     --allow-insecure-unlock \
     --pprof --pprofaddr 0.0.0.0 --pprofport 6060 \
     --nodekeyhex "$NODEKEYHEX"\
-    --rpcapi admin,db,eth,evr,debug,miner,net,shh,txpool,personal,web3 2>>./log/node.log
+    --rpcapi admin,db,eth,evr,debug,miner,net,shh,txpool,personal,web3 2>>./log/node.log &
+
+  gev_pid=$!
+  echo "- PID of node NODE_ID is $gev_pid"
 fi
+
+#Wait
+wait $gev_pid
+trap - TERM INT
+wait $gev_pid
