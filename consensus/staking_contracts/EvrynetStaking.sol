@@ -213,7 +213,6 @@ contract EvrynetStaking is ReentrancyGuard {
 
     /**
      * @dev vote for a candidate, amount of EVRY token is msg.value
-     * @dev must vote for an active campaign 
      * @param candidate address of candidate to vote for
      * 
     */
@@ -382,13 +381,15 @@ contract EvrynetStaking is ReentrancyGuard {
     }
 
     /**
-    * Return list of candidates with stakes data, current epoch and max validator size
+    * Return list of candidates with stakes data, current epoch, max validator size and min cap to be a validtor
     */
     function getListCandidates()
-        public view returns(address[] memory _candidates, uint[] memory stakes, uint epoch, uint validatorSize)
+        public view
+        returns(address[] memory _candidates, uint[] memory stakes, uint epoch, uint validatorSize, uint minValidatorCap)
     {
         epoch = getCurrentEpoch();
         validatorSize = maxValidatorSize;
+        minValidatorCap = minValidatorStake;
         _candidates = candidates;
         stakes = new uint[](_candidates.length);
         for(uint i = 0; i < _candidates.length; i++) {
