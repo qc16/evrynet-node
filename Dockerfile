@@ -7,15 +7,14 @@ WORKDIR /evrynet-node
 ADD . .
 
 # Load all project dependencies
-RUN ./vendor.sh
+RUN go mod download
 
 # Install golangci-lint tool
 RUN curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
 				sh -s -- -b $GOPATH/bin v1.21.0
 
 # Build the gev binary
-#TODO: not sure why but if replace this by 'go run build/ci.go install', Jenkins CI is failed by out of memory
-RUN go run build/ci.go install ./cmd/gev
+RUN go run build/ci.go install
 
 RUN go build ./cmd/gev
 RUN go build ./cmd/bootnode
