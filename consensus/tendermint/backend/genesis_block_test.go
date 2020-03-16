@@ -39,7 +39,7 @@ func TestGenesisblockWithStakingSC(t *testing.T) {
 		{
 			name:        "StakingSC",
 			genesisType: StakingSC,
-			validators:  4,
+			validators:  3,
 		},
 		{
 			name:        "FixedValidators",
@@ -82,7 +82,7 @@ func TestBackendCallGetListCandidateFromSC(t *testing.T) {
 	stakingCaller := coreStaking.NewStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
 	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
 	assert.NoError(t, err)
-	assert.Equal(t, 4, len(validators))
+	assert.Equal(t, 3, len(validators))
 }
 
 type Config struct {
