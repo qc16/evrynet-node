@@ -204,7 +204,7 @@ func getStakingSCData(contractBackend *backends.SimulatedBackend, smlSCAddress c
 func (w *wizard) readStakingSCParams(genesis *core.Genesis, validators []common.Address) []interface{} {
 	fmt.Println()
 	fmt.Println("Input params to init staking SC:")
-	fmt.Printf("- What is the address of candidates owner? (expected %d address)", len(validators))
+	fmt.Printf("- What is the address of candidates owner? (expected %d address)\n", len(validators))
 	var _candidatesOwners []common.Address
 	for {
 		if address := w.readAddress(); address != nil {

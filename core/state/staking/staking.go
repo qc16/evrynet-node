@@ -65,10 +65,7 @@ func (caller *BackendContractCaller) GetValidators(scAddress common.Address) ([]
 		return nil, ErrLengthOfCandidatesAndStakesMisMatch
 	}
 	// check and remove if owner stake of candidate is greater or equal minValidatorStake
-	minValidatorStake, err := sc.MinValidatorStake(nil)
-	if err != nil {
-		return nil, err
-	}
+	minValidatorStake := data.MinValidatorCap
 	for i, candidate := range data.Candidates {
 		owner, err := sc.GetCandidateOwner(nil, candidate)
 		if err != nil {
