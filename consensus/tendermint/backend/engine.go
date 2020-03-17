@@ -330,10 +330,18 @@ func (sb *Backend) getValSetFromChain(chain consensus.ChainReader, header *types
 		return sb.valSetInfo.GetValSet(chain, big.NewInt(int64(blockNumber)))
 	}
 	// check if parent headers contains transition block
-	for len(parents) != 0 {
-		currentHeader = parents[len(parents)-1]
-		if currentHeader.Hash() != hash || currentHeader.Number.Uint64() != number {
-			return nil, consensus.ErrUnknownAncestor
+	for {
+		if len(parents) != 0 {
+			currentHeader = parents[len(parents)-1]
+			if currentHeader.Hash() != hash || currentHeader.Number.Uint64() != number {
+				return nil, consensus.ErrUnknownAncestor
+			}
+			parents = parents[:len(parents)-1]
+		} else {
+			currentHeader = chain.GetHeader(hash, number)
+			if currentHeader == nil {
+				return nil, consensus.ErrUnknownAncestor
+			}
 		}
 		if number%sb.config.Epoch == 0 {
 			validators, err := utils.GetValSetAddresses(currentHeader)
@@ -342,7 +350,6 @@ func (sb *Backend) getValSetFromChain(chain consensus.ChainReader, header *types
 			}
 			return validator.NewSet(validators, sb.config.ProposerPolicy, int64(blockNumber)), nil
 		}
-		parents = parents[:len(parents)-1]
 		number, hash = number-1, currentHeader.ParentHash
 	}
 	// if the parents does not contain the transition block, return an error
@@ -614,6 +621,9 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 		}
 	}
 	start := time.Now()
+	if sb.chain == nil {
+		return nil, errors.New("no chain reader")
+	}
 	stateDB, err := sb.chain.StateAt(header.Root)
 	if err != nil {
 		return nil, err
