@@ -58,7 +58,7 @@ func TestGetValidatorsFromStateDb(t *testing.T) {
 
 	stateDB, err := be.CurrentStateDb()
 	require.NoError(t, err)
-	state := staking.NewStateDbCaller(stateDB)
+	state := staking.NewStateDbStakingCaller(stateDB)
 	validators, err := state.GetValidators(addr)
 	require.NoError(t, err)
 	for _, val := range validators {

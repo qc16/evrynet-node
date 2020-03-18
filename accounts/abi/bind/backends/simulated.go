@@ -443,6 +443,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	return nil
 }
 
+//TODO: Add a param to choose evm or statedb staking caller
 //GetStakingCaller returns staking caller for testing
 func (b *SimulatedBackend) GetStakingCaller() (staking.StakingCaller, error) {
 	state, err := b.blockchain.State()
@@ -450,7 +451,7 @@ func (b *SimulatedBackend) GetStakingCaller() (staking.StakingCaller, error) {
 		return nil, err
 	}
 	header := b.blockchain.CurrentHeader()
-	return staking.NewStakingCaller(state, b.blockchain, header, b.config, vm.Config{}), nil
+	return staking.NewEVMStakingCaller(state, b.blockchain, header, b.config, vm.Config{}), nil
 }
 
 // CurrentStateDb returns the current stateDB for testing
