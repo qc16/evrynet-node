@@ -79,7 +79,7 @@ func TestBackendCallGetListCandidateFromSC(t *testing.T) {
 	assert.NoError(t, err)
 
 	header := backend.chain.CurrentHeader()
-	stakingCaller := coreStaking.NewStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
+	stakingCaller := coreStaking.NewEVMStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
 	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(validators))
