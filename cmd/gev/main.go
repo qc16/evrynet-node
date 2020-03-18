@@ -131,7 +131,7 @@ var (
 		utils.NoDiscoverFlag,
 		utils.DiscoveryV5Flag,
 		utils.NetrestrictFlag,
-		utils.NodeKeyFromKeystore,
+		utils.NodeKeyFromKeystoreFlag,
 		utils.NodeKeyFileFlag,
 		utils.NodeKeyHexFlag,
 		utils.DeveloperFlag,
@@ -465,7 +465,7 @@ func unlockAccounts(ctx *cli.Context, stack *node.Node) {
 		unlockAccount(ks, account, i, passwords)
 	}
 
-	if stack.Config().P2P.PrivateKey == nil && ctx.GlobalBool(utils.NodeKeyFromKeystore.Name) {
+	if stack.Config().P2P.PrivateKey == nil && ctx.GlobalBool(utils.NodeKeyFromKeystoreFlag.Name) {
 		hasUnlockedKey := false
 		for _, account := range unlocks {
 			if pk := ks.GetUnlockPk(common.HexToAddress(account)); pk != nil {

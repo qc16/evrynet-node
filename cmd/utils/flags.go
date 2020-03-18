@@ -607,7 +607,7 @@ var (
 		Usage: "Comma separated enode URLs for P2P v5 discovery bootstrap (light server, light nodes)",
 		Value: "",
 	}
-	NodeKeyFromKeystore = cli.BoolFlag{
+	NodeKeyFromKeystoreFlag = cli.BoolFlag{
 		Name:  "nodekeyfromkeystore",
 		Usage: "Enables importing the 1st account from keystore as nodekey",
 	}
