@@ -252,7 +252,7 @@ func (c *core) handlePropose(msg message) error {
 	go c.reBroadcastMsg(msg, logger)
 
 	state.SetProposalReceived(&proposal)
-	//WARNING: THIS piece of code is experimental
+	//TODO: Simulate and test the case where core receives proposal at these steps: prevote/ precommit
 	if state.Step() <= RoundStepPropose && state.IsProposalComplete() {
 		log.Info("handle proposal: received proposal, proposal completed. before enterPrevote Jump to enterPrevote")
 		// Move onto the next step
