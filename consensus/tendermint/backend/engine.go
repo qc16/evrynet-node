@@ -612,7 +612,7 @@ func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *s
 		return nil
 	}
 
-	validatorsReward := calculateValidatorsReward(chainReader, currentBlock, epoch, header)
+	validatorsReward := calculateTotalValidatorsReward(chainReader, epoch, header)
 	transitionHeader := chainReader.GetHeaderByNumber(currentBlock - epoch)
 	validatorAdds, err := utils.GetValSetAddresses(transitionHeader)
 	if err != nil {
@@ -636,9 +636,10 @@ func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *s
 	return nil
 }
 
-// calculateValidatorsReward gets reward from chainReader and current header (from finalize)
+// calculateTotalValidatorsReward gets reward from chainReader and current header (from finalize)
 // reward includes block rewards and tx fee from block number currentBlock - epoch +1
-func calculateValidatorsReward(chainReader consensus.ChainReader, currentBlock uint64, epoch uint64, header *types.Header) map[common.Address]*big.Int {
+func calculateTotalValidatorsReward(chainReader consensus.ChainReader, epoch uint64, header *types.Header) map[common.Address]*big.Int {
+	var currentBlock = header.Number.Uint64()
 	validatorsReward := make(map[common.Address]*big.Int)
 	addReward := func(addr common.Address, value *big.Int) {
 		if current, ok := validatorsReward[addr]; ok {

@@ -22,7 +22,8 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
-//TestBackend_Finalize this is integration test between core.BlockChain and tendermint.Backend
+//TestBackend_RewardNoTx this is integration test between core.BlockChain and tendermint.Backend
+// this test check the reward of validator without any transactions and voters
 func TestBackend_RewardNoTx(t *testing.T) {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 	_, addr := getValidatorAccounts()
@@ -37,7 +38,8 @@ func TestBackend_RewardNoTx(t *testing.T) {
 	})
 }
 
-//TestBackend_Finalize this is integration test between core.BlockChain and tendermint.Backend
+//TestBackend_RewardNoTx_WithVoter this is integration test between core.BlockChain and tendermint.Backend
+// this test check the reward of validators and voters without any transactions
 func TestBackend_RewardNoTx_WithVoter(t *testing.T) {
 	var (
 		nonce uint64 = 0
@@ -96,6 +98,8 @@ func TestBackend_RewardNoTx_WithVoter(t *testing.T) {
 	})
 }
 
+// TestBackend_RewardWithTx this is integration test between core.BlockChain and tendermint.Backend
+// this test check the reward of validators with included transaction fee
 func TestBackend_RewardWithTx(t *testing.T) {
 	const (
 		numberTransaction = 100

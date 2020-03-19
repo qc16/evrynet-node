@@ -27,9 +27,6 @@ var (
 	ErrLengthOfCandidatesAndStakesMisMatch = errors.New("length of stakes is not equal to length of candidates")
 	// ErrLengthOfVotesAndStakesMisMatch returns when lengths voters and stakes are not match
 	ErrLengthOfVotesAndStakesMisMatch = errors.New("length of voters is not equal to length of stakes")
-	indexValidatorMapping             = map[string]uint64{
-		"validators": 0,
-	}
 
 	maxGasGetValSet uint64 = 500000000
 )

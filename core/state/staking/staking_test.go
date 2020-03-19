@@ -85,6 +85,7 @@ func TestGetValidators(t *testing.T) {
 
 	data, err := contract.GetListCandidates(nil)
 	require.Equal(t, len(data.Candidates), 3)
+	require.NotNil(t, data)
 	// new validator is voted
 	ownerPk, _ := crypto.HexToECDSA(newCandidatePkHex)
 	authOpts = bind.NewKeyedTransactor(ownerPk)
