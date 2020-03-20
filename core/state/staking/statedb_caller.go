@@ -13,7 +13,7 @@ import (
 
 //Note: this constant order is based on smart-contract code. Pls modify it carefully
 const (
-	adminIndex             uint64 = iota + 1 //1
+	withdrawsStateIndex    uint64 = iota + 1 //1
 	candidateVotersIndex                     //2
 	candidateDataIndex                       //3
 	candidatesIndex                          //4
@@ -22,7 +22,7 @@ const (
 	maxValidatorSizeIndex                    //7
 	minValidatorStakeIndex                   //8
 	minVoterCapIndex                         //9
-	withdrawsStateIndex                      //10
+	adminIndex                               //10
 )
 
 // stateDBStakingCaller creates a wrapper with statedb to implements ContractCaller
