@@ -50,7 +50,7 @@ func (c *stateDBStakingCaller) GetCandidateStake(scAddress common.Address, candi
 func (c *stateDBStakingCaller) GetValidators(scAddress common.Address) ([]common.Address, error) {
 	// check if this address is a valid contract, this will help us return better error
 	codes := c.stateDB.GetCode(scAddress)
-	if len(codes) != 0 {
+	if len(codes) == 0 {
 		return nil, bind.ErrNoCode
 	}
 
@@ -105,7 +105,7 @@ func (c *stateDBStakingCaller) getMinValidatorStake(scAddress common.Address) *b
 }
 
 func (c *stateDBStakingCaller) getCandidates(scAddress common.Address) ([]common.Address, error) {
-	slot := candidateDataIndex
+	slot := candidatesIndex
 	slotHash := common.BigToHash(new(big.Int).SetUint64(slot))
 	arrLength := c.stateDB.GetState(scAddress, slotHash)
 	if arrLength.Big().Cmp(big.NewInt(0)) == 0 {
