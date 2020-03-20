@@ -66,7 +66,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 		}
 	} else {
 		fmt.Println()
-		fmt.Println("Specify your staking smart contract path (default = ./consensus/staking_contracts/EvrynetStaking.sol)")
+		fmt.Println("Specify your staking smart contract path (default = ./consensus/staking_contracts/EvrynetStaking.sol). Please download the latest sc from https://github.com/Evrynetlabs/staking-contract")
 		for {
 			if scPath = w.readDefaultString("./consensus/staking_contracts/EvrynetStaking.sol"); len(scPath) > 0 {
 				break
