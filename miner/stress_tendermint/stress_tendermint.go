@@ -57,7 +57,7 @@ const (
 	defaultConfigFile  = "./stress_config.json"
 	dataDir            = "test_data"
 	txsBatchSize       = 1024
-	maxTxPoolSize      = 40960
+	maxTxPoolSize      = 20480
 )
 
 func main() {
@@ -157,7 +157,11 @@ func forceBroadcastPendingTxs(ethereum *evr.Evrynet) {
 	}
 	for _, pendingTxs := range pendings {
 		ethereum.TxPool().State()
-		txs = append(txs, pendingTxs...)
+		if len(pendingTxs) > txsBatchSize {
+			txs = append(txs, pendingTxs[:txsBatchSize]...)
+		} else {
+			txs = append(txs, pendingTxs...)
+		}
 	}
 	go func() {
 		ethereum.GetPm().ForceBroadcastTxs(txs)

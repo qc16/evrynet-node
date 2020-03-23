@@ -37,9 +37,7 @@ func (sb *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 }
 
 func (sb *Backend) sendDataToCore(data []byte) error {
-	return sb.EventMux().Post(tendermint.MessageEvent{
-		Payload: data,
-	})
+	return sb.checkAndSendMsg(data)
 }
 
 func (sb *Backend) replayTendermintMsg() (done bool, err error) {

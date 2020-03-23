@@ -511,7 +511,7 @@ func (self *StateDB) createObject(addr common.Address, opts ...types.CreateAccou
 	prev = self.getStateObject(addr)
 	var account Account
 	if len(opts) > 0 {
-		log.Info("got optional parameters, take only the first Option, ignore the rest", opts)
+		log.Info("got optional parameters, take only the first Option, ignore the rest", "opts", opts)
 		account = Account{
 			OwnerAddress: opts[0].OwnerAddress,
 		}

@@ -607,6 +607,10 @@ var (
 		Usage: "Comma separated enode URLs for P2P v5 discovery bootstrap (light server, light nodes)",
 		Value: "",
 	}
+	NodeKeyFromKeystoreFlag = cli.BoolFlag{
+		Name:  "nodekeyfromkeystore",
+		Usage: "Enables importing the 1st account from keystore as nodekey",
+	}
 	NodeKeyFileFlag = cli.StringFlag{
 		Name:  "nodekey",
 		Usage: "P2P node key file",
@@ -678,7 +682,7 @@ var (
 	}
 	TendermintFaultyModeFlag = cli.Uint64Flag{
 		Name:  "tendermint.faultymode",
-		Usage: "0: not faulty, 1: send fake proposal",
+		Usage: "0: not faulty, 1: send fake proposal, 2: enable randomly stop message sending",
 		Value: evr.DefaultConfig.Tendermint.FaultyMode,
 	}
 	TendermintTimeoutProposeFlag = cli.DurationFlag{
@@ -1754,7 +1758,9 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		setTendermint(ctx, tdmintConfig)
 		tdmintConfig.ProposerPolicy = tendermint.ProposerPolicy(config.Tendermint.ProposerPolicy)
 		tdmintConfig.Epoch = config.Tendermint.Epoch
-		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey(), tdmintBackend.WithDB(chainDb))
+		tdmintConfig.StakingSCAddress = config.Tendermint.StakingSCAddress
+		tdmintConfig.FixedValidators = config.Tendermint.FixedValidators
+		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey())
 	} else {
 		engine = ethash.NewFaker()
 		if !ctx.GlobalBool(FakePoWFlag.Name) {

@@ -53,12 +53,12 @@ func (w *wizard) makeGenesis() {
 		Difficulty: big.NewInt(524288),
 		Alloc:      make(core.GenesisAlloc),
 		Config: &params.ChainConfig{
-			HomesteadBlock:      big.NewInt(1),
-			EIP150Block:         big.NewInt(2),
-			EIP155Block:         big.NewInt(3),
-			EIP158Block:         big.NewInt(3),
-			ByzantiumBlock:      big.NewInt(4),
-			ConstantinopleBlock: big.NewInt(5),
+			HomesteadBlock:      big.NewInt(0),
+			EIP150Block:         big.NewInt(0),
+			EIP155Block:         big.NewInt(0),
+			EIP158Block:         big.NewInt(0),
+			ByzantiumBlock:      big.NewInt(0),
+			ConstantinopleBlock: big.NewInt(0),
 		},
 	}
 	// Figure out which consensus engine to choose
@@ -113,17 +113,10 @@ func (w *wizard) makeGenesis() {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
 	case choice == "" || choice == "3":
-		fmt.Println("How many block (Epoch) after which to checkpoint and reset the pending votes (default 30000)")
-		epoch := uint64(w.readDefaultInt(30000))
-
 		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
 		policy := uint64(w.readDefaultInt(0))
 
-		genesis.Config.Tendermint = &params.TendermintConfig{
-			Epoch:          epoch,
-			ProposerPolicy: policy,
-		}
-		// In the case of Tendermint, configure the consensus parameters
+		// In the case of Tender-mint, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
 
 		// We also need the initial list of validators
@@ -140,9 +133,27 @@ func (w *wizard) makeGenesis() {
 				break
 			}
 		}
-		tendermintExtra := types.TendermintExtra{
-			Validators: validators,
+		genesis.Config.Tendermint = &params.TendermintConfig{
+			ProposerPolicy: policy,
 		}
+		tendermintExtra := types.TendermintExtra{}
+
+		fmt.Println()
+		fmt.Println("Do you want to use fixed validators? (default = no)")
+		if w.readDefaultYesNo(false) {
+			genesis.Config.Tendermint.FixedValidators = validators
+		} else if err := w.configStakingSC(genesis, validators); err != nil {
+			log.Error("Failed to config staking SC", "error", err)
+			return
+		}
+
+		// RLP encode validator's address to bytes
+		valSetData, err := rlp.EncodeToBytes(validators)
+		if err != nil {
+			log.Error("rlp encode got error", "error", err)
+			return
+		}
+		tendermintExtra.ValidatorAdds = valSetData
 		extraData, err := rlp.EncodeToBytes(&tendermintExtra)
 		if err != nil {
 			log.Error("rlp encode got error", "error", err)
@@ -191,8 +202,8 @@ func (w *wizard) makeGenesis() {
 			break
 		}
 		fmt.Println()
-		fmt.Println("Should the precompile-addresses (0x1 .. 0xff) be pre-funded with 1 wei? (advisable yes)")
-		if w.readDefaultYesNo(true) {
+		fmt.Println("Should the precompile-addresses (0x1 .. 0xff) be pre-funded with 1 wei? (advisable no)")
+		if w.readDefaultYesNo(false) {
 			// Add a batch of precompile balances to avoid them getting deleted
 			for i := int64(0); i < 256; i++ {
 				genesis.Alloc[common.BigToAddress(big.NewInt(i))] = core.GenesisAccount{Balance: big.NewInt(1)}

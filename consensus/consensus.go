@@ -50,6 +50,13 @@ type ChainReader interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 }
 
+// FullChainReader extends ChainReader with function StateAt to get validators for tendermint consensus
+type FullChainReader interface {
+	ChainReader
+	// StateAt returns a new mutable state based on a particular point in time.
+	StateAt(hash common.Hash) (*state.StateDB, error)
+}
+
 // Engine is an algorithm agnostic consensus engine.
 // Note: Prepare, Finalize and FinalizeAndAssemple are used in order to
 // populate all of the necessary header fields including the state root.
@@ -153,7 +160,7 @@ type Tendermint interface {
 	Engine
 
 	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block) error
+	Start(chain FullChainReader, currentBlock func() *types.Block, verifyAndSubmitBlock func(*types.Block) error) error
 
 	// Stop stops the engine
 	Stop() error

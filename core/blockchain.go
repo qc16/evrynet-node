@@ -1201,6 +1201,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.chainmu.Lock()
 	defer bc.chainmu.Unlock()
 
+	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
+		return NonStatTy, nil
+	}
 	return bc.writeBlockWithState(block, receipts, state)
 }
 
