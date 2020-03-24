@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
@@ -301,6 +302,22 @@ func (t *UDPv4) Close() {
 // ReadRandomNodes reads random nodes from the local table.
 func (t *UDPv4) ReadRandomNodes(buf []*enode.Node) int {
 	return t.tab.ReadRandomNodes(buf)
+}
+
+// Find & remove duplicated new neighbours
+func (t *UDPv4) LookupDiscoveredPeers() map[common.Address]*enode.Node {
+	var (
+		nodes       = t.lookupSelf()
+		uniqueNodes = make(map[common.Address]*enode.Node)
+	)
+
+	for _, node := range nodes {
+		nodeAddr := crypto.PubkeyToAddress(*node.Pubkey())
+		if _, ok := uniqueNodes[nodeAddr]; !ok {
+			uniqueNodes[nodeAddr] = node
+		}
+	}
+	return uniqueNodes
 }
 
 // LookupRandom finds random nodes in the network.

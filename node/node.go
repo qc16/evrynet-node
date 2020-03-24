@@ -30,6 +30,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/evrdb"
+	"github.com/Evrynetlabs/evrynet-node/interfaces"
 	"github.com/Evrynetlabs/evrynet-node/internal/debug"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p"
@@ -39,6 +40,9 @@ import (
 
 // Node is a container on which services can be registered.
 type Node struct {
+	ChainReader     interfaces.ChainReader
+	ChainReaderDone chan struct{}
+
 	eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	config   *Config
 	accman   *accounts.Manager
@@ -119,6 +123,7 @@ func New(conf *Config) (*Node, error) {
 		wsEndpoint:        conf.WSEndpoint(),
 		eventmux:          new(event.TypeMux),
 		log:               conf.Logger,
+		ChainReaderDone:   make(chan struct{}),
 	}, nil
 }
 
@@ -177,6 +182,7 @@ func (n *Node) Start() error {
 	n.serverConfig.PrivateKey = n.config.NodeKey()
 	n.serverConfig.Name = n.config.NodeName()
 	n.serverConfig.Logger = n.log
+	n.ChainReaderDone = make(chan struct{})
 	if n.serverConfig.StaticNodes == nil {
 		n.serverConfig.StaticNodes = n.config.StaticNodes()
 	}
@@ -186,8 +192,23 @@ func (n *Node) Start() error {
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
-	running := &p2p.Server{Config: n.serverConfig}
+	running := &p2p.Server{
+		Config:          n.serverConfig,
+		ChainReader:     n.ChainReader,
+		ChainReaderDone: make(chan struct{}),
+	}
 	n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
+	go func() {
+		for {
+			select {
+			case <-n.ChainReaderDone:
+				running.ChainReader = n.ChainReader
+				running.ChainReaderDone <- struct{}{}
+				break
+			default:
+			}
+		}
+	}()
 
 	// Otherwise copy and specialize the P2P configuration
 	services := make(map[reflect.Type]Service)

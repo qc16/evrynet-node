@@ -1631,6 +1631,11 @@ func RegisterEthService(stack *node.Node, cfg *evr.Config) {
 				ls, _ := les.NewLesServer(fullNode, cfg)
 				fullNode.AddLesServer(ls)
 			}
+
+			if fullNode != nil && fullNode.BlockChain() != nil {
+				stack.ChainReader = fullNode.BlockChain()
+				stack.ChainReaderDone <- struct{}{}
+			}
 			return fullNode, err
 		})
 	}

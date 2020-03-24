@@ -22,6 +22,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/Evrynetlabs/evrynet-node/crypto"
+
+	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 	"github.com/Evrynetlabs/evrynet-node/p2p/netutil"
@@ -68,6 +71,7 @@ func (t TCPDialer) Dial(dest *enode.Node) (net.Conn, error) {
 // It gets a chance to compute new tasks on every iteration
 // of the main loop in Server.run.
 type dialstate struct {
+	nodeAddress common.Address
 	maxDynDials int
 	ntab        discoverTable
 	netrestrict *netutil.Netlist
@@ -89,6 +93,7 @@ type discoverTable interface {
 	Resolve(*enode.Node) *enode.Node
 	LookupRandom() []*enode.Node
 	ReadRandomNodes([]*enode.Node) int
+	LookupDiscoveredPeers() map[common.Address]*enode.Node
 }
 
 type task interface {
@@ -119,6 +124,7 @@ type waitExpireTask struct {
 
 func newDialState(self enode.ID, ntab discoverTable, maxdyn int, cfg *Config) *dialstate {
 	s := &dialstate{
+		nodeAddress: crypto.PubkeyToAddress(cfg.PrivateKey.PublicKey),
 		maxDynDials: maxdyn,
 		ntab:        ntab,
 		self:        self,
@@ -150,7 +156,7 @@ func (s *dialstate) removeStatic(n *enode.Node) {
 	delete(s.static, n.ID())
 }
 
-func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, now time.Time) []task {
+func (s *dialstate) newTasks(nRunning int, peers map[common.Address]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task {
 	if s.start.IsZero() {
 		s.start = now
 	}
@@ -194,6 +200,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, now time.Ti
 			newtasks = append(newtasks, t)
 		}
 	}
+
 	// If we don't have any peers whatsoever, try to dial a random bootnode. This
 	// scenario is useful for the testnet (and private networks) where the discovery
 	// table might be full of mostly bad peers, making it hard to find good ones.
@@ -211,7 +218,8 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, now time.Ti
 	randomCandidates := needDynDials / 2
 	if randomCandidates > 0 {
 		n := s.ntab.ReadRandomNodes(s.randomNodes)
-		for i := 0; i < randomCandidates && i < n; i++ {
+
+		for i := 0; i < randomCandidates && randomCandidates <= len(s.randomNodes) && i < n; i++ {
 			if addDial(dynDialedConn, s.randomNodes[i]) {
 				needDynDials--
 			}
@@ -240,6 +248,33 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, now time.Ti
 		t := &waitExpireTask{s.hist.nextExpiry().Sub(now)}
 		newtasks = append(newtasks, t)
 	}
+
+	// If discover table has validator node without adding, creating dyndial task
+	if _, ok := validatorAddrs[s.nodeAddress]; ok {
+		// Find missing validators didn't connect
+		var missingConnectedValPeers []common.Address
+		for valAddr, _ := range validatorAddrs {
+			if _, ok := peers[valAddr]; !ok && valAddr.Hex() != s.nodeAddress.Hex() {
+				missingConnectedValPeers = append(missingConnectedValPeers, valAddr)
+			}
+		}
+
+		// Create dial task for missing validator nodes
+		discoveredPeers := s.ntab.LookupDiscoveredPeers()
+		for _, missingValAddr := range missingConnectedValPeers {
+			if peer, ok := discoveredPeers[missingValAddr]; ok {
+				s.log.Debug("Create dial task for missing validator nodes", "nodeAddress", peer.Address().Hex())
+				t := &dialTask{flags: dynDialedConn, dest: peer}
+				if err := s.checkDial(t.dest, peers); err != nil {
+					s.log.Warn("Check dial task", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP(), Port: t.dest.TCP()}, "err", err)
+				} else {
+					s.dialing[peer.ID()] = t.flags
+					newtasks = append(newtasks, t)
+				}
+			}
+		}
+	}
+
 	return newtasks
 }
 
@@ -251,12 +286,12 @@ var (
 	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
 )
 
-func (s *dialstate) checkDial(n *enode.Node, peers map[enode.ID]*Peer) error {
+func (s *dialstate) checkDial(n *enode.Node, peers map[common.Address]*Peer) error {
 	_, dialing := s.dialing[n.ID()]
 	switch {
 	case dialing:
 		return errAlreadyDialing
-	case peers[n.ID()] != nil:
+	case peers[n.Address()] != nil:
 		return errAlreadyConnected
 	case n.ID() == s.self:
 		return errSelf
