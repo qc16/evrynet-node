@@ -22,9 +22,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/Evrynetlabs/evrynet-node/crypto"
-
 	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 	"github.com/Evrynetlabs/evrynet-node/p2p/netutil"
@@ -219,7 +218,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[common.Address]*Peer, valid
 	if randomCandidates > 0 {
 		n := s.ntab.ReadRandomNodes(s.randomNodes)
 
-		for i := 0; i < randomCandidates && randomCandidates <= len(s.randomNodes) && i < n; i++ {
+		for i := 0; i < randomCandidates && i < n; i++ {
 			if addDial(dynDialedConn, s.randomNodes[i]) {
 				needDynDials--
 			}

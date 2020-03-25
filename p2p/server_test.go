@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/internal/testlog"
 	"github.com/Evrynetlabs/evrynet-node/log"
@@ -213,7 +214,7 @@ func TestServerTaskScheduling(t *testing.T) {
 		quit, returned = make(chan struct{}), make(chan struct{})
 		tc             = 0
 		tg             = taskgen{
-			newFunc: func(running int, peers map[enode.ID]*Peer) []task {
+			newFunc: func(running int, peers map[common.Address]*Peer) []task {
 				tc++
 				return []task{&testTask{index: tc - 1}}
 			},
@@ -292,7 +293,7 @@ func TestServerManyTasks(t *testing.T) {
 	defer srv.Stop()
 	srv.loopWG.Add(1)
 	go srv.run(taskgen{
-		newFunc: func(running int, peers map[enode.ID]*Peer) []task {
+		newFunc: func(running int, peers map[common.Address]*Peer) []task {
 			start, end = end, end+maxActiveDialTasks+10
 			if end > len(alltasks) {
 				end = len(alltasks)
@@ -327,11 +328,11 @@ func TestServerManyTasks(t *testing.T) {
 }
 
 type taskgen struct {
-	newFunc  func(running int, peers map[enode.ID]*Peer) []task
+	newFunc  func(running int, peers map[common.Address]*Peer) []task
 	doneFunc func(task)
 }
 
-func (tg taskgen) newTasks(running int, peers map[enode.ID]*Peer, now time.Time) []task {
+func (tg taskgen) newTasks(running int, peers map[common.Address]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task {
 	return tg.newFunc(running, peers)
 }
 func (tg taskgen) taskDone(t task, now time.Time) {
@@ -355,6 +356,7 @@ func (t *testTask) Do(srv *Server) {
 // just after the encryption handshake when the server is
 // at capacity. Trusted connections should still be accepted.
 func TestServerAtCap(t *testing.T) {
+	privateKeys := generatePrivateKeys(3)
 	trustedNode := newkey()
 	trustedID := enode.PubkeyToIDV4(&trustedNode.PublicKey)
 	srv := &Server{
@@ -363,7 +365,7 @@ func TestServerAtCap(t *testing.T) {
 			MaxPeers:     10,
 			NoDial:       true,
 			NoDiscovery:  true,
-			TrustedNodes: []*enode.Node{newNode(trustedID, nil)},
+			TrustedNodes: []*enode.Node{newNode(1, nil, privateKeys)},
 		},
 	}
 	if err := srv.Start(); err != nil {
@@ -401,14 +403,14 @@ func TestServerAtCap(t *testing.T) {
 	}
 
 	// Remove from trusted set and try again
-	srv.RemoveTrustedPeer(newNode(trustedID, nil))
+	srv.RemoveTrustedPeer(newNode(1, nil, nil))
 	c = newconn(trustedID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != DiscTooManyPeers {
 		t.Error("wrong error for insert:", err)
 	}
 
 	// Add anotherID to trusted set and try again
-	srv.AddTrustedPeer(newNode(anotherID, nil))
+	srv.AddTrustedPeer(newNode(2, nil, nil))
 	c = newconn(anotherID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != nil {
 		t.Error("unexpected error for trusted conn @posthandshake:", err)
