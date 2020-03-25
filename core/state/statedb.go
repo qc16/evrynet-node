@@ -400,6 +400,43 @@ func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)
+		if addr.Hex() == "0x0000000000000000000000000000000000000011" {
+			withdrawsStateIndexKey := common.BigToHash(new(big.Int).SetUint64(1))
+			candidateVotersIndexKey := common.BigToHash(new(big.Int).SetUint64(2))
+			candidateDataIndexKey := common.BigToHash(new(big.Int).SetUint64(3))
+			candidatesKey := common.BigToHash(new(big.Int).SetUint64(4))
+			startBlockKey := common.BigToHash(new(big.Int).SetUint64(5))
+			epochKey := common.BigToHash(new(big.Int).SetUint64(6))
+			maxValidatorSizeKey := common.BigToHash(new(big.Int).SetUint64(7))
+			minValidatorStakeKey := common.BigToHash(new(big.Int).SetUint64(8))
+			minVoteCapKey := common.BigToHash(new(big.Int).SetUint64(9))
+			adminKey := common.BigToHash(new(big.Int).SetUint64(10))
+
+			switch key {
+			case withdrawsStateIndexKey:
+				log.Warn("****** stateDB ****** SetState: withdrawsStateIndex key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case candidateVotersIndexKey:
+				log.Warn("****** stateDB ****** SetState: candidateVotersIndex key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case candidateDataIndexKey:
+				log.Warn("****** stateDB ****** SetState: candidateDataIndex key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case candidatesKey:
+				log.Warn("****** stateDB ****** SetState: candidates key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case startBlockKey:
+				log.Warn("****** stateDB ****** SetState: startBlock key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case epochKey:
+				log.Warn("****** stateDB ****** SetState: epoch key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case maxValidatorSizeKey:
+				log.Warn("****** stateDB ****** SetState: maxValidatorSize key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case minValidatorStakeKey:
+				log.Warn("****** stateDB ****** SetState: minValidatorStake key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case minVoteCapKey:
+				log.Warn("****** stateDB ****** SetState: minVoteCap key", "address", addr.Hex(), "key", key, "value", value.Big())
+			case adminKey:
+				log.Warn("****** stateDB ****** SetState: admin key", "address", addr.Hex(), "key", key, "value", common.HexToAddress(value.Hex()).Hex)
+			default:
+				log.Warn("****** stateDB ****** SetState", "address", addr.Hex(), "key", key, "key loc", key.Big(), "value hash", value)
+			}
+		}
 	}
 }
 

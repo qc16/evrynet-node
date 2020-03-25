@@ -23,6 +23,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/math"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"golang.org/x/crypto/sha3"
 )
@@ -634,9 +635,17 @@ func opSload(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory
 }
 
 func opSstore(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	loc := common.BigToHash(stack.pop())
+	locNum := stack.pop()
+	loc := common.BigToHash(locNum)
 	val := stack.pop()
-	interpreter.evm.StateDB.SetState(contract.Address(), loc, common.BigToHash(val))
+	valHash := common.BigToHash(val)
+	interpreter.evm.StateDB.SetState(contract.Address(), loc, valHash)
+
+	if contract.Address().Hex() == "0x0000000000000000000000000000000000000011" {
+		log.Warn("****** opSstore => evm.StateDB.SetState", "address", contract.Address().Hex(),
+			"locNumber", locNum, "locHash", loc,
+			"value", val.Int64(), "valHash", valHash)
+	}
 
 	interpreter.intPool.put(val)
 	return nil, nil

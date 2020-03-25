@@ -23,6 +23,7 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/math"
+	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
@@ -162,6 +163,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	contract.Input = input
 
 	// Reclaim the stack as an int pool when the execution stops
+	log.Warn("i am here")
 	defer func() { in.intPool.put(stack.data...) }()
 
 	if in.cfg.Debug {
