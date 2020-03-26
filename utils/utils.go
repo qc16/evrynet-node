@@ -7,7 +7,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
@@ -15,6 +14,8 @@ import (
 
 var (
 	ErrInvalidSealLength = errors.New("seal is expected to be multiplication of 65")
+	// ErrEmptyValSet is returned if the field of validator set is zero.
+	ErrEmptyValSet = errors.New("zero validator set")
 )
 
 const (
@@ -143,7 +144,7 @@ func GetValSetAddresses(h *types.Header) ([]common.Address, error) {
 		return nil, err
 	}
 	if len(tdmExtra.ValidatorAdds) == 0 {
-		return nil, tendermint.ErrEmptyValSet
+		return nil, ErrEmptyValSet
 	}
 
 	// RLP decode validator's address from bytes

@@ -249,7 +249,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[common.Address]*Peer, valid
 	}
 
 	// If discover table has validator node without adding, creating dyndial task
-	if _, ok := validatorAddrs[s.nodeAddress]; ok {
+	if _, ok := validatorAddrs[s.nodeAddress]; ok && s.ntab != nil {
 		// Find missing validators didn't connect
 		var missingConnectedValPeers []common.Address
 		for valAddr, _ := range validatorAddrs {

@@ -26,13 +26,18 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/state"
+	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/internal/testlog"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
-	"github.com/Evrynetlabs/evrynet-node/p2p/enr"
-	"golang.org/x/crypto/sha3"
+	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 // func init() {
@@ -80,14 +85,45 @@ func startTestServer(t *testing.T, remoteKey *ecdsa.PublicKey, pf func(*Peer)) *
 		Logger:     testlog.Logger(t, log.LvlTrace),
 	}
 	server := &Server{
-		Config:       config,
-		newPeerHook:  pf,
-		newTransport: func(fd net.Conn) transport { return newTestTransport(remoteKey, fd) },
+		ChainReader:     generateChainReader(t),
+		ChainReaderDone: make(chan struct{}),
+		Config:          config,
+		newPeerHook:     pf,
+		newTransport:    func(fd net.Conn) transport { return newTestTransport(remoteKey, fd) },
 	}
-	if err := server.Start(); err != nil {
+
+	// Start Server
+	serverStarted := make(chan error)
+	go func() {
+		serverStarted <- server.Start()
+	}()
+	server.ChainReaderDone <- struct{}{}
+	if err := <-serverStarted; err != nil {
 		t.Fatalf("Could not start server: %v", err)
 	}
 	return server
+}
+
+func generateChainReader(t *testing.T) *tests_utils.MockChainReader {
+	var (
+		nodePrivateKey = newkey()
+		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
+		validators     = []common.Address{nodeAddr}
+		genesisHeader  = tests_utils.MakeGenesisHeader(validators)
+		stateDB, err   = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()))
+	)
+	if err != nil {
+		t.Fatalf("failed to create stateDB, error %s", err)
+	}
+
+	return &tests_utils.MockChainReader{
+		MockBlockChain: &tests_utils.MockBlockChain{
+			Statedb:          stateDB,
+			GasLimit:         1000000000,
+			ChainHeadFeed:    new(event.Feed),
+			MockCurrentBlock: types.NewBlockWithHeader(genesisHeader),
+		},
+	}
 }
 
 func TestServerListen(t *testing.T) {
@@ -356,39 +392,54 @@ func (t *testTask) Do(srv *Server) {
 // just after the encryption handshake when the server is
 // at capacity. Trusted connections should still be accepted.
 func TestServerAtCap(t *testing.T) {
-	privateKeys := generatePrivateKeys(3)
-	trustedNode := newkey()
-	trustedID := enode.PubkeyToIDV4(&trustedNode.PublicKey)
+	var (
+		privateKeys    = generatePrivateKeys(13)
+		trustedNode    = newkey()
+		trustedID      = 12
+		nodePrivateKey = newkey()
+	)
 	srv := &Server{
+		ChainReader:     generateChainReader(t),
+		ChainReaderDone: make(chan struct{}),
 		Config: Config{
-			PrivateKey:   newkey(),
+			Name:         "test",
+			PrivateKey:   nodePrivateKey,
 			MaxPeers:     10,
 			NoDial:       true,
 			NoDiscovery:  true,
-			TrustedNodes: []*enode.Node{newNode(1, nil, privateKeys)},
+			TrustedNodes: []*enode.Node{newNode(trustedID, nil, privateKeys)},
+			ListenAddr:   "127.0.0.1:0",
+			Logger:       testlog.Logger(t, log.LvlTrace),
 		},
 	}
-	if err := srv.Start(); err != nil {
-		t.Fatalf("could not start: %v", err)
+
+	// Start Server
+	serverStarted := make(chan error)
+	go func() {
+		serverStarted <- srv.Start()
+	}()
+	srv.ChainReaderDone <- struct{}{}
+	if err := <-serverStarted; err != nil {
+		t.Fatalf("Could not start server: %v", err)
 	}
 	defer srv.Stop()
 
-	newconn := func(id enode.ID) *conn {
+	newconn := func(id int) *conn {
 		fd, _ := net.Pipe()
 		tx := newTestTransport(&trustedNode.PublicKey, fd)
-		node := enode.SignNull(new(enr.Record), id)
+		node := newNode(id, nil, privateKeys)
 		return &conn{fd: fd, transport: tx, flags: inboundConn, node: node, cont: make(chan error)}
 	}
 
 	// Inject a few connections to fill up the peer set.
 	for i := 0; i < 10; i++ {
-		c := newconn(randomID())
+		c := newconn(i)
 		if err := srv.checkpoint(c, srv.checkpointAddPeer); err != nil {
 			t.Fatalf("could not add conn %d: %v", i, err)
 		}
 	}
 	// Try inserting a non-trusted connection.
-	anotherID := randomID()
+	anotherID := 11
 	c := newconn(anotherID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != DiscTooManyPeers {
 		t.Error("wrong error for insert:", err)
@@ -403,14 +454,14 @@ func TestServerAtCap(t *testing.T) {
 	}
 
 	// Remove from trusted set and try again
-	srv.RemoveTrustedPeer(newNode(1, nil, nil))
+	srv.RemoveTrustedPeer(newNode(trustedID, nil, privateKeys))
 	c = newconn(trustedID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != DiscTooManyPeers {
 		t.Error("wrong error for insert:", err)
 	}
 
 	// Add anotherID to trusted set and try again
-	srv.AddTrustedPeer(newNode(2, nil, nil))
+	srv.AddTrustedPeer(newNode(anotherID, nil, privateKeys))
 	c = newconn(anotherID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != nil {
 		t.Error("unexpected error for trusted conn @posthandshake:", err)
@@ -421,9 +472,11 @@ func TestServerAtCap(t *testing.T) {
 }
 
 func TestServerPeerLimits(t *testing.T) {
-	srvkey := newkey()
-	clientkey := newkey()
-	clientnode := enode.NewV4(&clientkey.PublicKey, nil, 0, 0)
+	var (
+		srvkey     = newkey()
+		clientkey  = newkey()
+		clientnode = enode.NewV4(&clientkey.PublicKey, nil, 0, 0)
+	)
 
 	var tp = &setupTransport{
 		pubkey: &clientkey.PublicKey,
@@ -435,6 +488,8 @@ func TestServerPeerLimits(t *testing.T) {
 	}
 
 	srv := &Server{
+		ChainReader:     generateChainReader(t),
+		ChainReaderDone: make(chan struct{}),
 		Config: Config{
 			PrivateKey:  srvkey,
 			MaxPeers:    0,
@@ -445,8 +500,15 @@ func TestServerPeerLimits(t *testing.T) {
 		newTransport: func(fd net.Conn) transport { return tp },
 		log:          log.New(),
 	}
-	if err := srv.Start(); err != nil {
-		t.Fatalf("couldn't start server: %v", err)
+
+	// Start Server
+	serverStarted := make(chan error)
+	go func() {
+		serverStarted <- srv.Start()
+	}()
+	srv.ChainReaderDone <- struct{}{}
+	if err := <-serverStarted; err != nil {
+		t.Fatalf("Could not start server: %v", err)
 	}
 	defer srv.Stop()
 
@@ -558,13 +620,21 @@ func TestServerSetupConn(t *testing.T) {
 				Logger:      testlog.Logger(t, log.LvlTrace),
 			}
 			srv := &Server{
-				Config:       cfg,
-				newTransport: func(fd net.Conn) transport { return test.tt },
-				log:          cfg.Logger,
+				ChainReader:     generateChainReader(t),
+				ChainReaderDone: make(chan struct{}),
+				Config:          cfg,
+				newTransport:    func(fd net.Conn) transport { return test.tt },
+				log:             cfg.Logger,
 			}
 			if !test.dontstart {
-				if err := srv.Start(); err != nil {
-					t.Fatalf("couldn't start server: %v", err)
+				// Start Server
+				serverStarted := make(chan error)
+				go func() {
+					serverStarted <- srv.Start()
+				}()
+				srv.ChainReaderDone <- struct{}{}
+				if err := <-serverStarted; err != nil {
+					t.Fatalf("Could not start server: %v", err)
 				}
 				defer srv.Stop()
 			}
@@ -635,6 +705,8 @@ func TestServerInboundThrottle(t *testing.T) {
 	const timeout = 5 * time.Second
 	newTransportCalled := make(chan struct{})
 	srv := &Server{
+		ChainReader:     generateChainReader(t),
+		ChainReaderDone: make(chan struct{}),
 		Config: Config{
 			PrivateKey:  newkey(),
 			ListenAddr:  "127.0.0.1:0",
@@ -653,8 +725,14 @@ func TestServerInboundThrottle(t *testing.T) {
 			return listenFakeAddr(network, laddr, fakeAddr)
 		},
 	}
-	if err := srv.Start(); err != nil {
-		t.Fatal("can't start: ", err)
+	// Start Server
+	serverStarted := make(chan error)
+	go func() {
+		serverStarted <- srv.Start()
+	}()
+	srv.ChainReaderDone <- struct{}{}
+	if err := <-serverStarted; err != nil {
+		t.Fatalf("Could not start server: %v", err)
 	}
 	defer srv.Stop()
 

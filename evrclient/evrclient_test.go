@@ -17,6 +17,7 @@
 package evrclient
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -35,6 +36,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/evr"
 	"github.com/Evrynetlabs/evrynet-node/node"
 	"github.com/Evrynetlabs/evrynet-node/params"
+	"github.com/Evrynetlabs/evrynet-node/rlp"
 )
 
 // Verify that Client implements the ethereum interfaces.
@@ -163,7 +165,7 @@ func TestToFilterArg(t *testing.T) {
 }
 
 var (
-	testKey, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testKey, _  = crypto.HexToECDSA("ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1")
 	testAddr    = crypto.PubkeyToAddress(testKey.PublicKey)
 	testBalance = big.NewInt(2e10)
 )
@@ -179,6 +181,10 @@ func newTestBackend(t *testing.T) (*node.Node, []*types.Block) {
 		config := &evr.Config{Genesis: genesis}
 		config.Ethash.PowMode = ethash.ModeFake
 		ethservice, err = evr.New(ctx, config)
+		if ethservice != nil && ethservice.BlockChain() != nil {
+			n.ChainReader = ethservice.BlockChain()
+			n.ChainReaderDone <- struct{}{}
+		}
 		return ethservice, err
 	})
 
@@ -198,7 +204,7 @@ func generateTestChain() (*core.Genesis, []*types.Block) {
 	genesis := &core.Genesis{
 		Config:    config,
 		Alloc:     core.GenesisAlloc{testAddr: {Balance: testBalance}},
-		ExtraData: []byte("test genesis"),
+		ExtraData: generateExtraDataTestChain(),
 		Timestamp: 9000,
 	}
 	generate := func(i int, g *core.BlockGen) {
@@ -210,6 +216,23 @@ func generateTestChain() (*core.Genesis, []*types.Block) {
 	blocks, _ := core.GenerateChain(config, gblock, engine, db, 1, generate)
 	blocks = append([]*types.Block{gblock}, blocks...)
 	return genesis, blocks
+}
+
+func generateExtraDataTestChain() []byte {
+	// RLP encode validator's address to bytes
+	valSetData, err := rlp.EncodeToBytes([]common.Address{common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a")})
+	if err != nil {
+		panic("RLP encode got error: " + err.Error())
+	}
+	tdmExtra := types.TendermintExtra{
+		ValidatorAdds: valSetData,
+	}
+	extraData, err := rlp.EncodeToBytes(&tdmExtra)
+	if err != nil {
+		panic("RLP encode got error: " + err.Error())
+	}
+	tdmExtraVanity := bytes.Repeat([]byte{0x00}, types.TendermintExtraVanity)
+	return append(tdmExtraVanity, extraData...)
 }
 
 func TestHeader(t *testing.T) {

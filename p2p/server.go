@@ -501,8 +501,8 @@ func (srv *Server) Start() (err error) {
 }
 
 func (srv *Server) setupChainReader() error {
+	srv.log.Info("Setup chain reader ...")
 	<-srv.ChainReaderDone
-
 	if err := srv.updateNextValidators(); err != nil {
 		return err
 	}
@@ -510,6 +510,10 @@ func (srv *Server) setupChainReader() error {
 }
 
 func (srv *Server) updateNextValidators() error {
+	if srv.ChainReader == nil {
+		return errors.New("Chain reader of server is nil")
+	}
+
 	nextValidatorAddrs, err := GetValSetAddresses(srv.ChainReader.CurrentHeader())
 	if err != nil {
 		return errors.New("Can't get the validators's address from extra-data. Error: " + err.Error())

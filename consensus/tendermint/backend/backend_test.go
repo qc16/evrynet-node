@@ -14,7 +14,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
 	evrynetCore "github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
@@ -22,6 +22,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
+	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func TestSign(t *testing.T) {
@@ -88,9 +89,9 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 		statedb = tests_utils.MustCreateStateDB(t)
 
 		testTxPoolConfig evrynetCore.TxPoolConfig
-		blockchain       = &tests_utils.MockChainReader{
+		blockchain       = &tdmTestsUtils.MockChainReader{
 			GenesisHeader: genesisHeader,
-			MockBlockChain: &tests_utils.MockBlockChain{
+			MockBlockChain: &tdmTestsUtils.MockBlockChain{
 				Statedb:       statedb,
 				GasLimit:      1000000000,
 				ChainHeadFeed: new(event.Feed),

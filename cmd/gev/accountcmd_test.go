@@ -18,6 +18,7 @@ package main
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -40,6 +41,33 @@ func tmpDatadirWithKeystore(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return datadir
+}
+
+func initTestGenesis(t *testing.T, datadir string) {
+	// Read genesis file
+	genesis, err := ioutil.ReadFile("testdata/genesis.json")
+	if err != nil {
+		t.Errorf("Can not read testdata/genesis.json. Error: %v", err)
+	}
+
+	// Initialize the data directory with the custom genesis block
+	jsonFile := filepath.Join(datadir, "genesis.json")
+	if err := ioutil.WriteFile(jsonFile, genesis, 0600); err != nil {
+		t.Fatalf("Failed to write genesis file: %v", err)
+	}
+	runGeth(t, "--datadir", datadir, "init", jsonFile).WaitExit()
+
+	// Read genesis file
+	nodekey, err := ioutil.ReadFile("testdata/nodekey")
+	if err != nil {
+		t.Errorf("Can not read testdata/nodekey. Error: %v", err)
+	}
+
+	// Copy nodekey
+	nodekeyFile := filepath.Join(datadir, "geth", "nodekey")
+	if err := ioutil.WriteFile(nodekeyFile, nodekey, 0600); err != nil {
+		t.Fatalf("Failed to write nodekey file: %v", err)
+	}
 }
 
 func TestAccountListEmpty(t *testing.T) {
@@ -142,7 +170,12 @@ Fatal: could not decrypt key with given passphrase
 }
 
 func TestUnlockFlag(t *testing.T) {
+	// Create a temporary data directory to use and inspect later
 	datadir := tmpDatadirWithKeystore(t)
+	defer os.RemoveAll(datadir)
+
+	initTestGenesis(t, datadir)
+
 	geth := runGeth(t,
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxpeers", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
@@ -185,7 +218,12 @@ Fatal: Failed to unlock account f466859ead1932d743d622cb74fc058882e8648a (could 
 
 // https://github.com/Evrynetlabs/evrynet-node/issues/1785
 func TestUnlockFlagMultiIndex(t *testing.T) {
+	// Create a temporary data directory to use and inspect later
 	datadir := tmpDatadirWithKeystore(t)
+	defer os.RemoveAll(datadir)
+
+	initTestGenesis(t, datadir)
+
 	geth := runGeth(t,
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxpeers", "0", "--port", "0",
 		"--unlock", "0,2",
@@ -212,7 +250,12 @@ Passphrase: {{.InputLine "foobar"}}
 }
 
 func TestUnlockFlagPasswordFile(t *testing.T) {
+	// Create a temporary data directory to use and inspect later
 	datadir := tmpDatadirWithKeystore(t)
+	defer os.RemoveAll(datadir)
+
+	initTestGenesis(t, datadir)
+
 	geth := runGeth(t,
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxpeers", "0", "--port", "0",
 		"--password", "testdata/passwords.txt", "--unlock", "0,2",
@@ -243,9 +286,15 @@ Fatal: Failed to unlock account 0 (could not decrypt key with given passphrase)
 }
 
 func TestUnlockFlagAmbiguous(t *testing.T) {
+	// Create a temporary data directory to use and inspect later
+	datadir := tmpDatadirWithKeystore(t)
+	defer os.RemoveAll(datadir)
+
+	initTestGenesis(t, datadir)
+
 	store := filepath.Join("..", "..", "accounts", "keystore", "testdata", "dupes")
 	geth := runGeth(t,
-		"--keystore", store, "--nat", "none", "--nodiscover", "--maxpeers", "0", "--port", "0",
+		"--datadir", datadir, "--keystore", store, "--nat", "none", "--nodiscover", "--maxpeers", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
 		"js", "testdata/empty.js")
 	defer geth.ExpectExit()
