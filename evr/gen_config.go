@@ -50,7 +50,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	var enc Config
 	enc.Genesis = c.Genesis
 	enc.NetworkId = c.NetworkId
-	enc.GasPrice = c.GasPrice
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
 	enc.NoPrefetch = c.NoPrefetch
@@ -122,9 +121,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.NetworkId != nil {
 		c.NetworkId = *dec.NetworkId
-	}
-	if dec.GasPrice != nil {
-		c.GasPrice = dec.GasPrice
 	}
 	if dec.SyncMode != nil {
 		c.SyncMode = *dec.SyncMode

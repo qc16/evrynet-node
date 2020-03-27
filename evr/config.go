@@ -31,7 +31,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/evr/downloader"
 	"github.com/Evrynetlabs/evrynet-node/evr/gasprice"
 	"github.com/Evrynetlabs/evrynet-node/miner"
-	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 // DefaultConfig contains default settings for use on the Evrynet main net.
@@ -45,7 +44,6 @@ var DefaultConfig = Config{
 		DatasetsOnDisk: 2,
 	},
 	NetworkId:      1,
-	GasPrice:       big.NewInt(params.GasPriceConfig),
 	LightPeers:     100,
 	DatabaseCache:  512,
 	TrieCleanCache: 256,
