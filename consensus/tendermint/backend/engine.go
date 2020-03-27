@@ -17,7 +17,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
-	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
@@ -649,7 +648,7 @@ func calculateTotalValidatorsReward(chainReader consensus.ChainReader, epoch uin
 			currentHeader = header
 		}
 		reward := new(big.Int).Set(TendermintBlockReward)
-		txFee := new(big.Int).Mul(big.NewInt(int64(currentHeader.GasUsed)), big.NewInt(params.GasPriceConfig))
+		txFee := new(big.Int).Mul(big.NewInt(int64(currentHeader.GasUsed)), chainReader.Config().GasPrice)
 		addReward(currentHeader.Coinbase, new(big.Int).Add(reward, txFee))
 	}
 	return validatorsReward
