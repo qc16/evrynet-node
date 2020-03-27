@@ -267,7 +267,6 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 			Miner: miner.Config{
 				GasFloor: genesis.GasLimit * 9 / 10,
 				GasCeil:  genesis.GasLimit * 11 / 10,
-				GasPrice: genesis.Config.GasPrice,
 				Recommit: time.Second,
 			},
 		})

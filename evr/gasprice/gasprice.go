@@ -34,7 +34,6 @@ var maxPrice = big.NewInt(500 * params.GWei)
 type Config struct {
 	Blocks     int
 	Percentile int
-	Default    *big.Int `toml:",omitempty"`
 }
 
 // Oracle recommends gas prices based on the content of recent
@@ -43,7 +42,6 @@ type Oracle struct {
 	backend       evrapi.Backend
 	fixedGasPrice *big.Int
 	lastHead      common.Hash
-	lastPrice     *big.Int
 	fetchLock     sync.Mutex
 
 	checkBlocks, maxEmpty, maxBlocks int
@@ -66,7 +64,6 @@ func NewOracle(backend evrapi.Backend, params Config) *Oracle {
 	return &Oracle{
 		backend:       backend,
 		fixedGasPrice: new(big.Int).Set(backend.ChainConfig().GasPrice),
-		lastPrice:     params.Default,
 		checkBlocks:   blocks,
 		maxEmpty:      blocks / 2,
 		maxBlocks:     blocks * 5,
