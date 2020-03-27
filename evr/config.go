@@ -61,7 +61,6 @@ var DefaultConfig = Config{
 	GPO: gasprice.Config{
 		Blocks:     20,
 		Percentile: 60,
-		GasPrice:   big.NewInt(params.GasPriceConfig),
 	},
 
 	Tendermint: *tendermint.DefaultConfig,
