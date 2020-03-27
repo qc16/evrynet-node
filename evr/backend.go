@@ -111,10 +111,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-	if config.Miner.GasPrice == nil || config.Miner.GasPrice.Cmp(common.Big0) <= 0 {
-		log.Warn("Sanitizing invalid miner gas price", "provided", config.Miner.GasPrice, "updated", DefaultConfig.Miner.GasPrice)
-		config.Miner.GasPrice = new(big.Int).Set(DefaultConfig.Miner.GasPrice)
-	}
 	if config.NoPruning && config.TrieDirtyCache > 0 {
 		config.TrieCleanCache += config.TrieDirtyCache
 		config.TrieDirtyCache = 0
@@ -134,7 +130,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 
 	//rewrite gas price
 	chainConfig.GasPrice = config.GasPrice
-	config.Miner.GasPrice = config.GasPrice
 
 	evr := &Evrynet{
 		config:         config,
@@ -144,7 +139,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 		engine:         CreateConsensusEngine(ctx, chainConfig, config, config.Miner.Notify, config.Miner.Noverify, chainDb),
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
-		gasPrice:       config.GasPrice,
+		gasPrice:       chainConfig.GasPrice,
 		etherbase:      config.Miner.Etherbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
@@ -206,9 +201,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 
 	evr.APIBackend = &EvrAPIBackend{ctx.ExtRPCEnabled(), evr, nil}
 	gpoParams := config.GPO
-	if gpoParams.Default == nil {
-		gpoParams.Default = config.Miner.GasPrice
-	}
 	evr.APIBackend.gpo = gasprice.NewOracle(evr.APIBackend, gpoParams)
 
 	return evr, nil
