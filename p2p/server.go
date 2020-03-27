@@ -162,9 +162,9 @@ type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
 
-	ChainReader     interfaces.ChainReader
-	ChainReaderDone chan struct{}
-	nextValidators  map[common.Address]struct{}
+	ChainReader       interfaces.ChainReader
+	ChainReaderDone   chan struct{}
+	currentValidators map[common.Address]struct{}
 
 	// Hooks for testing. These are useful because we can inhibit
 	// the whole protocol stack.
@@ -503,47 +503,58 @@ func (srv *Server) Start() (err error) {
 func (srv *Server) setupChainReader() error {
 	srv.log.Info("Setup chain reader ...")
 	<-srv.ChainReaderDone
-	if err := srv.updateNextValidators(); err != nil {
+	if err := srv.updateCurrentValidators(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (srv *Server) updateNextValidators() error {
+func (srv *Server) updateCurrentValidators() error {
 	if srv.ChainReader == nil {
 		return errors.New("Chain reader of server is nil")
 	}
 
-	nextValidatorAddrs, err := GetValSetAddresses(srv.ChainReader.CurrentHeader())
+	nextValidatorAddrs, err := srv.GetValSetAddresses(srv.ChainReader.CurrentHeader())
 	if err != nil {
 		return errors.New("Can't get the validators's address from extra-data. Error: " + err.Error())
 	}
 
-	var nextValidatorMap = make(map[common.Address]struct{})
+	var currentValidatorMap = make(map[common.Address]struct{})
 	for _, valAddr := range nextValidatorAddrs {
-		nextValidatorMap[valAddr] = struct{}{}
+		currentValidatorMap[valAddr] = struct{}{}
 	}
-	srv.nextValidators = nextValidatorMap
+	srv.currentValidators = currentValidatorMap
 	return nil
 }
 
 // GetValSetAddresses returns the address of validators from the extra-data field.
-func GetValSetAddresses(h *types.Header) ([]common.Address, error) {
-	tdmExtra, err := types.ExtractTendermintExtra(h)
+func (srv *Server) GetValSetAddresses(header *types.Header) ([]common.Address, error) {
+	if srv.ChainReader == nil {
+		return nil, errors.New("Chain reader of server is nil")
+	}
+
+	var (
+		validators       []common.Address
+		epoch            = srv.ChainReader.Config().Tendermint.Epoch
+		transitionHeader = srv.ChainReader.GetHeaderByNumber((header.Number.Uint64() / epoch) * epoch)
+	)
+	if transitionHeader == nil {
+		return nil, errors.Errorf("Can not get transition header at number %v with epoch %v", header.Number.Uint64(), epoch)
+	}
+
+	tdmExtra, err := types.ExtractTendermintExtra(transitionHeader)
 	if err != nil {
 		return nil, err
 	}
 	if len(tdmExtra.ValidatorAdds) == 0 {
-		return nil, errors.New("zero validator set")
+		return nil, errors.New("Zero validator set")
 	}
 
 	// RLP decode validator's address from bytes
-	var validators []common.Address
 	err = rlp.DecodeBytes(tdmExtra.ValidatorAdds, &validators)
 	if err != nil {
 		return nil, err
 	}
-
 	return validators, nil
 }
 
@@ -729,14 +740,14 @@ func (srv *Server) run(dialstate dialer) {
 	}
 	scheduleTasks := func() {
 		// Update validators to check missing peers
-		if err := srv.updateNextValidators(); err != nil {
+		if err := srv.updateCurrentValidators(); err != nil {
 			log.Error("Failed to update next validators", "error", err)
 		}
 		// Start from queue first.
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
-			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, srv.nextValidators, time.Now())
+			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, srv.currentValidators, time.Now())
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
@@ -1026,18 +1037,21 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	}
 
 	// Setup next validators map
-	if err := srv.updateNextValidators(); err != nil {
+	if err := srv.updateCurrentValidators(); err != nil {
 		return err
 	}
-	connectedPeers := srv.PeersMap()
-	_, isValidatorNode := srv.nextValidators[srv.Address()]
-	_, isValidatorNodeConnection := srv.nextValidators[c.node.Address()]
+
+	var (
+		connectedPeers               = srv.PeersMap()
+		_, isValidatorNode           = srv.currentValidators[srv.Address()]
+		_, isValidatorNodeConnection = srv.currentValidators[c.node.Address()]
+	)
 	// If you are the validator node, handle peers connection priority
 	// Handle for validator node connection
 	if len(connectedPeers) == srv.MaxPeers && isValidatorNode && isValidatorNodeConnection {
 		for _, connectedPeer := range connectedPeers {
 			// Disconnect non-validator node to add new validator node
-			if _, ok := srv.nextValidators[crypto.PubkeyToAddress(*connectedPeer.Node().Pubkey())]; !ok {
+			if _, ok := srv.currentValidators[crypto.PubkeyToAddress(*connectedPeer.Node().Pubkey())]; !ok {
 				connectedPeer.Disconnect(DiscNonValidator)
 				break
 			}
