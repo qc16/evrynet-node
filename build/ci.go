@@ -204,28 +204,25 @@ func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd
 
 func doTest(cmdline []string) {
 	coverage := flag.Bool("coverage", false, "Whether to record code coverage")
+	full := flag.Bool("full", false, "Whether to run all the tests")
 	integration := flag.Bool("integration", false, "The flag to decide run integration test or not")
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
-	// TODO: fix all remaining tests so this could be ./...
-	packages := []string{
-		"./accounts/...", "./cmd/...", "./common/...", "./consensus/...", "./crypto/...",
-		"./dashboard/...", "./ethstats/...", "./event/...", "./evr/...", "./evrclient/...", "./evrdb/...",
-		"./graphql/...", "./internal/...", "./les/...", "./light/...", "./log/...",
-		"./metrics/...", "./miner/...", "./mobile/...", "./node/...", "./p2p/...", "./params/...",
-		"./rlp/...", "./rpc/...", "./signer/...", "./trie/...", "./whisper/...",
-	}
-	if *integration {
-		packages = []string{"./tests/provider_logic_test/..."}
-	} else {
-		gotest := goTool("test", buildFlags(env)...)
-		gotest.Args = append(gotest.Args, "-p", "1", "-timeout", "5m", "--short")
-		if *coverage {
-			gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover")
+	var packages []string
+	switch {
+	case *full:
+		packages = []string{
+			"./accounts/...", "./cmd/...", "./common/...", "./consensus/...", "./crypto/...",
+			"./dashboard/...", "./ethstats/...", "./event/...", "./evr/...", "./evrclient/...", "./evrdb/...",
+			"./graphql/...", "./internal/...", "./les/...", "./light/...", "./log/...",
+			"./metrics/...", "./miner/...", "./mobile/...", "./node/...", "./p2p/...", "./params/...",
+			"./rlp/...", "./rpc/...", "./signer/...", "./trie/...", "./whisper/...",
 		}
-		gotest.Args = append(gotest.Args, "./core/...")
-		build.MustRun(gotest)
+	case *integration:
+		packages = []string{"./tests/provider_logic_test/..."}
+	default:
+		packages = []string{"./consensus/tendermint/...", "./cmd/...", "./internal/...", "./evrclient/...", "./miner/..."}
 	}
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
