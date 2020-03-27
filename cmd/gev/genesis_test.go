@@ -39,7 +39,7 @@ var customGenesisTests = []struct {
 			"nonce"      : "0x0000000000000042",
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"timestamp"  : "0x00"
+			"timestamp"  : "0x00",
 		}`,
 		query:  "evr.getBlock(0).nonce",
 		result: "0x0000000000000042",
@@ -56,7 +56,9 @@ var customGenesisTests = []struct {
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"timestamp"  : "0x00",
-			"config"     : {}
+			"config"     : {
+				"gasPrice"	 : 1000000000
+			}
 		}`,
 		query:  "evr.getBlock(0).nonce",
 		result: "0x0000000000000042",
@@ -76,7 +78,8 @@ var customGenesisTests = []struct {
 			"config"     : {
 				"homesteadBlock" : 314,
 				"daoForkBlock"   : 141,
-				"daoForkSupport" : true
+				"daoForkSupport" : true,
+				"gasPrice"	 : 1000000000
 			}
 		}`,
 		query:  "evr.getBlock(0).nonce",

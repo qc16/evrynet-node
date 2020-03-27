@@ -128,9 +128,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
-	//rewrite gas price
-	chainConfig.GasPrice = config.GasPrice
-
 	evr := &Evrynet{
 		config:         config,
 		chainDb:        chainDb,
