@@ -532,6 +532,9 @@ func (srv *Server) GetValSetAddresses(header *types.Header) ([]common.Address, e
 	if srv.ChainReader == nil {
 		return nil, errors.New("Chain reader of server is nil")
 	}
+	if len(srv.ChainReader.Config().Tendermint.FixedValidators) > 0 {
+		return srv.ChainReader.Config().Tendermint.FixedValidators, nil
+	}
 
 	var (
 		validators       []common.Address

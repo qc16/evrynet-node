@@ -29,14 +29,19 @@ import (
 	ethereum "github.com/Evrynetlabs/evrynet-node"
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/ethash"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/evr"
 	"github.com/Evrynetlabs/evrynet-node/node"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/utils"
 )
 
 // Verify that Client implements the ethereum interfaces.
@@ -165,14 +170,14 @@ func TestToFilterArg(t *testing.T) {
 }
 
 var (
-	testKey, _  = crypto.HexToECDSA("ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1")
+	testKey, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	testAddr    = crypto.PubkeyToAddress(testKey.PublicKey)
 	testBalance = big.NewInt(2e10)
 )
 
 func newTestBackend(t *testing.T) (*node.Node, []*types.Block) {
 	// Generate test chain.
-	genesis, blocks := generateTestChain()
+	genesis, blocks, chainReader := generateTestChain()
 
 	// Start Evrynet service.
 	var ethservice *evr.Evrynet
@@ -181,8 +186,8 @@ func newTestBackend(t *testing.T) (*node.Node, []*types.Block) {
 		config := &evr.Config{Genesis: genesis}
 		config.Ethash.PowMode = ethash.ModeFake
 		ethservice, err = evr.New(ctx, config)
-		if ethservice != nil && ethservice.BlockChain() != nil {
-			n.ChainReader = ethservice.BlockChain()
+		if ethservice != nil && chainReader != nil {
+			n.ChainReader = chainReader
 			n.ChainReaderDone <- struct{}{}
 		}
 		return ethservice, err
@@ -198,24 +203,80 @@ func newTestBackend(t *testing.T) (*node.Node, []*types.Block) {
 	return n, blocks
 }
 
-func generateTestChain() (*core.Genesis, []*types.Block) {
-	db := rawdb.NewMemoryDatabase()
-	config := params.AllEthashProtocolChanges
-	genesis := &core.Genesis{
+func generateTestChain() (*core.Genesis, []*types.Block, *core.BlockChain) {
+	var (
+		db        = rawdb.NewMemoryDatabase()
+		key, _    = crypto.HexToECDSA("ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1")
+		addr      = crypto.PubkeyToAddress(key.PublicKey)
+		tdmConfig = tendermint.DefaultConfig
+		config    = params.TendermintTestChainConfig
+	)
+	tdmConfig.FixedValidators = []common.Address{common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a")}
+	engine := backend.New(tdmConfig, key)
+
+	config.Tendermint = &params.TendermintConfig{
+		Epoch:           40,
+		ProposerPolicy:  0,
+		FixedValidators: tdmConfig.FixedValidators,
+	}
+	genSpec := &core.Genesis{
 		Config:    config,
-		Alloc:     core.GenesisAlloc{testAddr: {Balance: testBalance}},
 		ExtraData: generateExtraDataTestChain(),
-		Timestamp: 9000,
+		Alloc: map[common.Address]core.GenesisAccount{
+			testAddr: {Balance: testBalance},
+		},
 	}
-	generate := func(i int, g *core.BlockGen) {
-		g.OffsetTime(5)
-		g.SetExtra([]byte("test"))
+	genesisBlock := genSpec.MustCommit(db)
+
+	// Generate a batch of blocks, each properly signed
+	chain, err := core.NewBlockChain(db, nil, config, engine, vm.Config{}, nil)
+	if err != nil {
+		panic(err)
 	}
-	gblock := genesis.ToBlock(db)
-	engine := ethash.NewFaker()
-	blocks, _ := core.GenerateChain(config, gblock, engine, db, 1, generate)
-	blocks = append([]*types.Block{gblock}, blocks...)
-	return genesis, blocks
+	defer chain.Stop()
+
+	blocks, _ := core.GenerateChain(config, genesisBlock, engine, db, 3, func(i int, block *core.BlockGen) {
+		block.SetCoinbase(addr)
+	})
+	for i, block := range blocks {
+		header := block.Header()
+		if i > 0 {
+			header.ParentHash = blocks[i-1].Hash()
+		}
+		extra, err := tests_utils.PrepareExtra(header)
+		if err != nil {
+			panic(err)
+		}
+		header.Extra = extra
+		if err := utils.WriteValSet(header, config.Tendermint.FixedValidators); err != nil {
+			panic(err)
+		}
+
+		hash := utils.SigHash(header).Bytes()
+		seal, err := crypto.Sign(crypto.Keccak256(hash), key)
+		if err != nil {
+			panic(err)
+		}
+		if err = utils.WriteSeal(header, seal); err != nil {
+			panic(err)
+		}
+
+		commitHash := utils.PrepareCommittedSeal(header.Hash())
+		committedSeal, err := crypto.Sign(crypto.Keccak256(commitHash), key)
+		if err != nil {
+			panic(err)
+		}
+		tests_utils.AppendCommittedSeal(header, committedSeal)
+		blocks[i] = block.WithSeal(header)
+	}
+
+	// Insert the first two blocks and make sure the chain is valid
+	if _, err := chain.InsertChain(blocks[:2]); err != nil {
+		panic("failed to insert initial blocks: " + err.Error())
+	}
+
+	blocks = append([]*types.Block{genesisBlock}, blocks...)
+	return genSpec, blocks, chain
 }
 
 func generateExtraDataTestChain() []byte {
@@ -354,7 +415,7 @@ func TestChainID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if id == nil || id.Cmp(params.AllEthashProtocolChanges.ChainID) != 0 {
+	if id == nil || id.Cmp(params.TendermintTestChainConfig.ChainID) != 0 {
 		t.Fatalf("ChainID returned wrong number: %+v", id)
 	}
 }
