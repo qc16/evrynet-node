@@ -134,7 +134,6 @@ func New(ctx *node.ServiceContext, config *Config) (*Evrynet, error) {
 
 	//rewrite gas price
 	chainConfig.GasPrice = config.GasPrice
-	config.GPO.GasPrice = config.GasPrice
 	config.Miner.GasPrice = config.GasPrice
 
 	evr := &Evrynet{
