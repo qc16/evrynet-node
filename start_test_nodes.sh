@@ -13,5 +13,6 @@ do
   ./gev --datadir ./tests/test_nodes/node"$i"/data --nodiscover --tendermint.blockperiod 1 --gasprice 1000000000 --syncmode full --networkid 15 --mine \
     --rpc --rpcaddr 0.0.0.0 --rpcport 2200"$i" --port 3030"$i" \
     --pprof --pprofport 606"$i" \
+    --sc.index-generator-path ./tests/test_nodes/indexGenerator.json \
     --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,tendermint --allow-insecure-unlock 2>>node"$i".log &
 done

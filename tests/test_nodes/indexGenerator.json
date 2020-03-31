@@ -1,0 +1,57 @@
+[
+ {
+  "label": "_notEntered",
+  "offset": 0,
+  "slot": "0"
+ },
+ {
+  "label": "withdrawsState",
+  "offset": 0,
+  "slot": "1"
+ },
+ {
+  "label": "candidateVoters",
+  "offset": 0,
+  "slot": "2"
+ },
+ {
+  "label": "candidateData",
+  "offset": 0,
+  "slot": "3"
+ },
+ {
+  "label": "candidates",
+  "offset": 0,
+  "slot": "4"
+ },
+ {
+  "label": "startBlock",
+  "offset": 0,
+  "slot": "5"
+ },
+ {
+  "label": "epochPeriod",
+  "offset": 0,
+  "slot": "6"
+ },
+ {
+  "label": "maxValidatorSize",
+  "offset": 0,
+  "slot": "7"
+ },
+ {
+  "label": "minValidatorStake",
+  "offset": 0,
+  "slot": "8"
+ },
+ {
+  "label": "minVoterCap",
+  "offset": 0,
+  "slot": "9"
+ },
+ {
+  "label": "admin",
+  "offset": 0,
+  "slot": "10"
+ }
+]

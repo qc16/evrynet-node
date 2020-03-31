@@ -9,6 +9,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20190712234253-ed1100a1c015
 	github.com/btcsuite/btcd v0.20.0-beta
 	github.com/cespare/cp v1.1.1
+	github.com/chilts/sid v0.0.0-20190607042430-660e94789ec9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1
 	github.com/docker/docker v1.13.1
@@ -50,11 +51,11 @@ require (
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0
+	github.com/tidwall/gjson v1.6.0
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/urfave/cli v1.22.1
 	github.com/wsddn/go-ecdh v0.0.0-20161211032359-48726bab9208
-	go.uber.org/atomic v1.5.1 // indirect
-	go.uber.org/multierr v1.4.0 // indirect
+	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.11.0
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
 	golang.org/x/net v0.0.0-20191109021931-daa7c04131f5

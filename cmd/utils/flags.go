@@ -41,6 +41,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	tdmintBackend "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/backend"
 	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/dashboard"
@@ -721,6 +722,13 @@ var (
 		Value: evr.DefaultConfig.Tendermint.TimeoutCommit,
 	}
 
+	// staking contract flags
+	SCIndexGeneratorPathFlag = cli.StringFlag{
+		Name:  "sc.index-generator-path",
+		Usage: "The path of indexGenerator file",
+		Value: "",
+	}
+
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -1375,6 +1383,8 @@ func setWhitelist(ctx *cli.Context, cfg *evr.Config) {
 // setTendermint will use params from CLI for tendermint config
 // NOTE: ProposerPolicy, Epoch are used for chain, so they not allowed to inject. They will be got from genesis
 func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
+	setStakingConfig(ctx, cfg.IndexStateVariables)
+
 	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
 		cfg.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
 	}
@@ -1615,6 +1625,65 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 	cfg.Host = ctx.GlobalString(DashboardAddrFlag.Name)
 	cfg.Port = ctx.GlobalInt(DashboardPortFlag.Name)
 	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
+}
+
+// setStakingConfig applies staking-related command line flags to the config.
+func setStakingConfig(ctx *cli.Context, cfg *staking.Config) {
+	if !ctx.GlobalIsSet(SCIndexGeneratorPathFlag.Name) {
+		log.Warn("node will uses index of state variables with default config")
+		return
+	}
+
+	filePath := ctx.GlobalString(SCIndexGeneratorPathFlag.Name)
+	if filePath == "" {
+		log.Warn("node will uses index of state variables with default config")
+		return
+	}
+
+	jsonData, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Error("get content of the staking contract index error", "err", err)
+		return
+	}
+
+	type storageLayout struct {
+		Label  string `json:"label"`
+		Offset uint16 `json:"offset"`
+		Slot   uint64 `json:"slot,string"`
+	}
+
+	var items []storageLayout
+	err = json.Unmarshal(jsonData, &items)
+	if err != nil {
+		log.Error("Unmarshal content of the staking contract index error", "err", err)
+		return
+	}
+
+	log.Info("node will uses index of state variables with new config", "from", filePath)
+	for _, item := range items {
+		switch item.Label {
+		case staking.WithdrawsStateIndexName:
+			cfg.WithdrawsStateIndex = item.Slot
+		case staking.CandidateVotersIndexName:
+			cfg.CandidateVotersIndex = item.Slot
+		case staking.CandidateDataIndexName:
+			cfg.CandidateDataIndex = item.Slot
+		case staking.CandidatesIndexName:
+			cfg.CandidatesIndex = item.Slot
+		case staking.StartBlockIndexName:
+			cfg.StartBlockIndex = item.Slot
+		case staking.EpochPeriodIndexName:
+			cfg.EpochPeriodIndex = item.Slot
+		case staking.MaxValidatorSizeIndexName:
+			cfg.MaxValidatorSizeIndex = item.Slot
+		case staking.MinValidatorStakeIndexName:
+			cfg.MinValidatorStakeIndex = item.Slot
+		case staking.MinVoterCapIndexName:
+			cfg.MinVoterCapIndex = item.Slot
+		case staking.AdminIndexName:
+			cfg.AdminIndex = item.Slot
+		}
+	}
 }
 
 // RegisterEthService adds an Evrynet client to the stack.

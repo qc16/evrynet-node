@@ -11,35 +11,23 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
-//Note: this constant order is based on smart-contract code. Pls modify it carefully
-const (
-	withdrawsStateIndex    uint64 = iota + 1 //1
-	candidateVotersIndex                     //2
-	candidateDataIndex                       //3
-	candidatesIndex                          //4
-	startBlockIndex                          //5
-	epochPeriodIndex                         //6
-	maxValidatorSizeIndex                    //7
-	minValidatorStakeIndex                   //8
-	minVoterCapIndex                         //9
-	adminIndex                               //10
-)
-
 // stateDBStakingCaller creates a wrapper with statedb to implements ContractCaller
 type stateDBStakingCaller struct {
 	stateDB *state.StateDB
+	config  *Config
 }
 
 // NewStateDbStakingCaller return instance of StakingCaller which reads data directly from state DB
-func NewStateDbStakingCaller(state *state.StateDB) StakingCaller {
+func NewStateDbStakingCaller(state *state.StateDB, cfg *Config) StakingCaller {
 	return &stateDBStakingCaller{
 		stateDB: state,
+		config:  cfg,
 	}
 }
 
 // GetCandidateStake returns current stake of a candidate
 func (c *stateDBStakingCaller) GetCandidateStake(scAddress common.Address, candidate common.Address) *big.Int {
-	locValidatorsState := getLocMappingAtKey(candidate.Hash(), candidateDataIndex)
+	locValidatorsState := getLocMappingAtKey(candidate.Hash(), c.config.CandidateDataIndex)
 	//TODO: change uint64(1) into a constant
 	locStake := locValidatorsState.Add(locValidatorsState, new(big.Int).SetUint64(uint64(1)))
 	stake := c.stateDB.GetState(scAddress, common.BigToHash(locStake))
@@ -95,21 +83,19 @@ func (c *stateDBStakingCaller) GetValidatorsData(common.Address, []common.Addres
 }
 
 func (c *stateDBStakingCaller) getMaxValidatorSize(scAddress common.Address) int {
-	slot := maxValidatorSizeIndex
-	slotHash := common.BigToHash(new(big.Int).SetUint64(slot))
+	slotHash := common.BigToHash(new(big.Int).SetUint64(c.config.MaxValidatorSizeIndex))
 	ret := c.stateDB.GetState(scAddress, slotHash)
 	return int(ret.Big().Int64())
 }
 
 func (c *stateDBStakingCaller) getMinValidatorStake(scAddress common.Address) *big.Int {
-	slot := minValidatorStakeIndex
-	slotHash := common.BigToHash(new(big.Int).SetUint64(slot))
+	slotHash := common.BigToHash(new(big.Int).SetUint64(c.config.MinValidatorStakeIndex))
 	ret := c.stateDB.GetState(scAddress, slotHash)
 	return ret.Big()
 }
 
 func (c *stateDBStakingCaller) getCandidates(scAddress common.Address) ([]common.Address, error) {
-	slot := candidatesIndex
+	slot := c.config.CandidatesIndex
 	slotHash := common.BigToHash(new(big.Int).SetUint64(slot))
 	arrLength := c.stateDB.GetState(scAddress, slotHash)
 	if arrLength.Big().Cmp(big.NewInt(0)) == 0 {

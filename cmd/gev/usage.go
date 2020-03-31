@@ -263,6 +263,12 @@ var AppHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
+		Name: "STAKING CONTRACT",
+		Flags: []cli.Flag{
+			utils.SCIndexGeneratorPathFlag,
+		},
+	},
+	{
 		Name: "MISC",
 	},
 }
