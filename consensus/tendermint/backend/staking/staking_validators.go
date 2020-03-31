@@ -6,9 +6,9 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
 	"github.com/Evrynetlabs/evrynet-node/log"
-	"github.com/Evrynetlabs/evrynet-node/utils"
 )
 
 // StakingValidator is implementation of ValidatorSetInfo

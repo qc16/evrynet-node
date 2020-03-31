@@ -29,6 +29,7 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
+
 	"github.com/Evrynetlabs/evrynet-node/p2p/enr"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 )

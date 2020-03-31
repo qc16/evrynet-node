@@ -11,12 +11,12 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
-	"github.com/Evrynetlabs/evrynet-node/utils"
+	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 const (
@@ -34,10 +34,10 @@ func TestFinalizeBlock(t *testing.T) {
 			common.HexToAddress("0x5be60024b3b7EF2f6e4db97641e8942b85a5124e"),
 			common.HexToAddress("0x954e4BF2C68F13D97C45db0e02645D145dB6911f"),
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -113,14 +113,14 @@ func TestFinalizeBlock(t *testing.T) {
 
 			//Create block 1
 			genesisHeader.Number = big.NewInt(1)
-			bl1 := tests_utils.MakeBlockWithoutSeal(genesisHeader)
+			bl1 := tmdTestsUtils.MakeBlockWithoutSeal(genesisHeader)
 			blHash1 := bl1.Hash()
 			committedSeal1, err := core.backend.Sign(utils.PrepareCommittedSeal(blHash1))
 			require.NoError(t, err)
 
 			//Create block 2
 			genesisHeader.Number = big.NewInt(2)
-			bl2 := tests_utils.MakeBlockWithoutSeal(genesisHeader)
+			bl2 := tmdTestsUtils.MakeBlockWithoutSeal(genesisHeader)
 			blHash2 := bl2.Hash()
 			committedSeal2, err := core.backend.Sign(utils.PrepareCommittedSeal(blHash2))
 			require.NoError(t, err)

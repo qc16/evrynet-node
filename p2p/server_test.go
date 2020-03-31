@@ -250,7 +250,7 @@ func TestServerTaskScheduling(t *testing.T) {
 		quit, returned = make(chan struct{}), make(chan struct{})
 		tc             = 0
 		tg             = taskgen{
-			newFunc: func(running int, peers map[common.Address]*Peer) []task {
+			newFunc: func(running int, peers map[enode.ID]*Peer) []task {
 				tc++
 				return []task{&testTask{index: tc - 1}}
 			},
@@ -329,7 +329,7 @@ func TestServerManyTasks(t *testing.T) {
 	defer srv.Stop()
 	srv.loopWG.Add(1)
 	go srv.run(taskgen{
-		newFunc: func(running int, peers map[common.Address]*Peer) []task {
+		newFunc: func(running int, peers map[enode.ID]*Peer) []task {
 			start, end = end, end+maxActiveDialTasks+10
 			if end > len(alltasks) {
 				end = len(alltasks)
@@ -364,11 +364,11 @@ func TestServerManyTasks(t *testing.T) {
 }
 
 type taskgen struct {
-	newFunc  func(running int, peers map[common.Address]*Peer) []task
+	newFunc  func(running int, peers map[enode.ID]*Peer) []task
 	doneFunc func(task)
 }
 
-func (tg taskgen) newTasks(running int, peers map[common.Address]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task {
+func (tg taskgen) newTasks(running int, peers map[enode.ID]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task {
 	return tg.newFunc(running, peers)
 }
 func (tg taskgen) taskDone(t task, now time.Time) {

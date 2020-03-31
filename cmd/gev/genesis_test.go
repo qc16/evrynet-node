@@ -34,23 +34,12 @@ var customGenesisTests = []struct {
 			"alloc"      : {},
 			"coinbase"   : "0x0000000000000000000000000000000000000000",
 			"difficulty" : "0x20000",
-			"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000d980c096d594560089ab68dc224b250f9588b3db540d87a66b7a",
+			"extraData"  : "",
 			"gasLimit"   : "0x2fefd8",
 			"nonce"      : "0x0000000000000042",
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"timestamp"  : "0x00",
-			"config": {
-				"chainId": 15,
-				"tendermint": {
-				  "epoch": 2000,
-				  "policy": 0,
-				  "fixedValidators": [
-					"0x560089aB68dc224b250f9588b3DB540D87A66b7a"
-				  ],
-				  "stakingSCAddress": null
-				}
-			}
+			"timestamp"  : "0x00"
 		}`,
 		query:  "evr.getBlock(0).nonce",
 		result: "0x0000000000000042",
@@ -61,22 +50,13 @@ var customGenesisTests = []struct {
 			"alloc"      : {},
 			"coinbase"   : "0x0000000000000000000000000000000000000000",
 			"difficulty" : "0x20000",
-			"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000d980c096d594560089ab68dc224b250f9588b3db540d87a66b7a",
+			"extraData"  : "",
 			"gasLimit"   : "0x2fefd8",
 			"nonce"      : "0x0000000000000042",
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"timestamp"  : "0x00",
-			"config": {
-				"chainId": 15,
-				"tendermint": {
-				  "epoch": 2000,
-				  "policy": 0,
-				  "fixedValidators": [
-					"0x560089aB68dc224b250f9588b3DB540D87A66b7a"
-				  ]
-				}
-			}
+			"config"     : {}
 		}`,
 		query:  "evr.getBlock(0).nonce",
 		result: "0x0000000000000042",
@@ -87,20 +67,16 @@ var customGenesisTests = []struct {
 			"alloc"      : {},
 			"coinbase"   : "0x0000000000000000000000000000000000000000",
 			"difficulty" : "0x20000",
-			"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000d980c096d594560089ab68dc224b250f9588b3db540d87a66b7a",
+			"extraData"  : "",
 			"gasLimit"   : "0x2fefd8",
 			"nonce"      : "0x0000000000000042",
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
 			"timestamp"  : "0x00",
 			"config"     : {
-				"tendermint": {
-				  "epoch": 2000,
-				  "policy": 0,
-				  "fixedValidators": [
-					"0x560089aB68dc224b250f9588b3DB540D87A66b7a"
-				  ]
-				}
+				"homesteadBlock" : 314,
+				"daoForkBlock"   : 141,
+				"daoForkSupport" : true
 			}
 		}`,
 		query:  "evr.getBlock(0).nonce",

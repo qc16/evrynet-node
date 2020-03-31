@@ -38,6 +38,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common/math"
 	"github.com/Evrynetlabs/evrynet-node/consensus/clique"
 	"github.com/Evrynetlabs/evrynet-node/consensus/ethash"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
@@ -48,7 +49,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
-	"github.com/Evrynetlabs/evrynet-node/utils"
 )
 
 const (

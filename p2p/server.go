@@ -30,12 +30,12 @@ import (
 
 	"github.com/pkg/errors"
 
+	evrnet "github.com/Evrynetlabs/evrynet-node"
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/mclock"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
-	"github.com/Evrynetlabs/evrynet-node/interfaces"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p/discover"
 	"github.com/Evrynetlabs/evrynet-node/p2p/discv5"
@@ -162,7 +162,7 @@ type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
 
-	ChainReader       interfaces.ChainReader
+	ChainReader       evrnet.P2PChainReader
 	ChainReaderDone   chan struct{}
 	currentValidators map[common.Address]struct{}
 
@@ -202,7 +202,7 @@ type Server struct {
 	inboundHistory expHeap
 }
 
-type peerOpFunc func(map[common.Address]*Peer)
+type peerOpFunc func(map[enode.ID]*Peer)
 
 type peerDrop struct {
 	*Peer
@@ -301,7 +301,7 @@ func (srv *Server) Peers() []*Peer {
 	// Note: We'd love to put this function into a variable but
 	// that seems to cause a weird compiler error in some
 	// environments.
-	case srv.peerOp <- func(peers map[common.Address]*Peer) {
+	case srv.peerOp <- func(peers map[enode.ID]*Peer) {
 		for _, p := range peers {
 			ps = append(ps, p)
 		}
@@ -313,10 +313,10 @@ func (srv *Server) Peers() []*Peer {
 }
 
 // PeersMap returns all connected peers.
-func (srv *Server) PeersMap() map[common.Address]*Peer {
-	var ps map[common.Address]*Peer
+func (srv *Server) PeersMap() map[enode.ID]*Peer {
+	var ps map[enode.ID]*Peer
 	select {
-	case srv.peerOp <- func(peers map[common.Address]*Peer) {
+	case srv.peerOp <- func(peers map[enode.ID]*Peer) {
 		ps = peers
 	}:
 		<-srv.peerOpDone
@@ -329,7 +329,7 @@ func (srv *Server) PeersMap() map[common.Address]*Peer {
 func (srv *Server) PeerCount() int {
 	var count int
 	select {
-	case srv.peerOp <- func(ps map[common.Address]*Peer) { count = len(ps) }:
+	case srv.peerOp <- func(ps map[enode.ID]*Peer) { count = len(ps) }:
 		<-srv.peerOpDone
 	case <-srv.quit:
 	}
@@ -481,9 +481,9 @@ func (srv *Server) Start() (err error) {
 	if err := srv.setupLocalNode(); err != nil {
 		return err
 	}
-	if err := srv.setupChainReader(); err != nil {
-		return err
-	}
+	//if err := srv.setupChainReader(); err != nil {
+	//	return err
+	//}
 	if srv.ListenAddr != "" {
 		if err := srv.setupListening(); err != nil {
 			return err
@@ -500,16 +500,12 @@ func (srv *Server) Start() (err error) {
 	return nil
 }
 
-func (srv *Server) setupChainReader() error {
-	srv.log.Info("Setup chain reader ...")
-	<-srv.ChainReaderDone
-	if err := srv.updateCurrentValidators(); err != nil {
-		return err
+// UpdateCurrentValidators will use Tendermint config to get validator
+func (srv *Server) UpdateCurrentValidators() error {
+	// Ignore if Tendermint config it does not exist
+	if srv.ChainReader != nil && srv.ChainReader.Config().Tendermint == nil {
+		return nil
 	}
-	return nil
-}
-
-func (srv *Server) updateCurrentValidators() error {
 	if srv.ChainReader == nil {
 		return errors.New("Chain reader of server is nil")
 	}
@@ -523,6 +519,7 @@ func (srv *Server) updateCurrentValidators() error {
 	for _, valAddr := range nextValidatorAddrs {
 		currentValidatorMap[valAddr] = struct{}{}
 	}
+
 	srv.currentValidators = currentValidatorMap
 	return nil
 }
@@ -696,7 +693,7 @@ func (srv *Server) setupListening() error {
 }
 
 type dialer interface {
-	newTasks(running int, peers map[common.Address]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task
+	newTasks(running int, peers map[enode.ID]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task
 	taskDone(task, time.Time)
 	addStatic(*enode.Node)
 	removeStatic(*enode.Node)
@@ -708,7 +705,7 @@ func (srv *Server) run(dialstate dialer) {
 	defer srv.nodedb.Close()
 
 	var (
-		peers        = make(map[common.Address]*Peer)
+		peers        = make(map[enode.ID]*Peer)
 		inboundCount = 0
 		trusted      = make(map[enode.ID]bool, len(srv.TrustedNodes))
 		taskdone     = make(chan task, maxActiveDialTasks)
@@ -743,7 +740,7 @@ func (srv *Server) run(dialstate dialer) {
 	}
 	scheduleTasks := func() {
 		// Update validators to check missing peers
-		if err := srv.updateCurrentValidators(); err != nil {
+		if err := srv.UpdateCurrentValidators(); err != nil {
 			log.Error("Failed to update next validators", "error", err)
 		}
 		// Start from queue first.
@@ -777,7 +774,7 @@ running:
 			// stop keeping the node connected.
 			srv.log.Trace("Removing static node", "node", n)
 			dialstate.removeStatic(n)
-			if p, ok := peers[n.Address()]; ok {
+			if p, ok := peers[n.ID()]; ok {
 				p.Disconnect(DiscRequested)
 			}
 
@@ -787,7 +784,7 @@ running:
 			srv.log.Trace("Adding trusted node", "node", n)
 			trusted[n.ID()] = true
 			// Mark any already-connected peer as trusted
-			if p, ok := peers[n.Address()]; ok {
+			if p, ok := peers[n.ID()]; ok {
 				p.rw.set(trustedConn, true)
 			}
 
@@ -798,7 +795,7 @@ running:
 			delete(trusted, n.ID())
 
 			// Unmark any already-connected peer as trusted
-			if p, ok := peers[n.Address()]; ok {
+			if p, ok := peers[n.ID()]; ok {
 				p.rw.set(trustedConn, false)
 			}
 
@@ -840,7 +837,7 @@ running:
 				name := truncateName(c.name)
 				p.log.Debug("Adding p2p peer", "addr", p.RemoteAddr(), "peers", len(peers)+1, "name", name)
 				go srv.runPeer(p)
-				peers[c.node.Address()] = p
+				peers[c.node.ID()] = p
 				if p.Inbound() {
 					inboundCount++
 				}
@@ -854,7 +851,7 @@ running:
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "addr", pd.RemoteAddr(), "peers", len(peers)-1, "duration", d, "req", pd.requested, "err", pd.err)
-			delete(peers, pd.Address())
+			delete(peers, pd.ID())
 			if pd.Inbound() {
 				inboundCount--
 			}
@@ -880,17 +877,17 @@ running:
 	for len(peers) > 0 {
 		p := <-srv.delpeer
 		p.log.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
-		delete(peers, p.Address())
+		delete(peers, p.ID())
 	}
 }
 
-func (srv *Server) postHandshakeChecks(peers map[common.Address]*Peer, inboundCount int, c *conn) error {
+func (srv *Server) postHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
 	switch {
 	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers:
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
-	case peers[c.node.Address()] != nil:
+	case peers[c.node.ID()] != nil:
 		return DiscAlreadyConnected
 	case c.node.ID() == srv.localnode.ID():
 		return DiscSelf
@@ -899,7 +896,7 @@ func (srv *Server) postHandshakeChecks(peers map[common.Address]*Peer, inboundCo
 	}
 }
 
-func (srv *Server) addPeerChecks(peers map[common.Address]*Peer, inboundCount int, c *conn) error {
+func (srv *Server) addPeerChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
 		return DiscUselessPeer
@@ -1040,7 +1037,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	}
 
 	// Setup next validators map
-	if err := srv.updateCurrentValidators(); err != nil {
+	if err := srv.UpdateCurrentValidators(); err != nil {
 		return err
 	}
 

@@ -1617,8 +1617,8 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
 }
 
-// RegisterEthService adds an Evrynet client to the stack.
-func RegisterEthService(stack *node.Node, cfg *evr.Config) {
+// RegisterEvrService adds an Evrynet client to the stack.
+func RegisterEvrService(stack *node.Node, cfg *evr.Config) {
 	var err error
 	if cfg.SyncMode == downloader.LightSync {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
@@ -1632,10 +1632,12 @@ func RegisterEthService(stack *node.Node, cfg *evr.Config) {
 				fullNode.AddLesServer(ls)
 			}
 
-			if fullNode != nil && fullNode.BlockChain() != nil {
-				stack.ChainReader = fullNode.BlockChain()
-				stack.ChainReaderDone <- struct{}{}
+			// Init Tendermint ChainReader for p2p server to read validators set
+			if fullNode != nil && fullNode.BlockChain() != nil && fullNode.BlockChain().Config().Tendermint != nil && stack.P2PServer.ChainReader == nil {
+				stack.P2PServer.ChainReader = fullNode.BlockChain()
 			}
+			stack.P2PServerTrigger <- struct{}{}
+
 			return fullNode, err
 		})
 	}

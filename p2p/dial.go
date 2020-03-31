@@ -155,7 +155,7 @@ func (s *dialstate) removeStatic(n *enode.Node) {
 	delete(s.static, n.ID())
 }
 
-func (s *dialstate) newTasks(nRunning int, peers map[common.Address]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task {
+func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, validatorAddrs map[common.Address]struct{}, now time.Time) []task {
 	if s.start.IsZero() {
 		s.start = now
 	}
@@ -249,22 +249,34 @@ func (s *dialstate) newTasks(nRunning int, peers map[common.Address]*Peer, valid
 
 	// If discover table has validator node without adding, creating dyndial task
 	if _, ok := validatorAddrs[s.nodeAddress]; ok && s.ntab != nil {
+		var (
+			missingValPeers []common.Address
+			discoveredPeers = s.ntab.LookupDiscoveredPeers()
+		)
 		// Find missing validators didn't connect
-		var missingConnectedValPeers []common.Address
 		for valAddr, _ := range validatorAddrs {
-			if _, ok := peers[valAddr]; !ok && valAddr.Hex() != s.nodeAddress.Hex() {
-				missingConnectedValPeers = append(missingConnectedValPeers, valAddr)
+			// Don't check if current node address belongs to validatorAddrs
+			if valAddr.Hex() != s.nodeAddress.Hex() {
+				connectedValPeer := false
+				for _, peer := range peers {
+					if valAddr.Hex() == peer.Address().Hex() {
+						connectedValPeer = true
+						break
+					}
+				}
+				if !connectedValPeer {
+					missingValPeers = append(missingValPeers, valAddr)
+				}
 			}
 		}
 
 		// Create dial task for missing validator nodes
-		discoveredPeers := s.ntab.LookupDiscoveredPeers()
-		for _, missingValAddr := range missingConnectedValPeers {
+		for _, missingValAddr := range missingValPeers {
 			if peer, ok := discoveredPeers[missingValAddr]; ok {
 				s.log.Debug("Create dial task for missing validator nodes", "nodeAddress", peer.Address().Hex())
 				t := &dialTask{flags: dynDialedConn, dest: peer}
 				if err := s.checkDial(t.dest, peers); err != nil {
-					s.log.Warn("Check dial task", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP(), Port: t.dest.TCP()}, "err", err)
+					s.log.Warn("Check dial task failed", "id", t.dest.ID, "addr", &net.TCPAddr{IP: t.dest.IP(), Port: t.dest.TCP()}, "err", err)
 				} else {
 					s.dialing[peer.ID()] = t.flags
 					newtasks = append(newtasks, t)
@@ -284,12 +296,12 @@ var (
 	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
 )
 
-func (s *dialstate) checkDial(n *enode.Node, peers map[common.Address]*Peer) error {
+func (s *dialstate) checkDial(n *enode.Node, peers map[enode.ID]*Peer) error {
 	_, dialing := s.dialing[n.ID()]
 	switch {
 	case dialing:
 		return errAlreadyDialing
-	case peers[n.Address()] != nil:
+	case peers[n.ID()] != nil:
 		return errAlreadyConnected
 	case n.ID() == s.self:
 		return errSelf

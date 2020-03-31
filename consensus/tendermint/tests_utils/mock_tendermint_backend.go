@@ -16,7 +16,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 type MockBackend struct {
@@ -168,7 +167,7 @@ func MustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 	var (
 		address = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		trigger = false
-		statedb = tests_utils.MustCreateStateDB(t)
+		statedb = MustCreateStateDB(t)
 
 		testTxPoolConfig core.TxPoolConfig
 		blockchain       = &MockChainReader{

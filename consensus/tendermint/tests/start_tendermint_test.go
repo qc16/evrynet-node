@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	tests_utils2 "github.com/Evrynetlabs/evrynet-node/tests_utils"
+
 	"math/big"
 	"os"
 	"testing"
@@ -21,7 +23,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 const (
@@ -40,8 +41,8 @@ func TestStartingTendermint(t *testing.T) {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
 	var (
-		nodePk1    = tests_utils.MustGeneratePrivateKey(pkey1)
-		nodePk2    = tests_utils.MustGeneratePrivateKey(pkey2)
+		nodePk1    = tests_utils2.MustGeneratePrivateKey(pkey1)
+		nodePk2    = tests_utils2.MustGeneratePrivateKey(pkey2)
 		tbe1       = backend.New(tendermint.DefaultConfig, nodePk1)
 		totalPeers = 2
 		n1         = enode.MustParseV4("enode://" + hex.EncodeToString(crypto.FromECDSAPub(&nodePk1.PublicKey)[1:]) + "@33.4.2.1:30303")

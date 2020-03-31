@@ -12,13 +12,13 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
+	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
@@ -37,23 +37,23 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
 
 func TestVerifyProposal(t *testing.T) {
 	var (
-		nodePrivateKey     = tests_utils.MakeNodeKey()
-		nodeFakePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey     = tmdTestsUtils.MakeNodeKey()
+		nodeFakePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators         = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
 	// --------CASE 1--------
 	// Will get errMismatchTxhashes
-	block1 := tests_utils.MakeBlockWithoutSeal(genesisHeader)
+	block1 := tmdTestsUtils.MakeBlockWithoutSeal(genesisHeader)
 
 	// --------CASE 2--------
 	// Pass all validation
@@ -152,17 +152,17 @@ func TestVerifyProposal(t *testing.T) {
 
 func TestCore_HandleMsg(t *testing.T) {
 	var (
-		nodePrivateKey     = tests_utils.MakeNodeKey()
-		nodeFakePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey     = tmdTestsUtils.MakeNodeKey()
+		nodeFakePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators         = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	msg := message{

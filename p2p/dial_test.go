@@ -57,10 +57,10 @@ func runDialTest(t *testing.T, test dialtest) {
 		vtime   time.Time
 		running int
 	)
-	pm := func(ps []*Peer) map[common.Address]*Peer {
-		m := make(map[common.Address]*Peer)
+	pm := func(ps []*Peer) map[enode.ID]*Peer {
+		m := make(map[enode.ID]*Peer)
 		for _, p := range ps {
-			m[p.Address()] = p
+			m[p.ID()] = p
 		}
 		return m
 	}

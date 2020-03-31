@@ -30,7 +30,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/evrdb"
-	"github.com/Evrynetlabs/evrynet-node/interfaces"
 	"github.com/Evrynetlabs/evrynet-node/internal/debug"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p"
@@ -40,9 +39,6 @@ import (
 
 // Node is a container on which services can be registered.
 type Node struct {
-	ChainReader     interfaces.ChainReader
-	ChainReaderDone chan struct{}
-
 	eventmux *event.TypeMux // Event multiplexer used between the services of a stack
 	config   *Config
 	accman   *accounts.Manager
@@ -50,8 +46,9 @@ type Node struct {
 	ephemeralKeystore string            // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   fileutil.Releaser // prevents concurrent use of instance directory
 
-	serverConfig p2p.Config
-	server       *p2p.Server // Currently running P2P networking layer
+	serverConfig     p2p.Config
+	P2PServer        *p2p.Server // Currently running P2P networking layer
+	P2PServerTrigger chan struct{}
 
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
@@ -123,7 +120,7 @@ func New(conf *Config) (*Node, error) {
 		wsEndpoint:        conf.WSEndpoint(),
 		eventmux:          new(event.TypeMux),
 		log:               conf.Logger,
-		ChainReaderDone:   make(chan struct{}),
+		P2PServerTrigger:  make(chan struct{}),
 	}, nil
 }
 
@@ -156,7 +153,7 @@ func (n *Node) Register(constructor ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.server != nil {
+	if n.P2PServer != nil {
 		return ErrNodeRunning
 	}
 	n.serviceFuncs = append(n.serviceFuncs, constructor)
@@ -169,7 +166,7 @@ func (n *Node) Start() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's already running
-	if n.server != nil {
+	if n.P2PServer != nil {
 		return ErrNodeRunning
 	}
 	if err := n.openDataDir(); err != nil {
@@ -182,7 +179,7 @@ func (n *Node) Start() error {
 	n.serverConfig.PrivateKey = n.config.NodeKey()
 	n.serverConfig.Name = n.config.NodeName()
 	n.serverConfig.Logger = n.log
-	n.ChainReaderDone = make(chan struct{})
+	n.P2PServerTrigger = make(chan struct{})
 	if n.serverConfig.StaticNodes == nil {
 		n.serverConfig.StaticNodes = n.config.StaticNodes()
 	}
@@ -192,21 +189,22 @@ func (n *Node) Start() error {
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
-	running := &p2p.Server{
-		Config:          n.serverConfig,
-		ChainReader:     n.ChainReader,
+	p2pServer := &p2p.Server{
+		Config: n.serverConfig,
+
 		ChainReaderDone: make(chan struct{}),
 	}
+	n.P2PServer = p2pServer
 	n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
+
+	setupChainReader := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case <-n.ChainReaderDone:
-				running.ChainReader = n.ChainReader
-				running.ChainReaderDone <- struct{}{}
-				break
-			default:
+		select {
+		case <-n.P2PServerTrigger:
+			if err := n.P2PServer.UpdateCurrentValidators(); err != nil {
+				n.log.Error("Failed to setup chain reader", "error", err)
 			}
+			setupChainReader <- struct{}{}
 		}
 	}()
 
@@ -236,21 +234,23 @@ func (n *Node) Start() error {
 	}
 	// Gather the protocols and start the freshly assembled P2P server
 	for _, service := range services {
-		running.Protocols = append(running.Protocols, service.Protocols()...)
+		p2pServer.Protocols = append(p2pServer.Protocols, service.Protocols()...)
 	}
-	if err := running.Start(); err != nil {
+
+	// Waiting chainreader was set in service
+	<-setupChainReader
+	if err := p2pServer.Start(); err != nil {
 		return convertFileLockError(err)
 	}
 	// Start each of the services
 	var started []reflect.Type
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
-		if err := service.Start(running); err != nil {
+		if err := service.Start(p2pServer); err != nil {
 			for _, kind := range started {
 				services[kind].Stop()
 			}
-			running.Stop()
-
+			p2pServer.Stop()
 			return err
 		}
 		// Mark the service started for potential cleanup
@@ -261,12 +261,11 @@ func (n *Node) Start() error {
 		for _, service := range services {
 			service.Stop()
 		}
-		running.Stop()
+		p2pServer.Stop()
 		return err
 	}
 	// Finish initializing the startup
 	n.services = services
-	n.server = running
 	n.stop = make(chan struct{})
 
 	return nil
@@ -453,7 +452,7 @@ func (n *Node) Stop() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's not running
-	if n.server == nil {
+	if n.P2PServer == nil {
 		return ErrNodeStopped
 	}
 
@@ -470,9 +469,9 @@ func (n *Node) Stop() error {
 			failure.Services[kind] = err
 		}
 	}
-	n.server.Stop()
+	n.P2PServer.Stop()
 	n.services = nil
-	n.server = nil
+	n.P2PServer = nil
 
 	// Release instance directory lock.
 	if n.instanceDirLock != nil {
@@ -504,7 +503,7 @@ func (n *Node) Stop() error {
 // at the time of invocation, the method immediately returns.
 func (n *Node) Wait() {
 	n.lock.RLock()
-	if n.server == nil {
+	if n.P2PServer == nil {
 		n.lock.RUnlock()
 		return
 	}
@@ -531,7 +530,7 @@ func (n *Node) Attach() (*rpc.Client, error) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
-	if n.server == nil {
+	if n.P2PServer == nil {
 		return nil, ErrNodeStopped
 	}
 	return rpc.DialInProc(n.inprocHandler), nil
@@ -552,10 +551,10 @@ func (n *Node) RPCHandler() (*rpc.Server, error) {
 // only to inspect fields of the currently running server, life cycle management
 // should be left to this Node entity.
 func (n *Node) Server() *p2p.Server {
-	n.lock.RLock()
-	defer n.lock.RUnlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 
-	return n.server
+	return n.P2PServer
 }
 
 // Service retrieves a currently running service registered of a specific type.
@@ -564,7 +563,7 @@ func (n *Node) Service(service interface{}) error {
 	defer n.lock.RUnlock()
 
 	// Short circuit if the node's not running
-	if n.server == nil {
+	if n.P2PServer == nil {
 		return ErrNodeStopped
 	}
 	// Otherwise try to find the service to return

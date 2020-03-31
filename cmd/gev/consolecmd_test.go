@@ -31,24 +31,18 @@ import (
 )
 
 const (
-	ipcAPIs  = "admin:1.0 debug:1.0 eth:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 shh:1.0 tendermint:1.0 txpool:1.0 web3:1.0"
+	ipcAPIs  = "admin:1.0 debug:1.0 eth:1.0 ethash:1.0 miner:1.0 net:1.0 personal:1.0 rpc:1.0 shh:1.0 txpool:1.0 web3:1.0"
 	httpAPIs = "eth:1.0 net:1.0 rpc:1.0 web3:1.0"
 )
 
 // Tests that a node embedded within a console can be started up properly and
 // then terminated by closing the input stream.
 func TestConsoleWelcome(t *testing.T) {
-	coinbase := "0x560089ab68dc224b250f9588b3db540d87a66b7a"
-
-	// Create a temporary data directory to use and inspect later
-	datadir := tmpdir(t)
-	defer os.RemoveAll(datadir)
-
-	initTestGenesis(t, datadir)
+	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
 
 	// Start a geth console, make sure it's cleaned up and terminate the console
 	geth := runGeth(t,
-		"--datadir", datadir, "--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
+		"--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
 		"--etherbase", coinbase, "--shh",
 		"console")
 
@@ -77,14 +71,8 @@ at block: 0 ({{niltime}})
 
 // Tests that a console can be attached to a running node via various means.
 func TestIPCAttachWelcome(t *testing.T) {
-	// Create a temporary data directory to use and inspect later
-	datadir := tmpDatadirWithKeystore(t)
-	defer os.RemoveAll(datadir)
-
-	initTestGenesis(t, datadir)
-
 	// Configure the instance for IPC attachement
-	coinbase := "0x560089ab68dc224b250f9588b3db540d87a66b7a"
+	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
 	var ipc string
 	if runtime.GOOS == "windows" {
 		ipc = `\\.\pipe\geth` + strconv.Itoa(trulyRandInt(100000, 999999))
@@ -96,7 +84,7 @@ func TestIPCAttachWelcome(t *testing.T) {
 	// Note: we need --shh because testAttachWelcome checks for default
 	// list of ipc modules and shh is included there.
 	geth := runGeth(t,
-		"--datadir", datadir, "--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
+		"--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
 		"--etherbase", coinbase, "--shh", "--ipcpath", ipc)
 
 	time.Sleep(2 * time.Second) // Simple way to wait for the RPC endpoint to open
@@ -107,16 +95,10 @@ func TestIPCAttachWelcome(t *testing.T) {
 }
 
 func TestHTTPAttachWelcome(t *testing.T) {
-	// Create a temporary data directory to use and inspect later
-	datadir := tmpDatadirWithKeystore(t)
-	defer os.RemoveAll(datadir)
-
-	initTestGenesis(t, datadir)
-
-	coinbase := "0x560089ab68dc224b250f9588b3db540d87a66b7a"
+	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
 	geth := runGeth(t,
-		"--datadir", datadir, "--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
+		"--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
 		"--etherbase", coinbase, "--rpc", "--rpcport", port)
 
 	time.Sleep(2 * time.Second) // Simple way to wait for the RPC endpoint to open
@@ -127,17 +109,14 @@ func TestHTTPAttachWelcome(t *testing.T) {
 }
 
 func TestWSAttachWelcome(t *testing.T) {
-	// Create a temporary data directory to use and inspect later
-	datadir := tmpDatadirWithKeystore(t)
-	defer os.RemoveAll(datadir)
+	//TODO: fix this test later when rename eth -> evr in web socket
+	t.Skip()
 
-	initTestGenesis(t, datadir)
-
-	coinbase := "0x560089ab68dc224b250f9588b3db540d87a66b7a"
+	coinbase := "0x8605cdbbdb6d264aa742e77020dcbc58fcdce182"
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
 
 	geth := runGeth(t,
-		"--datadir", datadir, "--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
+		"--port", "0", "--maxpeers", "0", "--nodiscover", "--nat", "none",
 		"--etherbase", coinbase, "--ws", "--wsport", port)
 
 	time.Sleep(2 * time.Second) // Simple way to wait for the RPC endpoint to open

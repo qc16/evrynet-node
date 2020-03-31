@@ -12,26 +12,26 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
+	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -51,17 +51,17 @@ func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
 
 func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
 			nodeAddr2,
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -81,17 +81,17 @@ func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 
 func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
 			nodeAddr2,
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -111,15 +111,15 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 
 func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -139,16 +139,16 @@ func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 
 func TestCoreFutureMessage(t *testing.T) {
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -206,7 +206,7 @@ func TestCoreFutureMessage(t *testing.T) {
 func TestCore_Start_NotValidators(t *testing.T) {
 	t.Parallel()
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
 		validators     = []common.Address{
 			common.HexToAddress("0x11"),
 		}
@@ -218,7 +218,7 @@ func TestCore_Start_NotValidators(t *testing.T) {
 func TestCore_Start_Validators(t *testing.T) {
 	t.Parallel()
 	var (
-		nodePrivateKey = tests_utils.MakeNodeKey()
+		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
@@ -229,10 +229,10 @@ func TestCore_Start_Validators(t *testing.T) {
 
 func testCoreStartNewRound(t *testing.T, nodePk *ecdsa.PrivateKey, validators []common.Address, expectedStep RoundStepType) {
 	var (
-		genesisHeader = tests_utils.MakeGenesisHeader(validators)
+		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePk, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePk, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -253,7 +253,7 @@ func sign(t *testing.T, msg *message, privateKey *ecdsa.PrivateKey) {
 func assertNextMsg(t *testing.T, sentMsgSub *event.TypeMuxSubscription, msgType uint64, timeout time.Duration, assertAddress func(address common.Address), assertMsg func([]byte)) {
 	select {
 	case ev := <-sentMsgSub.Chan():
-		sendMsgEvent := ev.Data.(tdmTestsUtils.SentMsgEvent)
+		sendMsgEvent := ev.Data.(tests_utils.SentMsgEvent)
 		if assertAddress != nil {
 			assertAddress(sendMsgEvent.Target)
 		}

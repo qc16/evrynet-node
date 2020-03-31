@@ -14,7 +14,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
 	evrynetCore "github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
@@ -89,9 +89,9 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 		statedb = tests_utils.MustCreateStateDB(t)
 
 		testTxPoolConfig evrynetCore.TxPoolConfig
-		blockchain       = &tdmTestsUtils.MockChainReader{
+		blockchain       = &tmdTestsUtils.MockChainReader{
 			GenesisHeader: genesisHeader,
-			MockBlockChain: &tdmTestsUtils.MockBlockChain{
+			MockBlockChain: &tmdTestsUtils.MockBlockChain{
 				Statedb:       statedb,
 				GasLimit:      1000000000,
 				ChainHeadFeed: new(event.Feed),
@@ -128,7 +128,7 @@ func (m *mockBroadcaster) FindPeers(targets map[common.Address]bool) map[common.
 
 	if m.isSendFailed {
 		for addr := range targets {
-			out[addr] = &tests_utils.MockPeer{SendFn: func(data interface{}) error {
+			out[addr] = &tmdTestsUtils.MockPeer{SendFn: func(data interface{}) error {
 				return errors.New("test send failed")
 			}}
 		}
@@ -139,11 +139,11 @@ func (m *mockBroadcaster) FindPeers(targets map[common.Address]bool) map[common.
 	hasHandle := false
 	for addr := range targets {
 		if !hasHandle {
-			out[addr] = &tests_utils.MockPeer{SendFn: m.handleFn}
+			out[addr] = &tmdTestsUtils.MockPeer{SendFn: m.handleFn}
 			hasHandle = true
 			continue
 		}
-		out[addr] = &tests_utils.MockPeer{}
+		out[addr] = &tmdTestsUtils.MockPeer{}
 	}
 	return out
 }
