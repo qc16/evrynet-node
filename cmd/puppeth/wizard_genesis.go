@@ -216,6 +216,11 @@ func (w *wizard) makeGenesis() {
 	fmt.Println("Specify your chain/network ID if you want an explicit one (default = random)")
 	genesis.Config.ChainID = new(big.Int).SetUint64(uint64(w.readDefaultInt(rand.Intn(65536))))
 
+	// Query the gas price
+	fmt.Println()
+	fmt.Println("Specify your network gas price if you want an explicit one (default = 1 Gwei)")
+	genesis.Config.GasPrice = new(big.Int).SetUint64(uint64(w.readDefaultInt(params.GasPriceConfig)))
+
 	// All done, store the genesis and flush to disk
 	log.Info("Configured new genesis block")
 
