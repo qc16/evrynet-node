@@ -191,8 +191,6 @@ func (n *Node) Start() error {
 	}
 	p2pServer := &p2p.Server{
 		Config: n.serverConfig,
-
-		ChainReaderDone: make(chan struct{}),
 	}
 	n.P2PServer = p2pServer
 	n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
@@ -239,6 +237,7 @@ func (n *Node) Start() error {
 
 	// Waiting chainreader was set in service
 	<-setupChainReader
+	n.log.Info("ChainReader of p2p server is ready")
 	if err := p2pServer.Start(); err != nil {
 		return convertFileLockError(err)
 	}

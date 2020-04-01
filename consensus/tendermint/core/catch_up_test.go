@@ -12,9 +12,10 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 // DefaultTestConfig with time is smaller than DefaultConfig for speed-up
@@ -47,11 +48,11 @@ func Test_CatchUpRequest(t *testing.T) {
 		tendermintCfg = DefaultTestConfig
 	)
 	//create New test backend and newMockChain
-	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 	// subscribe to output msg
-	mockBe, ok := be.(*tests_utils.MockBackend)
+	mockBe, ok := be.(*tdmTestsUtils.MockBackend)
 	require.True(t, ok)
-	sentMsgSub := mockBe.SendEventMux.Subscribe(tests_utils.SentMsgEvent{})
+	sentMsgSub := mockBe.SendEventMux.Subscribe(tdmTestsUtils.SentMsgEvent{})
 	defer sentMsgSub.Unsubscribe()
 
 	core := newTestCore(be, tendermintCfg)

@@ -85,20 +85,13 @@ func startTestServer(t *testing.T, remoteKey *ecdsa.PublicKey, pf func(*Peer)) *
 		Logger:     testlog.Logger(t, log.LvlTrace),
 	}
 	server := &Server{
-		ChainReader:     generateChainReader(t),
-		ChainReaderDone: make(chan struct{}),
-		Config:          config,
-		newPeerHook:     pf,
-		newTransport:    func(fd net.Conn) transport { return newTestTransport(remoteKey, fd) },
+		ChainReader:  generateChainReader(t),
+		Config:       config,
+		newPeerHook:  pf,
+		newTransport: func(fd net.Conn) transport { return newTestTransport(remoteKey, fd) },
 	}
 
-	// Start Server
-	serverStarted := make(chan error)
-	go func() {
-		serverStarted <- server.Start()
-	}()
-	server.ChainReaderDone <- struct{}{}
-	if err := <-serverStarted; err != nil {
+	if err := server.Start(); err != nil {
 		t.Fatalf("Could not start server: %v", err)
 	}
 	return server
@@ -117,6 +110,7 @@ func generateChainReader(t *testing.T) *tests_utils.MockChainReader {
 	}
 
 	return &tests_utils.MockChainReader{
+		GenesisHeader: genesisHeader,
 		MockBlockChain: &tests_utils.MockBlockChain{
 			Statedb:          stateDB,
 			GasLimit:         1000000000,
@@ -399,8 +393,7 @@ func TestServerAtCap(t *testing.T) {
 		nodePrivateKey = newkey()
 	)
 	srv := &Server{
-		ChainReader:     generateChainReader(t),
-		ChainReaderDone: make(chan struct{}),
+		ChainReader: generateChainReader(t),
 		Config: Config{
 			Name:         "test",
 			PrivateKey:   nodePrivateKey,
@@ -413,14 +406,8 @@ func TestServerAtCap(t *testing.T) {
 		},
 	}
 
-	// Start Server
-	serverStarted := make(chan error)
-	go func() {
-		serverStarted <- srv.Start()
-	}()
-	srv.ChainReaderDone <- struct{}{}
-	if err := <-serverStarted; err != nil {
-		t.Fatalf("Could not start server: %v", err)
+	if err := srv.Start(); err != nil {
+		t.Fatalf("could not start: %v", err)
 	}
 	defer srv.Stop()
 
@@ -488,8 +475,7 @@ func TestServerPeerLimits(t *testing.T) {
 	}
 
 	srv := &Server{
-		ChainReader:     generateChainReader(t),
-		ChainReaderDone: make(chan struct{}),
+		ChainReader: generateChainReader(t),
 		Config: Config{
 			PrivateKey:  srvkey,
 			MaxPeers:    0,
@@ -501,14 +487,8 @@ func TestServerPeerLimits(t *testing.T) {
 		log:          log.New(),
 	}
 
-	// Start Server
-	serverStarted := make(chan error)
-	go func() {
-		serverStarted <- srv.Start()
-	}()
-	srv.ChainReaderDone <- struct{}{}
-	if err := <-serverStarted; err != nil {
-		t.Fatalf("Could not start server: %v", err)
+	if err := srv.Start(); err != nil {
+		t.Fatalf("could not start: %v", err)
 	}
 	defer srv.Stop()
 
@@ -620,21 +600,14 @@ func TestServerSetupConn(t *testing.T) {
 				Logger:      testlog.Logger(t, log.LvlTrace),
 			}
 			srv := &Server{
-				ChainReader:     generateChainReader(t),
-				ChainReaderDone: make(chan struct{}),
-				Config:          cfg,
-				newTransport:    func(fd net.Conn) transport { return test.tt },
-				log:             cfg.Logger,
+				ChainReader:  generateChainReader(t),
+				Config:       cfg,
+				newTransport: func(fd net.Conn) transport { return test.tt },
+				log:          cfg.Logger,
 			}
 			if !test.dontstart {
-				// Start Server
-				serverStarted := make(chan error)
-				go func() {
-					serverStarted <- srv.Start()
-				}()
-				srv.ChainReaderDone <- struct{}{}
-				if err := <-serverStarted; err != nil {
-					t.Fatalf("Could not start server: %v", err)
+				if err := srv.Start(); err != nil {
+					t.Fatalf("could not start: %v", err)
 				}
 				defer srv.Stop()
 			}
@@ -705,8 +678,7 @@ func TestServerInboundThrottle(t *testing.T) {
 	const timeout = 5 * time.Second
 	newTransportCalled := make(chan struct{})
 	srv := &Server{
-		ChainReader:     generateChainReader(t),
-		ChainReaderDone: make(chan struct{}),
+		ChainReader: generateChainReader(t),
 		Config: Config{
 			PrivateKey:  newkey(),
 			ListenAddr:  "127.0.0.1:0",
@@ -725,14 +697,8 @@ func TestServerInboundThrottle(t *testing.T) {
 			return listenFakeAddr(network, laddr, fakeAddr)
 		},
 	}
-	// Start Server
-	serverStarted := make(chan error)
-	go func() {
-		serverStarted <- srv.Start()
-	}()
-	srv.ChainReaderDone <- struct{}{}
-	if err := <-serverStarted; err != nil {
-		t.Fatalf("Could not start server: %v", err)
+	if err := srv.Start(); err != nil {
+		t.Fatalf("could not start: %v", err)
 	}
 	defer srv.Stop()
 

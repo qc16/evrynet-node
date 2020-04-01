@@ -12,12 +12,13 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
+	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
@@ -30,7 +31,7 @@ func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -60,7 +61,7 @@ func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -90,7 +91,7 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -118,7 +119,7 @@ func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -147,7 +148,7 @@ func TestCoreFutureMessage(t *testing.T) {
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -231,7 +232,7 @@ func testCoreStartNewRound(t *testing.T, nodePk *ecdsa.PrivateKey, validators []
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePk, genesisHeader, validators)
+	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePk, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -252,7 +253,7 @@ func sign(t *testing.T, msg *message, privateKey *ecdsa.PrivateKey) {
 func assertNextMsg(t *testing.T, sentMsgSub *event.TypeMuxSubscription, msgType uint64, timeout time.Duration, assertAddress func(address common.Address), assertMsg func([]byte)) {
 	select {
 	case ev := <-sentMsgSub.Chan():
-		sendMsgEvent := ev.Data.(tests_utils.SentMsgEvent)
+		sendMsgEvent := ev.Data.(tdmTestsUtils.SentMsgEvent)
 		if assertAddress != nil {
 			assertAddress(sendMsgEvent.Target)
 		}

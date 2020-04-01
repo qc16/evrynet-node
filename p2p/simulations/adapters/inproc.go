@@ -23,6 +23,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/Evrynetlabs/evrynet-node/tests_utils"
+
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/node"
@@ -265,6 +267,13 @@ func (sn *SimNode) Start(snapshots map[string][]byte) error {
 				return nil, err
 			}
 			sn.running[name] = service
+
+			// Init ChainReader to Server start
+			sn.node.P2PServer.ChainReader, err = tests_utils.GenerateMockChainReader()
+			if err != nil {
+				return nil, err
+			}
+			sn.node.P2PServerTrigger <- struct{}{}
 			return service, nil
 		}
 	}

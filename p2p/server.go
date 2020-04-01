@@ -163,7 +163,6 @@ type Server struct {
 	Config
 
 	ChainReader       evrnet.P2PChainReader
-	ChainReaderDone   chan struct{}
 	currentValidators map[common.Address]struct{}
 
 	// Hooks for testing. These are useful because we can inhibit
@@ -478,12 +477,12 @@ func (srv *Server) Start() (err error) {
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 
+	if srv.Config.MaxPeers < len(srv.currentValidators) {
+		srv.Config.MaxPeers = len(srv.currentValidators)
+	}
 	if err := srv.setupLocalNode(); err != nil {
 		return err
 	}
-	//if err := srv.setupChainReader(); err != nil {
-	//	return err
-	//}
 	if srv.ListenAddr != "" {
 		if err := srv.setupListening(); err != nil {
 			return err
