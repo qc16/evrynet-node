@@ -14,7 +14,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/validator"
 	evrynetCore "github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
@@ -22,7 +22,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/params"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func TestSign(t *testing.T) {
@@ -89,9 +88,9 @@ func mustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 		statedb = tests_utils.MustCreateStateDB(t)
 
 		testTxPoolConfig evrynetCore.TxPoolConfig
-		blockchain       = &tmdTestsUtils.MockChainReader{
+		blockchain       = &tests_utils.MockChainReader{
 			GenesisHeader: genesisHeader,
-			MockBlockChain: &tmdTestsUtils.MockBlockChain{
+			MockBlockChain: &tests_utils.MockBlockChain{
 				Statedb:       statedb,
 				GasLimit:      1000000000,
 				ChainHeadFeed: new(event.Feed),
@@ -128,7 +127,7 @@ func (m *mockBroadcaster) FindPeers(targets map[common.Address]bool) map[common.
 
 	if m.isSendFailed {
 		for addr := range targets {
-			out[addr] = &tmdTestsUtils.MockPeer{SendFn: func(data interface{}) error {
+			out[addr] = &tests_utils.MockPeer{SendFn: func(data interface{}) error {
 				return errors.New("test send failed")
 			}}
 		}
@@ -139,11 +138,11 @@ func (m *mockBroadcaster) FindPeers(targets map[common.Address]bool) map[common.
 	hasHandle := false
 	for addr := range targets {
 		if !hasHandle {
-			out[addr] = &tmdTestsUtils.MockPeer{SendFn: m.handleFn}
+			out[addr] = &tests_utils.MockPeer{SendFn: m.handleFn}
 			hasHandle = true
 			continue
 		}
-		out[addr] = &tmdTestsUtils.MockPeer{}
+		out[addr] = &tests_utils.MockPeer{}
 	}
 	return out
 }

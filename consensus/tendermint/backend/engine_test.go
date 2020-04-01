@@ -13,12 +13,11 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/crypto/secp256k1"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 // TestSimulateSubscribeAndReceiveToSeal is a simple test to pass a block to backend.Seal()
@@ -69,7 +68,7 @@ func TestAuthor(t *testing.T) {
 	//create New test backend and newMockChain
 	be := mustCreateAndStartNewBackend(t, nodePK, genesisHeader, validators)
 
-	block := tmdTestsUtils.MakeBlockWithSeal(be, genesisHeader)
+	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
 	header := block.Header()
 	signer, err := be.Author(header)
 	assert.NoError(t, err)
@@ -123,7 +122,7 @@ func TestVerifySeal(t *testing.T) {
 	err = be.VerifySeal(be.chain, genesisHeader)
 	assert.Equal(t, tendermint.ErrUnknownBlock, err)
 
-	block := tmdTestsUtils.MakeBlockWithSeal(be, genesisHeader)
+	block := tests_utils.MakeBlockWithSeal(be, genesisHeader)
 	err = be.VerifySeal(be.chain, block.Header())
 	assert.NoError(t, err)
 }
@@ -266,7 +265,7 @@ func TestBackend_VerifyHeaders(t *testing.T) {
 	finalizeHeader := createHeader(pk3, int64(2*epochSize+1), hash, nil)
 	verifiedHeader = append(verifiedHeader, finalizeHeader)
 
-	chainReader := tmdTestsUtils.NewHeadersMockChainReader(chainHeaders)
+	chainReader := tests_utils.NewHeadersMockChainReader(chainHeaders)
 	//verify header if transition block is in ChainReader
 	require.NoError(t, be.VerifyHeader(chainReader, verifiedHeader[0], true))
 	//verify header if transition block is not in ChainReader

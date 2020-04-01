@@ -18,7 +18,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
@@ -37,13 +36,13 @@ func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
 
 func TestVerifyProposal(t *testing.T) {
 	var (
-		nodePrivateKey     = tmdTestsUtils.MakeNodeKey()
-		nodeFakePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey     = tests_utils.MakeNodeKey()
+		nodeFakePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators         = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 		err           error
 	)
 	//create New test backend and newMockChain
@@ -53,7 +52,7 @@ func TestVerifyProposal(t *testing.T) {
 	require.NoError(t, core.Start())
 	// --------CASE 1--------
 	// Will get errMismatchTxhashes
-	block1 := tmdTestsUtils.MakeBlockWithoutSeal(genesisHeader)
+	block1 := tests_utils.MakeBlockWithoutSeal(genesisHeader)
 
 	// --------CASE 2--------
 	// Pass all validation
@@ -152,13 +151,13 @@ func TestVerifyProposal(t *testing.T) {
 
 func TestCore_HandleMsg(t *testing.T) {
 	var (
-		nodePrivateKey     = tmdTestsUtils.MakeNodeKey()
-		nodeFakePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey     = tests_utils.MakeNodeKey()
+		nodeFakePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr           = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators         = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 		err           error
 	)
 	//create New test backend and newMockChain

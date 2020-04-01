@@ -18,17 +18,16 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	tmdTestsUtils "github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
 	var (
-		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
 	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
@@ -51,14 +50,14 @@ func TestRecoverCoreTimeoutWithNewHeight(t *testing.T) {
 
 func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 	var (
-		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
 			nodeAddr2,
 		}
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
 	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
@@ -81,14 +80,14 @@ func TestRecoverCoreTimeoutWithPropose(t *testing.T) {
 
 func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 	var (
-		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		nodeAddr2      = common.HexToAddress("0x0")
 		validators     = []common.Address{
 			nodeAddr,
 			nodeAddr2,
 		}
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
 	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
@@ -111,12 +110,12 @@ func TestRecoverCoreTimeoutWithPrevoteWait(t *testing.T) {
 
 func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 	var (
-		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
 	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
@@ -139,12 +138,12 @@ func TestRecoverCoreTimeoutWithPreCommit(t *testing.T) {
 
 func TestCoreFutureMessage(t *testing.T) {
 	var (
-		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
 		}
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 		err           error
 	)
 	//create New test backend and newMockChain
@@ -206,7 +205,7 @@ func TestCoreFutureMessage(t *testing.T) {
 func TestCore_Start_NotValidators(t *testing.T) {
 	t.Parallel()
 	var (
-		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		validators     = []common.Address{
 			common.HexToAddress("0x11"),
 		}
@@ -218,7 +217,7 @@ func TestCore_Start_NotValidators(t *testing.T) {
 func TestCore_Start_Validators(t *testing.T) {
 	t.Parallel()
 	var (
-		nodePrivateKey = tmdTestsUtils.MakeNodeKey()
+		nodePrivateKey = tests_utils.MakeNodeKey()
 		nodeAddr       = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		validators     = []common.Address{
 			nodeAddr,
@@ -229,7 +228,7 @@ func TestCore_Start_Validators(t *testing.T) {
 
 func testCoreStartNewRound(t *testing.T, nodePk *ecdsa.PrivateKey, validators []common.Address, expectedStep RoundStepType) {
 	var (
-		genesisHeader = tmdTestsUtils.MakeGenesisHeader(validators)
+		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
 	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePk, genesisHeader, validators)
