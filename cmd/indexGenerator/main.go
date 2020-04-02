@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/chilts/sid"
 	"github.com/tidwall/gjson"
+
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 )
 
 const (
@@ -19,12 +22,6 @@ const (
 	// KeyPath returns the path of the storage data in json file
 	KeyPath = "contracts.EvrynetStaking\\.sol.EvrynetStaking.storageLayout.storage"
 )
-
-type storageLayout struct {
-	Label  string `json:"label"`
-	Offset uint16 `json:"offset"`
-	Slot   uint16 `json:"slot,string"`
-}
 
 func main() {
 	rawFile, err := genJSONFile()
@@ -44,7 +41,7 @@ func main() {
 	}
 }
 
-func saveToFile(items []storageLayout) error {
+func saveToFile(items []staking.StorageLayout) error {
 	file, err := json.MarshalIndent(items, "", " ")
 	if err != nil {
 		return err
@@ -52,18 +49,19 @@ func saveToFile(items []storageLayout) error {
 	return ioutil.WriteFile(StorageLayoutConfigPath, file, 0644)
 }
 
-func readJSONData(rawFile string) ([]storageLayout, error) {
+func readJSONData(rawFile string) ([]staking.StorageLayout, error) {
 	jsonData, err := ioutil.ReadFile(rawFile)
 	if err != nil {
 		return nil, err
 	}
-	var items []storageLayout
+	var items []staking.StorageLayout
 	data := gjson.Get(string(jsonData), KeyPath)
-	if data.Exists() {
-		err = json.Unmarshal([]byte(data.Raw), &items)
-		if err != nil {
-			return nil, err
-		}
+	if !data.Exists() {
+		return nil, errors.New("storageLayout's data not found")
+	}
+	err = json.Unmarshal([]byte(data.Raw), &items)
+	if err != nil {
+		return nil, err
 	}
 	if err = os.Remove(rawFile); err != nil {
 		log.Printf("remove the temporary file error %s\n", err.Error())

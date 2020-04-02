@@ -17,6 +17,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	coreStaking "github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -94,6 +95,22 @@ func TestBackendCallGetListCandidateFromSC(t *testing.T) {
 
 	header := backend.chain.CurrentHeader()
 	stakingCaller := coreStaking.NewEVMStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
+	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(validators))
+}
+
+func TestBackendCallGetListCandidateFromStateDB(t *testing.T) {
+	// Must init log to show error when using log.Debug
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+
+	backend, _, err := createBlockchainAndBackendFromGenesis(StakingSC)
+	assert.NoError(t, err)
+
+	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
+	assert.NoError(t, err)
+
+	stakingCaller := coreStaking.NewStateDbStakingCaller(state, staking.DefaultConfig)
 	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(validators))

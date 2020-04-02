@@ -626,8 +626,8 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	if err != nil {
 		return nil, err
 	}
-	state := staking.NewStateDbStakingCaller(stateDB, sb.config.IndexStateVariables)
-	validators, err := state.GetValidators(sb.stakingContractAddr)
+	stateDBCaller := staking.NewStateDbStakingCaller(stateDB, sb.config.IndexStateVariables)
+	validators, err := stateDBCaller.GetValidators(sb.stakingContractAddr)
 	if err != nil {
 		return nil, err
 	}

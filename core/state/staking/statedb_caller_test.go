@@ -32,6 +32,7 @@ func TestGetValidatorsFromStateDb(t *testing.T) {
 		minValidatorStake = big.NewInt(20)
 		minVoteCap        = big.NewInt(10)
 		adminAddr         = common.HexToAddress("0x94F5B16552DCEaCbAdABA146D6e3235f4A8617a8")
+		indexLayout       = staking.DefaultConfig
 	)
 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
 	require.NoError(t, err)
@@ -57,11 +58,12 @@ func TestGetValidatorsFromStateDb(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), receipt.Status)
 
-	stateDB, err := be.CurrentStateDb()
+	stateDBCaller, err := be.GetStakingCaller(indexLayout)
 	require.NoError(t, err)
-	state := staking.NewStateDbStakingCaller(stateDB)
-	validators, err := state.GetValidators(scAddress)
+
+	validators, err := stateDBCaller.GetValidators(scAddress)
 	require.NoError(t, err)
+	assert.Equal(t, 2, len(validators))
 	for _, val := range validators {
 		fmt.Println(val.Hex())
 	}

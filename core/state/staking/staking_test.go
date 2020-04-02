@@ -63,7 +63,7 @@ func TestGetValidators(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx.Hash())
 
-	stakingCaller, err := be.GetStakingCaller()
+	stakingCaller, err := be.GetStakingCaller(nil)
 	require.NoError(t, err)
 
 	validators, err := stakingCaller.GetValidators(addr)
@@ -77,7 +77,7 @@ func TestGetValidators(t *testing.T) {
 	require.NoError(t, err)
 	be.Commit()
 	assertTxSuccess(t, be, tx2.Hash())
-	stakingCaller, err = be.GetStakingCaller()
+	stakingCaller, err = be.GetStakingCaller(nil)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestGetValidators(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx3.Hash())
 	assertTxSuccess(t, be, tx4.Hash())
-	stakingCaller, err = be.GetStakingCaller()
+	stakingCaller, err = be.GetStakingCaller(nil)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx.Hash())
 
-	stakingCaller, err := be.GetStakingCaller()
+	stakingCaller, err := be.GetStakingCaller(nil)
 	require.NoError(t, err)
 
 	validators, err := stakingCaller.GetValidators(addr)
@@ -166,7 +166,7 @@ func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
 	require.NoError(t, err)
 	be.Commit()
 	assertTxSuccess(t, be, tx2.Hash())
-	stakingCaller, err = be.GetStakingCaller()
+	stakingCaller, err = be.GetStakingCaller(nil)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx3.Hash())
 	assertTxSuccess(t, be, tx4.Hash())
-	stakingCaller, err = be.GetStakingCaller()
+	stakingCaller, err = be.GetStakingCaller(nil)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)

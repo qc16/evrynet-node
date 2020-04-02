@@ -47,7 +47,7 @@ type Config struct {
 
 	FaultyMode uint64 `toml:",omitempty"` // The faulty node indicates the faulty node's behavior
 
-	IndexStateVariables *staking.Config //The index of state variables has stored in stateDB
+	IndexStateVariables *staking.IndexConfigs //The index of state variables has stored in stateDB
 }
 
 var DefaultConfig = &Config{

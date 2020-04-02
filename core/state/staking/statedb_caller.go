@@ -14,35 +14,30 @@ import (
 // stateDBStakingCaller creates a wrapper with statedb to implements ContractCaller
 type stateDBStakingCaller struct {
 	stateDB *state.StateDB
-	config  *Config
+	config  *IndexConfigs
 }
 
 // NewStateDbStakingCaller return instance of StakingCaller which reads data directly from state DB
-func NewStateDbStakingCaller(state *state.StateDB, cfg *Config) StakingCaller {
+func NewStateDbStakingCaller(state *state.StateDB, cfg *IndexConfigs) StakingCaller {
 	return &stateDBStakingCaller{
 		stateDB: state,
 		config:  cfg,
 	}
 }
 
-// GetCandidateStake returns current stake of a candidate
-func (c *stateDBStakingCaller) GetCandidateStake(scAddress common.Address, candidate common.Address) *big.Int {
-	locValidatorsState := getLocMappingAtKey(candidate.Hash(), c.config.CandidateDataIndex)
-	//TODO: change uint64(1) into a constant
-	locStake := locValidatorsState.Add(locValidatorsState, new(big.Int).SetUint64(uint64(1)))
-	stake := c.stateDB.GetState(scAddress, common.BigToHash(locStake))
-	return stake.Big()
+func (layOut *LayOut) slotHash() common.Hash {
+	return common.BigToHash(new(big.Int).SetUint64(layOut.Slot))
 }
 
 // GetValidators returns validators from stateDB and block number of the caller by smart-contract's address
-func (c *stateDBStakingCaller) GetValidators(scAddress common.Address) ([]common.Address, error) {
+func (c *stateDBStakingCaller) GetValidators(stakingContractAddr common.Address) ([]common.Address, error) {
 	// check if this address is a valid contract, this will help us return better error
-	codes := c.stateDB.GetCode(scAddress)
+	codes := c.stateDB.GetCode(stakingContractAddr)
 	if len(codes) == 0 {
 		return nil, bind.ErrNoCode
 	}
 
-	candidates, err := c.getCandidates(scAddress)
+	candidates, err := c.GetCandidates(stakingContractAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -51,9 +46,9 @@ func (c *stateDBStakingCaller) GetValidators(scAddress common.Address) ([]common
 		validators []common.Address
 		stakes     = make(map[common.Address]*big.Int)
 	)
-	minValStake := c.getMinValidatorStake(scAddress)
+	minValStake := c.GetMinValidatorStake(stakingContractAddr)
 	for _, candidate := range candidates {
-		stake := c.GetCandidateStake(scAddress, candidate)
+		stake := c.GetCandidateStake(stakingContractAddr, candidate)
 		if stake.Cmp(minValStake) < 0 {
 			continue
 		}
@@ -62,8 +57,7 @@ func (c *stateDBStakingCaller) GetValidators(scAddress common.Address) ([]common
 		stakes[candidate] = stake
 	}
 
-	maxValSize := c.getMaxValidatorSize(scAddress)
-	//TODO: reuse this block of code with evmStakingCaller
+	maxValSize := c.GetMaxValidatorSize(stakingContractAddr)
 	if len(validators) <= maxValSize {
 		return validators, nil
 	}
@@ -82,32 +76,75 @@ func (c *stateDBStakingCaller) GetValidatorsData(common.Address, []common.Addres
 	panic("implement me")
 }
 
-func (c *stateDBStakingCaller) getMaxValidatorSize(scAddress common.Address) int {
-	slotHash := common.BigToHash(new(big.Int).SetUint64(c.config.MaxValidatorSizeIndex))
-	ret := c.stateDB.GetState(scAddress, slotHash)
-	return int(ret.Big().Int64())
-}
-
-func (c *stateDBStakingCaller) getMinValidatorStake(scAddress common.Address) *big.Int {
-	slotHash := common.BigToHash(new(big.Int).SetUint64(c.config.MinValidatorStakeIndex))
-	ret := c.stateDB.GetState(scAddress, slotHash)
-	return ret.Big()
-}
-
-func (c *stateDBStakingCaller) getCandidates(scAddress common.Address) ([]common.Address, error) {
-	slot := c.config.CandidatesIndex
-	slotHash := common.BigToHash(new(big.Int).SetUint64(slot))
-	arrLength := c.stateDB.GetState(scAddress, slotHash)
+// GetCandidates returns list candidate's address
+func (c *stateDBStakingCaller) GetCandidates(stakingContractAddr common.Address) ([]common.Address, error) {
+	slotHash := c.config.CandidatesIndex.slotHash()
+	arrLength := c.stateDB.GetState(stakingContractAddr, slotHash)
 	if arrLength.Big().Cmp(big.NewInt(0)) == 0 {
 		return nil, ErrEmptyValidatorSet
 	}
 	var candidates []common.Address
 	for i := uint64(0); i < arrLength.Big().Uint64(); i++ {
 		key := getLocDynamicArrAtElement(slotHash, i, 1)
-		ret := c.stateDB.GetState(scAddress, key)
+		ret := c.stateDB.GetState(stakingContractAddr, key)
 		candidates = append(candidates, common.HexToAddress(ret.Hex()))
 	}
 	return candidates, nil
+}
+
+// GetCandidateOwner returns current owner of a candidate
+func (c *stateDBStakingCaller) GetCandidateOwner(stakingContractAddr common.Address, candidate common.Address) common.Address {
+	locCandidateOwner := getStorageLocation(c.config.CandidateDataIndex, candidate.Hash(), 2)
+	ret := c.stateDB.GetState(stakingContractAddr, locCandidateOwner)
+	return common.HexToAddress(ret.Hex())
+}
+
+// GetCandidateStake returns current stake of a candidate
+func (c *stateDBStakingCaller) GetCandidateStake(stakingContractAddr common.Address, candidate common.Address) *big.Int {
+	locStake := getStorageLocation(c.config.CandidateDataIndex, candidate.Hash(), 1)
+	stake := c.stateDB.GetState(stakingContractAddr, locStake)
+	return stake.Big()
+}
+
+// GetStartBlock returns the startblock
+func (c *stateDBStakingCaller) GetStartBlock(stakingContractAddr common.Address) int {
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.StartBlockIndex.slotHash())
+	return int(ret.Big().Int64())
+}
+
+// GetEpochPeriod returns the epochperiod
+func (c *stateDBStakingCaller) GetEpochPeriod(stakingContractAddr common.Address) int {
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.EpochPeriodIndex.slotHash())
+	return int(ret.Big().Int64())
+}
+
+// GetMaxValidatorSize returns maximum validators allowed
+func (c *stateDBStakingCaller) GetMaxValidatorSize(stakingContractAddr common.Address) int {
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.MaxValidatorSizeIndex.slotHash())
+	return int(ret.Big().Int64())
+}
+
+// GetMinValidatorStake returns the min stake of a validator
+func (c *stateDBStakingCaller) GetMinValidatorStake(stakingContractAddr common.Address) *big.Int {
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.MinValidatorStakeIndex.slotHash())
+	return ret.Big()
+}
+
+// GetMinVoterCap returns the MinVoterCap
+func (c *stateDBStakingCaller) GetMinVoterCap(stakingContractAddr common.Address) *big.Int {
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.MinVoterCapIndex.slotHash())
+	return ret.Big()
+}
+
+// GetAdmin returns admin's address
+func (c *stateDBStakingCaller) GetAdmin(stakingContractAddr common.Address) common.Address {
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.AdminIndex.slotHash())
+	return common.HexToAddress(ret.Hex())
+}
+
+func getStorageLocation(LayOut LayOut, offsetHash common.Hash, index uint) common.Hash {
+	locState := getLocMappingAtKey(offsetHash, LayOut.Slot)
+	return common.BigToHash(locState.Add(locState, new(big.Int).SetUint64(uint64(index))))
 }
 
 func getLocDynamicArrAtElement(slotHash common.Hash, index uint64, elementSize uint64) common.Hash {

@@ -1628,60 +1628,50 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 }
 
 // setStakingConfig applies staking-related command line flags to the config.
-func setStakingConfig(ctx *cli.Context, cfg *staking.Config) {
-	if !ctx.GlobalIsSet(SCIndexGeneratorPathFlag.Name) {
-		log.Warn("node will uses index of state variables with default config")
+func setStakingConfig(ctx *cli.Context, cfg *staking.IndexConfigs) {
+	if !ctx.GlobalIsSet(SCIndexGeneratorPathFlag.Name) || ctx.GlobalString(SCIndexGeneratorPathFlag.Name) == "" {
+		log.Warn("Node will uses index of state variables with default config")
 		return
 	}
 
 	filePath := ctx.GlobalString(SCIndexGeneratorPathFlag.Name)
-	if filePath == "" {
-		log.Warn("node will uses index of state variables with default config")
-		return
-	}
-
 	jsonData, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Error("get content of the staking contract index error", "err", err)
+		log.Error("Get content of the staking contract index error", "err", err)
 		return
 	}
 
-	type storageLayout struct {
-		Label  string `json:"label"`
-		Offset uint16 `json:"offset"`
-		Slot   uint64 `json:"slot,string"`
-	}
-
-	var items []storageLayout
+	var items []staking.StorageLayout
 	err = json.Unmarshal(jsonData, &items)
 	if err != nil {
 		log.Error("Unmarshal content of the staking contract index error", "err", err)
 		return
 	}
 
-	log.Info("node will uses index of state variables with new config", "from", filePath)
+	log.Info("Node will uses index of state variables with new config", "from", filePath)
 	for _, item := range items {
+		layOut := staking.NewLayOut(item.Slot, item.Offset)
 		switch item.Label {
 		case staking.WithdrawsStateIndexName:
-			cfg.WithdrawsStateIndex = item.Slot
+			cfg.WithdrawsStateIndex = layOut
 		case staking.CandidateVotersIndexName:
-			cfg.CandidateVotersIndex = item.Slot
+			cfg.CandidateVotersIndex = layOut
 		case staking.CandidateDataIndexName:
-			cfg.CandidateDataIndex = item.Slot
+			cfg.CandidateDataIndex = layOut
 		case staking.CandidatesIndexName:
-			cfg.CandidatesIndex = item.Slot
+			cfg.CandidatesIndex = layOut
 		case staking.StartBlockIndexName:
-			cfg.StartBlockIndex = item.Slot
+			cfg.StartBlockIndex = layOut
 		case staking.EpochPeriodIndexName:
-			cfg.EpochPeriodIndex = item.Slot
+			cfg.EpochPeriodIndex = layOut
 		case staking.MaxValidatorSizeIndexName:
-			cfg.MaxValidatorSizeIndex = item.Slot
+			cfg.MaxValidatorSizeIndex = layOut
 		case staking.MinValidatorStakeIndexName:
-			cfg.MinValidatorStakeIndex = item.Slot
+			cfg.MinValidatorStakeIndex = layOut
 		case staking.MinVoterCapIndexName:
-			cfg.MinVoterCapIndex = item.Slot
+			cfg.MinVoterCapIndex = layOut
 		case staking.AdminIndexName:
-			cfg.AdminIndex = item.Slot
+			cfg.AdminIndex = layOut
 		}
 	}
 }
