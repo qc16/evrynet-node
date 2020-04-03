@@ -67,13 +67,6 @@ func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *s
 func calculateTotalValidatorsRewards(chainReader consensus.ChainReader, epoch uint64, header *types.Header) map[common.Address]*big.Int {
 	var currentBlock = header.Number.Uint64()
 	validatorsRewards := make(map[common.Address]*big.Int)
-	addReward := func(addr common.Address, value *big.Int) {
-		if current, ok := validatorsRewards[addr]; ok {
-			validatorsRewards[addr] = new(big.Int).Add(current, value)
-		} else {
-			validatorsRewards[addr] = value
-		}
-	}
 	for i := currentBlock - epoch + 1; i <= currentBlock; i++ {
 		var currentHeader *types.Header
 		if i != currentBlock {
@@ -81,9 +74,13 @@ func calculateTotalValidatorsRewards(chainReader consensus.ChainReader, epoch ui
 		} else {
 			currentHeader = header
 		}
-		reward := new(big.Int).Set(TendermintBlockReward)
 		txFee := new(big.Int).Mul(big.NewInt(int64(currentHeader.GasUsed)), chainReader.Config().GasPrice)
-		addReward(currentHeader.Coinbase, new(big.Int).Add(reward, txFee))
+		reward := new(big.Int).Add(TendermintBlockReward, txFee)
+		if current, ok := validatorsRewards[currentHeader.Coinbase]; ok {
+			validatorsRewards[currentHeader.Coinbase] = new(big.Int).Add(current, reward)
+		} else {
+			validatorsRewards[currentHeader.Coinbase] = reward
+		}
 	}
 	return validatorsRewards
 }
