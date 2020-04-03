@@ -45,4 +45,6 @@ var (
 	ErrInvalidCandidate = errors.New("candidate for validator is invalid")
 	// ErrUnknownParent is return when a proposal is sent with unknown parent hash
 	ErrUnknownParent = errors.New("unknown parent")
+	// ErrFinalizeZeroBlock is returned if node finalize with block number = 0
+	ErrFinalizeZeroBlock = errors.New("finalize zero block")
 )

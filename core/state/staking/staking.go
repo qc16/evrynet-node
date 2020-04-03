@@ -75,12 +75,12 @@ func (caller *BackendContractCaller) GetValidatorsData(scAddress common.Address,
 		if len(voterStakes) != len(voters) { // if this happens, blame Mike not me
 			return nil, ErrLengthOfVotesAndStakesMisMatch
 		}
-		voteStake := make(map[common.Address]*big.Int)
+		voteStakes := make(map[common.Address]*big.Int)
 		for i := range voterStakes {
-			voteStake[voters[i]] = voterStakes[i]
+			voteStakes[voters[i]] = voterStakes[i]
 		}
 		allVoterStake[candidate] = CandidateData{
-			VoterStakes: voteStake,
+			VoterStakes: voteStakes,
 			Owner:       candidateData.Owner,
 			TotalStake:  candidateData.TotalStake,
 		}
