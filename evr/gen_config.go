@@ -84,7 +84,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type Config struct {
 		Genesis                 *core.Genesis `toml:",omitempty"`
 		NetworkId               *uint64
-		GasPrice                *big.Int
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
 		NoPrefetch              *bool
