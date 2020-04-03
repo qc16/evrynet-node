@@ -17,7 +17,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
-	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
@@ -25,7 +24,9 @@ import (
 var (
 	// TendermintBlockReward tempo fix the Block reward in wei for successfully mining a block
 	// TODO: will modify after
-	TendermintBlockReward = big.NewInt(5e+18)
+	TendermintBlockReward           = big.NewInt(5e+18)
+	validatorRewardPercentage int64 = 50
+	voterRewardPercentage     int64 = 50
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
@@ -452,13 +453,17 @@ func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
 func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header) {
+	uncles []*types.Header) error {
 	// Accumulate any block rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header)
+	if err := sb.accumulateRewards(chain, state, header); err != nil {
+		log.Error("failed to accumulateRewards", "err", err)
+		return err
+	}
 
 	// Since there is a change in stateDB, its trie must be update
 	// In case block reached EIP158 hash, the state will attempt to delete empty object as EIP158 sepcification
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	return nil
 }
 
 // FinalizeAndAssemble runs any post-transaction state modifications (e.g. block rewards)
@@ -469,7 +474,10 @@ func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 func (sb *Backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header)
+	if err := sb.accumulateRewards(chain, state, header); err != nil {
+		log.Error("failed to accumulateRewards", "err", err)
+		return nil, err
+	}
 
 	// No block rewards, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -582,15 +590,6 @@ func blockProposer(header *types.Header) (common.Address, error) {
 	}
 	//TODO: will be caching address
 	return addr, nil
-}
-
-// AccumulateRewards credits the coinbase of the given block with the proposing
-// reward.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
-	// Accumulate the rewards for the proposer
-	reward := new(big.Int).Set(TendermintBlockReward)
-
-	state.AddBalance(header.Coinbase, reward)
 }
 
 // addValSetToHeader Add validator set back to the tendermint extra.

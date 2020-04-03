@@ -111,7 +111,7 @@ func (m *mockCore) SetBlockForProposal(block *types.Block) {
 func TestBackend_HandleMsg(t *testing.T) {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
-	be, blockchain, err := createBlockchainAndBackendFromGenesis(FixedValidators)
+	be, blockchain, _, err := createBlockchainAndBackendFromGenesis(FixedValidators)
 	require.NoError(t, err)
 	mockCore := NewMockCore(be)
 	be.core = mockCore
@@ -146,7 +146,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 func TestBackend_StartStop(t *testing.T) {
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
-	be, blockchain, err := createBlockchainAndBackendFromGenesis(FixedValidators)
+	be, blockchain, _, err := createBlockchainAndBackendFromGenesis(FixedValidators)
 	require.NoError(t, err)
 	mockCore := NewMockCore(be)
 	be.core = mockCore
