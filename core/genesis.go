@@ -344,6 +344,19 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	}
 }
 
+// DefaultEvrynetTestnetGenesisBlock returns the Evrynet test network genesis block.
+func DefaultEvrynetTestnetGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.EvrynetTestnetChainConfig,
+		Nonce:      0,
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f858f83f94f0a9917744aed1df3248602c372531aa8304301194adf5fa1aa0f7734877b1176361385d4a50e88ae494333a18bdc5af889d2a2e2684cf464524644064a794000000000000000000000000000000000000000080c0"),
+		GasLimit:   20000000,
+		Difficulty: big.NewInt(1),
+		Coinbase:   common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		Alloc:      decodePrealloc(evrynetTestAllocData),
+	}
+}
+
 // DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
 func DefaultRinkebyGenesisBlock() *Genesis {
 	return &Genesis{

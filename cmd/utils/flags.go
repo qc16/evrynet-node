@@ -769,6 +769,9 @@ func MakeDataDir(ctx *cli.Context) string {
 		if ctx.GlobalBool(TestnetFlag.Name) {
 			return filepath.Join(path, "testnet")
 		}
+		if ctx.GlobalBool(EvrynetTestnetFlag.Name) {
+			return filepath.Join(path, "publictestnet")
+		}
 		if ctx.GlobalBool(RinkebyFlag.Name) {
 			return filepath.Join(path, "rinkeby")
 		}
@@ -827,6 +830,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		}
 	case ctx.GlobalBool(TestnetFlag.Name):
 		urls = params.TestnetBootnodes
+	case ctx.GlobalBool(EvrynetTestnetFlag.Name):
+		urls = params.EvrynetTestBootnodes
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		urls = params.RinkebyBootnodes
 	case ctx.GlobalBool(GoerliFlag.Name):
@@ -1224,6 +1229,8 @@ func setDataDir(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = "" // unless explicitly requested, use memory databases
 	case ctx.GlobalBool(TestnetFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "testnet")
+	case ctx.GlobalBool(EvrynetTestnetFlag.Name):
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "publictestnet")
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "rinkeby")
 	case ctx.GlobalBool(GoerliFlag.Name):
@@ -1471,7 +1478,7 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node, cfg *whisper.Config) {
 // SetEvrConfig applies evr-related command line flags to the config.
 func SetEvrConfig(ctx *cli.Context, stack *node.Node, cfg *evr.Config) {
 	// Avoid conflicting network flags
-	checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag, GoerliFlag)
+	checkExclusive(ctx, DeveloperFlag, TestnetFlag, EvrynetTestnetFlag, RinkebyFlag, GoerliFlag)
 	checkExclusive(ctx, LightServFlag, SyncModeFlag, "light")
 	// Can't use both ephemeral unlocked and external signer
 	checkExclusive(ctx, DeveloperFlag, ExternalSignerFlag)
@@ -1550,6 +1557,11 @@ func SetEvrConfig(ctx *cli.Context, stack *node.Node, cfg *evr.Config) {
 			cfg.NetworkId = 3
 		}
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
+	case ctx.GlobalBool(EvrynetTestnetFlag.Name):
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 15
+		}
+		cfg.Genesis = core.DefaultEvrynetTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 4
@@ -1708,6 +1720,8 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 	switch {
 	case ctx.GlobalBool(TestnetFlag.Name):
 		genesis = core.DefaultTestnetGenesisBlock()
+	case ctx.GlobalBool(EvrynetTestnetFlag.Name):
+		genesis = core.DefaultEvrynetTestnetGenesisBlock()
 	case ctx.GlobalBool(RinkebyFlag.Name):
 		genesis = core.DefaultRinkebyGenesisBlock()
 	case ctx.GlobalBool(GoerliFlag.Name):

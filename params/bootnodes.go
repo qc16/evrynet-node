@@ -30,6 +30,12 @@ var MainnetBootnodes = []string{
 	"enode://979b7fa28feeb35a4741660a16076f1943202cb72b6af70d327f053e248bab9ba81760f39d0701ef1d8f89cc1fbd2cacba0710a12cd5314d5e0c9021aa3637f9@5.1.83.226:30303", // DE
 }
 
+// EvrynetTestBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// Evrynet test network.
+var EvrynetTestBootnodes = []string{
+	"enode://b9807e0c2b05e12cccbc32cc41e2f0e65e46aa0b2e465e3ee591217dcf65908d2da383a31309e2b6270a43c12a3427bc23858c83144e516be7b270d8279b6ae7@127.0.0.1:30300", // Thai's team
+}
+
 // TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Ropsten test network.
 var TestnetBootnodes = []string{
