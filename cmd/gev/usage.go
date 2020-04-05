@@ -260,12 +260,8 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.TendermintTimeoutPrecommitDeltaFlag,
 			utils.TendermintTimeoutCommitFlag,
 			utils.TendermintFaultyModeFlag,
-		},
-	},
-	{
-		Name: "STAKING CONTRACT",
-		Flags: []cli.Flag{
-			utils.SCIndexGeneratorPathFlag,
+			utils.TendermintSCUseEVMCallerFlag,
+			utils.TendermintSCIndexGeneratorPathFlag,
 		},
 	},
 	{

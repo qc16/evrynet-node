@@ -29,30 +29,30 @@ type LayOut struct {
 
 // IndexConfigs represents the configuration index of state variables.
 type IndexConfigs struct {
-	WithdrawsStateIndex    LayOut //1
-	CandidateVotersIndex   LayOut //2
-	CandidateDataIndex     LayOut //3
-	CandidatesIndex        LayOut //4
-	StartBlockIndex        LayOut //5
-	EpochPeriodIndex       LayOut //6
-	MaxValidatorSizeIndex  LayOut //7
-	MinValidatorStakeIndex LayOut //8
-	MinVoterCapIndex       LayOut //9
-	AdminIndex             LayOut //10
+	WithdrawsStateLayout    LayOut //1
+	CandidateVotersLayout   LayOut //2
+	CandidateDataLayout     LayOut //3
+	CandidatesLayout        LayOut //4
+	StartBlockLayout        LayOut //5
+	EpochPeriodLayout       LayOut //6
+	MaxValidatorSizeLayout  LayOut //7
+	MinValidatorStakeLayout LayOut //8
+	MinVoterCapLayout       LayOut //9
+	AdminLayout             LayOut //10
 }
 
 // DefaultConfig represents he default configuration.
 var DefaultConfig = &IndexConfigs{
-	WithdrawsStateIndex:    NewLayOut(1, 0),
-	CandidateVotersIndex:   NewLayOut(2, 0),
-	CandidateDataIndex:     NewLayOut(3, 0),
-	CandidatesIndex:        NewLayOut(4, 0),
-	StartBlockIndex:        NewLayOut(5, 0),
-	EpochPeriodIndex:       NewLayOut(6, 0),
-	MaxValidatorSizeIndex:  NewLayOut(7, 0),
-	MinValidatorStakeIndex: NewLayOut(8, 0),
-	MinVoterCapIndex:       NewLayOut(9, 0),
-	AdminIndex:             NewLayOut(10, 0),
+	WithdrawsStateLayout:    NewLayOut(1, 0),
+	CandidateVotersLayout:   NewLayOut(2, 0),
+	CandidateDataLayout:     NewLayOut(3, 0),
+	CandidatesLayout:        NewLayOut(4, 0),
+	StartBlockLayout:        NewLayOut(5, 0),
+	EpochPeriodLayout:       NewLayOut(6, 0),
+	MaxValidatorSizeLayout:  NewLayOut(7, 0),
+	MinValidatorStakeLayout: NewLayOut(8, 0),
+	MinVoterCapLayout:       NewLayOut(9, 0),
+	AdminLayout:             NewLayOut(10, 0),
 }
 
 // NewLayOut returns new instance of a LayOut

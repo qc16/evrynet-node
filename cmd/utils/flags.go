@@ -721,10 +721,12 @@ var (
 		Usage: "Duration waiting to start round with new height",
 		Value: evr.DefaultConfig.Tendermint.TimeoutCommit,
 	}
-
-	// staking contract flags
-	SCIndexGeneratorPathFlag = cli.StringFlag{
-		Name:  "sc.index-generator-path",
+	TendermintSCUseEVMCallerFlag = cli.BoolFlag{
+		Name:  "tendermint.use-evm-caller",
+		Usage: "The flag allowance reading data from stateDB or EVM",
+	}
+	TendermintSCIndexGeneratorPathFlag = cli.StringFlag{
+		Name:  "tendermint.index-generator-path",
 		Usage: "The path of indexGenerator file",
 		Value: "",
 	}
@@ -1385,6 +1387,10 @@ func setWhitelist(ctx *cli.Context, cfg *evr.Config) {
 func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
 	setStakingConfig(ctx, cfg.IndexStateVariables)
 
+	if ctx.GlobalIsSet(TendermintSCUseEVMCallerFlag.Name) {
+		cfg.UseEVMCaller = true
+	}
+
 	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
 		cfg.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
 	}
@@ -1411,6 +1417,10 @@ func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
 	}
 	if ctx.GlobalIsSet(TendermintTimeoutCommitFlag.Name) {
 		cfg.TimeoutCommit = ctx.GlobalDuration(TendermintTimeoutCommitFlag.Name)
+	}
+
+	if ctx.IsSet(TendermintSCUseEVMCallerFlag.Name) {
+		cfg.UseEVMCaller = true
 	}
 
 	if ctx.IsSet(TendermintBlockPeriodFlag.Name) {
@@ -1629,12 +1639,12 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 
 // setStakingConfig applies staking-related command line flags to the config.
 func setStakingConfig(ctx *cli.Context, cfg *staking.IndexConfigs) {
-	if !ctx.GlobalIsSet(SCIndexGeneratorPathFlag.Name) || ctx.GlobalString(SCIndexGeneratorPathFlag.Name) == "" {
+	if !ctx.GlobalIsSet(TendermintSCIndexGeneratorPathFlag.Name) || ctx.GlobalString(TendermintSCIndexGeneratorPathFlag.Name) == "" {
 		log.Warn("Node will uses index of state variables with default config")
 		return
 	}
 
-	filePath := ctx.GlobalString(SCIndexGeneratorPathFlag.Name)
+	filePath := ctx.GlobalString(TendermintSCIndexGeneratorPathFlag.Name)
 	jsonData, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		log.Error("Get content of the staking contract index error", "err", err)
@@ -1653,25 +1663,25 @@ func setStakingConfig(ctx *cli.Context, cfg *staking.IndexConfigs) {
 		layOut := staking.NewLayOut(item.Slot, item.Offset)
 		switch item.Label {
 		case staking.WithdrawsStateIndexName:
-			cfg.WithdrawsStateIndex = layOut
+			cfg.WithdrawsStateLayout = layOut
 		case staking.CandidateVotersIndexName:
-			cfg.CandidateVotersIndex = layOut
+			cfg.CandidateVotersLayout = layOut
 		case staking.CandidateDataIndexName:
-			cfg.CandidateDataIndex = layOut
+			cfg.CandidateDataLayout = layOut
 		case staking.CandidatesIndexName:
-			cfg.CandidatesIndex = layOut
+			cfg.CandidatesLayout = layOut
 		case staking.StartBlockIndexName:
-			cfg.StartBlockIndex = layOut
+			cfg.StartBlockLayout = layOut
 		case staking.EpochPeriodIndexName:
-			cfg.EpochPeriodIndex = layOut
+			cfg.EpochPeriodLayout = layOut
 		case staking.MaxValidatorSizeIndexName:
-			cfg.MaxValidatorSizeIndex = layOut
+			cfg.MaxValidatorSizeLayout = layOut
 		case staking.MinValidatorStakeIndexName:
-			cfg.MinValidatorStakeIndex = layOut
+			cfg.MinValidatorStakeLayout = layOut
 		case staking.MinVoterCapIndexName:
-			cfg.MinVoterCapIndex = layOut
+			cfg.MinVoterCapLayout = layOut
 		case staking.AdminIndexName:
-			cfg.AdminIndex = layOut
+			cfg.AdminLayout = layOut
 		}
 	}
 }

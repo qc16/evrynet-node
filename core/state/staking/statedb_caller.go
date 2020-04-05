@@ -32,8 +32,7 @@ func (layOut *LayOut) slotHash() common.Hash {
 // GetValidators returns validators from stateDB and block number of the caller by smart-contract's address
 func (c *stateDBStakingCaller) GetValidators(stakingContractAddr common.Address) ([]common.Address, error) {
 	// check if this address is a valid contract, this will help us return better error
-	codes := c.stateDB.GetCode(stakingContractAddr)
-	if len(codes) == 0 {
+	if codes := c.stateDB.GetCode(stakingContractAddr); len(codes) == 0 {
 		return nil, bind.ErrNoCode
 	}
 
@@ -78,7 +77,7 @@ func (c *stateDBStakingCaller) GetValidatorsData(common.Address, []common.Addres
 
 // GetCandidates returns list candidate's address
 func (c *stateDBStakingCaller) GetCandidates(stakingContractAddr common.Address) ([]common.Address, error) {
-	slotHash := c.config.CandidatesIndex.slotHash()
+	slotHash := c.config.CandidatesLayout.slotHash()
 	arrLength := c.stateDB.GetState(stakingContractAddr, slotHash)
 	if arrLength.Big().Cmp(big.NewInt(0)) == 0 {
 		return nil, ErrEmptyValidatorSet
@@ -94,56 +93,56 @@ func (c *stateDBStakingCaller) GetCandidates(stakingContractAddr common.Address)
 
 // GetCandidateOwner returns current owner of a candidate
 func (c *stateDBStakingCaller) GetCandidateOwner(stakingContractAddr common.Address, candidate common.Address) common.Address {
-	locCandidateOwner := getStorageLocation(c.config.CandidateDataIndex, candidate.Hash(), 2)
+	locCandidateOwner := getStorageLocation(c.config.CandidateDataLayout, candidate.Hash(), 2)
 	ret := c.stateDB.GetState(stakingContractAddr, locCandidateOwner)
 	return common.HexToAddress(ret.Hex())
 }
 
 // GetCandidateStake returns current stake of a candidate
 func (c *stateDBStakingCaller) GetCandidateStake(stakingContractAddr common.Address, candidate common.Address) *big.Int {
-	locStake := getStorageLocation(c.config.CandidateDataIndex, candidate.Hash(), 1)
+	locStake := getStorageLocation(c.config.CandidateDataLayout, candidate.Hash(), 1)
 	stake := c.stateDB.GetState(stakingContractAddr, locStake)
 	return stake.Big()
 }
 
 // GetStartBlock returns the startblock
 func (c *stateDBStakingCaller) GetStartBlock(stakingContractAddr common.Address) int {
-	ret := c.stateDB.GetState(stakingContractAddr, c.config.StartBlockIndex.slotHash())
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.StartBlockLayout.slotHash())
 	return int(ret.Big().Int64())
 }
 
 // GetEpochPeriod returns the epochperiod
 func (c *stateDBStakingCaller) GetEpochPeriod(stakingContractAddr common.Address) int {
-	ret := c.stateDB.GetState(stakingContractAddr, c.config.EpochPeriodIndex.slotHash())
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.EpochPeriodLayout.slotHash())
 	return int(ret.Big().Int64())
 }
 
 // GetMaxValidatorSize returns maximum validators allowed
 func (c *stateDBStakingCaller) GetMaxValidatorSize(stakingContractAddr common.Address) int {
-	ret := c.stateDB.GetState(stakingContractAddr, c.config.MaxValidatorSizeIndex.slotHash())
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.MaxValidatorSizeLayout.slotHash())
 	return int(ret.Big().Int64())
 }
 
 // GetMinValidatorStake returns the min stake of a validator
 func (c *stateDBStakingCaller) GetMinValidatorStake(stakingContractAddr common.Address) *big.Int {
-	ret := c.stateDB.GetState(stakingContractAddr, c.config.MinValidatorStakeIndex.slotHash())
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.MinValidatorStakeLayout.slotHash())
 	return ret.Big()
 }
 
 // GetMinVoterCap returns the MinVoterCap
 func (c *stateDBStakingCaller) GetMinVoterCap(stakingContractAddr common.Address) *big.Int {
-	ret := c.stateDB.GetState(stakingContractAddr, c.config.MinVoterCapIndex.slotHash())
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.MinVoterCapLayout.slotHash())
 	return ret.Big()
 }
 
 // GetAdmin returns admin's address
 func (c *stateDBStakingCaller) GetAdmin(stakingContractAddr common.Address) common.Address {
-	ret := c.stateDB.GetState(stakingContractAddr, c.config.AdminIndex.slotHash())
+	ret := c.stateDB.GetState(stakingContractAddr, c.config.AdminLayout.slotHash())
 	return common.HexToAddress(ret.Hex())
 }
 
-func getStorageLocation(LayOut LayOut, offsetHash common.Hash, index uint) common.Hash {
-	locState := getLocMappingAtKey(offsetHash, LayOut.Slot)
+func getStorageLocation(LayOut LayOut, keyHash common.Hash, index uint) common.Hash {
+	locState := getLocMappingAtKey(keyHash, LayOut.Slot)
 	return common.BigToHash(locState.Add(locState, new(big.Int).SetUint64(uint64(index))))
 }
 
