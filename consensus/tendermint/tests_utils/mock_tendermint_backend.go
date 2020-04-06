@@ -6,8 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
-
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
@@ -169,7 +167,7 @@ func MustCreateAndStartNewBackend(t *testing.T, nodePrivateKey *ecdsa.PrivateKey
 	var (
 		address = crypto.PubkeyToAddress(nodePrivateKey.PublicKey)
 		trigger = false
-		statedb = tests_utils.MustCreateStateDB(t)
+		statedb = MustCreateStateDB(t)
 
 		testTxPoolConfig core.TxPoolConfig
 		blockchain       = &MockChainReader{

@@ -12,26 +12,10 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
-
-// DefaultTestConfig with time is smaller than DefaultConfig for speed-up
-var DefaultTestConfig = &tendermint.Config{
-	ProposerPolicy:        tendermint.RoundRobin,
-	Epoch:                 30000,
-	BlockPeriod:           1,
-	TimeoutPropose:        30 * time.Millisecond,
-	TimeoutProposeDelta:   50 * time.Millisecond,
-	TimeoutPrevote:        100 * time.Millisecond,
-	TimeoutPrevoteDelta:   50 * time.Millisecond,
-	TimeoutPrecommit:      100 * time.Millisecond,
-	TimeoutPrecommitDelta: 50 * time.Millisecond,
-	TimeoutCommit:         100 * time.Millisecond,
-	FaultyMode:            tendermint.Disabled.Uint64(),
-}
 
 func Test_CatchUpRequest(t *testing.T) {
 	zap.ReplaceGlobals(zap.NewExample())
@@ -45,14 +29,14 @@ func Test_CatchUpRequest(t *testing.T) {
 			nodeAddr,
 		}
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
-		tendermintCfg = DefaultTestConfig
+		tendermintCfg = tests_utils.DefaultTestConfig
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 	// subscribe to output msg
-	mockBe, ok := be.(*tdmTestsUtils.MockBackend)
+	mockBe, ok := be.(*tests_utils.MockBackend)
 	require.True(t, ok)
-	sentMsgSub := mockBe.SendEventMux.Subscribe(tdmTestsUtils.SentMsgEvent{})
+	sentMsgSub := mockBe.SendEventMux.Subscribe(tests_utils.SentMsgEvent{})
 	defer sentMsgSub.Unsubscribe()
 
 	core := newTestCore(be, tendermintCfg)

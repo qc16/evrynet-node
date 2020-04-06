@@ -12,13 +12,12 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 func newTestCore(backend tendermint.Backend, config *tendermint.Config) *core {
@@ -47,7 +46,7 @@ func TestVerifyProposal(t *testing.T) {
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())
@@ -162,7 +161,7 @@ func TestCore_HandleMsg(t *testing.T) {
 		err           error
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	msg := message{

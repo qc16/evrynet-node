@@ -11,12 +11,11 @@ import (
 
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
-	tdmTestsUtils "github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/utils"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 const (
@@ -37,7 +36,7 @@ func TestFinalizeBlock(t *testing.T) {
 		genesisHeader = tests_utils.MakeGenesisHeader(validators)
 	)
 	//create New test backend and newMockChain
-	be, _ := tdmTestsUtils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
+	be, _ := tests_utils.MustCreateAndStartNewBackend(t, nodePrivateKey, genesisHeader, validators)
 
 	core := newTestCore(be, tendermint.DefaultConfig)
 	require.NoError(t, core.Start())

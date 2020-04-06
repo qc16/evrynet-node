@@ -9,6 +9,8 @@ var (
 	ErrStoppedEngine = errors.New("engine is already stopped")
 	// ErrEmptyCommittedSeals is returned if the field of committed seals is zero.
 	ErrEmptyCommittedSeals = errors.New("zero committed seals")
+	// ErrEmptyValSet is returned if the field of validator set is zero.
+	ErrEmptyValSet = errors.New("zero validator set")
 	// ErrMismatchValSet is returned if the field of validator set is mismatch.
 	ErrMismatchValSet = errors.New("mismatch validator set")
 	// ErrMismatchTxhashes is returned if the TxHash in header is mismatch.
