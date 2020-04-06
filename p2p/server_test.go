@@ -37,6 +37,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/internal/testlog"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
+	"github.com/Evrynetlabs/evrynet-node/p2p/enr"
 	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
@@ -387,9 +388,8 @@ func (t *testTask) Do(srv *Server) {
 // at capacity. Trusted connections should still be accepted.
 func TestServerAtCap(t *testing.T) {
 	var (
-		privateKeys    = generatePrivateKeys(13)
 		trustedNode    = newkey()
-		trustedID      = 12
+		trustedID      = enode.PubkeyToIDV4(&trustedNode.PublicKey)
 		nodePrivateKey = newkey()
 	)
 	srv := &Server{
@@ -400,7 +400,7 @@ func TestServerAtCap(t *testing.T) {
 			MaxPeers:     10,
 			NoDial:       true,
 			NoDiscovery:  true,
-			TrustedNodes: []*enode.Node{newNode(trustedID, nil, privateKeys)},
+			TrustedNodes: []*enode.Node{newNode(trustedID, nil)},
 			ListenAddr:   "127.0.0.1:0",
 			Logger:       testlog.Logger(t, log.LvlTrace),
 		},
@@ -411,22 +411,22 @@ func TestServerAtCap(t *testing.T) {
 	}
 	defer srv.Stop()
 
-	newconn := func(id int) *conn {
+	newconn := func(id enode.ID) *conn {
 		fd, _ := net.Pipe()
 		tx := newTestTransport(&trustedNode.PublicKey, fd)
-		node := newNode(id, nil, privateKeys)
+		node := enode.SignNull(new(enr.Record), id)
 		return &conn{fd: fd, transport: tx, flags: inboundConn, node: node, cont: make(chan error)}
 	}
 
 	// Inject a few connections to fill up the peer set.
 	for i := 0; i < 10; i++ {
-		c := newconn(i)
+		c := newconn(randomID())
 		if err := srv.checkpoint(c, srv.checkpointAddPeer); err != nil {
 			t.Fatalf("could not add conn %d: %v", i, err)
 		}
 	}
 	// Try inserting a non-trusted connection.
-	anotherID := 11
+	anotherID := randomID()
 	c := newconn(anotherID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != DiscTooManyPeers {
 		t.Error("wrong error for insert:", err)
@@ -441,14 +441,14 @@ func TestServerAtCap(t *testing.T) {
 	}
 
 	// Remove from trusted set and try again
-	srv.RemoveTrustedPeer(newNode(trustedID, nil, privateKeys))
+	srv.RemoveTrustedPeer(newNode(trustedID, nil))
 	c = newconn(trustedID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != DiscTooManyPeers {
 		t.Error("wrong error for insert:", err)
 	}
 
 	// Add anotherID to trusted set and try again
-	srv.AddTrustedPeer(newNode(anotherID, nil, privateKeys))
+	srv.AddTrustedPeer(newNode(anotherID, nil))
 	c = newconn(anotherID)
 	if err := srv.checkpoint(c, srv.checkpointPostHandshake); err != nil {
 		t.Error("unexpected error for trusted conn @posthandshake:", err)

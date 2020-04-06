@@ -46,9 +46,9 @@ type Node struct {
 	ephemeralKeystore string            // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   fileutil.Releaser // prevents concurrent use of instance directory
 
-	serverConfig     p2p.Config
-	P2PServer        *p2p.Server // Currently running P2P networking layer
-	P2PServerTrigger chan struct{}
+	serverConfig      p2p.Config
+	P2PServer         *p2p.Server // Currently running P2P networking layer
+	P2PServerInitDone chan struct{}
 
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
@@ -120,7 +120,7 @@ func New(conf *Config) (*Node, error) {
 		wsEndpoint:        conf.WSEndpoint(),
 		eventmux:          new(event.TypeMux),
 		log:               conf.Logger,
-		P2PServerTrigger:  make(chan struct{}),
+		P2PServerInitDone: make(chan struct{}),
 	}, nil
 }
 
@@ -179,7 +179,7 @@ func (n *Node) Start() error {
 	n.serverConfig.PrivateKey = n.config.NodeKey()
 	n.serverConfig.Name = n.config.NodeName()
 	n.serverConfig.Logger = n.log
-	n.P2PServerTrigger = make(chan struct{})
+	n.P2PServerInitDone = make(chan struct{})
 	if n.serverConfig.StaticNodes == nil {
 		n.serverConfig.StaticNodes = n.config.StaticNodes()
 	}
@@ -195,14 +195,14 @@ func (n *Node) Start() error {
 	n.P2PServer = p2pServer
 	n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
-	setupChainReader := make(chan struct{})
+	setupChainReaderDone := make(chan struct{})
 	go func() {
 		select {
-		case <-n.P2PServerTrigger:
+		case <-n.P2PServerInitDone:
 			if err := n.P2PServer.UpdateCurrentValidators(); err != nil {
 				n.log.Error("Failed to setup chain reader", "error", err)
 			}
-			setupChainReader <- struct{}{}
+			setupChainReaderDone <- struct{}{}
 		}
 	}()
 
@@ -236,7 +236,7 @@ func (n *Node) Start() error {
 	}
 
 	// Waiting chainreader was set in service
-	<-setupChainReader
+	<-setupChainReaderDone
 	n.log.Info("ChainReader of p2p server is ready")
 	if err := p2pServer.Start(); err != nil {
 		return convertFileLockError(err)

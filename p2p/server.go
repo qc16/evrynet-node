@@ -311,19 +311,6 @@ func (srv *Server) Peers() []*Peer {
 	return ps
 }
 
-// PeersMap returns all connected peers.
-func (srv *Server) PeersMap() map[enode.ID]*Peer {
-	var ps map[enode.ID]*Peer
-	select {
-	case srv.peerOp <- func(peers map[enode.ID]*Peer) {
-		ps = peers
-	}:
-		<-srv.peerOpDone
-	case <-srv.quit:
-	}
-	return ps
-}
-
 // PeerCount returns the number of connected peers.
 func (srv *Server) PeerCount() int {
 	var count int
@@ -509,13 +496,13 @@ func (srv *Server) UpdateCurrentValidators() error {
 		return errors.New("Chain reader of server is nil")
 	}
 
-	nextValidatorAddrs, err := srv.GetValSetAddresses(srv.ChainReader.CurrentHeader())
+	currentValidatorAddrs, err := srv.GetValSetAddresses(srv.ChainReader.CurrentHeader())
 	if err != nil {
 		return errors.New("Can't get the validators's address from extra-data. Error: " + err.Error())
 	}
 
 	var currentValidatorMap = make(map[common.Address]struct{})
-	for _, valAddr := range nextValidatorAddrs {
+	for _, valAddr := range currentValidatorAddrs {
 		currentValidatorMap[valAddr] = struct{}{}
 	}
 
@@ -738,10 +725,6 @@ func (srv *Server) run(dialstate dialer) {
 		return ts[i:]
 	}
 	scheduleTasks := func() {
-		// Update validators to check missing peers
-		if err := srv.UpdateCurrentValidators(); err != nil {
-			log.Error("Failed to update next validators", "error", err)
-		}
 		// Start from queue first.
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
 		// Query dialer for new tasks and start as many as possible now.
@@ -1041,7 +1024,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	}
 
 	var (
-		connectedPeers               = srv.PeersMap()
+		connectedPeers               = srv.Peers()
 		_, isValidatorNode           = srv.currentValidators[srv.Address()]
 		_, isValidatorNodeConnection = srv.currentValidators[c.node.Address()]
 	)

@@ -1636,7 +1636,7 @@ func RegisterEvrService(stack *node.Node, cfg *evr.Config) {
 			if fullNode != nil && fullNode.BlockChain() != nil && fullNode.BlockChain().Config().Tendermint != nil && stack.P2PServer.ChainReader == nil {
 				stack.P2PServer.ChainReader = fullNode.BlockChain()
 			}
-			stack.P2PServerTrigger <- struct{}{}
+			stack.P2PServerInitDone <- struct{}{}
 
 			return fullNode, err
 		})

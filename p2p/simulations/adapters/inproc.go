@@ -273,7 +273,7 @@ func (sn *SimNode) Start(snapshots map[string][]byte) error {
 			if err != nil {
 				return nil, err
 			}
-			sn.node.P2PServerTrigger <- struct{}{}
+			sn.node.P2PServerInitDone <- struct{}{}
 			return service, nil
 		}
 	}

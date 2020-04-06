@@ -179,7 +179,7 @@ func newTestBackend(t *testing.T) (*node.Node, []*types.Block) {
 		config := &evr.Config{Genesis: genesis}
 		config.Ethash.PowMode = ethash.ModeFake
 		ethservice, err = evr.New(ctx, config)
-		n.P2PServerTrigger <- struct{}{}
+		n.P2PServerInitDone <- struct{}{}
 		return ethservice, err
 	})
 
