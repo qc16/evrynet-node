@@ -92,7 +92,7 @@ type discoverTable interface {
 	Resolve(*enode.Node) *enode.Node
 	LookupRandom() []*enode.Node
 	ReadRandomNodes([]*enode.Node) int
-	LookupDiscoveredPeers() map[common.Address]*enode.Node
+	ReadDiscoveredNodes(map[common.Address]*enode.Node) int
 }
 
 type task interface {
@@ -251,8 +251,12 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, validatorAd
 	if _, ok := validatorAddrs[s.nodeAddress]; ok && s.ntab != nil {
 		var (
 			missingValPeers []common.Address
-			discoveredPeers = s.ntab.LookupDiscoveredPeers()
+			discoveredPeers = make(map[common.Address]*enode.Node)
 		)
+		if s.ntab.ReadDiscoveredNodes(discoveredPeers) == 0 {
+			return newtasks
+		}
+
 		// Find missing validators didn't connect
 		for valAddr, _ := range validatorAddrs {
 			// Don't check if current node address belongs to validatorAddrs

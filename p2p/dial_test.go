@@ -88,14 +88,12 @@ func runDialTest(t *testing.T, test dialtest) {
 
 type fakeTable []*enode.Node
 
-func (t fakeTable) Self() *enode.Node                     { return new(enode.Node) }
-func (t fakeTable) Close()                                {}
-func (t fakeTable) LookupRandom() []*enode.Node           { return nil }
-func (t fakeTable) Resolve(*enode.Node) *enode.Node       { return nil }
-func (t fakeTable) ReadRandomNodes(buf []*enode.Node) int { return copy(buf, t) }
-func (t fakeTable) LookupDiscoveredPeers() map[common.Address]*enode.Node {
-	return map[common.Address]*enode.Node{}
-}
+func (t fakeTable) Self() *enode.Node                                          { return new(enode.Node) }
+func (t fakeTable) Close()                                                     {}
+func (t fakeTable) LookupRandom() []*enode.Node                                { return nil }
+func (t fakeTable) Resolve(*enode.Node) *enode.Node                            { return nil }
+func (t fakeTable) ReadRandomNodes(buf []*enode.Node) int                      { return copy(buf, t) }
+func (t fakeTable) ReadDiscoveredNodes(buf map[common.Address]*enode.Node) int { return 0 }
 
 // This test checks that dynamic dials are launched from discovery results.
 func TestDialStateDynDial(t *testing.T) {
@@ -714,13 +712,11 @@ func (t *resolveMock) Resolve(n *enode.Node) *enode.Node {
 	return t.answer
 }
 
-func (t *resolveMock) Self() *enode.Node                     { return new(enode.Node) }
-func (t *resolveMock) Close()                                {}
-func (t *resolveMock) LookupRandom() []*enode.Node           { return nil }
-func (t *resolveMock) ReadRandomNodes(buf []*enode.Node) int { return 0 }
-func (t *resolveMock) LookupDiscoveredPeers() map[common.Address]*enode.Node {
-	return map[common.Address]*enode.Node{}
-}
+func (t *resolveMock) Self() *enode.Node                                          { return new(enode.Node) }
+func (t *resolveMock) Close()                                                     {}
+func (t *resolveMock) LookupRandom() []*enode.Node                                { return nil }
+func (t *resolveMock) ReadRandomNodes(buf []*enode.Node) int                      { return 0 }
+func (t *resolveMock) ReadDiscoveredNodes(buf map[common.Address]*enode.Node) int { return 0 }
 
 func generatePrivateKeys(num int) []*ecdsa.PrivateKey {
 	var privateKeys []*ecdsa.PrivateKey

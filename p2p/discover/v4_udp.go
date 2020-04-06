@@ -304,20 +304,9 @@ func (t *UDPv4) ReadRandomNodes(buf []*enode.Node) int {
 	return t.tab.ReadRandomNodes(buf)
 }
 
-// Find & remove duplicated new neighbours
-func (t *UDPv4) LookupDiscoveredPeers() map[common.Address]*enode.Node {
-	var (
-		nodes       = t.lookupSelf()
-		uniqueNodes = make(map[common.Address]*enode.Node)
-	)
-
-	for _, node := range nodes {
-		nodeAddr := crypto.PubkeyToAddress(*node.Pubkey())
-		if _, ok := uniqueNodes[nodeAddr]; !ok {
-			uniqueNodes[nodeAddr] = node
-		}
-	}
-	return uniqueNodes
+// ReadDiscoveredNodes reads all discovered nodes from the local table.
+func (t *UDPv4) ReadDiscoveredNodes(buf map[common.Address]*enode.Node) int {
+	return t.tab.ReadDiscoveredNodes(buf)
 }
 
 // LookupRandom finds random nodes in the network.
