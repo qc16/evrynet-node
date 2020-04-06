@@ -48,7 +48,8 @@ func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *s
 	if err != nil {
 		return err
 	}
-	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), transitionHeader, sb.chain.Config(), vm.Config{})
+	//TODO: add config to this
+	stakingCaller := staking.NewEVMStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), transitionHeader, sb.chain.Config(), vm.Config{})
 	validatorsData, err := stakingCaller.GetValidatorsData(*sb.config.StakingSCAddress, validatorAdds)
 	if err != nil {
 		return err
