@@ -23,8 +23,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Evrynetlabs/evrynet-node/tests_utils"
-
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/node"
@@ -32,6 +30,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 	"github.com/Evrynetlabs/evrynet-node/p2p/simulations/pipes"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
+	"github.com/Evrynetlabs/evrynet-node/tests_utils"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and

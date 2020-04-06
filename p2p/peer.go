@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
-
 	"github.com/Evrynetlabs/evrynet-node/common/mclock"
 	"github.com/Evrynetlabs/evrynet-node/event"
 	"github.com/Evrynetlabs/evrynet-node/log"
