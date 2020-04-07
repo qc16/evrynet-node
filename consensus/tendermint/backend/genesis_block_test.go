@@ -104,7 +104,7 @@ func TestBackendCallGetListCandidateFromStateDB(t *testing.T) {
 	// Must init log to show error when using log.Debug
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
-	backend, _, err := createBlockchainAndBackendFromGenesis(StakingSC)
+	backend, _, _, err := createBlockchainAndBackendFromGenesis(StakingSC)
 	assert.NoError(t, err)
 
 	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
