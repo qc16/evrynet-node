@@ -11,6 +11,11 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 )
 
+const (
+	// default element size for address, uint array
+	defaultElementSize = 1
+)
+
 // stateDBStakingCaller creates a wrapper with statedb to implements ContractCaller
 // based on https://solidity.readthedocs.io/en/develop/miscellaneous.html
 type stateDBStakingCaller struct {
@@ -26,10 +31,6 @@ func NewStateDbStakingCaller(state *state.StateDB, cfg *IndexConfigs) StakingCal
 	}
 }
 
-func (layOut *LayOut) slotHash() common.Hash {
-	return common.BigToHash(new(big.Int).SetUint64(layOut.Slot))
-}
-
 // GetCandidates returns list candidate's address
 func (c *stateDBStakingCaller) GetCandidates(stakingContractAddr common.Address) ([]common.Address, error) {
 	//arrLength := c.getStorageLocation(stakingContractAddr, c.config.CandidatesLayout, common.Hash{}, nil)
@@ -39,7 +40,7 @@ func (c *stateDBStakingCaller) GetCandidates(stakingContractAddr common.Address)
 	}
 	var candidates []common.Address
 	for i := uint64(0); i < arrLength.Big().Uint64(); i++ {
-		ret := c.stateDB.GetState(stakingContractAddr, getLocDynamicArrAtElement(c.config.CandidatesLayout.slotHash(), i, 1))
+		ret := c.stateDB.GetState(stakingContractAddr, getLocDynamicArrAtElement(c.config.CandidatesLayout.slotHash(), i, defaultElementSize))
 		candidates = append(candidates, common.HexToAddress(ret.Hex()))
 	}
 	return candidates, nil
@@ -100,15 +101,15 @@ func (c *stateDBStakingCaller) GetValidatorsData(scAddress common.Address, candi
 // GetCandidateData returns current stake of a candidate
 func (c *stateDBStakingCaller) GetCandidateData(stakingContractAddr common.Address, candidate common.Address) CandidateData {
 	loc := getLocMapping(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
-	totalStakeLoc := getSlot(loc, big.NewInt(1))
+	totalStakeLoc := getSlot(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.TotalStake.Slot))
 	totalStake := c.stateDB.GetState(stakingContractAddr, totalStakeLoc).Big()
 
-	ownerLoc := getSlot(loc, big.NewInt(2))
+	ownerLoc := getSlot(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.Owner.Slot))
 	owner := common.HexToAddress(c.stateDB.GetState(stakingContractAddr, ownerLoc).Hex())
 
 	voteStakes := make(map[common.Address]*big.Int)
 	for _, voter := range c.GetVoters(stakingContractAddr, candidate) {
-		voterStakesSlot := getSlot(loc, big.NewInt(3))
+		voterStakesSlot := getSlot(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.VotersStakes.Slot))
 		voterStakeSlot := getLocMapping(voterStakesSlot, voter.Hash())
 		stake := c.getBigInt(stakingContractAddr, voterStakeSlot)
 		voteStakes[voter] = stake
@@ -126,7 +127,7 @@ func (c *stateDBStakingCaller) GetVoters(stakingAddr common.Address, candidate c
 	votersLength := c.getBigInt(stakingAddr, votersSlot).Uint64()
 	var voters []common.Address
 	for i := uint64(0); i < votersLength; i++ {
-		voterSlot := getLocDynamicArrAtElement(votersSlot, i, 1)
+		voterSlot := getLocDynamicArrAtElement(votersSlot, i, defaultElementSize)
 		voters = append(voters, c.getAddress(stakingAddr, voterSlot))
 	}
 	return voters
@@ -135,7 +136,7 @@ func (c *stateDBStakingCaller) GetVoters(stakingAddr common.Address, candidate c
 // GetCandidateStake returns current stake of a candidate
 func (c *stateDBStakingCaller) GetCandidateStake(scAddress common.Address, candidate common.Address) *big.Int {
 	loc := getLocMapping(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
-	loc = getSlot(loc, big.NewInt(1))
+	loc = getSlot(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.TotalStake.Slot))
 	return c.getBigInt(scAddress, loc)
 }
 
@@ -172,7 +173,7 @@ func (c *stateDBStakingCaller) GetAdmin(scAddress common.Address) common.Address
 // GetCandidateOwner returns current owner of a candidate
 func (c *stateDBStakingCaller) GetCandidateOwner(stakingContractAddr common.Address, candidate common.Address) common.Address {
 	loc := getLocMapping(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
-	loc = getSlot(loc, big.NewInt(2))
+	loc = getSlot(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.Owner.Slot))
 	return c.getAddress(stakingContractAddr, loc)
 }
 

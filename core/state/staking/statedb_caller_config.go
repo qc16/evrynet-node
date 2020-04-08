@@ -1,5 +1,11 @@
 package staking
 
+import (
+	"math/big"
+
+	"github.com/Evrynetlabs/evrynet-node/common"
+)
+
 // Constants represents the configuration name of all state variables.
 const (
 	WithdrawsStateIndexName    = "withdrawsState"
@@ -27,6 +33,10 @@ type LayOut struct {
 	Slot   uint64
 }
 
+func (layOut *LayOut) slotHash() common.Hash {
+	return common.BigToHash(new(big.Int).SetUint64(layOut.Slot))
+}
+
 // IndexConfigs represents the configuration index of state variables.
 type IndexConfigs struct {
 	WithdrawsStateLayout    LayOut //1
@@ -39,6 +49,15 @@ type IndexConfigs struct {
 	MinValidatorStakeLayout LayOut //8
 	MinVoterCapLayout       LayOut //9
 	AdminLayout             LayOut //10
+
+	CandidateDataStruct CandidateDataStructIndex
+}
+
+// layout inside candidateData struct
+type CandidateDataStructIndex struct {
+	Owner        LayOut
+	TotalStake   LayOut
+	VotersStakes LayOut
 }
 
 // DefaultConfig represents he default configuration.
@@ -53,6 +72,11 @@ var DefaultConfig = &IndexConfigs{
 	MinValidatorStakeLayout: NewLayOut(8, 0),
 	MinVoterCapLayout:       NewLayOut(9, 0),
 	AdminLayout:             NewLayOut(10, 0),
+	CandidateDataStruct: CandidateDataStructIndex{
+		TotalStake:   NewLayOut(1, 0),
+		Owner:        NewLayOut(2, 0),
+		VotersStakes: NewLayOut(3, 0),
+	},
 }
 
 // NewLayOut returns new instance of a LayOut
