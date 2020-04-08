@@ -148,6 +148,10 @@ var (
 		Usage: "GasPrice for every transaction in the network",
 		Value: evr.DefaultConfig.GasPrice,
 	}
+	EvrynetTestnetFlag = cli.BoolFlag{
+		Name:  "publictestnet",
+		Usage: "Evrynet network: pre-configured tendermint test network",
+	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Ropsten network: pre-configured proof-of-work test network",
