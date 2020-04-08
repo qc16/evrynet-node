@@ -20,7 +20,9 @@ var (
 )
 
 type StakingCaller interface {
+	// GetValidators returns list of validators, calculate from current stateDB
 	GetValidators(common.Address) ([]common.Address, error)
+	// GetValidatorsData return information of validators including owner, totalStake and voterStakes
 	GetValidatorsData(common.Address, []common.Address) (map[common.Address]CandidateData, error)
 }
 

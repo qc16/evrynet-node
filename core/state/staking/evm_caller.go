@@ -86,6 +86,7 @@ func (caller *evmStakingCaller) GetValidators(scAddress common.Address) ([]commo
 	return candidatesArr[:int(data.ValidatorSize.Int64())], err
 }
 
+// GetValidatorsData return information of validators including owner, totalStake and voterStakes
 func (caller *evmStakingCaller) GetValidatorsData(scAddress common.Address, candidates []common.Address) (map[common.Address]CandidateData, error) {
 	sc, err := staking_contracts.NewStakingContractsCaller(scAddress, caller)
 	if err != nil {

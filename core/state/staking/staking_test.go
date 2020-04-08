@@ -15,6 +15,7 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/staking_contracts"
 	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/params"
 )
@@ -25,7 +26,15 @@ const (
 	gasLimit          = 10000000
 )
 
-func TestGetValidators(t *testing.T) {
+func TestEvmStakingCaller_GetValidators(t *testing.T) {
+	testGetValidators(t, nil)
+}
+
+func TestStateDBStakingCaller_GetValidators(t *testing.T) {
+	testGetValidators(t, staking.DefaultConfig)
+}
+
+func testGetValidators(t *testing.T, indexCfg *staking.IndexConfigs) {
 	var (
 		candidates = []common.Address{
 			common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a"),
@@ -63,7 +72,7 @@ func TestGetValidators(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx.Hash())
 
-	stakingCaller, err := be.GetStakingCaller(nil)
+	stakingCaller, err := be.GetStakingCaller(indexCfg)
 	require.NoError(t, err)
 
 	validators, err := stakingCaller.GetValidators(addr)
@@ -77,7 +86,7 @@ func TestGetValidators(t *testing.T) {
 	require.NoError(t, err)
 	be.Commit()
 	assertTxSuccess(t, be, tx2.Hash())
-	stakingCaller, err = be.GetStakingCaller(nil)
+	stakingCaller, err = be.GetStakingCaller(indexCfg)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)
@@ -104,7 +113,7 @@ func TestGetValidators(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx3.Hash())
 	assertTxSuccess(t, be, tx4.Hash())
-	stakingCaller, err = be.GetStakingCaller(nil)
+	stakingCaller, err = be.GetStakingCaller(indexCfg)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)
@@ -114,7 +123,15 @@ func TestGetValidators(t *testing.T) {
 	}
 }
 
-func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
+func TestEvmStakingCaller_GetValidatorsData(t *testing.T) {
+	testGetValidatorsData(t, nil)
+}
+
+func TestStateDBStakingCaller_GetValidatorsData(t *testing.T) {
+	testGetValidatorsData(t, staking.DefaultConfig)
+}
+
+func testGetValidatorsData(t *testing.T, indexCfg *staking.IndexConfigs) {
 	var (
 		candidates = []common.Address{
 			common.HexToAddress("0x560089aB68dc224b250f9588b3DB540D87A66b7a"),
@@ -152,7 +169,7 @@ func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx.Hash())
 
-	stakingCaller, err := be.GetStakingCaller(nil)
+	stakingCaller, err := be.GetStakingCaller(indexCfg)
 	require.NoError(t, err)
 
 	validators, err := stakingCaller.GetValidators(addr)
@@ -166,7 +183,7 @@ func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
 	require.NoError(t, err)
 	be.Commit()
 	assertTxSuccess(t, be, tx2.Hash())
-	stakingCaller, err = be.GetStakingCaller(nil)
+	stakingCaller, err = be.GetStakingCaller(indexCfg)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)
@@ -192,14 +209,11 @@ func TestBackendContractCaller_GetValidatorsData(t *testing.T) {
 	be.Commit()
 	assertTxSuccess(t, be, tx3.Hash())
 	assertTxSuccess(t, be, tx4.Hash())
-	stakingCaller, err = be.GetStakingCaller(nil)
+	stakingCaller, err = be.GetStakingCaller(indexCfg)
 	require.NoError(t, err)
 	validators, err = stakingCaller.GetValidators(addr)
 	require.NoError(t, err)
 	require.Equal(t, 3, len(validators))
-	for _, val := range validators {
-		fmt.Println(val.Hex())
-	}
 	// test get voter stake
 	voterStakes, err := stakingCaller.GetValidatorsData(addr, validators)
 	require.NoError(t, err)
