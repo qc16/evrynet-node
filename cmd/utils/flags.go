@@ -143,6 +143,10 @@ var (
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: evr.DefaultConfig.NetworkId,
 	}
+	EvrynetTestnetFlag = cli.BoolFlag{
+		Name:  "publictestnet",
+		Usage: "Evrynet network: pre-configured tendermint test network",
+	}
 	GasPriceFlag = BigFlag{
 		Name:  "gasprice",
 		Usage: "GasPrice for every transaction in the network",

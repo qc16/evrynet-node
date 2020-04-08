@@ -33,7 +33,8 @@ var MainnetBootnodes = []string{
 // EvrynetTestBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Evrynet test network.
 var EvrynetTestBootnodes = []string{
-	"enode://b9807e0c2b05e12cccbc32cc41e2f0e65e46aa0b2e465e3ee591217dcf65908d2da383a31309e2b6270a43c12a3427bc23858c83144e516be7b270d8279b6ae7@127.0.0.1:30300", // Thai's team
+	"enode://12bad590ae8c34df6eaffd910ee42e49de2ee58823262361c72e35966035c604c3bb4f6ca5978ec97bb325f51395556ecee53a79597b481ef0641400cc82c326@18.138.96.152:30300", // Thai's team
+	// "enode://aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f@52.220.52.16:30300",  // VN's team
 }
 
 // TestnetBootnodes are the enode URLs of the P2P bootstrap nodes running on the
