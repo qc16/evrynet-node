@@ -179,7 +179,6 @@ func (n *Node) Start() error {
 	n.serverConfig.PrivateKey = n.config.NodeKey()
 	n.serverConfig.Name = n.config.NodeName()
 	n.serverConfig.Logger = n.log
-	n.P2PServerInitDone = make(chan struct{})
 	if n.serverConfig.StaticNodes == nil {
 		n.serverConfig.StaticNodes = n.config.StaticNodes()
 	}
@@ -188,6 +187,9 @@ func (n *Node) Start() error {
 	}
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
+	}
+	if n.P2PServerInitDone == nil {
+		n.P2PServerInitDone = make(chan struct{})
 	}
 	p2pServer := &p2p.Server{
 		Config: n.serverConfig,

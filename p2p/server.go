@@ -466,6 +466,7 @@ func (srv *Server) Start() (err error) {
 
 	if srv.Config.MaxPeers < len(srv.currentValidators) {
 		srv.Config.MaxPeers = len(srv.currentValidators)
+		srv.log.Warn("Update the maxpeers config", "maxPeers", srv.Config.MaxPeers)
 	}
 	if err := srv.setupLocalNode(); err != nil {
 		return err
@@ -489,24 +490,18 @@ func (srv *Server) Start() (err error) {
 // UpdateCurrentValidators will use Tendermint config to get validator
 func (srv *Server) UpdateCurrentValidators() error {
 	// Ignore if Tendermint config it does not exist
-	if srv.ChainReader != nil && srv.ChainReader.Config().Tendermint == nil {
-		return nil
-	}
-	if srv.ChainReader == nil {
-		return errors.New("Chain reader of server is nil")
-	}
+	if srv.ChainReader != nil && srv.ChainReader.Config().Tendermint != nil {
+		currentValidatorAddrs, err := srv.GetValSetAddresses(srv.ChainReader.CurrentHeader())
+		if err != nil {
+			return errors.Wrap(err, "Can't get the validators's address from extra-data")
+		}
 
-	currentValidatorAddrs, err := srv.GetValSetAddresses(srv.ChainReader.CurrentHeader())
-	if err != nil {
-		return errors.New("Can't get the validators's address from extra-data. Error: " + err.Error())
+		var currentValidatorMap = make(map[common.Address]struct{})
+		for _, valAddr := range currentValidatorAddrs {
+			currentValidatorMap[valAddr] = struct{}{}
+		}
+		srv.currentValidators = currentValidatorMap
 	}
-
-	var currentValidatorMap = make(map[common.Address]struct{})
-	for _, valAddr := range currentValidatorAddrs {
-		currentValidatorMap[valAddr] = struct{}{}
-	}
-
-	srv.currentValidators = currentValidatorMap
 	return nil
 }
 
@@ -1018,7 +1013,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		c.node = nodeFromConn(remotePubkey, c.fd)
 	}
 
-	// Setup next validators map
+	// Setup current validators
 	if err := srv.UpdateCurrentValidators(); err != nil {
 		return err
 	}

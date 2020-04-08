@@ -22,11 +22,10 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/Evrynetlabs/evrynet-node/params"
-
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
+	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 // NotFound is returned by API methods if the requested item does not exist.
