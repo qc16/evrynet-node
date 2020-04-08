@@ -1,7 +1,7 @@
 {
   "config": {
     "chainId": 15,
-    "gasPrice": null,
+    "gasPrice": 1000000000,
     "homesteadBlock": 0,
     "eip150Block": 0,
     "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",

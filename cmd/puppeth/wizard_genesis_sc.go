@@ -175,6 +175,7 @@ func deployStakingSCToSimulatedBE(genesis *core.Genesis, parsedABI abi.ABI, byte
 	contractBackend := backends.NewSimulatedBackend(core.GenesisAlloc{addr: {Balance: big.NewInt(int64(simulatedBalance))}}, simulatedGasLimit)
 
 	transactOpts := bind.NewKeyedTransactor(pKey)
+	transactOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 	smlSCAddress, _, _, err := bind.DeployContract(transactOpts, parsedABI, common.FromHex(byteCodeSC), contractBackend, stakingSCParams...)
 	if err != nil {
 		utils.Fatalf("Failed to deploy contract: %v", err)
