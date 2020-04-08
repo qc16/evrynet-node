@@ -143,6 +143,10 @@ var (
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: evr.DefaultConfig.NetworkId,
 	}
+	EvrynetTestnetFlag = cli.BoolFlag{
+		Name:  "publictestnet",
+		Usage: "Evrynet network: pre-configured tendermint test network",
+	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Ropsten network: pre-configured proof-of-work test network",

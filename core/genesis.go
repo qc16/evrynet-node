@@ -347,14 +347,29 @@ func DefaultTestnetGenesisBlock() *Genesis {
 // DefaultEvrynetTestnetGenesisBlock returns the Evrynet test network genesis block.
 func DefaultEvrynetTestnetGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.EvrynetTestnetChainConfig,
-		Nonce:      0,
-		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f858f83f94f0a9917744aed1df3248602c372531aa8304301194adf5fa1aa0f7734877b1176361385d4a50e88ae494333a18bdc5af889d2a2e2684cf464524644064a794000000000000000000000000000000000000000080c0"),
-		GasLimit:   20000000,
+		Config:    params.EvrynetTestnetChainConfig,
+		Nonce:     0,
+		Timestamp: hexutil.MustDecodeUint64("0x5e6cf370"),
+		ExtraData: hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f84580c0b841f83f944823c11f1ae74caf2468f7c4f737a35a3230d63a94cd144babf40971b7643bb762958ac8e80a11421a94b6fb59c95e2988848eca21f1b11db0f0f33c6b4c"),
+		// ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f84580c0b841f83f94560089ab68dc224b250f9588b3db540d87a66b7a94954e4bf2c68f13d97c45db0e02645d145db6911f9445f8b547a7f16730c0c8961a21b56c31d84ddb49"),// VN's team
+		GasLimit:   hexutil.MustDecodeUint64("0x47b760"),
 		Difficulty: big.NewInt(1),
 		Coinbase:   common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		Alloc:      decodePrealloc(evrynetTestAllocData),
+		Alloc:      getAllocFromJSON(),
+		Number:     0,
 	}
+}
+
+// getAllocFromJSON loads account's configuration from json Data
+func getAllocFromJSON() GenesisAlloc {
+	var (
+		alloc = map[common.Address]GenesisAccount{}
+	)
+
+	if err := json.Unmarshal([]byte(evrynetAlloc), &alloc); err != nil {
+		panic(err)
+	}
+	return alloc
 }
 
 // DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
