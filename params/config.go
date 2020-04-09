@@ -91,7 +91,7 @@ var (
 	// EvrynetTestnetChainConfig contains the chain parameters to run a node on the Evrynet test network.
 	EvrynetTestnetChainConfig = &ChainConfig{
 		ChainID:             big.NewInt(15),
-		GasPrice:            nil,
+		GasPrice:            big.NewInt(GasPriceConfig),
 		HomesteadBlock:      big.NewInt(0),
 		EIP150Block:         big.NewInt(0),
 		EIP155Block:         big.NewInt(0),
