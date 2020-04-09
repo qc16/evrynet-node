@@ -1,0 +1,29 @@
+{
+    "language": "Solidity",
+    "sources": {
+        "./EvrynetStaking.sol": {
+            "urls": ["./staking-contract/contracts/EvrynetStaking.sol"]
+        },
+        "./IEvrynetStaking.sol": {
+            "urls": ["./staking-contract/contracts/IEvrynetStaking.sol"]
+        },
+        "./utils/SafeMath.sol": {
+            "urls": ["./staking-contract/contracts/utils/SafeMath.sol"]
+        },
+        "./utils/ReentrancyGuard.sol": {
+            "urls": ["./staking-contract/contracts/utils/ReentrancyGuard.sol"]
+        }
+    },
+    "settings": {
+        "optimizer": {
+            "enabled": true,
+            "runs": 200
+        },
+        "evmVersion": "homestead",
+        "outputSelection": {
+            "*": {
+                "*": ["storageLayout"]
+            }
+        }
+    }
+}
