@@ -191,7 +191,6 @@ Use "ethereum dump 0" to dump the genesis block.`,
 			utils.TendermintTimeoutCommitFlag,
 			utils.TendermintFaultyModeFlag,
 			utils.TendermintSCUseEVMCallerFlag,
-			utils.TendermintSCIndexGeneratorPathFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 	}

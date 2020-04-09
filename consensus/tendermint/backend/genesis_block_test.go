@@ -17,7 +17,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/core/rawdb"
-	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	coreStaking "github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
@@ -110,7 +109,7 @@ func TestBackendCallGetListCandidateFromStateDB(t *testing.T) {
 	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
 	assert.NoError(t, err)
 
-	stakingCaller := coreStaking.NewStateDbStakingCaller(state, staking.DefaultConfig)
+	stakingCaller := coreStaking.NewStateDbStakingCaller(state, coreStaking.DefaultConfig)
 	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(validators))

@@ -7,7 +7,7 @@ sh ./stop_test_nodes.sh
 for i in 1 2 3 4
 do
   echo "--- Create genesis block for node $i ..."
-  ./gev --datadir ./tests/test_nodes/node"$i"/data --tendermint.index-generator-path ./tests/test_nodes/indexGenerator.json init ./tests/test_nodes/genesis.json
+  ./gev --datadir ./tests/test_nodes/node"$i"/data init ./tests/test_nodes/genesis.json
 
   echo "--- Start test node $i ..."
   ./gev --datadir ./tests/test_nodes/node"$i"/data --nodiscover --tendermint.blockperiod 1 --gasprice 1000000000 --syncmode full --networkid 15 --mine \

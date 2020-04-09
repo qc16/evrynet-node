@@ -6,27 +6,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
-// Constants represents the configuration name of all state variables.
-const (
-	WithdrawsStateIndexName    = "withdrawsState"
-	CandidateVotersIndexName   = "candidateVoters"
-	CandidateDataIndexName     = "candidateData"
-	CandidatesIndexName        = "candidates"
-	StartBlockIndexName        = "startBlock"
-	EpochPeriodIndexName       = "epochPeriod"
-	MaxValidatorSizeIndexName  = "maxValidatorSize"
-	MinValidatorStakeIndexName = "minValidatorStake"
-	MinVoterCapIndexName       = "minVoterCap"
-	AdminIndexName             = "admin"
-)
-
-// StorageLayout represents the struct of object its get from a json data file
-type StorageLayout struct {
-	Label  string `json:"label"`
-	Offset uint16 `json:"offset"`
-	Slot   uint64 `json:"slot,string"`
-}
-
 // LayOut represents the Offset and Slot order of a state variable
 type LayOut struct {
 	Offset uint16

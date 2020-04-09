@@ -160,7 +160,6 @@ var (
 		utils.TendermintTimeoutPrecommitDeltaFlag,
 		utils.TendermintTimeoutCommitFlag,
 		utils.TendermintSCUseEVMCallerFlag,
-		utils.TendermintSCIndexGeneratorPathFlag,
 	}
 
 	rpcFlags = []cli.Flag{

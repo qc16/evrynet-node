@@ -261,7 +261,6 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.TendermintTimeoutCommitFlag,
 			utils.TendermintFaultyModeFlag,
 			utils.TendermintSCUseEVMCallerFlag,
-			utils.TendermintSCIndexGeneratorPathFlag,
 		},
 	},
 	{
