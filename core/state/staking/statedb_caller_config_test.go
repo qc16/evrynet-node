@@ -7,13 +7,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 )
 
 // Constants represents the configuration name of all state variables.
 const (
-	storageLayoutPath = "../../../consensus/staking_contracts/Storage-layout.json"
+	storageLayoutPath = "../../../consensus/staking_contracts/storage-layout.json"
 	gjsonPath         = `contracts.\./EvrynetStaking\.sol.EvrynetStaking.storageLayout`
 
 	WithdrawsStateIndexName    = "withdrawsState"
