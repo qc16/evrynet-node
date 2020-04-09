@@ -100,7 +100,7 @@ func (c *stateDBStakingCaller) GetValidatorsData(scAddress common.Address, candi
 
 // GetCandidateData returns current stake of a candidate
 func (c *stateDBStakingCaller) GetCandidateData(stakingContractAddr common.Address, candidate common.Address) CandidateData {
-	loc := getMappingLoc(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
+	loc := getMappingElementLoc(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
 	totalStakeLoc := addOffsetToLoc(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.TotalStake.Slot))
 	totalStake := c.stateDB.GetState(stakingContractAddr, totalStakeLoc).Big()
 
@@ -110,7 +110,7 @@ func (c *stateDBStakingCaller) GetCandidateData(stakingContractAddr common.Addre
 	voteStakes := make(map[common.Address]*big.Int)
 	for _, voter := range c.GetVoters(stakingContractAddr, candidate) {
 		voterStakesSlot := addOffsetToLoc(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.VotersStakes.Slot))
-		voterStakeSlot := getMappingLoc(voterStakesSlot, voter.Hash())
+		voterStakeSlot := getMappingElementLoc(voterStakesSlot, voter.Hash())
 		stake := c.getBigInt(stakingContractAddr, voterStakeSlot)
 		voteStakes[voter] = stake
 	}
@@ -123,7 +123,7 @@ func (c *stateDBStakingCaller) GetCandidateData(stakingContractAddr common.Addre
 }
 
 func (c *stateDBStakingCaller) GetVoters(stakingAddr common.Address, candidate common.Address) []common.Address {
-	votersSlot := getMappingLoc(c.config.CandidateVotersLayout.slotHash(), candidate.Hash())
+	votersSlot := getMappingElementLoc(c.config.CandidateVotersLayout.slotHash(), candidate.Hash())
 	votersLength := c.getBigInt(stakingAddr, votersSlot).Uint64()
 	var voters []common.Address
 	for i := uint64(0); i < votersLength; i++ {
@@ -135,7 +135,7 @@ func (c *stateDBStakingCaller) GetVoters(stakingAddr common.Address, candidate c
 
 // GetCandidateStake returns current stake of a candidate
 func (c *stateDBStakingCaller) GetCandidateStake(scAddress common.Address, candidate common.Address) *big.Int {
-	loc := getMappingLoc(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
+	loc := getMappingElementLoc(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
 	loc = addOffsetToLoc(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.TotalStake.Slot))
 	return c.getBigInt(scAddress, loc)
 }
@@ -172,7 +172,7 @@ func (c *stateDBStakingCaller) GetAdmin(scAddress common.Address) common.Address
 
 // GetCandidateOwner returns current owner of a candidate
 func (c *stateDBStakingCaller) GetCandidateOwner(stakingContractAddr common.Address, candidate common.Address) common.Address {
-	loc := getMappingLoc(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
+	loc := getMappingElementLoc(c.config.CandidateDataLayout.slotHash(), candidate.Hash())
 	loc = addOffsetToLoc(loc, new(big.Int).SetUint64(c.config.CandidateDataStruct.Owner.Slot))
 	return c.getAddress(stakingContractAddr, loc)
 }
@@ -187,6 +187,7 @@ func (c *stateDBStakingCaller) getBigInt(contractAddr common.Address, hash commo
 
 /**
  * Array data is located at keccak256(p)
+ *  So to get the location of element we add a offset = index * elementSize
  */
 func getElementArrayLoc(slotHash common.Hash, index uint64, elementSize uint64) common.Hash {
 	slotKecBig := crypto.Keccak256Hash(slotHash.Bytes()).Big()
@@ -197,15 +198,15 @@ func getElementArrayLoc(slotHash common.Hash, index uint64, elementSize uint64) 
 /**
  * The value to a mapping key k at position p is located at keccak256(k . p) where . is concatenation.
  */
-func getMappingLoc(root common.Hash, key common.Hash) common.Hash {
-	return common.BytesToHash(crypto.Keccak256(key.Bytes(), root.Bytes()))
+func getMappingElementLoc(slotHash common.Hash, key common.Hash) common.Hash {
+	return common.BytesToHash(crypto.Keccak256(key.Bytes(), slotHash.Bytes()))
 }
 
 /**
  * Get the position for a field inside a struct
  */
-func addOffsetToLoc(root common.Hash, slot *big.Int) common.Hash {
-	rootBig := root.Big()
+func addOffsetToLoc(slotHash common.Hash, slot *big.Int) common.Hash {
+	rootBig := slotHash.Big()
 	arrBig := new(big.Int).Add(rootBig, slot)
 	return common.BigToHash(arrBig)
 }
