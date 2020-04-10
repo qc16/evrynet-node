@@ -4,7 +4,7 @@ set -euo pipefail
 pushd ./consensus/staking_contracts
 # Generate bytes code and abi files
 echo "Generate bytes code and abi files"
-docker run -v $(pwd):/staking_contracts ethereum/solc:0.5.13 --overwrite -o /staking_contracts/EvrynetStaking.bin --optimize \
+docker run -v $(pwd):/staking_contracts ethereum/solc:0.5.13 --overwrite -o /staking_contracts/EvrynetStaking.bin --optimize --optimize-runs 20000 \
     --abi --bin /staking_contracts/staking-contract/contracts/EvrynetStaking.sol
 # Generate go file
 echo "Generate go file"
