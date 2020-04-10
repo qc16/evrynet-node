@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 )
 
 type ProposerPolicy uint64
@@ -45,6 +46,9 @@ type Config struct {
 	FixedValidators       []common.Address // The fixed validators
 
 	FaultyMode uint64 `toml:",omitempty"` // The faulty node indicates the faulty node's behavior
+
+	UseEVMCaller bool
+	IndexStateVariables *staking.IndexConfigs //The index of state variables has stored in stateDB
 }
 
 var DefaultConfig = &Config{
@@ -60,6 +64,8 @@ var DefaultConfig = &Config{
 	TimeoutPrecommitDelta: 500 * time.Millisecond,
 	TimeoutCommit:         1000 * time.Millisecond,
 	FaultyMode:            Disabled.Uint64(),
+	UseEVMCaller: false,
+	IndexStateVariables:   staking.DefaultConfig,
 }
 
 //ProposeTimeout return the timeout for a specific round

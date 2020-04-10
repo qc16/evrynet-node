@@ -627,7 +627,8 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	if err != nil {
 		return nil, err
 	}
-	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
+
+	stakingCaller := sb.getStakingCaller(stateDB, header)
 	validators, err := stakingCaller.GetValidators(sb.stakingContractAddr)
 	if err != nil {
 		return nil, err
@@ -636,6 +637,16 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	log.Info("found new val set", "number", header.Number.Uint64(), "elapsed", common.PrettyDuration(time.Since(start)),
 		"valset", common.PrettyAddresses(validators))
 	return validators, nil
+}
+
+func (sb *Backend) getStakingCaller(stateDB *state.StateDB, header *types.Header) staking.StakingCaller {
+	if sb.config.UseEVMCaller {
+		log.Info("using the EVM caller to get validators", "number", header.Number.Uint64())
+		return staking.NewEVMStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
+	} else {
+		log.Info("using the StateDB caller to get validators", "number", header.Number.Uint64())
+		return staking.NewStateDbStakingCaller(stateDB, sb.config.IndexStateVariables)
+	}
 }
 
 func (sb *Backend) prepareExtra(header *types.Header) []byte {

@@ -705,6 +705,10 @@ var (
 		Usage: "Duration waiting to start round with new height",
 		Value: evr.DefaultConfig.Tendermint.TimeoutCommit,
 	}
+	TendermintSCUseEVMCallerFlag = cli.BoolFlag{
+		Name:  "tendermint.use-evm-caller",
+		Usage: "The flag allowance reading data from stateDB or EVM",
+	}
 
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
@@ -1357,6 +1361,11 @@ func setWhitelist(ctx *cli.Context, cfg *evr.Config) {
 // setTendermint will use params from CLI for tendermint config
 // NOTE: ProposerPolicy, Epoch are used for chain, so they not allowed to inject. They will be got from genesis
 func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
+
+	if ctx.GlobalIsSet(TendermintSCUseEVMCallerFlag.Name) {
+		cfg.UseEVMCaller = true
+	}
+
 	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
 		cfg.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
 	}
@@ -1383,6 +1392,10 @@ func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
 	}
 	if ctx.GlobalIsSet(TendermintTimeoutCommitFlag.Name) {
 		cfg.TimeoutCommit = ctx.GlobalDuration(TendermintTimeoutCommitFlag.Name)
+	}
+
+	if ctx.IsSet(TendermintSCUseEVMCallerFlag.Name) {
+		cfg.UseEVMCaller = true
 	}
 
 	if ctx.IsSet(TendermintBlockPeriodFlag.Name) {

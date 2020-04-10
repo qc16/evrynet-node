@@ -444,13 +444,23 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 }
 
 //GetStakingCaller returns staking caller for testing
-func (b *SimulatedBackend) GetStakingCaller() (staking.StakingCaller, error) {
+func (b *SimulatedBackend) GetStakingCaller(indexCfg *staking.IndexConfigs) (staking.StakingCaller, error) {
 	state, err := b.blockchain.State()
 	if err != nil {
 		return nil, err
 	}
+
+	if indexCfg != nil {
+		return staking.NewStateDbStakingCaller(state, indexCfg), nil
+	}
+
 	header := b.blockchain.CurrentHeader()
-	return staking.NewStakingCaller(state, b.blockchain, header, b.config, vm.Config{}), nil
+	return staking.NewEVMStakingCaller(state, b.blockchain, header, b.config, vm.Config{}), nil
+}
+
+// CurrentStateDb returns the current stateDB for testing
+func (b *SimulatedBackend) CurrentStateDb() (*state.StateDB, error) {
+	return b.blockchain.State()
 }
 
 // callmsg implements core.Message to allow passing it as a transaction simulator.

@@ -11,7 +11,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/state"
 	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
-	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
@@ -48,7 +47,7 @@ func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *s
 	if err != nil {
 		return err
 	}
-	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), transitionHeader, sb.chain.Config(), vm.Config{})
+	stakingCaller := sb.getStakingCaller(stateDB, header)
 	validatorsData, err := stakingCaller.GetValidatorsData(*sb.config.StakingSCAddress, validatorAdds)
 	if err != nil {
 		return err

@@ -93,7 +93,23 @@ func TestBackendCallGetListCandidateFromSC(t *testing.T) {
 	assert.NoError(t, err)
 
 	header := backend.chain.CurrentHeader()
-	stakingCaller := coreStaking.NewStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
+	stakingCaller := coreStaking.NewEVMStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
+	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(validators))
+}
+
+func TestBackendCallGetListCandidateFromStateDB(t *testing.T) {
+	// Must init log to show error when using log.Debug
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+
+	backend, _, _, err := createBlockchainAndBackendFromGenesis(StakingSC)
+	assert.NoError(t, err)
+
+	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
+	assert.NoError(t, err)
+
+	stakingCaller := coreStaking.NewStateDbStakingCaller(state, coreStaking.DefaultConfig)
 	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(validators))
