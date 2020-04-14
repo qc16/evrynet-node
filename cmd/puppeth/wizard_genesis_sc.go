@@ -39,7 +39,7 @@ func (w *wizard) configStakingSC(genesis *core.Genesis, validators []common.Addr
 	)
 
 	fmt.Println()
-	fmt.Println("Do you want to use precompiled Staking Smart Contract file? (default =yes)")
+	fmt.Println("Do you want to use precompiled Staking Smart Contract file? (default = yes)")
 	if usePrecompiledSC := w.readDefaultYesNo(true); usePrecompiledSC {
 		fmt.Println("Specify your Bytecode file path (default = ./consensus/staking_contracts/EvrynetStaking.bin/EvrynetStaking.bin)")
 		for {
