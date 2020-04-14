@@ -94,6 +94,7 @@ var (
 		GasPrice:            big.NewInt(GasPriceConfig),
 		HomesteadBlock:      big.NewInt(0),
 		EIP150Block:         big.NewInt(0),
+		EIP150Hash:          common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
