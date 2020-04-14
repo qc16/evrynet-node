@@ -7,19 +7,21 @@ until [[ $env ]]; do read -rp "- Environment of Image: " env; done
 buildExplorer=
 until [[ $buildExplorer ]]; do read -rp "- Do you want to build Explorer Image? " buildExplorer; done
 
+# Replace / with -
+newVersion=${version//\//-}
+
 BASEDIR=$(dirname "$0")
 BUILDER_REPOSITORY="kybernetwork/evrynet-builder"
-BUILDER_TAG_ENV="$BUILDER_REPOSITORY:$version-$env"
+BUILDER_TAG_ENV="$BUILDER_REPOSITORY:$newVersion-$env"
 
 BOOTNODE_REPOSITORY="kybernetwork/evrynet-bootnode"
-BOOTNODE_TAG_ENV="$BOOTNODE_REPOSITORY:$version-$env"
+BOOTNODE_TAG_ENV="$BOOTNODE_REPOSITORY:$newVersion-$env"
 
 NODE_REPOSITORY="kybernetwork/evrynet-node"
-NODE_TAG_ENV="$NODE_REPOSITORY:$version-$env"
+NODE_TAG_ENV="$NODE_REPOSITORY:$newVersion-$env"
 
 EXPLORER_REPOSITORY="kybernetwork/evrynet-explorer"
-EXPLORER_TAG_ENV="$EXPLORER_REPOSITORY:$version-$env"
-
+EXPLORER_TAG_ENV="$EXPLORER_REPOSITORY:$newVersion-$env"
 
 git fetch --all --tags --prune
 rm -rf "$BASEDIR"/builder/project
