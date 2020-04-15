@@ -15,7 +15,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/consensus/staking_contracts"
 	"github.com/Evrynetlabs/evrynet-node/core"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
-	"github.com/Evrynetlabs/evrynet-node/params"
 )
 
 func TestCheckIndex(t *testing.T) {
@@ -44,7 +43,6 @@ func TestCheckIndex(t *testing.T) {
 
 	authOpts := bind.NewKeyedTransactor(privateKey)
 	authOpts.Nonce = big.NewInt(0)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 
 	scAddress, tx, _, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates, epoch, startBlock, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
 	require.NoError(t, err)

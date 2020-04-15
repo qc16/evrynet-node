@@ -65,7 +65,6 @@ func testGetValidators(t *testing.T, indexCfg *staking.IndexConfigs) {
 
 	authOpts := bind.NewKeyedTransactor(privateKey)
 	authOpts.Nonce = big.NewInt(0)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 
 	addr, tx, contract, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates, epoch, startBlock, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
 	require.NoError(t, err)
@@ -81,7 +80,6 @@ func testGetValidators(t *testing.T, indexCfg *staking.IndexConfigs) {
 	//register new candidate, with 0 stake from owner
 	authOpts = bind.NewKeyedTransactor(privateKey)
 	authOpts.Nonce = big.NewInt(1)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 	tx2, err := contract.Register(authOpts, newCandidate, newCandidate)
 	require.NoError(t, err)
 	be.Commit()
@@ -99,14 +97,12 @@ func testGetValidators(t *testing.T, indexCfg *staking.IndexConfigs) {
 	ownerPk, _ := crypto.HexToECDSA(newCandidatePkHex)
 	authOpts = bind.NewKeyedTransactor(ownerPk)
 	authOpts.Nonce = big.NewInt(0)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 	authOpts.Value = big.NewInt(1000)
 	tx3, err := contract.Vote(authOpts, newCandidate)
 	require.NoError(t, err)
 
 	authOpts = bind.NewKeyedTransactor(privateKey)
 	authOpts.Nonce = big.NewInt(2)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 	authOpts.Value = big.NewInt(30)
 	tx4, err := contract.Vote(authOpts, newCandidate)
 	require.NoError(t, err)
@@ -162,7 +158,6 @@ func testGetValidatorsData(t *testing.T, indexCfg *staking.IndexConfigs) {
 
 	authOpts := bind.NewKeyedTransactor(privateKey)
 	authOpts.Nonce = big.NewInt(0)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 
 	addr, tx, contract, err := staking_contracts.DeployStakingContracts(authOpts, be, candidates, candidates, epoch, startBlock, maxValidatorSize, minValidatorStake, minVoteCap, adminAddr)
 	require.NoError(t, err)
@@ -178,7 +173,6 @@ func testGetValidatorsData(t *testing.T, indexCfg *staking.IndexConfigs) {
 	//register new candidate, with 0 stake from owner
 	authOpts = bind.NewKeyedTransactor(privateKey)
 	authOpts.Nonce = big.NewInt(1)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 	tx2, err := contract.Register(authOpts, newCandidate, newCandidate)
 	require.NoError(t, err)
 	be.Commit()
@@ -195,14 +189,12 @@ func testGetValidatorsData(t *testing.T, indexCfg *staking.IndexConfigs) {
 	ownerPk, _ := crypto.HexToECDSA(newCandidatePkHex)
 	authOpts = bind.NewKeyedTransactor(ownerPk)
 	authOpts.Nonce = big.NewInt(0)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 	authOpts.Value = big.NewInt(1000)
 	tx3, err := contract.Vote(authOpts, newCandidate)
 	require.NoError(t, err)
 
 	authOpts = bind.NewKeyedTransactor(privateKey)
 	authOpts.Nonce = big.NewInt(2)
-	authOpts.GasPrice = big.NewInt(params.GasPriceConfig)
 	authOpts.Value = big.NewInt(30)
 	tx4, err := contract.Vote(authOpts, newCandidate)
 	require.NoError(t, err)
