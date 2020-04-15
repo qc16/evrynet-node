@@ -347,16 +347,18 @@ func DefaultTestnetGenesisBlock() *Genesis {
 // DefaultEvrynetTestnetGenesisBlock returns the Evrynet test network genesis block.
 func DefaultEvrynetTestnetGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:    params.EvrynetTestnetChainConfig,
-		Nonce:     0,
-		Timestamp: hexutil.MustDecodeUint64("0x5e6cf370"),
-		ExtraData: hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f84580c0b841f83f944823c11f1ae74caf2468f7c4f737a35a3230d63a94cd144babf40971b7643bb762958ac8e80a11421a94b6fb59c95e2988848eca21f1b11db0f0f33c6b4c"),
-		// ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f84580c0b841f83f94560089ab68dc224b250f9588b3db540d87a66b7a94954e4bf2c68f13d97c45db0e02645d145db6911f9445f8b547a7f16730c0c8961a21b56c31d84ddb49"),// VN's team
+		Config:     params.EvrynetTestnetChainConfig,
+		Nonce:      0,
+		Timestamp:  hexutil.MustDecodeUint64("0x5e7b2adf"),
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f84580c0b841f83f944823c11f1ae74caf2468f7c4f737a35a3230d63a94cd144babf40971b7643bb762958ac8e80a11421a94b6fb59c95e2988848eca21f1b11db0f0f33c6b4c"),
 		GasLimit:   hexutil.MustDecodeUint64("0x47b760"),
-		Difficulty: big.NewInt(1),
+		Difficulty: hexutil.MustDecodeBig("0x1"),
+		Mixhash:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		Coinbase:   common.HexToAddress("0x0000000000000000000000000000000000000000"),
 		Alloc:      getAllocFromJSON(),
-		Number:     0,
+		Number:     hexutil.MustDecodeUint64("0x0"),
+		GasUsed:    hexutil.MustDecodeUint64("0x0"),
+		ParentHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 	}
 }
 
