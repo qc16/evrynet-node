@@ -222,7 +222,7 @@ func doTest(cmdline []string) {
 	case *integration:
 		packages = []string{"./tests/provider_logic_test/..."}
 	default:
-		packages = []string{"./consensus/tendermint/...", "./cmd/...", "./internal/...", "./evrclient/...", "./miner/..."}
+		packages = []string{"./consensus/tendermint/...", "./cmd/...", "./internal/...", "./evrclient/...", "./miner/...", "./core/state/staking/..."}
 	}
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()

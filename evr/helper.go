@@ -59,7 +59,11 @@ func newTestProtocolManager(mode downloader.SyncMode, blocks int, generator func
 		db     = rawdb.NewMemoryDatabase()
 		gspec  = &core.Genesis{
 			Config: params.TestChainConfig,
-			Alloc:  core.GenesisAlloc{testBank: {Balance: big.NewInt(1000000)}},
+			Alloc: core.GenesisAlloc{
+				testBank: {
+					Balance: new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil),
+				},
+			},
 		}
 		genesis       = gspec.MustCommit(db)
 		blockchain, _ = core.NewBlockChain(db, nil, gspec.Config, engine, vm.Config{}, nil)
