@@ -49,6 +49,7 @@ type Node struct {
 	serverConfig      p2p.Config
 	P2PServer         *p2p.Server // Currently running P2P networking layer
 	P2PServerInitDone chan struct{}
+	running           bool
 
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
@@ -121,6 +122,7 @@ func New(conf *Config) (*Node, error) {
 		eventmux:          new(event.TypeMux),
 		log:               conf.Logger,
 		P2PServerInitDone: make(chan struct{}),
+		running:           false,
 	}, nil
 }
 
@@ -153,7 +155,7 @@ func (n *Node) Register(constructor ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	if n.P2PServer != nil {
+	if n.running {
 		return ErrNodeRunning
 	}
 	n.serviceFuncs = append(n.serviceFuncs, constructor)
@@ -166,7 +168,7 @@ func (n *Node) Start() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's already running
-	if n.P2PServer != nil {
+	if n.running {
 		return ErrNodeRunning
 	}
 	if err := n.openDataDir(); err != nil {
@@ -201,7 +203,7 @@ func (n *Node) Start() error {
 	go func() {
 		select {
 		case <-n.P2PServerInitDone:
-			if err := n.P2PServer.UpdateCurrentValidators(); err != nil {
+			if err := p2pServer.UpdateCurrentValidators(); err != nil {
 				n.log.Error("Failed to setup chain reader", "error", err)
 			}
 			setupChainReaderDone <- struct{}{}
@@ -267,6 +269,7 @@ func (n *Node) Start() error {
 	}
 	// Finish initializing the startup
 	n.services = services
+	n.running = true
 	n.stop = make(chan struct{})
 
 	return nil
@@ -453,7 +456,7 @@ func (n *Node) Stop() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's not running
-	if n.P2PServer == nil {
+	if !n.running {
 		return ErrNodeStopped
 	}
 
@@ -473,6 +476,7 @@ func (n *Node) Stop() error {
 	n.P2PServer.Stop()
 	n.services = nil
 	n.P2PServer = nil
+	n.running = false
 
 	// Release instance directory lock.
 	if n.instanceDirLock != nil {
@@ -504,7 +508,7 @@ func (n *Node) Stop() error {
 // at the time of invocation, the method immediately returns.
 func (n *Node) Wait() {
 	n.lock.RLock()
-	if n.P2PServer == nil {
+	if !n.running {
 		n.lock.RUnlock()
 		return
 	}
@@ -531,7 +535,7 @@ func (n *Node) Attach() (*rpc.Client, error) {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
-	if n.P2PServer == nil {
+	if !n.running {
 		return nil, ErrNodeStopped
 	}
 	return rpc.DialInProc(n.inprocHandler), nil
@@ -564,7 +568,7 @@ func (n *Node) Service(service interface{}) error {
 	defer n.lock.RUnlock()
 
 	// Short circuit if the node's not running
-	if n.P2PServer == nil {
+	if !n.running {
 		return ErrNodeStopped
 	}
 	// Otherwise try to find the service to return
