@@ -213,7 +213,7 @@ func doTest(cmdline []string) {
 	switch {
 	case *full:
 		packages = []string{
-			"./accounts/...", "./cmd/...", "./common/...", "./consensus/...", "./crypto/...",
+			"./accounts/...", "./cmd/...", "./core/...", "./common/...", "./consensus/...", "./crypto/...",
 			"./dashboard/...", "./ethstats/...", "./event/...", "./evr/...", "./evrclient/...", "./evrdb/...",
 			"./graphql/...", "./internal/...", "./les/...", "./light/...", "./log/...",
 			"./metrics/...", "./miner/...", "./mobile/...", "./node/...", "./p2p/...", "./params/...",
