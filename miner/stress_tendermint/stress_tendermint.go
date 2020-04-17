@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -107,13 +108,14 @@ func main() {
 
 	go reportLoop(ethereum.BlockChain(), cfg.TxMode)
 	// Start injecting transactions from the faucet like crazy
+	gasPrice := testNode.Server().ChainReader.Config().GasPrice
 	for {
 		var txs types.Transactions
 		// Create a batch of transaction and inject into the pool
 		// Note: if we add a single transaction one by one, the queue for broadcast txs might be full
 		for i := 0; i < txsBatchSize; i++ {
 			index := rand.Intn(len(faucets))
-			tx, err := createTx(cfg.TxMode, faucets[index], nonces[index], contractAddr)
+			tx, err := createTx(cfg.TxMode, gasPrice, faucets[index], nonces[index], contractAddr)
 			if err != nil {
 				panic(err)
 			}
@@ -231,7 +233,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 		P2P: p2p.Config{
 			ListenAddr:  "0.0.0.0:0",
 			NoDiscovery: true,
-			MaxPeers:    25,
+			MaxPeers:    50,
 		},
 		NoUSB:    true,
 		HTTPHost: "127.0.0.1", //add an rpc for debug
@@ -245,7 +247,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 		return nil, err
 	}
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		return evr.New(ctx, &evr.Config{
+		cfg := &evr.Config{
 			Genesis:         genesis,
 			NetworkId:       genesis.Config.ChainID.Uint64(),
 			SyncMode:        downloader.FullSync,
@@ -268,7 +270,17 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 				GasCeil:  genesis.GasLimit * 11 / 10,
 				Recommit: time.Second,
 			},
-		})
+		}
+
+		fullNode, err := evr.New(ctx, cfg)
+		// Init Tendermint ChainReader for p2p server to read validators set
+		if fullNode != nil && fullNode.BlockChain() != nil && fullNode.BlockChain().Config().Tendermint != nil && stack.P2PServer.ChainReader == nil {
+			fmt.Println("--- init ChainReader")
+			stack.P2PServer.ChainReader = fullNode.BlockChain()
+		}
+		stack.P2PServerInitDone <- struct{}{}
+
+		return fullNode, err
 	}); err != nil {
 		return nil, err
 	}
@@ -295,6 +307,20 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 	if err := store.Unlock(signer, ""); err != nil {
 		return nil, err
 	}
+
+	var evrynet *evr.Evrynet
+	if err := stack.Service(&evrynet); err != nil {
+		return nil, errors.Wrap(err, "Evrynet service not running")
+	}
+	// Set the gas price to the limits from the CLI and start mining
+	gasPrice := new(big.Int).Set(evrynet.BlockChain().Config().GasPrice)
+	evrynet.TxPool().SetGasPrice(gasPrice)
+
+	threads := 0
+	if err := evrynet.StartMining(threads); err != nil {
+		return nil, errors.Wrap(err, "Failed to start mining")
+	}
+
 	return stack, nil
 }
 
@@ -379,18 +405,18 @@ func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64)
 	return nil, errors.New("Can not get SC address")
 }
 
-func createTx(txMode TxMode, faucet *ecdsa.PrivateKey, nonces uint64, contractAddr *common.Address) (*types.Transaction, error) {
+func createTx(txMode TxMode, gasPrice *big.Int, faucet *ecdsa.PrivateKey, nonces uint64, contractAddr *common.Address) (*types.Transaction, error) {
 	switch txMode {
 	case NormalTxMode:
 		return types.SignTx(
 			types.NewTransaction(nonces, crypto.PubkeyToAddress(faucet.PublicKey), new(big.Int),
-				21000, big.NewInt(params.GasPriceConfig), nil),
+				21000, gasPrice, nil),
 			types.HomesteadSigner{},
 			faucet)
 	case SmartContractMode:
 		return types.SignTx(
 			types.NewTransaction(nonces, *contractAddr, new(big.Int),
-				40000, big.NewInt(params.GasPriceConfig),
+				40000, gasPrice,
 				[]byte("0x3fb5c1cb0000000000000000000000000000000000000000000000000000000000000002")),
 			types.HomesteadSigner{},
 			faucet)

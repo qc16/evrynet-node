@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -43,6 +44,7 @@ func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *s
 	if err != nil {
 		return err
 	}
+	fmt.Printf("--- currentBlock: %v | epoch: %v | transitionHeader.Root: %v\n", currentBlock, epoch, transitionHeader.Root.Hex())
 	stateDB, err := sb.chain.StateAt(transitionHeader.Root)
 	if err != nil {
 		return err
