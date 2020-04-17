@@ -7,11 +7,11 @@
         "./IEvrynetStaking.sol": {
             "urls": ["./staking-contract/contracts/IEvrynetStaking.sol"]
         },
-        "./utils/SafeMath.sol": {
-            "urls": ["./staking-contract/contracts/utils/SafeMath.sol"]
+        "@openzeppelin/contracts/math/SafeMath.sol": {
+            "urls": ["./staking-contract/node_modules/@openzeppelin/contracts/math/SafeMath.sol"]
         },
-        "./utils/ReentrancyGuard.sol": {
-            "urls": ["./staking-contract/contracts/utils/ReentrancyGuard.sol"]
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol": {
+            "urls": ["./staking-contract/node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol"]
         }
     },
     "settings": {
