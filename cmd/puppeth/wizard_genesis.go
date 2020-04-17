@@ -174,8 +174,8 @@ func (w *wizard) makeGenesis() {
 		numberAcc := w.readDefaultInt(1000)
 
 		fmt.Println()
-		fmt.Println("What is the seed? (default = testnet)")
-		seed := w.readDefaultString("testnet")
+		fmt.Println("What is the seed? (default = publictestnet)")
+		seed := w.readDefaultString("publictestnet")
 		accs, err := generateAccounts(numberAcc, seed)
 		if err != nil {
 			log.Error("fail to generate new account", "Error:", err)

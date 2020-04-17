@@ -206,7 +206,7 @@ func parseTestConfig(fileName string) (*stressConfig, []*enode.Node, []*ecdsa.Pr
 
 // parseGenesis creates a genesis block from config file
 func parseGenesis(fileName string) (*core.Genesis, error) {
-	// Create a Clique network based off of the Rinkeby config
+	// Create a Evrynet network based off of the Evrynet config
 	// Read file genesis generated from pupeth
 	genesisFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
