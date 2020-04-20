@@ -30,11 +30,10 @@ var MainnetBootnodes = []string{
 	"enode://979b7fa28feeb35a4741660a16076f1943202cb72b6af70d327f053e248bab9ba81760f39d0701ef1d8f89cc1fbd2cacba0710a12cd5314d5e0c9021aa3637f9@5.1.83.226:30303", // DE
 }
 
-// EvrynetTestBootnodes are the enode URLs of the P2P bootstrap nodes running on the
+// PublicTestBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Evrynet test network.
-var EvrynetTestBootnodes = []string{
+var PublicTestBootnodes = []string{
 	"enode://12bad590ae8c34df6eaffd910ee42e49de2ee58823262361c72e35966035c604c3bb4f6ca5978ec97bb325f51395556ecee53a79597b481ef0641400cc82c326@18.138.96.152:30300", // Thai's team
-	// "enode://aa8d839e6dbe3524e8c0a62aefae7cefa3880f9c7394ddaaa31cc8679fe3a25396e014c5c48814d0fe18d7f03d72a7971fd50b7dd689bd04498d98902dd0d82f@52.220.52.16:30300",  // VN's team
 }
 
 // DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
