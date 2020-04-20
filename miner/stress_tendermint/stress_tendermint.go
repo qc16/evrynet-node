@@ -100,7 +100,7 @@ func main() {
 		panic(err)
 	}
 	// wait until testNode is synced
-	nonces := waitForSyncingAndStableNonces(ethereum, faucets)
+	nonces := waitForSyncingAndStableNonces(ethereum, faucets, ethereum.BlockChain().CurrentHeader().Number.Uint64())
 	if TxMode(cfg.TxMode) == SmartContractMode {
 		if contractAddr, err = prepareNewContract(cfg.RPCEndpoint, faucets[0], nonces[0]); err != nil {
 			panic(err)
@@ -330,9 +330,9 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 }
 
 // waitForSyncingAndStableNonces wait util the node is syncing and the nonces of given addresses are not change, also returns stable nonces
-func waitForSyncingAndStableNonces(ethereum *evr.Evrynet, faucets []*ecdsa.PrivateKey) []uint64 {
+func waitForSyncingAndStableNonces(ethereum *evr.Evrynet, faucets []*ecdsa.PrivateKey, initBlkNumber uint64) []uint64 {
 	bc := ethereum.BlockChain()
-	for !ethereum.Synced() || ethereum.BlockChain().CurrentHeader().Number.Uint64() == 0 {
+	for !ethereum.Synced() || ethereum.BlockChain().CurrentHeader().Number.Uint64() == initBlkNumber {
 		log.Warn("testNode is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
 		time.Sleep(3 * time.Second)
 	}
