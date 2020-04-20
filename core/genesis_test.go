@@ -38,7 +38,7 @@ func TestDefaultGenesisBlock(t *testing.T) {
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
-	block = DefaultEvrynetTestnetGenesisBlock().ToBlock(nil)
+	block = DefaultPublicTestnetGenesisBlock().ToBlock(nil)
 	if block.Hash() != params.EvrynetTestGenesisHash {
 		t.Errorf("wrong testnet genesis hash, got %v, want %v", block.Hash(), params.EvrynetTestGenesisHash)
 	}
@@ -103,7 +103,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "custom block in DB, genesis == testnet",
 			fn: func(db evrdb.Database) (*params.ChainConfig, common.Hash, error) {
 				customg.MustCommit(db)
-				return SetupGenesisBlock(db, DefaultEvrynetTestnetGenesisBlock())
+				return SetupGenesisBlock(db, DefaultPublicTestnetGenesisBlock())
 			},
 			wantErr:    &GenesisMismatchError{Stored: customghash, New: params.EvrynetTestGenesisHash},
 			wantHash:   params.EvrynetTestGenesisHash,

@@ -332,8 +332,8 @@ func DefaultGenesisBlock() *Genesis {
 	}
 }
 
-// DefaultEvrynetTestnetGenesisBlock returns the Evrynet test network genesis block.
-func DefaultEvrynetTestnetGenesisBlock() *Genesis {
+// DefaultPublicTestnetGenesisBlock returns the Evrynet test network genesis block.
+func DefaultPublicTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.EvrynetTestnetChainConfig,
 		Nonce:      0,
@@ -356,7 +356,7 @@ func getAllocFromJSON() GenesisAlloc {
 		alloc = map[common.Address]GenesisAccount{}
 	)
 
-	if err := json.Unmarshal([]byte(evrynetAlloc), &alloc); err != nil {
+	if err := json.Unmarshal([]byte(publicTestnetAlloc), &alloc); err != nil {
 		panic(err)
 	}
 	return alloc
