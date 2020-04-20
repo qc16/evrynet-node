@@ -16,7 +16,7 @@ import (
 
 // AccumulateRewards credits the coinbase of the given block with the proposing
 // reward.
-func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *state.StateDB, header *types.Header) error {
+func (sb *Backend) accumulateRewards(chainReader consensus.FullChainReader, state *state.StateDB, header *types.Header) error {
 	// If fixed validators (test) then return
 	if chainReader.Config().Tendermint.FixedValidators != nil {
 		reward := new(big.Int).Set(TendermintBlockReward)
@@ -43,7 +43,7 @@ func (sb *Backend) accumulateRewards(chainReader consensus.ChainReader, state *s
 	if err != nil {
 		return err
 	}
-	stateDB, err := sb.chain.StateAt(transitionHeader.Root)
+	stateDB, err := chainReader.StateAt(transitionHeader.Root)
 	if err != nil {
 		return err
 	}
