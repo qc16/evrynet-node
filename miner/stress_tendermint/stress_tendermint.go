@@ -35,7 +35,9 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/common/fdlimit"
 	"github.com/Evrynetlabs/evrynet-node/common/hexutil"
+	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/core"
+	"github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
 	"github.com/Evrynetlabs/evrynet-node/evr"
@@ -270,6 +272,9 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 				GasCeil:  genesis.GasLimit * 11 / 10,
 				Recommit: time.Second,
 			},
+			Tendermint: tendermint.Config{
+				IndexStateVariables: staking.DefaultConfig,
+			},
 		}
 
 		fullNode, err := evr.New(ctx, cfg)
@@ -327,7 +332,7 @@ func makeNode(genesis *core.Genesis, enodes []*enode.Node) (*node.Node, error) {
 // waitForSyncingAndStableNonces wait util the node is syncing and the nonces of given addresses are not change, also returns stable nonces
 func waitForSyncingAndStableNonces(ethereum *evr.Evrynet, faucets []*ecdsa.PrivateKey) []uint64 {
 	bc := ethereum.BlockChain()
-	for !ethereum.Synced() {
+	for !ethereum.Synced() || ethereum.BlockChain().CurrentHeader().Number.Uint64() == 0 {
 		log.Warn("testNode is not synced, sleeping", "current_block", bc.CurrentHeader().Number)
 		time.Sleep(3 * time.Second)
 	}
