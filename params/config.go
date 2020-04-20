@@ -23,12 +23,13 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
+// GasPriceConfig returns default value for the GasPrice
 const GasPriceConfig = 1000000000
 
 // Genesis hashes to enforce below configs on.
 var (
 	MainnetGenesisHash      = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
-	EvrynetTestGenesisHash      = common.HexToHash("0x378dab13912842a10a8931dc2a59b4ed8ab57b699413d256ad3f223510ff39a2")
+	EvrynetTestGenesisHash  = common.HexToHash("0x378dab13912842a10a8931dc2a59b4ed8ab57b699413d256ad3f223510ff39a2")
 	StakingSCAddressTestnet = common.HexToAddress("0x0000000000000000000000000000000000000999")
 )
 
