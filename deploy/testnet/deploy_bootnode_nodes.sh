@@ -12,12 +12,15 @@ until [[ $version ]]; do read -rp "- Tag Version/Branch Name you want to deploy:
 env=
 until [[ $env ]]; do read -rp "- Environment of Image: " env; done
 
+# Replace / with -
+newVersion=${version//\//-}
+
 BASEDIR=$(dirname "$0")
 BOOTNODE_REPOSITORY="kybernetwork/evrynet-bootnode"
-BOOTNODE_TAG_ENV="$BOOTNODE_REPOSITORY:$version-$env"
+BOOTNODE_TAG_ENV="$BOOTNODE_REPOSITORY:$newVersion-$env"
 
 NODE_REPOSITORY="kybernetwork/evrynet-node"
-NODE_TAG_ENV="$NODE_REPOSITORY:$version-$env"
+NODE_TAG_ENV="$NODE_REPOSITORY:$newVersion-$env"
 
 echo -e "\n=> The image $BOOTNODE_TAG_ENV will be used to deploy Bootnode!"
 echo -e "=> The image $NODE_TAG_ENV will be used to deploy Node!\n"
