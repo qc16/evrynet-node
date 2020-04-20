@@ -6,7 +6,7 @@ pushd ./consensus/staking_contracts
 echo "Generate bytes code and abi files"
 # Download smart-contact library, it might be long
 pushd staking-contract
-npm install
+yarn install
 popd
 docker run -v $(pwd):/staking_contracts ethereum/solc:0.5.13 \
     @openzeppelin/=/staking_contracts/staking-contract/node_modules/@openzeppelin/ \
