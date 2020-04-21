@@ -99,9 +99,10 @@ func main() {
 		panic(err)
 	}
 	// wait until testNode is synced
+	gasPrice := testNode.Server().ChainReader.Config().GasPrice
 	nonces := waitForSyncingAndStableNonces(ethereum, faucets, ethereum.BlockChain().CurrentHeader().Number.Uint64())
 	if TxMode(cfg.TxMode) == SmartContractMode {
-		if contractAddr, err = prepareNewContract(cfg.RPCEndpoint, faucets[0], nonces[0]); err != nil {
+		if contractAddr, err = prepareNewContract(cfg.RPCEndpoint, faucets[0], nonces[0], gasPrice); err != nil {
 			panic(err)
 		}
 		nonces[0]++
@@ -109,7 +110,6 @@ func main() {
 
 	go reportLoop(ethereum.BlockChain(), cfg.TxMode)
 	// Start injecting transactions from the faucet like crazy
-	gasPrice := testNode.Server().ChainReader.Config().GasPrice
 	for {
 		var txs types.Transactions
 		// Create a batch of transaction and inject into the pool
@@ -344,7 +344,7 @@ func waitForSyncingAndStableNonces(ethereum *evr.Evrynet, faucets []*ecdsa.Priva
 	return nonces
 }
 
-func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64) (*common.Address, error) {
+func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64, gasPrice *big.Int) (*common.Address, error) {
 	log.Info("Creating Smart Contract ...")
 
 	evrClient, err := evrclient.Dial(rpcEndpoint)
@@ -370,7 +370,7 @@ func prepareNewContract(rpcEndpoint string, acc *ecdsa.PrivateKey, nonce uint64)
 		return nil, err
 	}
 
-	tx := types.NewContractCreation(nonce, big.NewInt(0), estGas, big.NewInt(params.GasPriceConfig), payLoadBytes)
+	tx := types.NewContractCreation(nonce, big.NewInt(0), estGas, gasPrice, payLoadBytes)
 	tx, err = types.SignTx(tx, types.HomesteadSigner{}, acc)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to sign Tx")
