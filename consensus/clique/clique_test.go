@@ -36,6 +36,10 @@ import (
 // already in the database. The bug was that processing the block *prior* to an
 // empty one **also completes** the empty one, ending up in a known-block error.
 func TestReimportMirroredState(t *testing.T) {
+	const (
+		// the random number to initialize the balance of an addr.
+		randomNumberForBalance = 100000000
+	)
 	// Initialize a Clique chain with a single signer
 	var (
 		db     = rawdb.NewMemoryDatabase()
@@ -47,7 +51,7 @@ func TestReimportMirroredState(t *testing.T) {
 	genspec := &core.Genesis{
 		ExtraData: make([]byte, extraVanity+common.AddressLength+extraSeal),
 		Alloc: map[common.Address]core.GenesisAccount{
-			addr: {Balance: new(big.Int).Mul(big.NewInt(100000000), big.NewInt(params.GasPriceConfig))},
+			addr: {Balance: new(big.Int).Mul(big.NewInt(randomNumberForBalance), big.NewInt(params.GasPriceConfig))},
 		},
 	}
 	copy(genspec.ExtraData[extraVanity:], addr[:])
