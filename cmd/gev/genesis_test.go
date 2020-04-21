@@ -28,7 +28,8 @@ var customGenesisTests = []struct {
 	query   string
 	result  string
 }{
-	// Plain genesis file without anything extra, it will cannot init this chain and getting the default config with nonce = 0x0000000000000042
+	// Plain genesis file without anything extra,
+	// it cannot initialize this chain and will be getting the default config with nonce = 0x0000000000000042
 	{
 		genesis: `{
 			"alloc"      : {},

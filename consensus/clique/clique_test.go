@@ -37,8 +37,8 @@ import (
 // empty one **also completes** the empty one, ending up in a known-block error.
 func TestReimportMirroredState(t *testing.T) {
 	const (
-		// the magic number to initialize the balance of an addr.
-		magicNumberForBalance = 100000000
+		// the random number to initialize the balance of an addr.
+		randomNumberForBalance = 100000000
 	)
 	// Initialize a Clique chain with a single signer
 	var (
@@ -51,7 +51,7 @@ func TestReimportMirroredState(t *testing.T) {
 	genspec := &core.Genesis{
 		ExtraData: make([]byte, extraVanity+common.AddressLength+extraSeal),
 		Alloc: map[common.Address]core.GenesisAccount{
-			addr: {Balance: new(big.Int).Mul(big.NewInt(magicNumberForBalance), big.NewInt(params.GasPriceConfig))},
+			addr: {Balance: new(big.Int).Mul(big.NewInt(randomNumberForBalance), big.NewInt(params.GasPriceConfig))},
 		},
 	}
 	copy(genspec.ExtraData[extraVanity:], addr[:])
