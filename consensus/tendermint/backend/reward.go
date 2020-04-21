@@ -47,7 +47,7 @@ func (sb *Backend) accumulateRewards(chainReader consensus.FullChainReader, stat
 	if err != nil {
 		return err
 	}
-	stakingCaller := sb.getStakingCaller(stateDB, header)
+	stakingCaller := sb.getStakingCaller(chainReader, stateDB, header)
 	validatorsData, err := stakingCaller.GetValidatorsData(*sb.config.StakingSCAddress, validatorAdds)
 	if err != nil {
 		return err

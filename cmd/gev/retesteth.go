@@ -215,7 +215,7 @@ func (e *NoRewardEngine) VerifySeal(chain consensus.ChainReader, header *types.H
 	return e.inner.VerifySeal(chain, header)
 }
 
-func (e *NoRewardEngine) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (e *NoRewardEngine) Prepare(chain consensus.FullChainReader, header *types.Header) error {
 	return e.inner.Prepare(chain, header)
 }
 
