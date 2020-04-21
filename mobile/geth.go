@@ -150,8 +150,8 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 			return nil, fmt.Errorf("invalid genesis spec: %v", err)
 		}
 		// If we have the publictestnet, hard code the chain configs too
-		if config.EvrynetGenesis == EvrynetTestnetGenesis() {
-			genesis.Config = params.EvrynetTestnetChainConfig
+		if config.EvrynetGenesis == PublicTestnetGenesis() {
+			genesis.Config = params.PublicTestnetChainConfig
 			if config.EvrynetNetworkID == 1 {
 				config.EvrynetNetworkID = 15
 			}
