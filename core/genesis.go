@@ -233,8 +233,10 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return g.Config
 	case ghash == params.MainnetGenesisHash:
 		return params.MainnetChainConfig
-	case ghash == params.EvrynetTestGenesisHash:
-		return params.EvrynetTestnetChainConfig
+	case ghash == params.TestnetGenesisHash:
+		return params.TestnetChainConfig
+	case ghash == params.PublicTestnetGenesisHash:
+		return params.PublicTestnetChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -332,10 +334,22 @@ func DefaultGenesisBlock() *Genesis {
 	}
 }
 
+// DefaultTestnetGenesisBlock returns the Ropsten network genesis block.
+func DefaultTestnetGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.TestnetChainConfig,
+		Nonce:      66,
+		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
+		GasLimit:   16777216,
+		Difficulty: big.NewInt(1048576),
+		Alloc:      decodePrealloc(testnetAllocData),
+	}
+}
+
 // DefaultPublicTestnetGenesisBlock returns the Evrynet test network genesis block.
 func DefaultPublicTestnetGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.EvrynetTestnetChainConfig,
+		Config:     params.PublicTestnetChainConfig,
 		Nonce:      0,
 		Timestamp:  hexutil.MustDecodeUint64("0x5e7b2adf"),
 		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f84580c0b841f83f944823c11f1ae74caf2468f7c4f737a35a3230d63a94cd144babf40971b7643bb762958ac8e80a11421a94b6fb59c95e2988848eca21f1b11db0f0f33c6b4c"),
@@ -347,6 +361,18 @@ func DefaultPublicTestnetGenesisBlock() *Genesis {
 		Number:     hexutil.MustDecodeUint64("0x0"),
 		GasUsed:    hexutil.MustDecodeUint64("0x0"),
 		ParentHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+	}
+}
+
+// DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
+func DefaultRinkebyGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.RinkebyChainConfig,
+		Timestamp:  1492009146,
+		ExtraData:  hexutil.MustDecode("0x52657370656374206d7920617574686f7269746168207e452e436172746d616e42eb768f2244c8811c63729a21a3569731535f067ffc57839b00206d1ad20c69a1981b489f772031b279182d99e65703f0076e4812653aab85fca0f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   4700000,
+		Difficulty: big.NewInt(1),
+		Alloc:      decodePrealloc(rinkebyAllocData),
 	}
 }
 

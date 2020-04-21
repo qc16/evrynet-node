@@ -32,8 +32,8 @@ func MainnetGenesis() string {
 	return ""
 }
 
-// EvrynetTestnetGenesis returns the JSON spec to use for the Evrynet test network.
-func EvrynetTestnetGenesis() string {
+// PublicTestnetGenesis returns the JSON spec to use for the Evrynet test network.
+func PublicTestnetGenesis() string {
 	enc, err := json.Marshal(core.DefaultPublicTestnetGenesisBlock())
 	if err != nil {
 		panic(err)
