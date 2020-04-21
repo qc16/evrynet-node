@@ -23,14 +23,15 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/common"
 )
 
+// GasPriceConfig returns default value for the GasPrice
 const GasPriceConfig = 1000000000
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
-	TestnetGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
-	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
-	GoerliGenesisHash  = common.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
+	MainnetGenesisHash            = common.HexToHash("0x38b23d699697336cd0d95a550a1d3a1ac7ee7148c4854c93b0464973dcea17b6")
+	TestnetGenesisHash            = common.HexToHash("0x802acb813a7194af31bfbf276ecc028b32cdb2a967ade79f8b384dfe40ef1f8c")
+	PublicTestnetGenesisHash      = common.HexToHash("0x378dab13912842a10a8931dc2a59b4ed8ab57b699413d256ad3f223510ff39a2")
+	PublicTestnetStakingSCAddress = common.HexToAddress("0x0000000000000000000000000000000000000999")
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -38,8 +39,6 @@ var (
 var TrustedCheckpoints = map[common.Hash]*TrustedCheckpoint{
 	MainnetGenesisHash: MainnetTrustedCheckpoint,
 	TestnetGenesisHash: TestnetTrustedCheckpoint,
-	RinkebyGenesisHash: RinkebyTrustedCheckpoint,
-	GoerliGenesisHash:  GoerliTrustedCheckpoint,
 }
 
 var (
@@ -124,32 +123,24 @@ var (
 		BloomRoot:    common.HexToHash("0xa3048fe8b7e30f77f11bc755a88478363d7d3e71c2bdfe4e8ab9e269cd804ba2"),
 	}
 
-	// GoerliChainConfig contains the chain parameters to run a node on the Görli test network.
-	GoerliChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(5),
+	// PublicTestnetChainConfig contains the chain parameters to run a node on the Evrynet test network.
+	PublicTestnetChainConfig = &ChainConfig{
+		ChainID:             big.NewInt(15),
 		GasPrice:            big.NewInt(GasPriceConfig),
 		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        nil,
-		DAOForkSupport:      true,
 		EIP150Block:         big.NewInt(0),
+		EIP150Hash:          common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: big.NewInt(0),
 		PetersburgBlock:     big.NewInt(0),
-		Clique: &CliqueConfig{
-			Period: 15,
-			Epoch:  30000,
+		Tendermint: &TendermintConfig{
+			Epoch:            17280,
+			ProposerPolicy:   0,
+			StakingSCAddress: &PublicTestnetStakingSCAddress,
+			FixedValidators:  nil,
 		},
-	}
-
-	// GoerliTrustedCheckpoint contains the light client trusted checkpoint for the Görli test network.
-	GoerliTrustedCheckpoint = &TrustedCheckpoint{
-		Name:         "goerli",
-		SectionIndex: 9,
-		SectionHead:  common.HexToHash("0x8e223d827391eee53b07cb8ee057dbfa11c93e0b45352188c783affd7840a921"),
-		CHTRoot:      common.HexToHash("0xe0a817ac69b36c1e437c5b0cff9e764853f5115702b5f66d451b665d6afb7e78"),
-		BloomRoot:    common.HexToHash("0x50d672aeb655b723284969c7c1201fb6ca003c23ed144bcb9f2d1b30e2971c1b"),
 	}
 
 	// AllEthashProtocolChanges contains every protocol change (EIPs) introduced

@@ -235,6 +235,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.MainnetChainConfig
 	case ghash == params.TestnetGenesisHash:
 		return params.TestnetChainConfig
+	case ghash == params.PublicTestnetGenesisHash:
+		return params.PublicTestnetChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -344,6 +346,24 @@ func DefaultTestnetGenesisBlock() *Genesis {
 	}
 }
 
+// DefaultPublicTestnetGenesisBlock returns the Evrynet test network genesis block.
+func DefaultPublicTestnetGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.PublicTestnetChainConfig,
+		Nonce:      0,
+		Timestamp:  hexutil.MustDecodeUint64("0x5e7b2adf"),
+		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f84580c0b841f83f944823c11f1ae74caf2468f7c4f737a35a3230d63a94cd144babf40971b7643bb762958ac8e80a11421a94b6fb59c95e2988848eca21f1b11db0f0f33c6b4c"),
+		GasLimit:   hexutil.MustDecodeUint64("0x47b760"),
+		Difficulty: hexutil.MustDecodeBig("0x1"),
+		Mixhash:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		Coinbase:   common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		Alloc:      getAllocFromJSON(),
+		Number:     hexutil.MustDecodeUint64("0x0"),
+		GasUsed:    hexutil.MustDecodeUint64("0x0"),
+		ParentHash: common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+	}
+}
+
 // DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
 func DefaultRinkebyGenesisBlock() *Genesis {
 	return &Genesis{
@@ -356,16 +376,16 @@ func DefaultRinkebyGenesisBlock() *Genesis {
 	}
 }
 
-// DefaultGoerliGenesisBlock returns the Görli network genesis block.
-func DefaultGoerliGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.GoerliChainConfig,
-		Timestamp:  1548854791,
-		ExtraData:  hexutil.MustDecode("0x22466c6578692069732061207468696e6722202d204166726900000000000000e0a2bd4258d2768837baa26a28fe71dc079f84c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-		GasLimit:   10485760,
-		Difficulty: big.NewInt(1),
-		Alloc:      decodePrealloc(goerliAllocData),
+// getAllocFromJSON loads account's configuration from json Data
+func getAllocFromJSON() GenesisAlloc {
+	var (
+		alloc = map[common.Address]GenesisAccount{}
+	)
+
+	if err := json.Unmarshal([]byte(publicTestnetAlloc), &alloc); err != nil {
+		panic(err)
 	}
+	return alloc
 }
 
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block. Note, this must

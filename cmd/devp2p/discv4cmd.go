@@ -124,7 +124,7 @@ func getNodeArgAndStartV4(ctx *cli.Context) (*enode.Node, *discover.UDPv4, error
 }
 
 func parseBootnodes(ctx *cli.Context) ([]*enode.Node, error) {
-	s := params.RinkebyBootnodes
+	s := params.PublicTestBootnodes
 	if ctx.IsSet(bootnodesFlag.Name) {
 		s = strings.Split(ctx.String(bootnodesFlag.Name), ",")
 	}

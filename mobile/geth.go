@@ -149,11 +149,11 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 		if err := json.Unmarshal([]byte(config.EvrynetGenesis), genesis); err != nil {
 			return nil, fmt.Errorf("invalid genesis spec: %v", err)
 		}
-		// If we have the testnet, hard code the chain configs too
-		if config.EvrynetGenesis == TestnetGenesis() {
-			genesis.Config = params.TestnetChainConfig
+		// If we have the publictestnet, hard code the chain configs too
+		if config.EvrynetGenesis == PublicTestnetGenesis() {
+			genesis.Config = params.PublicTestnetChainConfig
 			if config.EvrynetNetworkID == 1 {
-				config.EvrynetNetworkID = 3
+				config.EvrynetNetworkID = 15
 			}
 		}
 	}

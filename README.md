@@ -81,20 +81,20 @@ network, you want to join the **test** network with your node, which is fully eq
 the main network, but with play-Ether only.
 
 ```shell
-$ geth --testnet console
+$ geth --publictestnet console
 ```
 
 The `console` subcommand has the exact same meaning as above and they are equally
 useful on the testnet too. Please see above for their explanations if you've skipped here.
 
-Specifying the `--testnet` flag, however, will reconfigure your `geth` instance a bit:
+Specifying the `--publictestnet` flag, however, will reconfigure your `gev` instance a bit:
 
  * Instead of using the default data directory (`~/.ethereum` on Linux for example), `geth`
-   will nest itself one level deeper into a `testnet` subfolder (`~/.ethereum/testnet` on
+   will nest itself one level deeper into a `publictestnet` subfolder (`~/.ethereum/publictestnet` on
    Linux). Note, on OSX and Linux this also means that attaching to a running testnet node
    requires the use of a custom endpoint since `geth attach` will try to attach to a
    production node endpoint by default. E.g.
-   `geth attach <datadir>/testnet/geth.ipc`. Windows users are not affected by
+   `geth attach <datadir>/publictestnet/geth.ipc`. Windows users are not affected by
    this.
  * Instead of connecting the main Evrynet network, the client will connect to the test
    network, which uses different P2P bootnodes, different network IDs and genesis states.
@@ -104,19 +104,6 @@ crossing over between the main network and test network, you should make sure to
 use separate accounts for play-money and real-money. Unless you manually move
 accounts, `geth` will by default correctly separate the two networks and will not make any
 accounts available between them.*
-
-### Full node on the Rinkeby test network
-
-The above test network is a cross-client one based on the ethash proof-of-work consensus
-algorithm. As such, it has certain extra overhead and is more susceptible to reorganization
-attacks due to the network's low difficulty/security. Go Evrynet also supports connecting
-to a proof-of-authority based test network called [*Rinkeby*](https://www.rinkeby.io)
-(operated by members of the community). This network is lighter, more secure, but is only
-supported by go-ethereum.
-
-```shell
-$ geth --rinkeby console
-```
 
 ### Running a custom local node
 

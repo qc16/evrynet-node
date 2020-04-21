@@ -32,18 +32,9 @@ func MainnetGenesis() string {
 	return ""
 }
 
-// TestnetGenesis returns the JSON spec to use for the Evrynet test network.
-func TestnetGenesis() string {
-	enc, err := json.Marshal(core.DefaultTestnetGenesisBlock())
-	if err != nil {
-		panic(err)
-	}
-	return string(enc)
-}
-
-// RinkebyGenesis returns the JSON spec to use for the Rinkeby test network
-func RinkebyGenesis() string {
-	enc, err := json.Marshal(core.DefaultRinkebyGenesisBlock())
+// PublicTestnetGenesis returns the JSON spec to use for the Evrynet test network.
+func PublicTestnetGenesis() string {
+	enc, err := json.Marshal(core.DefaultPublicTestnetGenesisBlock())
 	if err != nil {
 		panic(err)
 	}
