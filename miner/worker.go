@@ -981,6 +981,7 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 	s := w.current.state.Copy()
 	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, uncles, w.current.receipts)
 	if err != nil {
+		log.Error("failed to FinalizeAndAssemble", "err", err)
 		return err
 	}
 	if w.isRunning() {

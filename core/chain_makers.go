@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/pkg/errors"
+
 	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus"
 	"github.com/Evrynetlabs/evrynet-node/consensus/misc"
@@ -190,10 +192,17 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		config = params.TestChainConfig
 	}
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
+	statedb, err := state.New(parent.Root(), state.NewDatabase(db))
+	if err != nil {
+		panic(err)
+	}
 	chainreader := &fakeChainReader{
 		config: config,
 		blocksByNumber: map[uint64]*types.Block{
 			parent.NumberU64(): parent,
+		},
+		stateByHash: map[common.Hash]*state.StateDB{
+			parent.Root(): statedb,
 		},
 	}
 	genblock := func(i int, parent *types.Block, statedb *state.StateDB) (*types.Block, types.Receipts) {
@@ -232,6 +241,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 				panic(fmt.Sprintf("trie write error: %v", err))
 			}
 			chainreader.blocksByNumber[block.NumberU64()] = block
+			chainreader.stateByHash[statedb.IntermediateRoot(true)] = statedb
 			return block, b.receipts
 		}
 		return nil, nil
@@ -295,6 +305,15 @@ type fakeChainReader struct {
 	config         *params.ChainConfig
 	genesis        *types.Block
 	blocksByNumber map[uint64]*types.Block
+	stateByHash    map[common.Hash]*state.StateDB
+}
+
+func (cr *fakeChainReader) StateAt(hash common.Hash) (*state.StateDB, error) {
+	if state, ok := cr.stateByHash[hash]; !ok {
+		return nil, errors.New("state not found")
+	} else {
+		return state, nil
+	}
 }
 
 // Config returns the chain configuration.
