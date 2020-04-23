@@ -2,10 +2,11 @@ package staking_test
 
 import (
 	"encoding/json"
-	"github.com/tidwall/gjson"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/stretchr/testify/require"
 

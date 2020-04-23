@@ -47,7 +47,7 @@ type Config struct {
 
 	FaultyMode uint64 `toml:",omitempty"` // The faulty node indicates the faulty node's behavior
 
-	UseEVMCaller bool
+	UseEVMCaller        bool
 	IndexStateVariables *staking.IndexConfigs //The index of state variables has stored in stateDB
 }
 
@@ -64,7 +64,7 @@ var DefaultConfig = &Config{
 	TimeoutPrecommitDelta: 500 * time.Millisecond,
 	TimeoutCommit:         1000 * time.Millisecond,
 	FaultyMode:            Disabled.Uint64(),
-	UseEVMCaller: false,
+	UseEVMCaller:          false,
 	IndexStateVariables:   staking.DefaultConfig,
 }
 
