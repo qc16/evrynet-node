@@ -808,13 +808,17 @@ func (bc *BlockChain) Stop() {
 
 	// Ensure the state of a recent block is also stored to disk before exiting.
 	// We're writing three different states to catch different restart scenarios:
-	//  - HEAD:     So we don't need to reprocess any blocks in the general case
-	//  - HEAD-1:   So we don't do large reorgs if our HEAD becomes an uncle
-	//  - HEAD-127: So we have a hard limit on the number of blocks reexecuted
+	//  - HEAD:     			So we don't need to reprocess any blocks in the general case
+	//  - HEAD-1:   			So we don't do large reorgs if our HEAD becomes an uncle
+	//  - HEAD-127: 			So we have a hard limit on the number of blocks reexecuted
+	//  - HEAD - HEAD % epoch:	So we have transition block to get state when finalize next transition block
 	if !bc.cacheConfig.TrieDirtyDisabled {
 		triedb := bc.stateCache.TrieDB()
-
-		for _, offset := range []uint64{0, 1, TriesInMemory - 1} {
+		var remainBlockOffset = []uint64{0, 1, TriesInMemory - 1}
+		if bc.chainConfig.Tendermint != nil {
+			remainBlockOffset = append(remainBlockOffset, bc.CurrentBlock().NumberU64()%bc.chainConfig.Tendermint.Epoch)
+		}
+		for _, offset := range remainBlockOffset {
 			if number := bc.CurrentBlock().NumberU64(); number > offset {
 				recent := bc.GetBlockByNumber(number - offset)
 
