@@ -1243,7 +1243,16 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	} else {
 		// Full but not archive node, do proper garbage collection
 		triedb.Reference(root, common.Hash{}) // metadata reference to keep trie alive
-		bc.triegc.Push(root, -int64(block.NumberU64()))
+		priority := -int64(block.NumberU64())
+		if bc.chainConfig.Tendermint != nil {
+			if block.NumberU64()%bc.chainConfig.Tendermint.Epoch == 0 {
+				// TODO: add a Flag transition-Block-preserve
+				// block number when transition block is dereference = block + 2 * epoch + TriesInMemory
+				priority -= int64(bc.chainConfig.Tendermint.Epoch) * 2
+				log.Info("transition block should be dereference with higher priority", "block", block.NumberU64(), "priority", priority)
+			}
+		}
+		bc.triegc.Push(root, priority)
 
 		if current := block.NumberU64(); current > TriesInMemory {
 			// If we exceeded our memory allowance, flush matured singleton nodes to disk
