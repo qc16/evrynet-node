@@ -20,6 +20,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"os"
 	godebug "runtime/debug"
 	"sort"
@@ -119,8 +120,6 @@ var (
 		utils.MinerGasTargetFlag,
 		utils.MinerLegacyGasTargetFlag,
 		utils.MinerGasLimitFlag,
-		utils.MinerGasPriceFlag,
-		utils.MinerLegacyGasPriceFlag,
 		utils.MinerEtherbaseFlag,
 		utils.MinerLegacyEtherbaseFlag,
 		utils.MinerExtraDataFlag,
@@ -159,6 +158,7 @@ var (
 		utils.TendermintTimeoutPrecommitFlag,
 		utils.TendermintTimeoutPrecommitDeltaFlag,
 		utils.TendermintTimeoutCommitFlag,
+		utils.TendermintSCUseEVMCallerFlag,
 	}
 
 	rpcFlags = []cli.Flag{
@@ -420,22 +420,19 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
 			utils.Fatalf("Light clients do not support mining")
 		}
-		var ethereum *evr.Evrynet
-		if err := stack.Service(&ethereum); err != nil {
+		var evrynet *evr.Evrynet
+		if err := stack.Service(&evrynet); err != nil {
 			utils.Fatalf("Evrynet service not running: %v", err)
 		}
 		// Set the gas price to the limits from the CLI and start mining
-		gasprice := utils.GlobalBig(ctx, utils.MinerLegacyGasPriceFlag.Name)
-		if ctx.IsSet(utils.MinerGasPriceFlag.Name) {
-			gasprice = utils.GlobalBig(ctx, utils.MinerGasPriceFlag.Name)
-		}
-		ethereum.TxPool().SetGasPrice(gasprice)
+		gasPrice := new(big.Int).Set(evrynet.BlockChain().Config().GasPrice)
+		evrynet.TxPool().SetGasPrice(gasPrice)
 
 		threads := ctx.GlobalInt(utils.MinerLegacyThreadsFlag.Name)
 		if ctx.GlobalIsSet(utils.MinerThreadsFlag.Name) {
 			threads = ctx.GlobalInt(utils.MinerThreadsFlag.Name)
 		}
-		if err := ethereum.StartMining(threads); err != nil {
+		if err := evrynet.StartMining(threads); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

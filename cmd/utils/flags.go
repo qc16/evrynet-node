@@ -143,11 +143,6 @@ var (
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: evr.DefaultConfig.NetworkId,
 	}
-	GasPriceFlag = BigFlag{
-		Name:  "gasprice",
-		Usage: "GasPrice for every transaction in the network",
-		Value: evr.DefaultConfig.GasPrice,
-	}
 	TestnetFlag = cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Ropsten network: pre-configured proof-of-work test network",
@@ -402,16 +397,6 @@ var (
 		Name:  "miner.gaslimit",
 		Usage: "Target gas ceiling for mined blocks",
 		Value: evr.DefaultConfig.Miner.GasCeil,
-	}
-	MinerGasPriceFlag = BigFlag{
-		Name:  "miner.gasprice",
-		Usage: "Minimum gas price for mining a transaction",
-		Value: evr.DefaultConfig.Miner.GasPrice,
-	}
-	MinerLegacyGasPriceFlag = BigFlag{
-		Name:  "gasprice",
-		Usage: "Minimum gas price for mining a transaction (deprecated, use --miner.gasprice)",
-		Value: evr.DefaultConfig.Miner.GasPrice,
 	}
 	MinerEtherbaseFlag = cli.StringFlag{
 		Name:  "miner.etherbase",
@@ -719,6 +704,10 @@ var (
 		Name:  "tendermint.timeout-commit",
 		Usage: "Duration waiting to start round with new height",
 		Value: evr.DefaultConfig.Tendermint.TimeoutCommit,
+	}
+	TendermintSCUseEVMCallerFlag = cli.BoolFlag{
+		Name:  "tendermint.use-evm-caller",
+		Usage: "The flag allowance reading data from stateDB or EVM",
 	}
 
 	// Metrics flags
@@ -1338,9 +1327,6 @@ func setMiner(ctx *cli.Context, cfg *miner.Config) {
 	if ctx.GlobalIsSet(MinerGasLimitFlag.Name) {
 		cfg.GasCeil = ctx.GlobalUint64(MinerGasLimitFlag.Name)
 	}
-	// if ctx.GlobalIsSet(MinerLegacyGasPriceFlag.Name) {
-	// 	cfg.GasPrice = GlobalBig(ctx, MinerLegacyGasPriceFlag.Name)
-	// }
 	if ctx.GlobalIsSet(MinerRecommitIntervalFlag.Name) {
 		cfg.Recommit = ctx.Duration(MinerRecommitIntervalFlag.Name)
 	}
@@ -1375,6 +1361,11 @@ func setWhitelist(ctx *cli.Context, cfg *evr.Config) {
 // setTendermint will use params from CLI for tendermint config
 // NOTE: ProposerPolicy, Epoch are used for chain, so they not allowed to inject. They will be got from genesis
 func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
+
+	if ctx.GlobalIsSet(TendermintSCUseEVMCallerFlag.Name) {
+		cfg.UseEVMCaller = true
+	}
+
 	if ctx.GlobalIsSet(TendermintBlockPeriodFlag.Name) {
 		cfg.BlockPeriod = ctx.GlobalUint64(TendermintBlockPeriodFlag.Name)
 	}
@@ -1401,6 +1392,10 @@ func setTendermint(ctx *cli.Context, cfg *tendermint.Config) {
 	}
 	if ctx.GlobalIsSet(TendermintTimeoutCommitFlag.Name) {
 		cfg.TimeoutCommit = ctx.GlobalDuration(TendermintTimeoutCommitFlag.Name)
+	}
+
+	if ctx.IsSet(TendermintSCUseEVMCallerFlag.Name) {
+		cfg.UseEVMCaller = true
 	}
 
 	if ctx.IsSet(TendermintBlockPeriodFlag.Name) {
@@ -1522,9 +1517,6 @@ func SetEvrConfig(ctx *cli.Context, stack *node.Node, cfg *evr.Config) {
 	if ctx.GlobalIsSet(NetworkIdFlag.Name) {
 		cfg.NetworkId = ctx.GlobalUint64(NetworkIdFlag.Name)
 	}
-	if ctx.GlobalIsSet(GasPriceFlag.Name) {
-		cfg.GasPrice = GlobalBig(ctx, GasPriceFlag.Name)
-	}
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
 		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 	}
@@ -1604,9 +1596,6 @@ func SetEvrConfig(ctx *cli.Context, stack *node.Node, cfg *evr.Config) {
 		log.Info("Using developer account", "address", developer.Address)
 
 		cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), developer.Address)
-		if !ctx.GlobalIsSet(MinerGasPriceFlag.Name) && !ctx.GlobalIsSet(MinerLegacyGasPriceFlag.Name) {
-			cfg.Miner.GasPrice = big.NewInt(1)
-		}
 	}
 }
 
@@ -1617,8 +1606,8 @@ func SetDashboardConfig(ctx *cli.Context, cfg *dashboard.Config) {
 	cfg.Refresh = ctx.GlobalDuration(DashboardRefreshFlag.Name)
 }
 
-// RegisterEthService adds an Evrynet client to the stack.
-func RegisterEthService(stack *node.Node, cfg *evr.Config) {
+// RegisterEvrService adds an Evrynet client to the stack.
+func RegisterEvrService(stack *node.Node, cfg *evr.Config) {
 	var err error
 	if cfg.SyncMode == downloader.LightSync {
 		err = stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
@@ -1631,6 +1620,13 @@ func RegisterEthService(stack *node.Node, cfg *evr.Config) {
 				ls, _ := les.NewLesServer(fullNode, cfg)
 				fullNode.AddLesServer(ls)
 			}
+
+			// Init Tendermint ChainReader for p2p server to read validators set
+			if fullNode != nil && fullNode.BlockChain() != nil && fullNode.BlockChain().Config().Tendermint != nil && stack.P2PServer.ChainReader == nil {
+				stack.P2PServer.ChainReader = fullNode.BlockChain()
+			}
+			stack.P2PServerInitDone <- struct{}{}
+
 			return fullNode, err
 		})
 	}

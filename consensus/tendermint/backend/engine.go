@@ -17,7 +17,6 @@ import (
 	"github.com/Evrynetlabs/evrynet-node/core/types"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/log"
-	"github.com/Evrynetlabs/evrynet-node/params"
 	"github.com/Evrynetlabs/evrynet-node/rlp"
 	"github.com/Evrynetlabs/evrynet-node/rpc"
 )
@@ -25,7 +24,9 @@ import (
 var (
 	// TendermintBlockReward tempo fix the Block reward in wei for successfully mining a block
 	// TODO: will modify after
-	TendermintBlockReward = big.NewInt(5e+18)
+	TendermintBlockReward           = big.NewInt(5e+18)
+	validatorRewardPercentage int64 = 50
+	voterRewardPercentage     int64 = 50
 
 	defaultDifficulty = big.NewInt(1)
 	now               = time.Now
@@ -227,7 +228,7 @@ func (sb *Backend) VerifyProposalHeader(header *types.Header) error {
 		if parent == nil {
 			return tendermint.ErrUnknownParent
 		}
-		validators, err := sb.getNextValidatorSet(parent)
+		validators, err := sb.getNextValidatorSet(sb.chain, parent)
 		if err != nil {
 			return err
 		}
@@ -406,7 +407,7 @@ func (sb *Backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 
 // Prepare initializes the consensus fields of a block header according to the
 // rules of a particular engine. The changes are executed inline.
-func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
+func (sb *Backend) Prepare(chain consensus.FullChainReader, header *types.Header) error {
 	// set coinbase with the proposer's address
 	header.Coinbase = sb.Address()
 	// use the same difficulty and mixDigest for all blocks
@@ -440,7 +441,7 @@ func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		header.Time = headerTime.Uint64()
 	}
 
-	if err := sb.addValSetToHeader(header, parent); err != nil {
+	if err := sb.addValSetToHeader(chain, header, parent); err != nil {
 		log.Error("failed to add val set to header", "err", err)
 	}
 
@@ -451,14 +452,18 @@ func (sb *Backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 //
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
-func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header) {
+func (sb *Backend) Finalize(chain consensus.FullChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+	uncles []*types.Header) error {
 	// Accumulate any block rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header)
+	if err := sb.accumulateRewards(chain, state, header); err != nil {
+		log.Error("failed to accumulateRewards", "err", err)
+		return err
+	}
 
 	// Since there is a change in stateDB, its trie must be update
 	// In case block reached EIP158 hash, the state will attempt to delete empty object as EIP158 sepcification
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	return nil
 }
 
 // FinalizeAndAssemble runs any post-transaction state modifications (e.g. block rewards)
@@ -466,10 +471,13 @@ func (sb *Backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 //
 // Note, the block header and state database might be updated to reflect any
 // consensus rules that happen at finalization (e.g. block rewards).
-func (sb *Backend) FinalizeAndAssemble(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (sb *Backend) FinalizeAndAssemble(chain consensus.FullChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate any block rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header)
+	if err := sb.accumulateRewards(chain, state, header); err != nil {
+		log.Error("failed to accumulateRewards", "err", err)
+		return nil, err
+	}
 
 	// No block rewards, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -584,17 +592,8 @@ func blockProposer(header *types.Header) (common.Address, error) {
 	return addr, nil
 }
 
-// AccumulateRewards credits the coinbase of the given block with the proposing
-// reward.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header) {
-	// Accumulate the rewards for the proposer
-	reward := new(big.Int).Set(TendermintBlockReward)
-
-	state.AddBalance(header.Coinbase, reward)
-}
-
 // addValSetToHeader Add validator set back to the tendermint extra.
-func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header) error {
+func (sb *Backend) addValSetToHeader(chainReader consensus.FullChainReader, header *types.Header, parent *types.Header) error {
 	var (
 		blockNumber = header.Number.Uint64()
 		epoch       = sb.config.Epoch
@@ -605,7 +604,7 @@ func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header)
 		return nil
 	}
 
-	validators, err := sb.getNextValidatorSet(parent)
+	validators, err := sb.getNextValidatorSet(chainReader, parent)
 	if err != nil {
 		return err
 	}
@@ -614,21 +613,19 @@ func (sb *Backend) addValSetToHeader(header *types.Header, parent *types.Header)
 	return utils.WriteValSet(header, validators)
 }
 
-func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, error) {
+func (sb *Backend) getNextValidatorSet(chainReader consensus.FullChainReader, header *types.Header) ([]common.Address, error) {
 	if validators, known := sb.computedValSetCache.Get(header.Number.Uint64()); known {
 		if addresses, ok := validators.([]common.Address); ok {
 			return addresses, nil
 		}
 	}
 	start := time.Now()
-	if sb.chain == nil {
-		return nil, errors.New("no chain reader")
-	}
-	stateDB, err := sb.chain.StateAt(header.Root)
+	stateDB, err := chainReader.StateAt(header.Root)
 	if err != nil {
 		return nil, err
 	}
-	stakingCaller := staking.NewStakingCaller(stateDB, staking.NewChainContextWrapper(sb, sb.chain.GetHeader), header, sb.chain.Config(), vm.Config{})
+
+	stakingCaller := sb.getStakingCaller(chainReader, stateDB, header)
 	validators, err := stakingCaller.GetValidators(sb.stakingContractAddr)
 	if err != nil {
 		return nil, err
@@ -637,6 +634,20 @@ func (sb *Backend) getNextValidatorSet(header *types.Header) ([]common.Address, 
 	log.Info("found new val set", "number", header.Number.Uint64(), "elapsed", common.PrettyDuration(time.Since(start)),
 		"valset", common.PrettyAddresses(validators))
 	return validators, nil
+}
+
+func (sb *Backend) getStakingCaller(chainReader consensus.FullChainReader, stateDB *state.StateDB, header *types.Header) staking.StakingCaller {
+	if sb.config.UseEVMCaller {
+		log.Info("using the EVM caller to get validators", "number", header.Number.Uint64())
+		return staking.NewEVMStakingCaller(stateDB,
+			staking.NewChainContextWrapper(sb, chainReader.GetHeader),
+			header,
+			chainReader.Config(),
+			vm.Config{})
+	} else {
+		log.Info("using the StateDB caller to get validators", "number", header.Number.Uint64())
+		return staking.NewStateDbStakingCaller(stateDB, sb.config.IndexStateVariables)
+	}
 }
 
 func (sb *Backend) prepareExtra(header *types.Header) []byte {

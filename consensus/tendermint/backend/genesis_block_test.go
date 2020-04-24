@@ -2,6 +2,7 @@
 package backend
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/Evrynetlabs/evrynet-node/common"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint"
 	"github.com/Evrynetlabs/evrynet-node/consensus/tendermint/tests_utils"
 	"github.com/Evrynetlabs/evrynet-node/core"
@@ -18,16 +20,28 @@ import (
 	coreStaking "github.com/Evrynetlabs/evrynet-node/core/state/staking"
 	"github.com/Evrynetlabs/evrynet-node/core/vm"
 	"github.com/Evrynetlabs/evrynet-node/crypto"
+	"github.com/Evrynetlabs/evrynet-node/evrdb"
 	"github.com/Evrynetlabs/evrynet-node/log"
 )
 
 const (
-	StakingSC       = "../tests/genesis_staking_sc.json"       // 4 validator
+	StakingSC       = "../tests/genesis_staking_sc.json" // 4 validator
+	stakingEpoch    = 40
 	FixedValidators = "../tests/genesis_fixed_validators.json" // 1 validators
 )
 
 var (
-	nodePKString = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
+	nodePKString           = "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
+	stakingScAddress       = common.HexToAddress("0x2D5Bd25EfA0aB97aaca4E888c5fbCB4866904E46")
+	stakingSCValidatorKeys = []string{ // list privatekey for validators in genesis file
+		"ce900e4057ef7253ce737dccf3979ec4e74a19d595e8cc30c6c5ea92dfdd37f1",
+		"e74f3525fb69f193b51d33f4baf602c4572d81ede57907c61a62eaf9ed95374a",
+		"276cd299f350174a6005525a523b59fccd4c536771e4876164adb9f1459b79e4",
+	}
+	stakingFaucetKeys = []string{
+		"4BCADFCEB52765412B7CF3C4BA8B64D47E50A50AE78902C0CC5522B09562613E",
+		"BCDEE223C39FBC96A76B4DDC65661ED4DDC0656FEA5A73A20CD00300F35D367F",
+	}
 )
 
 func TestGenesisblockWithStakingSC(t *testing.T) {
@@ -49,7 +63,7 @@ func TestGenesisblockWithStakingSC(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		getValidators := func(t *testing.T) {
-			backend, blockchain, err := createBlockchainAndBackendFromGenesis(tc.genesisType)
+			backend, blockchain, _, err := createBlockchainAndBackendFromGenesis(tc.genesisType)
 			assert.NoError(t, err)
 
 			// Tested with 4 valset but it will break the test TestBackend_HandleMsg (not enough 2f+1)
@@ -72,14 +86,30 @@ func TestBackendCallGetListCandidateFromSC(t *testing.T) {
 	// Must init log to show error when using log.Debug
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
-	backend, blockchain, err := createBlockchainAndBackendFromGenesis(StakingSC)
+	backend, blockchain, _, err := createBlockchainAndBackendFromGenesis(StakingSC)
 	assert.NoError(t, err)
 
 	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
 	assert.NoError(t, err)
 
 	header := backend.chain.CurrentHeader()
-	stakingCaller := coreStaking.NewStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
+	stakingCaller := coreStaking.NewEVMStakingCaller(state, blockchain, header, backend.chain.Config(), vm.Config{})
+	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(validators))
+}
+
+func TestBackendCallGetListCandidateFromStateDB(t *testing.T) {
+	// Must init log to show error when using log.Debug
+	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
+
+	backend, _, _, err := createBlockchainAndBackendFromGenesis(StakingSC)
+	assert.NoError(t, err)
+
+	state, err := backend.chain.StateAt(backend.CurrentHeadBlock().Root())
+	assert.NoError(t, err)
+
+	stakingCaller := coreStaking.NewStateDbStakingCaller(state, coreStaking.DefaultConfig)
 	validators, err := stakingCaller.GetValidators(backend.stakingContractAddr)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(validators))
@@ -126,26 +156,27 @@ func getGenesisConf(genesisPath string) (*core.Genesis, error) {
 	return config, nil
 }
 
-func createBlockchainAndBackendFromGenesis(genesisPath string) (*Backend, *core.BlockChain, error) {
+// createBlockchainAndBackendFromGenesis returns backend, blockchain and evr.Database for testing
+func createBlockchainAndBackendFromGenesis(genesisPath string) (*Backend, *core.BlockChain, evrdb.Database, error) {
 	config, err := makeNodeConfig(genesisPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	nodePK, err := crypto.HexToECDSA(nodePKString)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	dir, err := ioutil.TempDir("", "eth-chain-genesis")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	//create db instance with implement leveldb
 	db, err := rawdb.NewLevelDBDatabase(dir, 128, 1024, "")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	//init tendermint backend
@@ -155,15 +186,37 @@ func createBlockchainAndBackendFromGenesis(genesisPath string) (*Backend, *core.
 	//set up genesis block
 	chainConfig, _, err := core.SetupGenesisBlock(db, config.Genesis)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	//init block chain with tendermint engine
 	blockchain, err := core.NewBlockChain(db, nil, chainConfig, backend, vm.Config{}, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	backend.chain = blockchain
 	backend.currentBlock = blockchain.CurrentBlock
-	return backend, blockchain, nil
+	return backend, blockchain, db, nil
+}
+
+func getValidatorAccounts() ([]*ecdsa.PrivateKey, []common.Address) {
+	pks := make([]*ecdsa.PrivateKey, len(stakingSCValidatorKeys))
+	addrs := make([]common.Address, len(stakingSCValidatorKeys))
+	for i, pkHex := range stakingSCValidatorKeys {
+		pk, _ := crypto.HexToECDSA(pkHex)
+		pks[i] = pk
+		addrs[i] = crypto.PubkeyToAddress(pk.PublicKey)
+	}
+	return pks, addrs
+}
+
+func getFaucetAccounts() ([]*ecdsa.PrivateKey, []common.Address) {
+	pks := make([]*ecdsa.PrivateKey, len(stakingFaucetKeys))
+	addrs := make([]common.Address, len(stakingFaucetKeys))
+	for i, pkHex := range stakingFaucetKeys {
+		pk, _ := crypto.HexToECDSA(pkHex)
+		pks[i] = pk
+		addrs[i] = crypto.PubkeyToAddress(pk.PublicKey)
+	}
+	return pks, addrs
 }
