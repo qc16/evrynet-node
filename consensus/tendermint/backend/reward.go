@@ -19,7 +19,7 @@ import (
 func (sb *Backend) accumulateRewards(chainReader consensus.FullChainReader, state *state.StateDB, header *types.Header) error {
 	// If fixed validators (test) then return
 	if chainReader.Config().Tendermint.FixedValidators != nil {
-		reward := new(big.Int).Set(TendermintBlockReward)
+		reward := new(big.Int).Set(chainReader.Config().Tendermint.BlockReward)
 		state.AddBalance(header.Coinbase, reward)
 		return nil
 	}
@@ -74,7 +74,7 @@ func calculateTotalValidatorsRewards(chainReader consensus.ChainReader, epoch ui
 			currentHeader = header
 		}
 		txFee := new(big.Int).Mul(big.NewInt(int64(currentHeader.GasUsed)), chainReader.Config().GasPrice)
-		reward := new(big.Int).Add(TendermintBlockReward, txFee)
+		reward := new(big.Int).Add(chainReader.Config().Tendermint.BlockReward, txFee)
 		if current, ok := validatorsRewards[currentHeader.Coinbase]; ok {
 			validatorsRewards[currentHeader.Coinbase] = new(big.Int).Add(current, reward)
 		} else {

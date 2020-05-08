@@ -113,8 +113,16 @@ func (w *wizard) makeGenesis() {
 			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
 		}
 	case choice == "" || choice == "3":
-		fmt.Println("What is poclicy to select proposer (default 0 - roundrobin)")
+		fmt.Println("What is policy to select proposer (default 0 - roundrobin)")
 		policy := uint64(w.readDefaultInt(0))
+		genesis.Config.Tendermint = &params.TendermintConfig{
+			ProposerPolicy: policy,
+		}
+
+		// Query the tendermint block reward
+		fmt.Println()
+		fmt.Println("Specify your tendermint block reward if you want an explicit one (default = 5e+18)")
+		genesis.Config.Tendermint.BlockReward = new(big.Int).Set(w.readDefaultBigInt(big.NewInt(5e+18)))
 
 		// In the case of Tender-mint, configure the consensus parameters
 		genesis.Difficulty = big.NewInt(1)
@@ -132,9 +140,6 @@ func (w *wizard) makeGenesis() {
 			if len(validators) > 0 {
 				break
 			}
-		}
-		genesis.Config.Tendermint = &params.TendermintConfig{
-			ProposerPolicy: policy,
 		}
 		tendermintExtra := types.TendermintExtra{}
 

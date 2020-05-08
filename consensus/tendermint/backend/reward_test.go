@@ -33,7 +33,7 @@ func TestBackend_RewardNoTx(t *testing.T) {
 
 		currentState, err := chain.State()
 		require.NoError(t, err)
-		expectedBalance := new(big.Int).Mul(big.NewInt(stakingEpoch), TendermintBlockReward)
+		expectedBalance := new(big.Int).Mul(big.NewInt(stakingEpoch), chain.Config().Tendermint.BlockReward)
 		require.Equal(t, currentState.GetBalance(addr[0]), expectedBalance)
 	})
 }
@@ -81,7 +81,7 @@ func TestBackend_RewardNoTx_WithVoter(t *testing.T) {
 		// check balance reward for epoch 0
 		state0, err := chain.StateAt(chain.GetHeaderByNumber(stakingEpoch).Root)
 		require.NoError(t, err)
-		expectedBalance0 := new(big.Int).Mul(big.NewInt(stakingEpoch), TendermintBlockReward)
+		expectedBalance0 := new(big.Int).Mul(big.NewInt(stakingEpoch), chain.Config().Tendermint.BlockReward)
 		expectedBalance0 = new(big.Int).Add(expectedBalance0, new(big.Int).Mul(big.NewInt(int64(receipts[0].GasUsed)), big.NewInt(params.GasPriceConfig)))
 		require.Equal(t, expectedBalance0, state0.GetBalance(validatorAddresses[0]))
 		// check balance reward for epoch 1
@@ -89,7 +89,7 @@ func TestBackend_RewardNoTx_WithVoter(t *testing.T) {
 		state1, err := chain.StateAt(chain.GetHeaderByNumber(stakingEpoch * 2).Root)
 		require.NoError(t, err)
 		epoch1Reward := new(big.Int).Sub(state1.GetBalance(validatorAddresses[0]), expectedBalance0)
-		expectedTotalReward := new(big.Int).Mul(big.NewInt(stakingEpoch), TendermintBlockReward)
+		expectedTotalReward := new(big.Int).Mul(big.NewInt(stakingEpoch), chain.Config().Tendermint.BlockReward)
 		expectedOwnerReward := new(big.Int).Div(new(big.Int).Mul(expectedTotalReward, big.NewInt(75)), big.NewInt(100))
 		require.Equal(t, expectedOwnerReward, epoch1Reward)
 
@@ -126,7 +126,7 @@ func TestBackend_RewardWithTx(t *testing.T) {
 		currentState, err := chain.State()
 		require.NoError(t, err)
 
-		expectedBalance := new(big.Int).Mul(big.NewInt(stakingEpoch), TendermintBlockReward)
+		expectedBalance := new(big.Int).Mul(big.NewInt(stakingEpoch), chain.Config().Tendermint.BlockReward)
 		expectedBalance = expectedBalance.Add(expectedBalance, new(big.Int).Mul(big.NewInt(params.GasPriceConfig), big.NewInt(int64(numberTransaction*params.TxGas))))
 		require.Equal(t, currentState.GetBalance(addr[0]), expectedBalance)
 	})

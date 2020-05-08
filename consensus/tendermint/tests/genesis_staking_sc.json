@@ -12,6 +12,7 @@
     "tendermint": {
       "epoch": 40,
       "policy": 0,
+      "blockReward": 5000000000000000000,
       "stakingSCAddress": "0x2d5bd25efa0ab97aaca4e888c5fbcb4866904e46",
       "fixedValidators": null
     }

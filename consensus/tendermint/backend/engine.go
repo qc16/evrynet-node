@@ -22,9 +22,6 @@ import (
 )
 
 var (
-	// TendermintBlockReward tempo fix the Block reward in wei for successfully mining a block
-	// TODO: will modify after
-	TendermintBlockReward           = big.NewInt(5e+18)
 	validatorRewardPercentage int64 = 50
 	voterRewardPercentage     int64 = 50
 

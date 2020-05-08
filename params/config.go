@@ -239,6 +239,7 @@ func (c *CliqueConfig) String() string {
 type TendermintConfig struct {
 	Epoch            uint64           `json:"epoch"`            // Epoch length to reset votes and checkpoint
 	ProposerPolicy   uint64           `json:"policy"`           // The policy for proposer selection
+	BlockReward      *big.Int         `json:"blockReward"`      // TendermintBlockReward for accumulating reward
 	StakingSCAddress *common.Address  `json:"stakingSCAddress"` // The staking SC address for validating when deploy SC
 	FixedValidators  []common.Address `json:"fixedValidators"`
 }
