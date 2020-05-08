@@ -1756,6 +1756,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		tdmintConfig.Epoch = config.Tendermint.Epoch
 		tdmintConfig.StakingSCAddress = config.Tendermint.StakingSCAddress
 		tdmintConfig.FixedValidators = config.Tendermint.FixedValidators
+		tdmintConfig.BlockReward = config.Tendermint.BlockReward
 		engine = tdmintBackend.New(tdmintConfig, stack.Config().NodeKey())
 	} else {
 		engine = ethash.NewFaker()

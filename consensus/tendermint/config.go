@@ -1,6 +1,7 @@
 package tendermint
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/Evrynetlabs/evrynet-node/common"
@@ -44,6 +45,7 @@ type Config struct {
 	TimeoutPrecommitDelta time.Duration    //Duration waiting to increase if precommit wait expired to reach eventually synchronous
 	TimeoutCommit         time.Duration    //Duration waiting to start round with new height
 	FixedValidators       []common.Address // The fixed validators
+	BlockReward           *big.Int         //BlockReward for accumulating reward
 
 	FaultyMode uint64 `toml:",omitempty"` // The faulty node indicates the faulty node's behavior
 

@@ -232,6 +232,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, chainConfig *params.ChainCo
 		config.Tendermint.Epoch = chainConfig.Tendermint.Epoch
 		config.Tendermint.StakingSCAddress = chainConfig.Tendermint.StakingSCAddress
 		config.Tendermint.FixedValidators = chainConfig.Tendermint.FixedValidators
+		config.Tendermint.BlockReward = chainConfig.Tendermint.BlockReward
 		log.Info("Create Tendermint consensus engine")
 		return tendermintBackend.New(&config.Tendermint, ctx.NodeKey())
 	}
