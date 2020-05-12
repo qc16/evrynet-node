@@ -168,8 +168,6 @@ type broadcastTask struct {
 // The validators must be able to connected through Peer.
 // It will return backend.ErrNoBroadcaster if no broadcaster is set for backend
 func (sb *Backend) Gossip(valSet tendermint.ValidatorSet, blockNumber *big.Int, round int64, msgType uint64, payload []byte) error {
-	//TODO: check for known message by lru.ARCCache
-
 	targets := make(map[common.Address]bool)
 
 	for _, val := range valSet.List() {
@@ -238,7 +236,6 @@ func (sb *Backend) gossip(task broadcastTask) {
 		var wg sync.WaitGroup
 		for addr, p := range ps {
 			wg.Add(1)
-			//TODO: check for recent messsages using lru.ARCCache
 			go func(p consensus.Peer, addr common.Address) {
 				defer wg.Done()
 				if err := p.Send(consensus.TendermintMsg, task.Payload); err != nil {
@@ -315,7 +312,6 @@ func (sb *Backend) Multicast(targets map[common.Address]bool, payload []byte) er
 }
 
 // Validators return validator set for a block number
-// TODO: revise this function once auth vote is implemented
 func (sb *Backend) Validators(blockNumber *big.Int) tendermint.ValidatorSet {
 	valSet, err := sb.valSetInfo.GetValSet(sb.chain, blockNumber)
 	if err != nil {
