@@ -44,7 +44,7 @@ func (sb *Backend) replayTendermintMsg() (done bool, err error) {
 	sb.mutex.RLock()
 	defer sb.mutex.RUnlock()
 	if !sb.coreStarted {
-		log.Info("core stopped. Exit replaying tenderming msg to core.")
+		log.Info("core stopped. Exit replaying tendermint msg to core.")
 		return true, nil
 	}
 	if sb.storingMsgs.GetLen() == 0 {
@@ -72,18 +72,22 @@ func (sb *Backend) replayTendermintMsg() (done bool, err error) {
 func (sb *Backend) dequeueMsgLoop() {
 	for {
 		// w8 signal to trigger dequeue msg
-		<-sb.dequeueMsgTriggering
-		log.Trace("replay msg started")
-	replayLoop:
-		for {
-			// replay message one by one to core until there is no more message
-			done, err := sb.replayTendermintMsg()
-			if err != nil {
-				log.Error("failed to replayTendermintMsg", "err", err)
-				break replayLoop
-			}
-			if done {
-				break replayLoop
+		_, ok := <-sb.dequeueMsgTriggering
+
+		// Make sure the logic below won't run 1000 times (is maxTrigger) when closing a node
+		if ok {
+			log.Trace("replay msg started")
+		replayLoop:
+			for {
+				// replay message one by one to core until there is no more message
+				done, err := sb.replayTendermintMsg()
+				if err != nil {
+					log.Error("failed to replayTendermintMsg", "err", err)
+					break replayLoop
+				}
+				if done {
+					break replayLoop
+				}
 			}
 		}
 	}

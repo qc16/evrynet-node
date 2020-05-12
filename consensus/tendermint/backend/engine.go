@@ -502,13 +502,13 @@ func (sb *Backend) APIs(chain consensus.ChainReader) []rpc.API {
 	}}
 }
 
+// Close terminates any background threads maintained by the consensus engine.
 func (sb *Backend) Close() error {
-	log.Warn("Close: implement me")
-	//TODO: Research & Implement
+	close(sb.controlChan)
+	close(sb.dequeueMsgTriggering)
+	close(sb.broadcastCh)
 	return nil
 }
-
-// snapshot retrieves the authorization snapshot at a given point in time.
 
 // verifyProposalSeal checks proposal seal is signed by validator
 func (sb *Backend) verifyProposalSeal(header *types.Header, valSet tendermint.ValidatorSet) error {
