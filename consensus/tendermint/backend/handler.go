@@ -73,21 +73,20 @@ func (sb *Backend) dequeueMsgLoop() {
 	for {
 		// w8 signal to trigger dequeue msg
 		_, ok := <-sb.dequeueMsgTriggering
-
-		// Make sure the logic below won't run 1000 times (is maxTrigger) when closing a node
-		if ok {
-			log.Trace("replay msg started")
-		replayLoop:
-			for {
-				// replay message one by one to core until there is no more message
-				done, err := sb.replayTendermintMsg()
-				if err != nil {
-					log.Error("failed to replayTendermintMsg", "err", err)
-					break replayLoop
-				}
-				if done {
-					break replayLoop
-				}
+		if !ok {
+			return
+		}
+		log.Trace("replay msg started")
+	replayLoop:
+		for {
+			// replay message one by one to core until there is no more message
+			done, err := sb.replayTendermintMsg()
+			if err != nil {
+				log.Error("failed to replayTendermintMsg", "err", err)
+				break replayLoop
+			}
+			if done {
+				break replayLoop
 			}
 		}
 	}
