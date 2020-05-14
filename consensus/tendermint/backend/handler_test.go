@@ -163,6 +163,6 @@ func TestBackend_StartStop(t *testing.T) {
 	require.NoError(t, be.Start(blockchain, blockchain.CurrentBlock, nil))
 	require.Error(t, be.Start(blockchain, blockchain.CurrentBlock, nil))
 	require.NoError(t, be.Stop())
-	require.Error(t, be.Stop())
+	require.NoError(t, be.Stop())
 	close(done)
 }
