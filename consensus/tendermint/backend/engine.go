@@ -504,9 +504,12 @@ func (sb *Backend) APIs(chain consensus.ChainReader) []rpc.API {
 
 // Close terminates any background threads maintained by the consensus engine.
 func (sb *Backend) Close() error {
-	close(sb.controlChan)
-	close(sb.dequeueMsgTriggering)
-	close(sb.broadcastCh)
+	// send to sb.closeDequeueMsgChan if backend in dequeueMsgLoop loop
+	select {
+	case sb.closeDequeueMsgChan <- struct{}{}:
+	default:
+	}
+
 	return nil
 }
 

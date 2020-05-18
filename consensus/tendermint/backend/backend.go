@@ -56,7 +56,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		mutex:                &sync.RWMutex{},
 		storingMsgs:          queue.NewFIFO(),
 		dequeueMsgTriggering: make(chan struct{}, maxTrigger),
-		broadcastCh:          make(chan broadcastTask),
+		closeDequeueMsgChan:  make(chan struct{}),
 		controlChan:          make(chan struct{}),
 		computedValSetCache:  valSetCache,
 	}
@@ -109,12 +109,11 @@ type Backend struct {
 	//storingMsgs is used to store msg to handler when core stopped
 	storingMsgs          *queue.FIFO
 	dequeueMsgTriggering chan struct{}
+	closeDequeueMsgChan  chan struct{}
 
 	currentBlock func() *types.Block
 	//verifyAndSubmitBlock to send the proposal block to miner
 	verifyAndSubmitBlock func(*types.Block) error
-
-	broadcastCh chan broadcastTask
 
 	valSetInfo          ValidatorSetInfo
 	stakingContractAddr common.Address // stakingContractAddr stores the address of staking smart-contract

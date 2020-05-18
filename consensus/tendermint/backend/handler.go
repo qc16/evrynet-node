@@ -71,23 +71,24 @@ func (sb *Backend) replayTendermintMsg() (done bool, err error) {
 
 func (sb *Backend) dequeueMsgLoop() {
 	for {
-		// w8 signal to trigger dequeue msg
-		_, ok := <-sb.dequeueMsgTriggering
-		if !ok {
+		select {
+		case <-sb.dequeueMsgTriggering: // w8 signal to trigger dequeue msg
+			log.Trace("replay msg started")
+		replayLoop:
+			for {
+				// replay message one by one to core until there is no more message
+				done, err := sb.replayTendermintMsg()
+				if err != nil {
+					log.Error("failed to replayTendermintMsg", "err", err)
+					break replayLoop
+				}
+				if done {
+					break replayLoop
+				}
+			}
+		case <-sb.closeDequeueMsgChan:
+			log.Trace("interrupt dequeue message loop")
 			return
-		}
-		log.Trace("replay msg started")
-	replayLoop:
-		for {
-			// replay message one by one to core until there is no more message
-			done, err := sb.replayTendermintMsg()
-			if err != nil {
-				log.Error("failed to replayTendermintMsg", "err", err)
-				break replayLoop
-			}
-			if done {
-				break replayLoop
-			}
 		}
 	}
 }
