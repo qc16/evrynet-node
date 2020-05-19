@@ -55,7 +55,7 @@ func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option
 		commitChs:             newCommitChannels(),
 		mutex:                 &sync.RWMutex{},
 		storingMsgs:           queue.NewFIFO(),
-		dequeueMsgTriggering:  make(chan struct{}),
+		dequeueMsgTriggering:  make(chan struct{}, maxTrigger),
 		closingDequeueMsgChan: make(chan struct{}),
 		controlChan:           make(chan struct{}),
 		computedValSetCache:   valSetCache,
