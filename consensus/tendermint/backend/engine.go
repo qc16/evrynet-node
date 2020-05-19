@@ -201,7 +201,7 @@ func (sb *Backend) Stop() error {
 		case sb.controlChan <- struct{}{}:
 		default:
 		}
-		return tendermint.ErrStoppedEngine
+		return nil
 	}
 	if err := sb.core.Stop(); err != nil {
 		return err
