@@ -98,7 +98,6 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	// miner won't be able to interrupt a sealing task
 	// a sealing task can only exist when core consensus agreed upon a block
 	go func(ch <-chan *types.Block) {
-		//TODO: DO we need timeout for consensus?
 		select {
 		case bl, ok := <-ch:
 			if ok {
@@ -135,7 +134,6 @@ func (sb *Backend) tryStartCore() bool {
 		return false
 	}
 
-	//TODO: clear previous data of proposal
 	if err := sb.core.Start(); err != nil {
 		log.Error("failed to start tendermint core", "error", err)
 		return false
