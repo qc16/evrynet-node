@@ -98,11 +98,17 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	// miner won't be able to interrupt a sealing task
 	// a sealing task can only exist when core consensus agreed upon a block
 	go func(ch <-chan *types.Block) {
-		if bl, ok := <-ch; ok {
-			//this step is to stop other go routine wait for a block
-			sb.commitChs.closeAndRemoveCommitChannel(bl.Number().String())
-			log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
-			results <- bl
+		select {
+		case bl, ok := <-ch:
+			if ok {
+				//this step is to stop other go routine wait for a block
+				sb.commitChs.closeAndRemoveCommitChannel(bl.Number().String())
+				log.Info("committing... returned block to miner", "block_hash", bl.Hash(), "number", bl.Number())
+				results <- bl
+				return
+			}
+		case <-sb.closingDequeueMsgChan:
+			log.Trace("interrupt commit channel")
 			return
 		}
 	}(ch)
@@ -128,6 +134,7 @@ func (sb *Backend) tryStartCore() bool {
 		return false
 	}
 
+	//TODO: clear previous data of proposal
 	if err := sb.core.Start(); err != nil {
 		log.Error("failed to start tendermint core", "error", err)
 		return false
@@ -188,7 +195,7 @@ func (sb *Backend) Stop() error {
 		case sb.controlChan <- struct{}{}:
 		default:
 		}
-		return nil
+		return tendermint.ErrStoppedEngine
 	}
 	if err := sb.core.Stop(); err != nil {
 		return err
@@ -504,11 +511,7 @@ func (sb *Backend) APIs(chain consensus.ChainReader) []rpc.API {
 
 // Close terminates any background threads maintained by the consensus engine.
 func (sb *Backend) Close() error {
-	// send to sb.closeDequeueMsgChan if backend in dequeueMsgLoop loop
-	select {
-	case sb.closeDequeueMsgChan <- struct{}{}:
-	default:
-	}
+	close(sb.closingDequeueMsgChan)
 
 	return nil
 }

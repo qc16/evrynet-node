@@ -86,7 +86,7 @@ func (sb *Backend) dequeueMsgLoop() {
 					break replayLoop
 				}
 			}
-		case <-sb.closeDequeueMsgChan:
+		case <-sb.closingDequeueMsgChan:
 			log.Trace("interrupt dequeue message loop")
 			return
 		}
@@ -127,6 +127,12 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		// Trigger dequeue loop
 		go func() {
 			sb.dequeueMsgTriggering <- struct{}{}
+
+			select {
+			case <-sb.closingDequeueMsgChan:
+				log.Trace("interrupt trigger dequeue loop when handling message")
+				return
+			}
 		}()
 		return true, nil
 	default:
