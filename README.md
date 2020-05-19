@@ -16,7 +16,7 @@ archives are published at https://geth.ethereum.org/downloads/.
 
 For prerequisites and detailed build instructions please read the [Installation Instructions](https://github.com/Evrynetlabs/evrynet-node/wiki/Building-Evrynet) on the wiki.
 
-Building `gev` requires both a Go (version 1.10 or later) and a C compiler. You can install
+Building `gev` requires both a Go (version 1.12 or later) and a C compiler. You can install
 them using your favourite package manager. Once the dependencies are installed, run
 
 ```shell
@@ -37,7 +37,7 @@ directory.
 |    Command    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | :-----------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |  **`gev`**   | Our main Evrynet CLI client. It is the entry point into the Evrynet network (main-, test- or private net), capable of running as a full node (default), archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Evrynet network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `gev --help` and the [CLI Wiki page](https://github.com/Evrynetlabs/evrynet-node/wiki/Command-Line-Options) for command line options.          |
-|   `abigen`    | Source code generator to convert Evrynet contract definitions into easy to use, compile-time type-safe Go packages. It operates on plain [Evrynet contract ABIs](https://github.com/Evrynetlabs/evrynet-node/wiki/Evrynet-Contract-ABI) with expanded functionality if the contract bytecode is also available. However, it also accepts Solidity source files, making development much more streamlined. Please see our [Native DApps](https://github.com/Evrynetlabs/evrynet-node/wiki/Native-DApps:-Go-bindings-to-Evrynet-contracts) wiki page for details. |
+|   `abigen`    | Source code generator to convert Evrynet contract definitions into easy to use, compile-time type-safe Go packages. |
 |  `bootnode`   | Stripped down version of our Evrynet client implementation that only takes part in the network node discovery protocol, but does not run any of the higher level application protocols. It can be used as a lightweight bootstrap node to aid in finding peers in private networks.                                                                                                                                                                                                                                                                 |
 |     `evm`     | Developer utility version of the EVM (Evrynet Virtual Machine) that is capable of running bytecode snippets within a configurable environment and execution mode. Its purpose is to allow isolated, fine-grained debugging of EVM opcodes (e.g. `evm --code 60ff60ff --debug`).                                                                                                                                                                                                                                                                     |
 | `gethrpctest` | Developer utility tool to support our [ethereum/rpc-test](https://github.com/ethereum/rpc-tests) test suite which validates baseline conformity to the [Evrynet JSON RPC](https://github.com/Evrynetlabs/evrynet-node/wiki/JSON-RPC) specs. Please see the [test suite's readme](https://github.com/ethereum/rpc-tests/blob/master/README.md) for details.                                                                                                                                                                                                     |
@@ -68,7 +68,7 @@ This command will:
    of the Evrynet network, which is very CPU intensive.
  * Start up `gev`'s built-in interactive [JavaScript console](https://github.com/Evrynetlabs/evrynet-node/wiki/JavaScript-Console),
    (via the trailing `console` subcommand) through which you can invoke all official [`web3` methods](https://github.com/Evrynetlabs/evrynet-node/wiki/JavaScript-API)
-   as well as `gev`'s own [management APIs](https://github.com/Evrynetlabs/evrynet-node/wiki/Management-APIs).
+   as well as `gev`'s own [management APIs](https://github.com/Evrynetlabs/evrynet-node/wiki/Management-API).
    This tool is optional and if you leave it out you can always attach to an already running
    `gev` instance with `gev attach`.
 
@@ -175,7 +175,7 @@ accessible from the outside.
 As a developer, sooner rather than later you'll want to start interacting with `gev` and the
 Evrynet network via your own programs and not manually through the console. To aid
 this, `gev` has built-in support for a JSON-RPC based APIs ([standard APIs](https://github.com/Evrynetlabs/evrynet-node/wiki/JSON-RPC)
-and [`gev` specific APIs](https://github.com/Evrynetlabs/evrynet-node/wiki/Management-APIs)).
+and [`gev` specific APIs](https://github.com/Evrynetlabs/evrynet-node/wiki/Management-API)).
 These can be exposed via HTTP, WebSockets and IPC (UNIX sockets on UNIX based
 platforms, and named pipes on Windows).
 
@@ -321,10 +321,6 @@ Please make sure your contributions adhere to our coding guidelines:
  * Pull requests need to be based on and opened against the `master` branch.
  * Commit messages should be prefixed with the package(s) they modify.
    * E.g. "gev, rpc: make trace configs optional"
-
-Please see the [Developers' Guide](https://github.com/Evrynetlabs/evrynet-node/wiki/Developers'-Guide)
-for more details on configuring your environment, managing project dependencies, and
-testing procedures.
 
 ## License
 
