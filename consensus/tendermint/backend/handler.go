@@ -126,9 +126,8 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 		// Trigger dequeue loop
 		go func() {
-			sb.dequeueMsgTriggering <- struct{}{}
-
 			select {
+			case sb.dequeueMsgTriggering <- struct{}{}:
 			case <-sb.closingDequeueMsgChan:
 				log.Trace("interrupt trigger dequeue loop when handling message")
 				return

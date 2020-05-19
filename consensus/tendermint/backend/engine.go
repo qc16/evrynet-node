@@ -98,6 +98,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 	// miner won't be able to interrupt a sealing task
 	// a sealing task can only exist when core consensus agreed upon a block
 	go func(ch <-chan *types.Block) {
+		//TODO: DO we need timeout for consensus?
 		select {
 		case bl, ok := <-ch:
 			if ok {
@@ -142,7 +143,12 @@ func (sb *Backend) tryStartCore() bool {
 	sb.coreStarted = true
 	// trigger dequeue msg loop
 	go func() {
-		sb.dequeueMsgTriggering <- struct{}{}
+		select {
+		case sb.dequeueMsgTriggering <- struct{}{}:
+		case <-sb.closingDequeueMsgChan:
+			log.Trace("interrupt trigger dequeue loop when starting core")
+			return
+		}
 	}()
 	return true
 }
