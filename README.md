@@ -72,39 +72,6 @@ This command will:
    This tool is optional and if you leave it out you can always attach to an already running
    `gev` instance with `gev attach`.
 
-### A Full node on the Evrynet test network
-
-Transitioning towards developers, if you'd like to play around with creating Evrynet
-contracts, you almost certainly would like to do that without any real money involved until
-you get the hang of the entire system. In other words, instead of attaching to the main
-network, you want to join the **publictestnet** network with your node, which is fully equivalent to
-the main network, but with play-Ether only.
-
-```shell
-$ geth --publictestnet console
-```
-
-The `console` subcommand has the exact same meaning as above and they are equally
-useful on the publictestnet too. Please see above for their explanations if you've skipped here.
-
-Specifying the `--publictestnet` flag, however, will reconfigure your `gev` instance a bit:
-
- * Instead of using the default data directory (`~/.Evrynet` on Linux for example), `gev`
-   will nest itself one level deeper into a `publictestnet` subfolder (`~/.Evrynet/publictestnet` on
-   Linux). Note, on OSX and Linux this also means that attaching to a running testnet node
-   requires the use of a custom endpoint since `gev attach` will try to attach to a
-   production node endpoint by default. E.g.
-   `gev attach <datadir>/publictestnet/geth.ipc`. Windows users are not affected by
-   this.
- * Instead of connecting the main Evrynet network, the client will connect to the test
-   network, which uses different P2P bootnodes, different network IDs and genesis states.
-   
-*Note: Although there are some internal protective measures to prevent transactions from
-crossing over between the main network and test network, you should make sure to always
-use separate accounts for play-money and real-money. Unless you manually move
-accounts, `gev` will by default correctly separate the two networks and will not make any
-accounts available between them.*
-
 ### Running a custom local node
 
 build gev at the root folder of evrynet-node by running the command:
