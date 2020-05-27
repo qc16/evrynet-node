@@ -107,7 +107,7 @@ func (sb *Backend) Seal(chain consensus.ChainReader, block *types.Block, results
 				results <- bl
 				return
 			}
-		case <-sb.closingDequeueMsgChan:
+		case <-sb.closingBackgroundThreadsCh:
 			log.Trace("interrupt commit channel")
 			return
 		}
@@ -143,7 +143,7 @@ func (sb *Backend) tryStartCore() bool {
 	go func() {
 		select {
 		case sb.dequeueMsgTriggering <- struct{}{}:
-		case <-sb.closingDequeueMsgChan:
+		case <-sb.closingBackgroundThreadsCh:
 			log.Trace("interrupt trigger dequeue loop when starting core")
 			return
 		}
@@ -515,7 +515,7 @@ func (sb *Backend) APIs(chain consensus.ChainReader) []rpc.API {
 
 // Close terminates any background threads maintained by the consensus engine.
 func (sb *Backend) Close() error {
-	close(sb.closingDequeueMsgChan)
+	close(sb.closingBackgroundThreadsCh)
 
 	return nil
 }

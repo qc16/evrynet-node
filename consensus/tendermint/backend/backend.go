@@ -48,17 +48,17 @@ type Option func(b *Backend) error
 func New(config *tendermint.Config, privateKey *ecdsa.PrivateKey, opts ...Option) consensus.Tendermint {
 	valSetCache, _ := lru.NewARC(inMemoryValset)
 	be := &Backend{
-		config:                config,
-		tendermintEventMux:    new(event.TypeMux),
-		privateKey:            privateKey,
-		address:               crypto.PubkeyToAddress(privateKey.PublicKey),
-		commitChs:             newCommitChannels(),
-		mutex:                 &sync.RWMutex{},
-		storingMsgs:           queue.NewFIFO(),
-		dequeueMsgTriggering:  make(chan struct{}, maxTrigger),
-		closingDequeueMsgChan: make(chan struct{}),
-		controlChan:           make(chan struct{}),
-		computedValSetCache:   valSetCache,
+		config:                     config,
+		tendermintEventMux:         new(event.TypeMux),
+		privateKey:                 privateKey,
+		address:                    crypto.PubkeyToAddress(privateKey.PublicKey),
+		commitChs:                  newCommitChannels(),
+		mutex:                      &sync.RWMutex{},
+		storingMsgs:                queue.NewFIFO(),
+		dequeueMsgTriggering:       make(chan struct{}, maxTrigger),
+		closingBackgroundThreadsCh: make(chan struct{}),
+		controlChan:                make(chan struct{}),
+		computedValSetCache:        valSetCache,
 	}
 
 	if config.FixedValidators != nil && len(config.FixedValidators) > 0 {
@@ -101,15 +101,15 @@ type Backend struct {
 	//it is a map of blocknumber- channels with mutex
 	commitChs *commitChannels
 
-	coreStarted bool
-	mutex       *sync.RWMutex
-	chain       consensus.FullChainReader
-	controlChan chan struct{}
+	coreStarted                bool
+	mutex                      *sync.RWMutex
+	chain                      consensus.FullChainReader
+	controlChan                chan struct{}
+	closingBackgroundThreadsCh chan struct{}
 
 	//storingMsgs is used to store msg to handler when core stopped
-	storingMsgs           *queue.FIFO
-	dequeueMsgTriggering  chan struct{}
-	closingDequeueMsgChan chan struct{}
+	storingMsgs          *queue.FIFO
+	dequeueMsgTriggering chan struct{}
 
 	currentBlock func() *types.Block
 	//verifyAndSubmitBlock to send the proposal block to miner
