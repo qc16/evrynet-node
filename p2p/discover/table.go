@@ -58,7 +58,7 @@ const (
 	copyNodesInterval  = 30 * time.Second
 	seedMinTableTime   = 5 * time.Minute
 	seedCount          = 30
-	seedMaxAge         = 5 * 24 * time.Hour
+	seedMaxAge         = 15 * 24 * time.Hour
 )
 
 // Table is the 'node table', a Kademlia-like index of neighbor nodes. The table keeps
@@ -421,13 +421,17 @@ func (tab *Table) copyLiveNodes() {
 	defer tab.mutex.Unlock()
 
 	now := time.Now()
+	nodes := 0
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
 			if n.livenessChecks > 0 && now.Sub(n.addedAt) >= seedMinTableTime {
 				tab.db.UpdateNode(unwrapNode(n))
+				nodes++
 			}
 		}
 	}
+
+	tab.log.Trace("--- copyLiveNodes", "nodes", nodes)
 }
 
 // closest returns the n nodes in the table that are closest to the
@@ -652,6 +656,23 @@ func contains(ns []*node, id enode.ID) bool {
 
 // pushNode adds n to the front of list, keeping at most max items.
 func pushNode(list []*node, n *node, max int) ([]*node, *node) {
+	if len(list) == max {
+		for i := len(list) - 1; i >= 0; i-- {
+			if !list[i].isValidator {
+				removed := list[i]
+				tempList := append(list[:i], list[i+1:]...)
+				copy(tempList[1:], tempList)
+				tempList[0] = n
+				return tempList, removed
+			}
+		}
+		// In case, the list is full with validator nodes
+		removed := list[len(list)-1]
+		copy(list[1:], list)
+		list[0] = n
+		return list, removed
+	}
+
 	if len(list) < max {
 		list = append(list, nil)
 	}

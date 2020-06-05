@@ -345,6 +345,39 @@ func (db *DB) expireNodes() {
 	}
 }
 
+func (db *DB) GetAllNodes() []*Node {
+	it := db.lvl.NewIterator(util.BytesPrefix([]byte(dbNodePrefix)), nil)
+	defer it.Release()
+	if !it.Next() {
+		return nil
+	}
+
+	var (
+		atEnd = false
+		nodes []*Node
+	)
+
+	for !atEnd {
+		n := nextNode(it)
+		if n == nil {
+			break
+		}
+
+		existed := false
+		for i := range nodes {
+			if nodes[i].ID() == n.ID() {
+				existed = true
+				continue // duplicate
+			}
+		}
+		if !existed {
+			nodes = append(nodes, n)
+		}
+		atEnd = !it.Next()
+	}
+	return nodes
+}
+
 // LastPingReceived retrieves the time of the last ping packet received from
 // a remote node.
 func (db *DB) LastPingReceived(id ID, ip net.IP) time.Time {

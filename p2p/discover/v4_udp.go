@@ -73,6 +73,10 @@ const (
 	p_neighborsV4
 	p_enrRequestV4
 	p_enrResponseV4
+	p_validator_pingV4
+	p_validator_pongV4
+	p_validator_findnodeV4
+	p_validator_neighborsV4
 )
 
 // RPC request structures
@@ -143,6 +147,47 @@ type (
 		UDP uint16 // for discovery protocol
 		TCP uint16 // for RLPx protocol
 	}
+
+	// --- For validator node ---
+
+	validatorPingV4 struct {
+		senderKey *ecdsa.PublicKey // filled in by preverify
+
+		Version    uint
+		From, To   rpcEndpoint
+		Expiration uint64
+		// Ignore additional fields (for forward compatibility).
+		Rest []rlp.RawValue `rlp:"tail"`
+	}
+
+	// validatorPongV4 is the reply to pingV4.
+	validatorPongV4 struct {
+		// This field should mirror the UDP envelope address
+		// of the ping packet, which provides a way to discover the
+		// the external address (after NAT).
+		To rpcEndpoint
+
+		ReplyTok   []byte // This contains the hash of the ping packet.
+		Expiration uint64 // Absolute timestamp at which the packet becomes invalid.
+		// Ignore additional fields (for forward compatibility).
+		Rest []rlp.RawValue `rlp:"tail"`
+	}
+
+	// validatorFindnodeV4 is a query for nodes close to the given target.
+	validatorFindnodeV4 struct {
+		Target     encPubkey
+		Expiration uint64
+		// Ignore additional fields (for forward compatibility).
+		Rest []rlp.RawValue `rlp:"tail"`
+	}
+
+	// validatorNeighborsV4 is the reply to validatorFindnodeV4.
+	validatorNeighborsV4 struct {
+		Nodes      []rpcNode
+		Expiration uint64
+		// Ignore additional fields (for forward compatibility).
+		Rest []rlp.RawValue `rlp:"tail"`
+	}
 )
 
 // packetV4 is implemented by all v4 protocol messages.
@@ -206,6 +251,9 @@ type UDPv4 struct {
 	closeOnce   sync.Once
 	wg          sync.WaitGroup
 
+	validatorsTab     *Table
+	currentValidators map[common.Address]struct{}
+
 	addReplyMatcher chan *replyMatcher
 	gotreply        chan reply
 	closing         chan struct{}
@@ -256,17 +304,18 @@ type reply struct {
 	matched chan<- bool
 }
 
-func ListenV4(c UDPConn, ln *enode.LocalNode, cfg Config) (*UDPv4, error) {
+func ListenV4(c UDPConn, ln *enode.LocalNode, cfg Config, validators map[common.Address]struct{}) (*UDPv4, error) {
 	t := &UDPv4{
-		conn:            c,
-		priv:            cfg.PrivateKey,
-		netrestrict:     cfg.NetRestrict,
-		localNode:       ln,
-		db:              ln.Database(),
-		closing:         make(chan struct{}),
-		gotreply:        make(chan reply),
-		addReplyMatcher: make(chan *replyMatcher),
-		log:             cfg.Log,
+		conn:              c,
+		priv:              cfg.PrivateKey,
+		netrestrict:       cfg.NetRestrict,
+		localNode:         ln,
+		db:                ln.Database(),
+		closing:           make(chan struct{}),
+		gotreply:          make(chan reply),
+		addReplyMatcher:   make(chan *replyMatcher),
+		log:               cfg.Log,
+		currentValidators: validators,
 	}
 	if t.log == nil {
 		t.log = log.Root()
@@ -403,6 +452,10 @@ func (t *UDPv4) lookupWorker(n *node, targetKey encPubkey, reply chan<- []*node)
 		if fails >= maxFindnodeFailures {
 			t.log.Trace("Too many findnode failures, dropping", "id", n.ID(), "failcount", fails)
 			t.tab.delete(n)
+			if _, ok := t.currentValidators[n.Address()]; !ok {
+				t.db.DeleteNode(n.ID())
+				t.log.Trace("--- Too many findnode failures, delete forever", "id", n.ID(), "failcount", fails)
+			}
 		}
 	} else if fails > 0 {
 		// Reset failure counter because it counts _consecutive_ failures.
@@ -463,7 +516,11 @@ func (t *UDPv4) Ping(n *enode.Node) error {
 func (t *UDPv4) ping(n *enode.Node) (seq uint64, err error) {
 	rm := t.sendPing(n.ID(), &net.UDPAddr{IP: n.IP(), Port: n.UDP()}, nil)
 	if err = <-rm.errc; err == nil {
-		seq = seqFromTail(rm.reply.(*pongV4).Rest)
+		if pong, ok := rm.reply.(*pongV4); ok {
+			seq = seqFromTail(pong.Rest)
+		} else if pong, ok := rm.reply.(*validatorPongV4); ok {
+			seq = seqFromTail(pong.Rest)
+		}
 	}
 	return seq, err
 }
@@ -478,10 +535,24 @@ func (t *UDPv4) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func()) *r
 		errc <- err
 		return &replyMatcher{errc: errc}
 	}
+
+	pType := p_pongV4
+	if _, isValidatorNode := t.currentValidators[t.Self().Address()]; isValidatorNode {
+		t.log.Trace("--- sendPing as validator")
+		pType = p_validator_pongV4
+	}
+
 	// Add a matcher for the reply to the pending reply queue. Pongs are matched if they
 	// reference the ping we're about to send.
-	rm := t.pending(toid, toaddr.IP, p_pongV4, func(p interface{}) (matched bool, requestDone bool) {
-		matched = bytes.Equal(p.(*pongV4).ReplyTok, hash)
+	rm := t.pending(toid, toaddr.IP, byte(pType), func(p interface{}) (matched bool, requestDone bool) {
+		if pong, ok := p.(*validatorPongV4); ok {
+			matched = bytes.Equal(pong.ReplyTok, hash)
+			t.log.Trace("--- sendPing > check matched as validator", "matched", matched, "toIP", toaddr.String())
+		} else if pong, ok := p.(*pongV4); ok {
+			matched = bytes.Equal(pong.ReplyTok, hash)
+			t.log.Trace("--- sendPing > check matched", "matched", matched, "toIP", toaddr.String())
+		}
+
 		if matched && callback != nil {
 			callback()
 		}
@@ -489,12 +560,25 @@ func (t *UDPv4) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func()) *r
 	})
 	// Send the packet.
 	t.localNode.UDPContact(toaddr)
+	t.log.Trace("--- sendPing > localNode.UDPContact", "toaddr", toaddr.String())
 	t.write(toaddr, toid, req.name(), packet)
 	return rm
 }
 
-func (t *UDPv4) makePing(toaddr *net.UDPAddr) *pingV4 {
+func (t *UDPv4) makePing(toaddr *net.UDPAddr) packetV4 {
 	seq, _ := rlp.EncodeToBytes(t.localNode.Node().Seq())
+	if _, isValidator := t.currentValidators[t.Self().Address()]; isValidator {
+		//t.log.Trace("--- Make validatorPingV4", "validators", len(t.currentValidators))
+		return &validatorPingV4{
+			Version:    4,
+			From:       t.ourEndpoint(),
+			To:         makeEndpoint(toaddr, 0),
+			Expiration: uint64(time.Now().Add(expiration).Unix()),
+			Rest:       []rlp.RawValue{seq},
+		}
+	}
+
+	//t.log.Trace("--- Make pingV4", "validators", len(t.currentValidators))
 	return &pingV4{
 		Version:    4,
 		From:       t.ourEndpoint(),
@@ -513,9 +597,27 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) (
 	// active until enough nodes have been received.
 	nodes := make([]*node, 0, bucketSize)
 	nreceived := 0
-	rm := t.pending(toid, toaddr.IP, p_neighborsV4, func(r interface{}) (matched bool, requestDone bool) {
-		reply := r.(*neighborsV4)
-		for _, rn := range reply.Nodes {
+
+	pType := p_neighborsV4
+	if _, isValidatorNode := t.currentValidators[t.Self().Address()]; isValidatorNode {
+		t.log.Trace("--- findnode as validator")
+		pType = p_validator_neighborsV4
+	}
+
+	rm := t.pending(toid, toaddr.IP, byte(pType), func(r interface{}) (matched bool, requestDone bool) {
+		t.log.Trace("--- findnode > received node")
+
+		var replyNodes []rpcNode
+		switch pType {
+		case p_neighborsV4:
+			replyNodes = r.(*neighborsV4).Nodes
+			t.log.Trace("--- findnode > received node from neighborsV4", "replyNodes", len(replyNodes))
+		case p_validator_neighborsV4:
+			replyNodes = r.(*validatorNeighborsV4).Nodes
+			t.log.Trace("--- findnode > received node from validatorNeighborsV4", "replyNodes", len(replyNodes))
+		}
+
+		for _, rn := range replyNodes {
 			nreceived++
 			n, err := t.nodeFromRPC(toaddr, rn)
 			if err != nil {
@@ -523,13 +625,23 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) (
 				continue
 			}
 			nodes = append(nodes, n)
+			t.log.Trace("--- findnode > reply node", "addr", n.Addr())
 		}
 		return true, nreceived >= bucketSize
 	})
-	t.send(toaddr, toid, &findnodeV4{
-		Target:     target,
-		Expiration: uint64(time.Now().Add(expiration).Unix()),
-	})
+
+	if _, isValidatorNode := t.currentValidators[t.Self().Address()]; isValidatorNode {
+		t.log.Trace("--- findnode > send validatorFindnodeV4 req", "toaddr", toaddr)
+		t.send(toaddr, toid, &validatorFindnodeV4{
+			Target:     target,
+			Expiration: uint64(time.Now().Add(expiration).Unix()),
+		})
+	} else {
+		t.send(toaddr, toid, &findnodeV4{
+			Target:     target,
+			Expiration: uint64(time.Now().Add(expiration).Unix()),
+		})
+	}
 	return nodes, <-rm.errc
 }
 
@@ -801,10 +913,15 @@ func (t *UDPv4) handlePacket(from *net.UDPAddr, buf []byte) error {
 		return err
 	}
 	fromID := fromKey.id()
-	if err == nil {
-		err = packet.preverify(t, from, fromID, fromKey)
+	err = packet.preverify(t, from, fromID, fromKey)
+	if err != nil {
+		return err
 	}
-	t.log.Trace("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
+	pubKey, err := decodePubkey(fromKey)
+	if err != nil {
+		return err
+	}
+	t.log.Trace("<< "+packet.name(), "id", fromID, "addr", from, "err", err, "nodeAddr", crypto.PubkeyToAddress(*pubKey).Hex())
 	if err == nil {
 		packet.handle(t, from, fromID, hash)
 	}
@@ -839,6 +956,14 @@ func decodeV4(buf []byte) (packetV4, encPubkey, []byte, error) {
 		req = new(enrRequestV4)
 	case p_enrResponseV4:
 		req = new(enrResponseV4)
+	case p_validator_pingV4:
+		req = new(validatorPingV4)
+	case p_validator_pongV4:
+		req = new(validatorPongV4)
+	case p_validator_findnodeV4:
+		req = new(validatorFindnodeV4)
+	case p_validator_neighborsV4:
+		req = new(validatorNeighborsV4)
 	default:
 		return nil, fromKey, hash, fmt.Errorf("unknown type: %d", ptype)
 	}
@@ -857,6 +982,20 @@ func (t *UDPv4) checkBond(id enode.ID, ip net.IP) bool {
 func (t *UDPv4) ensureBond(toid enode.ID, toaddr *net.UDPAddr) {
 	tooOld := time.Since(t.db.LastPingReceived(toid, toaddr.IP)) > bondExpiration
 	if tooOld || t.db.FindFails(toid, toaddr.IP) > maxFindnodeFailures {
+		rm := t.sendPing(toid, toaddr, nil)
+		<-rm.errc
+		// Wait for them to ping back and process our pong.
+		time.Sleep(respTimeout)
+	}
+}
+
+// ensureBond solicits a ping from a node if we haven't seen a ping from it for a while.
+// This ensures there is a valid endpoint proof on the remote end.
+func (t *UDPv4) EnsureBond(toid enode.ID, toaddr *net.UDPAddr) {
+	tooOld := time.Since(t.db.LastPingReceived(toid, toaddr.IP)) > bondExpiration
+	failsOverMax := t.db.FindFails(toid, toaddr.IP) > maxFindnodeFailures
+	log.Trace("--- EnsureBond", "tooOld", tooOld, "findFails", failsOverMax, "toaddr", toaddr.IP)
+	if tooOld || failsOverMax {
 		rm := t.sendPing(toid, toaddr, nil)
 		<-rm.errc
 		// Wait for them to ping back and process our pong.
@@ -980,11 +1119,18 @@ func (req *findnodeV4) handle(t *UDPv4, from *net.UDPAddr, fromID enode.ID, mac 
 			t.send(from, fromID, &p)
 			p.Nodes = p.Nodes[:0]
 			sent = true
+			//log.Trace("--- Get findnodeV4 & send neighborsV4 because reached maxNeighbors", "toAddr", from.IP, "toID", fromID, "nodes", len(p.Nodes))
 		}
 	}
 	if len(p.Nodes) > 0 || !sent {
 		t.send(from, fromID, &p)
+		//log.Trace("--- Get findnodeV4 & send neighborsV4", "toAddr", from.IP, "toID", fromID, "nodes", len(p.Nodes))
 	}
+
+	//for _, node := range p.Nodes {
+	//	log.Trace("--- Node was sent", "addr", node.IP, "UDP", node.UDP, "TCP", node.TCP)
+	//}
+	//log.Trace("--- Handled findnodeV4 req", "fromIP", from.IP, "fromID", fromID, "nodes", len(p.Nodes))
 }
 
 // NEIGHBORS/v4
@@ -1040,4 +1186,148 @@ func (req *enrResponseV4) preverify(t *UDPv4, from *net.UDPAddr, fromID enode.ID
 }
 
 func (req *enrResponseV4) handle(t *UDPv4, from *net.UDPAddr, fromID enode.ID, mac []byte) {
+}
+
+// VALIDATOR_PING/v4
+
+func (req *validatorPingV4) name() string { return "VALIDATOR_PING/v4" }
+func (req *validatorPingV4) kind() byte   { return p_validator_pingV4 }
+
+func (req *validatorPingV4) preverify(t *UDPv4, from *net.UDPAddr, fromID enode.ID, fromKey encPubkey) error {
+	if expired(req.Expiration) {
+		return errExpired
+	}
+	key, err := decodePubkey(fromKey)
+	if err != nil {
+		return errors.New("invalid public key")
+	}
+	req.senderKey = key
+	return nil
+}
+
+func (req *validatorPingV4) handle(t *UDPv4, from *net.UDPAddr, fromID enode.ID, mac []byte) {
+	// Reply.
+	seq, _ := rlp.EncodeToBytes(t.localNode.Node().Seq())
+	t.send(from, fromID, &validatorPongV4{
+		To:         makeEndpoint(from, req.From.TCP),
+		ReplyTok:   mac,
+		Expiration: uint64(time.Now().Add(expiration).Unix()),
+		Rest:       []rlp.RawValue{seq},
+	})
+
+	// Ping back if our last pong on file is too far in the past.
+	n := wrapValidatorNode(enode.NewV4(req.senderKey, from.IP, int(req.From.TCP), from.Port))
+	if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
+		t.sendPing(fromID, from, func() {
+			t.tab.addVerifiedNode(n)
+		})
+	} else {
+		t.tab.addVerifiedNode(n)
+	}
+
+	if err := t.db.UpdateNode(unwrapNode(n)); err != nil {
+		t.log.Error("Update node failed", "err", err)
+	}
+
+	// Update node database and endpoint predictor.
+	t.db.UpdateLastPingReceived(n.ID(), from.IP, time.Now())
+	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
+}
+
+// VALIDATOR_PONG/v4
+
+func (req *validatorPongV4) name() string { return "VALIDATOR_PONG/v4" }
+func (req *validatorPongV4) kind() byte   { return p_validator_pongV4 }
+
+func (req *validatorPongV4) preverify(t *UDPv4, from *net.UDPAddr, fromID enode.ID, fromKey encPubkey) error {
+	if expired(req.Expiration) {
+		return errExpired
+	}
+	if !t.handleReply(fromID, from.IP, req) {
+		return errUnsolicitedReply
+	}
+	return nil
+}
+
+func (req *validatorPongV4) handle(t *UDPv4, from *net.UDPAddr, fromID enode.ID, mac []byte) {
+	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
+	t.db.UpdateLastPongReceived(fromID, from.IP, time.Now())
+}
+
+// VALIDATOR_FINDNODE/v4
+
+func (req *validatorFindnodeV4) name() string { return "VALIDATOR_FINDNODE/v4" }
+func (req *validatorFindnodeV4) kind() byte   { return p_validator_findnodeV4 }
+
+func (req *validatorFindnodeV4) preverify(t *UDPv4, from *net.UDPAddr, fromID enode.ID, fromKey encPubkey) error {
+	if expired(req.Expiration) {
+		return errExpired
+	}
+	if !t.checkBond(fromID, from.IP) {
+		// No endpoint proof pong exists, we don't process the packet. This prevents an
+		// attack vector where the discovery protocol could be used to amplify traffic in a
+		// DDOS attack. A malicious actor would send a findnode request with the IP address
+		// and UDP port of the target as the source address. The recipient of the findnode
+		// packet would then send a neighbors packet (which is a much bigger packet than
+		// findnode) to the victim.
+		return errUnknownNode
+	}
+	return nil
+}
+
+func (req *validatorFindnodeV4) handle(t *UDPv4, from *net.UDPAddr, fromID enode.ID, mac []byte) {
+	t.tab.mutex.Lock()
+	defer t.tab.mutex.Unlock()
+
+	var nodes []*node
+	for _, b := range &t.tab.buckets {
+		for _, n := range b.entries {
+			if n.livenessChecks > 0 && n.isValidator {
+				nodes = append(nodes, n)
+			}
+		}
+	}
+	t.log.Trace("--- validatorFindnodeV4.handle", "nodes", len(nodes))
+
+	for i, node := range nodes {
+		age := log.Lazy{Fn: func() interface{} { return time.Since(t.db.LastPongReceived(node.ID(), node.IP())) }}
+		t.log.Trace("--- validatorFindnodeV4.handle Node existed", "index", i, "id", node.ID(), "addr", node.addr(), "age", age, "fromIP", from)
+	}
+
+	// Send neighbors in chunks with at most maxNeighbors per packet
+	// to stay below the packet size limit.
+	p := validatorNeighborsV4{Expiration: uint64(time.Now().Add(expiration).Unix())}
+	for _, n := range nodes {
+		if netutil.CheckRelayIP(from.IP, n.IP()) == nil {
+			p.Nodes = append(p.Nodes, nodeToRPC(n))
+		}
+		if len(p.Nodes) == maxNeighbors {
+			t.send(from, fromID, &p)
+			p.Nodes = p.Nodes[:0]
+			log.Trace("--- Get validatorFindnodeV4 & send neighborsV4 because reached maxNeighbors", "toAddr", from.String(), "port", from.Port, "toID", fromID, "nodes", len(p.Nodes), "maxNeighbors", maxNeighbors)
+		}
+	}
+	if len(p.Nodes) > 0 {
+		t.send(from, fromID, &p)
+		log.Trace("--- Get validatorFindnodeV4 & send neighborsV4", "toAddr", from.String(), "port", from.Port, "toID", fromID, "nodes", len(p.Nodes))
+	}
+}
+
+// NEIGHBORS/v4
+
+func (req *validatorNeighborsV4) name() string { return "VALIDATOR_NEIGHBORS/v4" }
+func (req *validatorNeighborsV4) kind() byte   { return p_validator_neighborsV4 }
+
+func (req *validatorNeighborsV4) preverify(t *UDPv4, from *net.UDPAddr, fromID enode.ID, fromKey encPubkey) error {
+	if expired(req.Expiration) {
+		return errExpired
+	}
+	if !t.handleReply(fromID, from.IP, req) {
+		return errUnsolicitedReply
+	}
+	return nil
+}
+
+func (req *validatorNeighborsV4) handle(t *UDPv4, from *net.UDPAddr, fromID enode.ID, mac []byte) {
+	log.Trace("--- validatorNeighborsV4.handle not implement yet")
 }

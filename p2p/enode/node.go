@@ -82,6 +82,10 @@ func Parse(validSchemes enr.IdentityScheme, input string) (*Node, error) {
 	return New(validSchemes, &r)
 }
 
+func (n *Node) Addr() *net.UDPAddr {
+	return &net.UDPAddr{IP: n.IP(), Port: n.UDP()}
+}
+
 // ID returns the node identifier.
 func (n *Node) ID() ID {
 	return n.id

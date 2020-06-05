@@ -34,6 +34,7 @@ type node struct {
 	enode.Node
 	addedAt        time.Time // time when the node was added to the table
 	livenessChecks uint      // how often liveness was checked
+	isValidator    bool
 }
 
 type encPubkey [64]byte
@@ -73,6 +74,10 @@ func recoverNodeKey(hash, sig []byte) (key encPubkey, err error) {
 
 func wrapNode(n *enode.Node) *node {
 	return &node{Node: *n}
+}
+
+func wrapValidatorNode(n *enode.Node) *node {
+	return &node{Node: *n, isValidator: true}
 }
 
 func wrapNodes(ns []*enode.Node) []*node {

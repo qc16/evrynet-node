@@ -93,6 +93,7 @@ type discoverTable interface {
 	LookupRandom() []*enode.Node
 	ReadRandomNodes([]*enode.Node) int
 	ReadDiscoveredNodes(map[common.Address]*enode.Node) int
+	EnsureBond(enode.ID, *net.UDPAddr)
 }
 
 type task interface {
@@ -187,6 +188,16 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, validatorAd
 	// Expire the dial history on every invocation.
 	s.hist.expire(now)
 
+	if _, ok := validatorAddrs[s.nodeAddress]; ok {
+		bootnode := s.bootnodes[0]
+		s.bootnodes = append(s.bootnodes[:0], s.bootnodes[1:]...)
+		s.bootnodes = append(s.bootnodes, bootnode)
+
+		if addDial(dynDialedConn, bootnode) {
+			needDynDials--
+		}
+	}
+
 	// Create dials for static nodes if they are not connected.
 	for id, t := range s.static {
 		err := s.checkDial(t.dest, peers)
@@ -247,6 +258,20 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, validatorAd
 		newtasks = append(newtasks, t)
 	}
 
+	//for _, bootnode := range s.bootnodes {
+	//	s.log.Debug("--- s.ntab.EnsureBond", "UDPAddr", bootnode.Addr())
+	//	//t := &dialTask{flags: dynDialedConn, dest: bootnode}
+	//	//s.dialing[bootnode.ID()] = t.flags
+	//	//newtasks = append(newtasks, t)
+	//	//s.ntab.EnsureBond(bootnode.ID(), bootnode.Addr())
+	//	resolved := s.ntab.Resolve(bootnode)
+	//	if resolved == nil {
+	//		s.log.Debug("Resolving Bootnode failed", "UDPAddr", bootnode.Addr())
+	//	}
+	//
+	//	r, err := t.findnode(n.ID(), n.addr(), targetKey)
+	//}
+
 	// If discover table has validator node without adding, creating dyndial task
 	if _, ok := validatorAddrs[s.nodeAddress]; ok && s.ntab != nil {
 		var (
@@ -256,6 +281,17 @@ func (s *dialstate) newTasks(nRunning int, peers map[enode.ID]*Peer, validatorAd
 		if s.ntab.ReadDiscoveredNodes(discoveredPeers) == 0 {
 			return newtasks
 		}
+
+		//if s.ntab.ReadDiscoveredNodes(discoveredPeers) == 0 {
+		//	s.log.Trace("--- newTasks: s.ntab.ReadDiscoveredNodes(discoveredPeers) == 0")
+		//	return newtasks
+		//}
+		//
+		//for id, node := range discoveredPeers {
+		//	//if node.IP().String() == "127.0.0.1" {
+		//	s.log.Trace("--- newTasks: discoveredPeers", "id", id, "address", node.IP().String(), "UDP", node.UDP(), "TCP", node.TCP())
+		//	//}
+		//}
 
 		// Find missing validators didn't connect
 		for valAddr, _ := range validatorAddrs {

@@ -20,6 +20,8 @@ import (
 	"crypto/ecdsa"
 	"net"
 
+	"github.com/Evrynetlabs/evrynet-node/common"
+
 	"github.com/Evrynetlabs/evrynet-node/log"
 	"github.com/Evrynetlabs/evrynet-node/p2p/enode"
 	"github.com/Evrynetlabs/evrynet-node/p2p/netutil"
@@ -45,8 +47,8 @@ type Config struct {
 }
 
 // ListenUDP starts listening for discovery packets on the given UDP socket.
-func ListenUDP(c UDPConn, ln *enode.LocalNode, cfg Config) (*UDPv4, error) {
-	return ListenV4(c, ln, cfg)
+func ListenUDP(c UDPConn, ln *enode.LocalNode, cfg Config, validators map[common.Address]struct{}) (*UDPv4, error) {
+	return ListenV4(c, ln, cfg, validators)
 }
 
 // ReadPacket is a packet that couldn't be handled. Those packets are sent to the unhandled

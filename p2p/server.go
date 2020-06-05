@@ -621,7 +621,7 @@ func (srv *Server) setupDiscovery() error {
 			Unhandled:   unhandled,
 			Log:         srv.log,
 		}
-		ntab, err := discover.ListenUDP(conn, srv.localnode, cfg)
+		ntab, err := discover.ListenUDP(conn, srv.localnode, cfg, srv.currentValidators)
 		if err != nil {
 			return err
 		}
